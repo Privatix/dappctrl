@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-// Event that is emitted when client's bandwidth usage has been changed.
+// Event, that is emitted when client's bandwidth usage has been changed,
+// and appropriate notification has been received from the OpenVPN server.
 // For more details, please see the OpenVPN docs at:
 // https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
 type ServerEventByteCount struct {
@@ -24,24 +25,26 @@ type ServerEventByteCount struct {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// Abstract interface for the remote VPN management interface.
-// At this moment is implemented only for Linux, but also should be implemented for other OS too.
+// Abstract interface for the remote OpentVPN management interface communication.
 type TelnetCommunicator interface {
 	Connect() error
 	Disconnect()
 
+	// Disconnects client with common name "userCommonName" from the server.
+	// todo: [ababo] should it do also some locks, to prevent client reconnection?
 	KillUserSession(userCommonName string) error
 
+	// Once called, begins receiving events about clients traffic usage.
+	// Returns channel, where all received events would be collected.
 	SubscribeForByteCountEvents(timeoutSeconds uint8) (<-chan *ServerEventByteCount, error)
 
-	// todo: think about adding server disconnection events
-	// for appropriate disconnects handling
+	// todo: think about adding subscription for server disconnection events and/or errors.
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Internal events types, used in Linux implementation of TelnetCommunicator.
-// todo: move this into it's own package when source base would be under /src
+// todo: move this into it's own package when source code base would be under /src
 const (
 	kEventTypeConnectionStateChanged = 0
 	kEventTypeUserSessionKilled      = 1
@@ -49,13 +52,15 @@ const (
 )
 
 // Base interface for all internal events used by linux implementation of TelnetCommunicator.
+// Se method dispatchIncomingEvent() for more details.
 type internalEvent interface {
 	typeID() uint16
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// todo: add appropriate disconnect handling
+// This type of events are emitted when remote OpenVPN management interface connection state changes,
+// for example when connection was established, or lost.
 type internalEventConnectionStateChanged struct {
 	IsConnected bool
 }
@@ -66,6 +71,8 @@ func (e *internalEventConnectionStateChanged) typeID() uint16 {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// This type of events are emitted when remote OpenVPN management interface reports
+// about successfully killed client session.
 type internalEventClientKilled struct {
 	CommonName string
 }
@@ -76,6 +83,8 @@ func (e *internalEventClientKilled) typeID() uint16 {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// This type of events are emitted when remote OpenVPN management interface reports
+// some client traffic usage changes.
 type internalEventByteCount struct {
 	ClientID uint64
 	BytesIn  uint64
@@ -94,7 +103,7 @@ const (
 )
 
 // Linux implementation of TelnetCommunicator.
-// Uses standard telnet bash command in sub-process for communicating with remote management interface.
+// Uses standard telnet bash command in a sub-process for communicating with remote management interface.
 // todo: add telnet to the project dependencies.
 type LinuxTelnetCommunicator struct {
 	Host string
@@ -108,10 +117,10 @@ type LinuxTelnetCommunicator struct {
 	externalByteCountEvents chan *ServerEventByteCount
 
 	// Internal events.
-	// Used for reacting on server side notifications.
+	// Used for reacting on server side notifications by the communicator's internal logic.
 
-	// There is non-zero probability, that events would arrive very quickly.
-	// To prevent concurrent maps access (foe example, clientsKilledEventsRegistry),
+	// There is non-zero probability, that events would arrive very quickly and in unpredictable order.
+	// To prevent concurrent maps access (for example, clientsKilledEventsRegistry),
 	// and panics as a result - mutex is used for synchronization purposes.
 	internalEventsMutex sync.Mutex
 
@@ -122,11 +131,15 @@ type LinuxTelnetCommunicator struct {
 
 	// Events about clients killed are name-relevant.
 	// There is a non-zero probability of parallel occurrence of several such event at a time.
-	// To avoid calling goroutines to be confused - simple events dispatching mechanics is used.
-	//
-	// Each one call to KillUserSession() binds new channel, in which the event itself will arrive.
+	// To avoid calling goroutines to be confused by the non-relevant results -
+	// simple events dispatching mechanics is used.
+	// Each one call to KillUserSession() binds new channel,
+	// in which relevant the event itself will arrive.
 	clientsKilledEventsRegistry map[string]chan *internalEventClientKilled
 
+	// If "true" - then current communicator is now closing the connection,
+	// (or has already closed connection), and should not be used any more.
+	// This flag is used for controliing internal goroutine, that reads internal sub-process output.
 	isClosed bool
 }
 
@@ -134,8 +147,7 @@ func NewLinuxTelnetCommunicator(host string, port uint16) *LinuxTelnetCommunicat
 	return &LinuxTelnetCommunicator{
 		Host: host,
 		Port: port,
-
-		processHandler: nil,
+		isClosed: false,
 
 		externalByteCountEvents: make(chan *ServerEventByteCount),
 
@@ -143,18 +155,18 @@ func NewLinuxTelnetCommunicator(host string, port uint16) *LinuxTelnetCommunicat
 		clientsByteCountEvents: make(chan *internalEventByteCount),
 
 		clientsKilledEventsRegistry: make(map[string]chan *internalEventClientKilled),
-
-		isClosed: false,
 	}
 }
 
 // Attempts to connect to the remote control interface.
-// Blocks for kCommandExecutionTimeout in case of no response from the server.
+// Blocks for kCommandExecutionTimeout in case if no response from the server has been arrived.
 // Returns error in case if no connection was established.
 // todo: might not connect if there is already connected interface from other ttl. this must be fixed.
 func (c *LinuxTelnetCommunicator) Connect() error {
 	if c.isClosed {
-		return errors.New("communicator is now closed. please, use new one for the new connection")
+		return errors.New(
+			"communicator is now closed it's connection. " +
+			"please, use new one communicator instance for the new connection")
 	}
 
 	c.processHandler = exec.Command("telnet", c.Host, fmt.Sprint(c.Port))
@@ -204,7 +216,7 @@ func (c *LinuxTelnetCommunicator) Disconnect() {
 }
 
 // Attempts to disconnect the user from the server.
-// Blocks for kCommandExecutionTimeout in case of no response from the server.
+// Blocks for kCommandExecutionTimeout in case if no response from the server has been arrived.
 func (c *LinuxTelnetCommunicator) KillUserSession(userCommonName string) error {
 	// Accessing to the events registry should be synchronous.
 	c.internalEventsMutex.Lock()
@@ -231,7 +243,7 @@ func (c *LinuxTelnetCommunicator) KillUserSession(userCommonName string) error {
 	}()
 
 	// Unlocking is necessary to be done before the code reaches event checking stage.
-	// Otherwise - the dispatch method would be unable to deliver the event.
+	// Otherwise - the dispatch method would be unable to deliver the event, because of deadlock.
 	c.internalEventsMutex.Unlock()
 
 	// Transferring the command itself and waiting for the response.
@@ -462,7 +474,7 @@ func (c *LinuxTelnetCommunicator) logError(message string) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// note: [suggestion] rename to ServerController.
+// todo: [ababo][suggestion] rename to ServerController.
 type Control struct {
 	VPNServerAddress     string
 	ManagementTelnetPort uint16
@@ -512,7 +524,7 @@ func (c *Control) KillUserSession(userCommonName string) error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// todo: move this into specific package
+// todo: move this into specific erors package
 func WrapError(err error, message string) error {
 	return errors.New(message + " > " + err.Error())
 }

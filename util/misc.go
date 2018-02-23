@@ -2,9 +2,10 @@ package util
 
 import (
 	"encoding/json"
-	"github.com/satori/go.uuid"
 	"os"
 	"path/filepath"
+
+	"github.com/google/uuid"
 )
 
 // ReadJSONFile reads and parses a JSON file filling a given data instance.
@@ -20,7 +21,7 @@ func ReadJSONFile(name string, data interface{}) error {
 
 // NewUUID generates a new UUID.
 func NewUUID() string {
-	return uuid.Must(uuid.NewV4()).String()
+	return uuid.New().String()
 }
 
 // ExeDirJoin composes a file name relative to a running executable.

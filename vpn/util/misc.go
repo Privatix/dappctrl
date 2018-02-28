@@ -4,7 +4,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// FindLastSession finds a current session for a given state channel.
+// FindCurrentSession finds a current session for a given state channel.
 func FindCurrentSession(db *reform.DB, ch string) (string, error) {
 	var sess string
 	if err := db.QueryRow(`

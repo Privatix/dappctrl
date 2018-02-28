@@ -10,6 +10,11 @@
         "Level": "info"
     },
 
+    "VPNMonitor": {
+        "Addr": "localhost:7505",
+        "ByteCountPeriod": 5
+    },
+
     "VPNServer": {
         "Addr": "0.0.0.0:8080",
         "CertFile": "dappctrl.cert",

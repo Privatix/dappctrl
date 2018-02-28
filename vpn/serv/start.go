@@ -55,7 +55,7 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !positive {
-		s.logger.Warn("no positive balance")
+		s.logger.Warn("no positive balance for channel %s", req.Channel)
 		s.reply(w, errorReply{ErrNoPositiveBalance})
 		return
 	}

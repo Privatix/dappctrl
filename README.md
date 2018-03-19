@@ -1,6 +1,7 @@
 [![Go report](https://goreportcard.com/badge/github.com/Privatix/dappctrl)](https://goreportcard.com/badge/github.com/Privatix/dappctrl)
 [![Maintainability](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/maintainability)](https://codeclimate.com/github/Privatix/dappctrl/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/test_coverage)](https://codeclimate.com/github/Privatix/dappctrl/test_coverage)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_shield)
 
 # Privatix Controller.
 Privatix Controller is a core of Agent and Client functionality.
@@ -86,3 +87,6 @@ See also the list of [contributors](https://github.com/Privatix/dapp-somc/contri
 # License
 
 This project is licensed under the **GPL-3.0 License** - see the [COPYING](COPYING) file for details.
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_large)

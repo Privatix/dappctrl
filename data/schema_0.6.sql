@@ -1,8 +1,8 @@
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
-CREATE TYPE usage_rep_type AS ENUM ('incremental','total');
+CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates types.
-CREATE TYPE tpl_type AS ENUM ('offer','auth','access');
+CREATE TYPE tpl_type AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
@@ -24,7 +24,7 @@ CREATE TYPE user_role AS ENUM ('client','agent');
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
-		'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
+    'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
     'activating' -- service is activating.
     'active' -- service is now active and can be used.
     'suspending', -- service is waiting to be suspended.
@@ -60,14 +60,14 @@ CREATE TABLE users (
     id uuid PRIMARY KEY,
     public_key text NOT NULL,
     private_key text,
-		role user_role NOT NULL, -- agent or client
-		is_default boolean, -- default account
-		not_inuse boolean -- this account is not in use
+    role user_role NOT NULL, -- agent or client
+    is_default boolean, -- default account
+    not_inuse boolean -- this account is not in use
 );
 
 -- Templates.
 CREATE TABLE templates (
-		id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
     raw json,
     tpl_type tpl_type NOT NULL
@@ -75,7 +75,7 @@ CREATE TABLE templates (
 
 -- Services. Used to store billing and action related settings.
 CREATE TABLE services (
-		id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
     offer_tpl_id uuid REFERENCES templates(id),
     offer_auth_id uuid REFERENCES templates(id),
@@ -106,8 +106,8 @@ CREATE TABLE offerings (
     max_unit bigint, -- optional. If specified automatic termination can be invoked
     billing_interval int NOT NULL, -- every unit numbers, that should be paid, after free units consumed
     max_billing_unit_lag int NOT NULL, --maximum tolerance for payment lag (in units)
-		max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
-		max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
+    max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
+    max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
     free_units smallint, -- free units (test, bonus)
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON
@@ -122,7 +122,7 @@ CREATE TABLE channels (
     block int NOT NULL, -- block number, when state channel created
     ch_status channel_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
-		service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
+    service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
     total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
@@ -138,8 +138,8 @@ CREATE TABLE sessions (
     started timestamp with time zone NOT NULL, -- time, when session started
     stopped timestamp with time zone, -- time, when session stopped
     units_used bigint NOT NULL, -- total units used in this session.
-		seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
-		last_used_time timestamp with time zone NOT NULL, -- time of last usage reported
+    seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
+    last_used_time timestamp with time zone NOT NULL, -- time of last usage reported
     server_ip inet,
     server_port int,
     client_ip inet,
@@ -148,9 +148,9 @@ CREATE TABLE sessions (
 
 -- Smart contracts.
 CREATE TABLE contracts (
-		id uuid PRIMARY KEY,
-		address sha3_256 NOT NULL, -- ethereum address of contract
-		type contract_type NOT NULL,
-		version smallint, --version of contract. Greater means newer
-		enabled boolean NOT NULL -- contract is in use
+    id uuid PRIMARY KEY,
+    address sha3_256 NOT NULL, -- ethereum address of contract
+    type contract_type NOT NULL,
+    version smallint, --version of contract. Greater means newer
+    enabled boolean NOT NULL -- contract is in use
 );

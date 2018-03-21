@@ -25,12 +25,8 @@ CREATE TYPE user_role AS ENUM ('client','agent');
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
-    'activating' -- service is activating.
     'active' -- service is now active and can be used.
-    'suspending', -- service is waiting to be suspended.
     'suspended', -- service usage is not allowed. Usually used to temporary disallow access.
-    'unsuspending', -- service is in process of activation from suspended state.
-    'terminating', -- in process of permanent service deactivation.
     'terminated' -- service is permanently deactivated.
 );
 
@@ -73,8 +69,8 @@ CREATE TABLE templates (
     tpl_type tpl_type NOT NULL
 );
 
--- Services. Used to store billing and action related settings.
-CREATE TABLE services (
+-- Products. Used to store billing and action related settings.
+CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
     offer_tpl_id uuid REFERENCES templates(id),
@@ -87,7 +83,7 @@ CREATE TABLE services (
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding template
-    service uuid NOT NULL REFERENCES services(id), -- enables service specific billing and actions support
+    product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
     agent uuid NOT NULL REFERENCES users(id),

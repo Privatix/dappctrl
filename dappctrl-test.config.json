@@ -29,5 +29,16 @@
     "VPNServer": {
         "Addr": "localhost:8080",
         "TLS": null
+    },
+
+    "EthereumLib": {
+        "geth": {
+            "host": "localhost",
+            "port": 8545
+        },
+        "truffle": {
+            "host": "localhost",
+            "port": 5000
+        }
     }
 }

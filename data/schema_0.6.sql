@@ -35,7 +35,7 @@ CREATE TYPE svc_status AS ENUM (
 );
 
 -- State channel states.
-CREATE TYPE channel_status AS ENUM (
+CREATE TYPE chan_status AS ENUM (
     'pending', -- waiting to be opened
     'active', -- opened
     'wait_coop', -- waiting to be closed cooperatively
@@ -120,7 +120,7 @@ CREATE TABLE channels (
     client uuid NOT NULL REFERENCES users(id),
     offering uuid NOT NULL REFERENCES offerings(id),
     block int NOT NULL, -- block number, when state channel created
-    ch_status channel_status NOT NULL, -- status related to blockchain
+    channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
     total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups

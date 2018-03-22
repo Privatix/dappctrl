@@ -23,7 +23,7 @@ type Config struct {
 // NewConfig creates a default configuration for VPN session server.
 func NewConfig() *Config {
 	return &Config{
-		Addr: "localhost:8080",
+		Addr: "localhost:8000",
 		TLS:  nil,
 	}
 }

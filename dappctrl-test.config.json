@@ -16,6 +16,11 @@
         "TLS": null
     },
 
+    "SOMC": {
+        "ReconnPeriod": 1,
+        "URL": "ws://localhost:8080"
+    },
+
     "TestData": {
         "Channel": "e5b23706-16ed-11e8-b642-0ed5f89f718b",
         "Password": "secret"
@@ -27,7 +32,7 @@
     },
 
     "VPNServer": {
-        "Addr": "localhost:8080",
+        "Addr": "localhost:8000",
         "TLS": null
     },
 

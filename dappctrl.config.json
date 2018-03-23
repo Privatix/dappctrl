@@ -15,13 +15,18 @@
         "TLS": null
     },
 
+    "SOMC": {
+        "ReconnPeriod": 5000,
+        "URL": "ws://localhost:8080"
+    },
+
     "VPNMonitor": {
         "Addr": "localhost:7505",
         "ByteCountPeriod": 5
     },
 
     "VPNServer": {
-        "Addr": "localhost:8080",
+        "Addr": "localhost:8000",
         "TLS": null
     }
 }

@@ -11,6 +11,11 @@
         "Level": "info"
     },
 
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null
+    },
+
     "PaymentServer": {
         "Addr": "localhost:9000",
         "TLS": null
@@ -19,15 +24,5 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"
-    },
-
-    "VPNMonitor": {
-        "Addr": "localhost:7505",
-        "ByteCountPeriod": 5
-    },
-
-    "VPNServer": {
-        "Addr": "localhost:8000",
-        "TLS": null
     }
 }

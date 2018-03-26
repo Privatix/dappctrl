@@ -8,17 +8,16 @@ import "time"
 // It can play an agent role, a client role, or both of them.
 //reform:users
 type User struct {
-	ID         string  `reform:"id,pk"`
-	PublicKey  string  `reform:"public_key"`
-	PrivateKey *string `reform:"private_key"`
-	Default    *bool   `reform:"is_default"`
-	InUse      *bool   `reform:"in_use"`
+	ID         string  `json:"id" reform:"id,pk"`
+	PublicKey  string  `json:"publicKey" reform:"public_key"`
+	PrivateKey *string `json:"privateKey" reform:"private_key"`
+	Default    bool    `json:"default" reform:"is_default"`
+	InUse      bool    `json:"inUse" reform:"in_use"`
 }
 
 // Templates kinds.
 const (
 	TemplateOffer  = "offer"
-	TemplateAuth   = "auth"
 	TemplateAccess = "access"
 )
 
@@ -26,13 +25,13 @@ const (
 // It can be an offer, auth or access template.
 //reform:templates
 type Template struct {
-	ID   string `reform:"id,pk"`
-	Hash string `reform:"hash"`
-	Raw  []byte `reform:"raw"`
-	Kind string `reform:"kind"`
+	ID   string `json:"id" reform:"id,pk"`
+	Hash string `json:"hash" reform:"hash"`
+	Raw  []byte `json:"raw" reform:"raw"`
+	Kind string `json:"kind" reform:"kind"`
 }
 
-// Product uage reporting types.
+// Product usage reporting types.
 const (
 	ProductUsageIncremental = "incremental"
 	ProductUsageTotal       = "total"
@@ -41,11 +40,11 @@ const (
 // Product stores billing and action related settings.
 //reform:products
 type Product struct {
-	ID            string  `reform:"id,pk"`
-	Name          string  `reform:"name"`
-	OfferTplID    *string `reform:"offer_tpl_id"`
-	OfferAccessID *string `reform:"offer_access_id"`
-	UsageRepType  string  `reform:"usage_rep_type"`
+	ID            string  `json:"id" reform:"id,pk"`
+	Name          string  `json:"name" reform:"name"`
+	OfferTplID    *string `json:"offerTplID" reform:"offer_tpl_id"`
+	OfferAccessID *string `json:"offerAccessID" reform:"offer_access_id"`
+	UsageRepType  string  `json:"usageRepType" reform:"usage_rep_type"`
 }
 
 // Unit used for billing calculation.
@@ -71,32 +70,31 @@ const (
 // Offering is a service offering.
 //reform:offerings
 type Offering struct {
-	ID                 string  `reform:"id,pk"`
-	Template           string  `reform:"tpl"`     // Offering's.
-	Product            string  `reform:"product"` // Specific billing and actions.
-	Hash               string  `reform:"hash"`    // Offering's hash.
-	Status             string  `reform:"status"`
-	Agent              string  `reform:"agent"`
-	Signature          string  `reform:"signature"` // Agent's signature.
-	TemplateVersion    uint    `reform:"tpl_version"`
-	ServiceName        string  `reform:"service_name"`
-	Description        *string `reform:"description"`
-	Country            string  `reform:"country"` // ISO 3166-1 alpha-2.
-	Supply             uint    `reform:"supply"`
-	UnitName           string  `reform:"unit_name"` // Like megabytes, minutes, etc.
-	UnitType           string  `reform:"unit_type"`
-	BillingType        string  `reform:"billing_type"`
-	SetupPrice         *string `reform:"setup_price"` // Setup fee.
-	UnitPrice          string  `reform:"unit_price"`
-	MinUnits           uint64  `reform:"min_units"`
-	MaxUnit            *uint64 `reform:"max_unit"`
-	BillingInterval    uint    `reform:"billing_interval"`     // Every unit number to be paid.
-	MaxBillingUnitLag  uint    `reform:"max_billing_unit_lag"` // Max maximum tolerance for payment lag.
-	MaxSuspendTime     uint    `reform:"max_suspended_time"`   // In seconds.
-	MaxInactiveTimeSec *uint64 `reform:"max_inactive_time_sec"`
-	FreeUints          uint8   `reform:"free_units"`
-	Nonce              string  `reform:"nonce"`
-	AdditionalParams   []byte  `reform:"additional_params"`
+	ID                 string  `json:"id" reform:"id,pk"`
+	Template           string  `json:"template" reform:"tpl" validate:"required"`    // Offering's.
+	Product            string  `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
+	Hash               string  `json:"hash" reform:"hash"`                           // Offering's hash.
+	Status             string  `json:"status" reform:"status"`
+	Agent              string  `json:"agent" reform:"agent" validate:"required"`
+	Signature          string  `json:"signature" reform:"signature"` // Agent's signature.
+	ServiceName        string  `json:"serviceName" reform:"service_name" validate:"required"`
+	Description        *string `json:"description" reform:"description"`
+	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
+	Supply             uint    `json:"supply" reform:"supply" validate:"required"`
+	UnitName           string  `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
+	UnitType           string  `json:"unitType" reform:"unit_type" validate:"required"`
+	BillingType        string  `json:"billingType" reform:"billing_type" validate:"required"`
+	SetupPrice         uint64  `json:"setupPrice" reform:"setup_price"` // Setup fee.
+	UnitPrice          uint64  `json:"unitPrice" reform:"unit_price"`
+	MinUnits           uint64  `json:"minUnits" reform:"min_units" validate:"required"`
+	MaxUnit            *uint64 `json:"maxUnit" reform:"max_unit"`
+	BillingInterval    uint    `json:"billingInterval" reform:"billing_interval" validate:"required"` // Every unit number to be paid.
+	MaxBillingUnitLag  uint    `json:"maxBillingUnitLag" reform:"max_billing_unit_lag"`               // Max maximum tolerance for payment lag.
+	MaxSuspendTime     uint    `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
+	MaxInactiveTimeSec *uint64 `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
+	FreeUnits          uint8   `json:"freeUnits" reform:"free_units"`
+	Nonce              string  `json:"nonce" reform:"nonce"`
+	AdditionalParams   []byte  `json:"additionalParams" reform:"additional_params" validate:"required"`
 }
 
 // State channel statuses.
@@ -122,36 +120,36 @@ const (
 // Channel is a state channel.
 //reform:channels
 type Channel struct {
-	ID                 string     `reform:"id,pk"`
-	Agent              string     `reform:"agent"`
-	Client             string     `reform:"client"`
-	Offering           string     `reform:"offering"`
-	Block              uint       `reform:"block"`          // When state channel created.
-	ChannelStatus      string     `reform:"channel_status"` // Status related to blockchain.
-	ServiceStatus      string     `reform:"service_status"`
-	ServiceChangedTime *time.Time `reform:"service_changed_time"`
-	TotalDeposit       string     `reform:"total_deposit"`
-	Salt               uint64     `reform:"salt"`
-	Username           *string    `reform:"username"`
-	Password           string     `reform:"password"`
-	ReceiptBalance     string     `reform:"receipt_balance"`   // Last payment.
-	ReceiptSignature   string     `reform:"receipt_signature"` // Last payment's signature.
+	ID                 string     `json:"id" reform:"id,pk"`
+	Agent              string     `json:"agent" reform:"agent"`
+	Client             string     `json:"client" reform:"client"`
+	Offering           string     `json:"offering" reform:"offering"`
+	Block              uint       `json:"block" reform:"block"`                  // When state channel created.
+	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
+	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
+	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
+	TotalDeposit       string     `json:"totalDeposit" reform:"total_deposit"`
+	Salt               uint64     `json:"-" reform:"salt"`
+	Username           *string    `json:"-" reform:"username"`
+	Password           string     `json:"-" reform:"password"`
+	ReceiptBalance     string     `json:"-" reform:"receipt_balance"`   // Last payment.
+	ReceiptSignature   string     `json:"-" reform:"receipt_signature"` // Last payment's signature.
 }
 
 // Session is a client session.
 //reform:sessions
 type Session struct {
-	ID              string     `reform:"id,pk"`
-	Channel         string     `reform:"channel"`
-	Started         time.Time  `reform:"started"`
-	Stopped         *time.Time `reform:"stopped"`
-	UnitsUsed       uint64     `reform:"units_used"`
-	SecondsConsumed uint64     `reform:"seconds_consumed"`
-	LastUsageTime   time.Time  `reform:"last_usage_time"`
-	ServerIP        *string    `reform:"server_ip"`
-	ServerPort      *int16     `reform:"server_port"`
-	ClientIP        *string    `reform:"client_ip"`
-	ClientPort      *int16     `reform:"client_port"`
+	ID              string     `json:"id" reform:"id,pk"`
+	Channel         string     `json:"channel" reform:"channel"`
+	Started         time.Time  `json:"started" reform:"started"`
+	Stopped         *time.Time `json:"stopped" reform:"stopped"`
+	UnitsUsed       uint64     `json:"unitsUsed" reform:"units_used"`
+	SecondsConsumed uint64     `json:"secondsConsumed" reform:"seconds_consumed"`
+	LastUsageTime   time.Time  `json:"lastUsageTime" reform:"last_usage_time"`
+	ServerIP        *string    `json:"serverIP" reform:"server_ip"`
+	ServerPort      *int16     `json:"serverPort" reform:"server_port"`
+	ClientIP        *string    `json:"clientIP" reform:"client_ip"`
+	ClientPort      *int16     `json:"clientPort" reform:"client_port"`
 }
 
 // Contract types.
@@ -163,28 +161,36 @@ const (
 // Contract is a smart contract.
 //reform:contracts
 type Contract struct {
-	ID      string `reform:"id,pk"`
-	Address string `reform:"address"` // Ethereum address
-	Type    string `reform:"type"`
-	Version *uint8 `reform:"version"`
-	Enabled bool   `reform:"enabled"`
+	ID      string `json:"id" reform:"id,pk"`
+	Address string `json:"address" reform:"address"` // Ethereum address
+	Type    string `json:"type" reform:"type"`
+	Version *uint8 `json:"version" reform:"version"`
+	Enabled bool   `json:"enabled" reform:"enabled"`
+}
+
+// Setting is a user setting.
+//reform:settings
+type Setting struct {
+	Key         string  `json:"key" reform:"key,pk"`
+	Value       string  `json:"value" reform:"value"`
+	Description *string `json:"description" reform:"description"`
 }
 
 // Endpoint messages is info about service access.
+//reform:endpoints
 type Endpoint struct {
-	ID                     string  `reform:"id,pk"`
-	Template               string  `reform:"tpl"`
-	Channel                string  `reform:"channel"`
-	Hash                   string  `reform:"hash"`
-	Status                 string  `reform:"status"`
-	Signature              string  `reform:"signature"`
-	TemplateVersion        string  `reform:"tplVersion"`
-	PaymentReceiverAddress *string `reform:"payment_receiver_address"`
-	DNS                    *string `reform:"dns"`
-	IPAddress              *string `reform:"ip_addr"`
-	Username               *string `reform:"username"`
-	Password               *string `reform:"password"`
-	AdditionalParams       []byte  `reform:"additional_params"`
+	ID                     string  `json:"id" reform:"id,pk"`
+	Template               string  `json:"template" reform:"tpl"`
+	Channel                string  `json:"channel" reform:"channel"`
+	Hash                   string  `json:"hash" reform:"hash"`
+	Status                 string  `json:"status" reform:"status"`
+	Signature              string  `json:"signature" reform:"signature"`
+	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
+	DNS                    *string `json:"dns" reform:"dns"`
+	IPAddress              *string `json:"ipAddress" reform:"ip_addr"`
+	Username               *string `json:"-" reform:"username"`
+	Password               *string `json:"-" reform:"password"`
+	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
 }
 
 // Job creators.

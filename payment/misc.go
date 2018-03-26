@@ -137,6 +137,7 @@ func (s *Server) updateChannelWithPayment(w http.ResponseWriter,
 	ch.ReceiptBalance = pld.Balance
 	ch.ReceiptSignature = pld.BalanceMsgSig
 	if err := s.db.Update(ch); err != nil {
+		s.logger.Warn("failed to update channel: %v", err)
 		s.replyError(w, errUnexpected)
 		return false
 	}

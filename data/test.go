@@ -7,6 +7,7 @@ import (
 	cryptorand "crypto/rand"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/number"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -56,8 +57,8 @@ func NewTestProduct() *Product {
 	}
 }
 
-// NewTemplate returns new tempalte.
-func NewTemplate(kind string) *Template {
+// NewTestTemplate returns new tempalte.
+func NewTestTemplate(kind string) *Template {
 	return &Template{
 		ID:   util.NewUUID(),
 		Raw:  []byte("{}"),
@@ -66,18 +67,21 @@ func NewTemplate(kind string) *Template {
 }
 
 // NewTestOffering returns new offering.
-func NewTestOffering(agent *User, prt *Product, tpl string) *Offering {
+func NewTestOffering(agent, product, tpl string) *Offering {
 	return &Offering{
 		ID:               util.NewUUID(),
 		Template:         tpl,
-		Agent:            agent.ID,
-		Product:          prt.ID,
+		Agent:            agent,
+		Product:          product,
 		Supply:           1,
 		Status:           MsgChPublished,
 		UnitType:         UnitSeconds,
 		BillingType:      BillingPostpaid,
+		BillingInterval:  100,
 		Nonce:            util.NewUUID(),
-		AdditionalParams: []byte{'{', '}'},
+		AdditionalParams: []byte("{}"),
+		SetupPrice:       11,
+		UnitPrice:        22,
 	}
 }
 
@@ -94,5 +98,25 @@ func NewTestChannel(agent, client *User, offering *Offering,
 		ServiceStatus:  ServiceActive,
 		TotalDeposit:   FromBytes(number.Big(deposit).Bytes()),
 		ReceiptBalance: FromBytes(number.Big(balance).Bytes()),
+	}
+}
+
+// NewTestEndpoint returns new endpoint.
+func NewTestEndpoint(chanID, tplID string) *Endpoint {
+	return &Endpoint{
+		ID:               util.NewUUID(),
+		Template:         tplID,
+		Channel:          chanID,
+		Status:           MsgBChainPublished,
+		AdditionalParams: []byte("{}"),
+	}
+}
+
+// NewTestSession returns new session.
+func NewTestSession(chanID string) *Session {
+	return &Session{
+		ID:      util.NewUUID(),
+		Channel: chanID,
+		Started: time.Now(),
 	}
 }

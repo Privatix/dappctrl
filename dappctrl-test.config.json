@@ -28,16 +28,6 @@
         "Password": "secret"
     },
 
-    "VPNMonitor": {
-        "Addr": "localhost:7505",
-        "ByteCountPeriod": 5
-    },
-
-    "VPNServer": {
-        "Addr": "localhost:8000",
-        "TLS": null
-    },
-
     "EthereumLib": {
         "geth": {
             "host": "localhost",

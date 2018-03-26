@@ -37,11 +37,6 @@ func ExeDirJoin(elem ...string) string {
 	return filepath.Join(elem...)
 }
 
-// EthNumToBase64 returns eth's number.Number as base64 encoded string.
-func EthNumToBase64(x *number.Number) string {
-	return base64.URLEncoding.EncodeToString(x.Bytes())
-}
-
 // Base64ToEthNum returns eth's number.Number from base64 encoded string.
 func Base64ToEthNum(b64X string) (*number.Number, error) {
 	b, err := base64.URLEncoding.DecodeString(strings.TrimSpace(b64X))

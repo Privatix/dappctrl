@@ -1,6 +1,6 @@
 [![Go report](https://goreportcard.com/badge/github.com/Privatix/dappctrl)](https://goreportcard.com/badge/github.com/Privatix/dappctrl)
 [![Maintainability](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/maintainability)](https://codeclimate.com/github/Privatix/dappctrl/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/test_coverage)](https://codeclimate.com/github/Privatix/dappctrl/test_coverage)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_shield)
 
 # Privatix Controller.
 Privatix Controller is a core of Agent and Client functionality.
@@ -42,7 +42,7 @@ go install -tags=notest $DAPPCTRL
 Prepare a `dappctrl` database instance:
 
 ```bash
-psql -U postgres -d postgres -c 'CREATE DATABASE dappctrl'
+psql -U postgres -c 'CREATE DATABASE dappctrl'
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
@@ -57,6 +57,22 @@ Build OpenVPN session trigger:
 
 ```bash
 go install $DAPPCTRL/tool/dapptrig
+```
+
+## Using docker
+We have prepared two images and a compose file to make it easier to run app and its dependencies.
+There are 3 services in compose file:
+  1. db — uses public postgres image
+  2. vpn — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
+  3. dappctrl — image `privatix/dappctrl` is a main controller app
+
+If you want to develop dappctrl then it is convenient to run its dependencies using docker, but controller itself at your host machine:
+```
+docker-compose up vpn db
+```
+If your app is using dappctrl or you are not planning to develop controller run
+```
+docker-compose up
 ```
 
 # Tests

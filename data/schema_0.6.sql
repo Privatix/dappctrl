@@ -14,7 +14,7 @@ CREATE TYPE unit_type AS ENUM ('units','seconds');
 CREATE DOMAIN sha3_256 AS char(44);
 
 -- Etehereum address
-CREATE DOMAIN eth_addr AS char(20);
+CREATE DOMAIN eth_addr AS char(28);
 
  -- Ethereum's uint192 in base64 (RFC-4648).
 CREATE DOMAIN privatix_tokens AS char(32);
@@ -189,11 +189,9 @@ CREATE TABLE endpoints (
     tpl_version int NOT NULL, -- template version
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     dns varchar(100),
-    ipv4 inet,
-    ipv6 inet,
+    ip_addr inet,
     username varchar(100),
     password varchar(48),
-    nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON
 );
 
@@ -203,7 +201,7 @@ CREATE TABLE jobs (
     task_name char(30) NOT NULL, -- name of task
     status job_status NOT NULL, -- job status
     parent_obj char(30) NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
-    relid uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
     not_before timestamp with time zone, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
@@ -212,7 +210,7 @@ CREATE TABLE jobs (
 );
 
 -- Ethereum transactions.
-CREATE TABLE ethtxs (
+CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
     method char(30) NOT NULL, -- contract method
@@ -229,7 +227,7 @@ CREATE TABLE ethtxs (
 );
 
 -- Ethereum events.
-CREATE TABLE ethlog (
+CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL -- tx status (custom)

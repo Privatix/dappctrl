@@ -1,8 +1,8 @@
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
--- Templates types.
-CREATE TYPE tpl_type AS ENUM ('offer', 'auth', 'access');
+-- Templates kinds.
+CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
@@ -22,13 +22,13 @@ CREATE DOMAIN privatix_tokens AS char(32);
 -- Contract types.
 CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
--- User roles.
-CREATE TYPE user_role AS ENUM ('client','agent');
+-- User kinds.
+CREATE TYPE user_kind AS ENUM ('client','agent');
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
-    'active' -- service is now active and can be used.
+    'active', -- service is now active and can be used.
     'suspended', -- service usage is not allowed. Usually used to temporary disallow access.
     'terminated' -- service is permanently deactivated.
 );
@@ -83,17 +83,17 @@ CREATE TABLE users (
     id uuid PRIMARY KEY,
     public_key text NOT NULL,
     private_key text,
-    role user_role NOT NULL, -- agent or client
-    is_default boolean, -- default account
-    not_inuse boolean -- this account is not in use
+    kind user_kind NOT NULL, -- agent or client
+    is_default boolean DEFAULT false, -- default account
+    in_use boolean DEFAULT true-- this account is in use or not
 );
 
 -- Templates.
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
-    raw json,
-    tpl_type tpl_type NOT NULL
+    raw json NOT NULL,
+    kind tpl_kind NOT NULL
 );
 
 -- Products. Used to store billing and action related settings.
@@ -103,7 +103,7 @@ CREATE TABLE products (
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
-    usage_rep_type usage_rep_type -- for billing logic. Reporter provides increment or total usage
+    usage_rep_type usage_rep_type NOT NULL -- for billing logic. Reporter provides increment or total usage
 );
 
 -- Service offerings.
@@ -131,7 +131,7 @@ CREATE TABLE offerings (
     max_billing_unit_lag int NOT NULL, --maximum tolerance for payment lag (in units)
     max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
     max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
-    free_units smallint, -- free units (test, bonus)
+    free_units smallint NOT NULL DEFAULT 0, -- free units (test, bonus)
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON
 );
@@ -162,7 +162,7 @@ CREATE TABLE sessions (
     stopped timestamp with time zone, -- time, when session stopped
     units_used bigint NOT NULL, -- total units used in this session.
     seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
-    last_used_time timestamp with time zone NOT NULL, -- time of last usage reported
+    last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
     server_ip inet,
     server_port int,
     client_ip inet,

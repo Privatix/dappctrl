@@ -13,6 +13,9 @@ CREATE TYPE unit_type AS ENUM ('units','seconds');
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
+-- Etehereum address
+CREATE DOMAIN eth_addr AS char(20);
+
  -- Ethereum's uint192 in base64 (RFC-4648).
 CREATE DOMAIN privatix_tokens AS char(32);
 
@@ -50,6 +53,30 @@ CREATE TYPE msg_status AS ENUM (
 	'msg_channel_published' -- published in messaging channel
 );
 
+-- Transaction statuses.
+CREATE TYPE tx_status AS ENUM (
+	'unsent', -- saved in DB, but not sent
+	'sent', -- sent w/o error to eth node
+	'mined', -- tx mined
+	'uncle' -- tx is went to uncle block
+);
+
+-- Job creator.
+CREATE TYPE job_creator AS ENUM (
+	'user', -- by user through UI
+	'billing_checker', -- by billing checker procedure
+	'bc_monitor', -- by blockchain monitor
+	'task' -- by another task
+);
+
+-- Job status.
+CREATE TYPE job_status AS ENUM (
+	'new', -- previously never executed
+	'failed', -- failed to sucessfully execute
+	'skipped', -- skipped by user
+	'done' -- successfully executed
+);
+
 -- Users are party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
@@ -73,9 +100,9 @@ CREATE TABLE templates (
 CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
-    offer_tpl_id uuid REFERENCES templates(id),
-    offer_auth_id uuid REFERENCES templates(id),
-    offer_access_id uuid REFERENCES templates(id),
+    offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
+    -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
+    offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
     usage_rep_type usage_rep_type -- for billing logic. Reporter provides increment or total usage
 );
 
@@ -83,7 +110,7 @@ CREATE TABLE products (
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding template
-    product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support
+    product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
     agent uuid NOT NULL REFERENCES users(id),
@@ -149,4 +176,67 @@ CREATE TABLE contracts (
     type contract_type NOT NULL,
     version smallint, --version of contract. Greater means newer
     enabled boolean NOT NULL -- contract is in use
+);
+
+-- Endpoint messages. Messages that include info about service access.
+CREATE TABLE endpoints (
+    id uuid PRIMARY KEY,
+    tpl uuid REFERENCES templates(id), -- corresponding endpoint template
+    channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
+    hash sha3_256 NOT NULL, -- message hash
+    status msg_status NOT NULL, -- message status
+    signature text NOT NULL, -- agent's signature
+    tpl_version int NOT NULL, -- template version
+    payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
+    dns varchar(100),
+    ipv4 inet,
+    ipv6 inet,
+    username varchar(100),
+    password varchar(48),
+    nonce uuid NOT NULL, -- random number to get different hash, with same parameters
+    additional_params json -- all additional parameters stored as JSON
+);
+
+-- Job queue.
+CREATE TABLE jobs (
+    id uuid PRIMARY KEY,
+    task_name char(30) NOT NULL, -- name of task
+    status job_status NOT NULL, -- job status
+    parent_obj char(30) NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    relid uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
+    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    created_by job_creator NOT NULL, -- job creator
+    fail_count smallint, -- number of failures
+    try_count smallint -- number of times job was executed
+);
+
+-- Ethereum transactions.
+CREATE TABLE ethtxs (
+    id uuid PRIMARY KEY,
+    hash sha3_256 NOT NULL, -- transaction hash
+    method char(30) NOT NULL, -- contract method
+    status tx_status NOT NULL, -- tx status (custom)
+    job uuid REFERENCES jobs(id) -- corresponding endpoint template
+    issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
+    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
+    addr_from eth_addr NOT NULL, -- from etehereum address
+    addr_to eth_addr NOT NULL, -- from etehereum address
+    nonce numeric, -- tx nonce field
+    gas_price bigint, -- tx gas_price field
+    gas bigint, -- tx gas field
+    tx_raw text -- raw tx as was sent
+);
+
+-- Ethereum events.
+CREATE TABLE ethlog (
+    id uuid PRIMARY KEY,
+    tx_hash sha3_256, -- transaction hash
+    status tx_status NOT NULL -- tx status (custom)
+    job uuid REFERENCES jobs(id) -- corresponding endpoint template
+    block_number int, -- event block number field
+    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
+    addr eth_addr NOT NULL, -- address from which this log originated
+    data text, -- contains one or more 32 Bytes non-indexed arguments of the log
+    topics text -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );

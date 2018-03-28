@@ -1,3 +1,5 @@
+// +build !nosomctest
+
 package somc
 
 import (

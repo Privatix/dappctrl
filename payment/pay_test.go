@@ -1,3 +1,5 @@
+// +build !nopaymenttest
+
 package payment
 
 import (

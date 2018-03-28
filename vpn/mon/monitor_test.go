@@ -1,3 +1,5 @@
+// +build !novpnmontest
+
 package mon
 
 import (

@@ -1,3 +1,5 @@
+// +build !novpnsrvtest
+
 package srv
 
 import (

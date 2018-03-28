@@ -1,9 +1,13 @@
+// +build !noethtest
+
 package lib
 
 import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"eth/contract"
+	"eth/lib/tests"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -11,8 +15,6 @@ import (
 	"log"
 	"math/big"
 	"net/http"
-	"eth/contract"
-	"eth/lib/tests"
 	"testing"
 )
 

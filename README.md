@@ -83,6 +83,20 @@ docker-compose up
 go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json
 ```
 
+## Excluding specific tests from test run
+
+It's possible to exclude arbitrary package tests from test runs. To do so use
+a dedicated *build tag*. Name of a such tag is composed from the `no`-prefix,
+name of the package and the `test` suffix. For example, using `noethtest` tag
+will disable Ethereum library tests and disabling `novpnmontest` will disable
+VPN monitor tests.
+
+Example of a test run with the tags above:
+
+```bash
+go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json -tags=noethtest,novpnmontest
+```
+
 # Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.

@@ -1,3 +1,5 @@
+// +build !noethtest
+
 package lib
 
 import "testing"

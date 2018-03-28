@@ -1,10 +1,12 @@
+// +build !noethtest
+
 package tests
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 )
 
 type GethNode struct {
@@ -30,7 +32,7 @@ func (t *TruffleAPI) Interface() string {
 //---------------------------------------------------------------------------------------------------------------------
 
 type EthereumConf struct {
-	Geth GethNode `json:"geth"`
+	Geth       GethNode   `json:"geth"`
 	TruffleAPI TruffleAPI `json:"truffle"`
 }
 

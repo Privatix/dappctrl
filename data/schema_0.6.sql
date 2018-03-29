@@ -1,8 +1,8 @@
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
--- Templates types.
-CREATE TYPE tpl_type AS ENUM ('offer', 'auth', 'access');
+-- Templates kinds.
+CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
@@ -13,19 +13,22 @@ CREATE TYPE unit_type AS ENUM ('units','seconds');
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
+-- Etehereum address
+CREATE DOMAIN eth_addr AS char(28);
+
  -- Ethereum's uint192 in base64 (RFC-4648).
 CREATE DOMAIN privatix_tokens AS char(32);
 
 -- Contract types.
 CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
--- User roles.
-CREATE TYPE user_role AS ENUM ('client','agent');
+-- User kinds.
+CREATE TYPE user_kind AS ENUM ('client','agent');
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
-    'active' -- service is now active and can be used.
+    'active', -- service is now active and can be used.
     'suspended', -- service usage is not allowed. Usually used to temporary disallow access.
     'terminated' -- service is permanently deactivated.
 );
@@ -50,40 +53,64 @@ CREATE TYPE msg_status AS ENUM (
 	'msg_channel_published' -- published in messaging channel
 );
 
+-- Transaction statuses.
+CREATE TYPE tx_status AS ENUM (
+	'unsent', -- saved in DB, but not sent
+	'sent', -- sent w/o error to eth node
+	'mined', -- tx mined
+	'uncle' -- tx is went to uncle block
+);
+
+-- Job creator.
+CREATE TYPE job_creator AS ENUM (
+	'user', -- by user through UI
+	'billing_checker', -- by billing checker procedure
+	'bc_monitor', -- by blockchain monitor
+	'task' -- by another task
+);
+
+-- Job status.
+CREATE TYPE job_status AS ENUM (
+	'new', -- previously never executed
+	'failed', -- failed to sucessfully execute
+	'skipped', -- skipped by user
+	'done' -- successfully executed
+);
+
 -- Users are party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
     id uuid PRIMARY KEY,
     public_key text NOT NULL,
     private_key text,
-    role user_role NOT NULL, -- agent or client
-    is_default boolean, -- default account
-    not_inuse boolean -- this account is not in use
+    kind user_kind NOT NULL, -- agent or client
+    is_default boolean DEFAULT false, -- default account
+    in_use boolean DEFAULT true-- this account is in use or not
 );
 
 -- Templates.
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
-    raw json,
-    tpl_type tpl_type NOT NULL
+    raw json NOT NULL,
+    kind tpl_kind NOT NULL
 );
 
 -- Products. Used to store billing and action related settings.
 CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
-    offer_tpl_id uuid REFERENCES templates(id),
-    offer_auth_id uuid REFERENCES templates(id),
-    offer_access_id uuid REFERENCES templates(id),
-    usage_rep_type usage_rep_type -- for billing logic. Reporter provides increment or total usage
+    offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
+    -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
+    offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
+    usage_rep_type usage_rep_type NOT NULL -- for billing logic. Reporter provides increment or total usage
 );
 
 -- Service offerings.
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding template
-    product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support
+    product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
     agent uuid NOT NULL REFERENCES users(id),
@@ -104,7 +131,7 @@ CREATE TABLE offerings (
     max_billing_unit_lag int NOT NULL, --maximum tolerance for payment lag (in units)
     max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
     max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
-    free_units smallint, -- free units (test, bonus)
+    free_units smallint NOT NULL DEFAULT 0, -- free units (test, bonus)
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON
 );
@@ -135,7 +162,7 @@ CREATE TABLE sessions (
     stopped timestamp with time zone, -- time, when session stopped
     units_used bigint NOT NULL, -- total units used in this session.
     seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
-    last_used_time timestamp with time zone NOT NULL, -- time of last usage reported
+    last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
     server_ip inet,
     server_port int,
     client_ip inet,
@@ -149,4 +176,65 @@ CREATE TABLE contracts (
     type contract_type NOT NULL,
     version smallint, --version of contract. Greater means newer
     enabled boolean NOT NULL -- contract is in use
+);
+
+-- Endpoint messages. Messages that include info about service access.
+CREATE TABLE endpoints (
+    id uuid PRIMARY KEY,
+    tpl uuid REFERENCES templates(id), -- corresponding endpoint template
+    channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
+    hash sha3_256 NOT NULL, -- message hash
+    status msg_status NOT NULL, -- message status
+    signature text NOT NULL, -- agent's signature
+    tpl_version int NOT NULL, -- template version
+    payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
+    dns varchar(100),
+    ip_addr inet,
+    username varchar(100),
+    password varchar(48),
+    additional_params json -- all additional parameters stored as JSON
+);
+
+-- Job queue.
+CREATE TABLE jobs (
+    id uuid PRIMARY KEY,
+    task_name char(30) NOT NULL, -- name of task
+    status job_status NOT NULL, -- job status
+    parent_obj char(30) NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
+    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    created_by job_creator NOT NULL, -- job creator
+    fail_count smallint, -- number of failures
+    try_count smallint -- number of times job was executed
+);
+
+-- Ethereum transactions.
+CREATE TABLE eth_txs (
+    id uuid PRIMARY KEY,
+    hash sha3_256 NOT NULL, -- transaction hash
+    method char(30) NOT NULL, -- contract method
+    status tx_status NOT NULL, -- tx status (custom)
+    job uuid REFERENCES jobs(id) -- corresponding endpoint template
+    issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
+    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
+    addr_from eth_addr NOT NULL, -- from etehereum address
+    addr_to eth_addr NOT NULL, -- from etehereum address
+    nonce numeric, -- tx nonce field
+    gas_price bigint, -- tx gas_price field
+    gas bigint, -- tx gas field
+    tx_raw text -- raw tx as was sent
+);
+
+-- Ethereum events.
+CREATE TABLE eth_logs (
+    id uuid PRIMARY KEY,
+    tx_hash sha3_256, -- transaction hash
+    status tx_status NOT NULL -- tx status (custom)
+    job uuid REFERENCES jobs(id) -- corresponding endpoint template
+    block_number int, -- event block number field
+    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
+    addr eth_addr NOT NULL, -- address from which this log originated
+    data text, -- contains one or more 32 Bytes non-indexed arguments of the log
+    topics text -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );

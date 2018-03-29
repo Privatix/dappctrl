@@ -1,6 +1,7 @@
 {
     "DB": {
         "Conn": {
+            "user": "postgres",
             "dbname": "dappctrl",
             "sslmode": "disable"
         }

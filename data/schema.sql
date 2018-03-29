@@ -1,3 +1,9 @@
+-- While Postgres out-of-the-box supports storing UUID,
+-- generating UUID values requires an extension.
+-- It is distributed with the vanilla postgres itself,
+-- but is not enabled by default.
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
@@ -77,25 +83,25 @@ CREATE TYPE job_status AS ENUM (
 -- Users are party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     public_key text NOT NULL,
     private_key text,
-    is_default boolean DEFAULT false, -- default account
-    in_use boolean DEFAULT true-- this account is in use or not
+    is_default BOOLEAN DEFAULT FALSE, -- default account
+    in_use BOOLEAN DEFAULT TRUE -- this account is in use or not
 );
 
 -- Templates.
 CREATE TABLE templates (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     hash sha3_256 NOT NULL,
-    raw json NOT NULL,
+    raw json NOT NULL, -- todo: [suggestion] use jsonb instead of json, it is faster and can be indexed
     kind tpl_kind NOT NULL
 );
 
 -- Products. Used to store billing and action related settings.
 CREATE TABLE products (
-    id uuid PRIMARY KEY,
-    name varchar(64) NOT NULL,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(64) NOT NULL, -- todo: [suggestion] change type to "text"
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
@@ -104,47 +110,63 @@ CREATE TABLE products (
 
 -- Service offerings.
 CREATE TABLE offerings (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
     agent uuid NOT NULL REFERENCES users(id),
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version
-    service_name varchar(64) NOT NULL, -- name of service
+    tpl_version INT NOT NULL, -- template version
+    service_name VARCHAR(64) NOT NULL, -- name of service -- todo: [suggestion] change type to "text"
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
-    supply int NOT NULL, -- maximum identical offerings for concurrent use through different state channels
-    unit_name varchar(10) NOT NULL, -- like megabytes, minutes, etc
-    unit_type unit_type NOT NULL, -- type of unit. Time or material.
+    supply INT NOT NULL, -- maximum identical offerings for concurrent use through different state channels
+    unit_name VARCHAR(10) NOT NULL, -- like megabytes, minutes, etc
+    unit_type unit_type NOT NULL, -- type of unit. Time or material. -- todo: [suggestion] change type to "text"
     billing_type bill_type NOT NULL, -- prepaid/postpaid
     setup_price privatix_tokens, -- setup fee
     unit_price privatix_tokens NOT NULL,
-    min_units bigint NOT NULL, -- used to calculate min required deposit
-    max_unit bigint, -- optional. If specified automatic termination can be invoked
-    billing_interval int NOT NULL, -- every unit numbers, that should be paid, after free units consumed
-    max_billing_unit_lag int NOT NULL, --maximum tolerance for payment lag (in units)
-    max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
-    max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
-    free_units smallint NOT NULL DEFAULT 0, -- free units (test, bonus)
+    min_units BIGINT NOT NULL -- used to calculate min required deposit
+        CONSTRAINT positive_min_units CHECK (offerings.min_units >= 0),
+
+    max_unit BIGINT -- optional. If specified automatic termination can be invoked
+        CONSTRAINT positive_max_unit CHECK (offerings.max_unit >= 0),
+
+    billing_interval INT NOT NULL -- every unit numbers, that should be paid, after free units consumed
+        CONSTRAINT positive_billing_interval CHECK (offerings.billing_interval > 0),
+
+    max_billing_unit_lag INT NOT NULL --maximum tolerance for payment lag (in units)
+        CONSTRAINT positive_max_billing_unit_lag CHECK (offerings.max_billing_unit_lag > 0),
+
+    max_suspended_time INT NOT NULL -- maximum time in suspend state, after which service will be terminated (in seconds)
+        CONSTRAINT positive_max_suspended_time CHECK (offerings.max_suspended_time >= 0),
+
+    max_inactive_time_sec BIGINT -- maximum inactive time before channel will be closed
+        CONSTRAINT positive_max_inactive_time_sec CHECK (offerings.max_inactive_time_sec > 0),
+
+    free_units SMALLINT NOT NULL DEFAULT 0 -- free units (test, bonus)
+        CONSTRAINT positive_free_units CHECK (offerings.free_units > 0),
+
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
-    additional_params json -- all additional parameters stored as JSON
+    additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb instead of json, it is faster and can be indexed
 );
 
 -- State channels.
 CREATE TABLE channels (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     agent uuid NOT NULL REFERENCES users(id),
     client uuid NOT NULL REFERENCES users(id),
     offering uuid NOT NULL REFERENCES offerings(id),
-    block int NOT NULL, -- block number, when state channel created
+    block INT NOT NULL -- block number, when state channel created
+        CONSTRAINT positive_block CHECK (channels.block > 0),
+
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
-    service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
+    service_changed_time TIMESTAMP WITH TIME ZONE, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
     total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
-    salt bigint NOT NULL, -- password salt
-    username varchar(100), -- optional username, that can identify service instead of state channel id
+    salt BIGINT NOT NULL, -- password salt
+    username VARCHAR(100), -- optional username, that can identify service instead of state channel id -- todo: [suggestion] change type to "text"
     password sha3_256 NOT NULL,
     receipt_balance privatix_tokens NOT NULL, -- last payment amount received
     receipt_signature text NOT NULL -- signature corresponding to last payment
@@ -152,85 +174,103 @@ CREATE TABLE channels (
 
 -- Client sessions.
 CREATE TABLE sessions (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     channel uuid NOT NULL REFERENCES channels(id),
-    started timestamp with time zone NOT NULL, -- time, when session started
-    stopped timestamp with time zone, -- time, when session stopped
-    units_used bigint NOT NULL, -- total units used in this session.
-    seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
-    last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
+    started TIMESTAMP WITH TIME ZONE NOT NULL, -- time, when session started
+    stopped TIMESTAMP WITH TIME ZONE, -- time, when session stopped
+    units_used BIGINT NOT NULL -- total units used in this session.
+        CONSTRAINT positive_units_used CHECK (sessions.units_used >= 0),
+
+    seconds_consumed BIGINT NOT NULL -- total seconds interval from started is recorded
+        CONSTRAINT positive_seconds_consumed CHECK (sessions.seconds_consumed > 0),
+
+    last_usage_time TIMESTAMP WITH TIME ZONE NOT NULL, -- time of last usage reported
     server_ip inet,
-    server_port int,
+    server_port INT
+        CONSTRAINT server_port_ct CHECK (sessions.server_port > 0 AND sessions.server_port <= 65535),
+
     client_ip inet,
-    client_port int
+    client_port INT
+        CONSTRAINT client_port_ct CHECK (sessions.client_port > 0 AND sessions.client_port <= 65535)
 );
 
 -- Smart contracts.
 CREATE TABLE contracts (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     address sha3_256 NOT NULL, -- ethereum address of contract
     type contract_type NOT NULL,
-    version smallint, --version of contract. Greater means newer
-    enabled boolean NOT NULL -- contract is in use
+    version SMALLINT, --version of contract. Greater means newer
+    enabled BOOLEAN NOT NULL -- contract is in use
 );
 
 -- Endpoint messages. Messages that include info about service access.
 CREATE TABLE endpoints (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     tpl uuid REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version
-    payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
-    dns varchar(100),
+    tpl_version INT NOT NULL, -- template version -- todo: [suggestion] add constraint here. What is current versions range?
+    payment_receiver_address VARCHAR(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
+    dns VARCHAR(100), -- todo: [suggestion] change type to "text"
     ip_addr inet,
-    username varchar(100),
-    password varchar(48),
+    username VARCHAR(100), -- todo: [suggestion] change type to "text"
+    password VARCHAR(48), -- todo: [suggestion] change type to "text"
     additional_params json -- all additional parameters stored as JSON
 );
 
 -- Job queue.
 CREATE TABLE jobs (
-    id uuid PRIMARY KEY,
-    task_name char(30) NOT NULL, -- name of task
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    task_name text NOT NULL, -- name of task
     status job_status NOT NULL, -- job status
-    parent_obj char(30) NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    parent_obj text NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
     rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
-    created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
-    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL, -- timestamp, when job was created
+    not_before TIMESTAMP WITH TIME ZONE, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    fail_count smallint, -- number of failures
-    try_count smallint -- number of times job was executed
+    fail_count SMALLINT DEFAULT 0
+        CONSTRAINT positive_fail_count CHECK (jobs.fail_count >= 0), -- number of failures
+
+    try_count SMALLINT DEFAULT 0 -- todo: [suggestion] renate to attempts_count
+        CONSTRAINT positive_attempts_count CHECK (jobs.try_count >= 0) -- number of times job was executed
 );
 
 -- Ethereum transactions.
 CREATE TABLE eth_txs (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     hash sha3_256 NOT NULL, -- transaction hash
-    method char(30) NOT NULL, -- contract method
+    method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding endpoint template
-    issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
-    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
-    addr_from eth_addr NOT NULL, -- from etehereum address
-    addr_to eth_addr NOT NULL, -- from etehereum address
+    issued TIMESTAMP WITH TIME ZONE NOT NULL, -- timestamp, when tx was sent
+    block_number_issued BIGINT
+        CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
+
+    addr_from eth_addr NOT NULL, -- from ethereum address
+    addr_to eth_addr NOT NULL, -- from ethereum address
     nonce numeric, -- tx nonce field
-    gas_price bigint, -- tx gas_price field
-    gas bigint, -- tx gas field
-    tx_raw text -- raw tx as was sent
+    gas_price BIGINT
+        CONSTRAINT positive_gas_price CHECK (eth_txs.gas_price > 0), -- tx gas_price field
+
+    gas BIGINT
+        CONSTRAINT positive_gas CHECK (eth_txs.gas > 0), -- tx gas field
+
+    tx_raw jsonb -- raw tx as was sent
 );
+
 
 -- Ethereum events.
 CREATE TABLE eth_logs (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding endpoint template
-    block_number int, -- event block number field
-    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
+    block_number BIGINT
+        CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
+
     addr eth_addr NOT NULL, -- address from which this log originated
-    data text, -- contains one or more 32 Bytes non-indexed arguments of the log
-    topics text -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
+    topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );

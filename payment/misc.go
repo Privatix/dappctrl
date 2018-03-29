@@ -1,7 +1,6 @@
 package payment
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 
@@ -64,7 +63,7 @@ func bigger(a, b *number.Number) bool {
 
 func (s *Server) validateChannelState(w http.ResponseWriter,
 	ch *data.Channel) bool {
-	if !ch.IsOpen() {
+	if ch.ChannelStatus != data.ChannelActive {
 		s.replyError(w, errChannelClosed)
 		return false
 	}
@@ -101,23 +100,24 @@ func (s *Server) validateAmount(w http.ResponseWriter,
 func (s *Server) verifySignature(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
 
-	client := &data.Subject{}
+	client := &data.User{}
 	if s.db.FindByPrimaryKeyTo(client, ch.Client) != nil {
 		s.replyError(w, errUnexpected)
 		return false
 	}
 
-	pub, err := base64.URLEncoding.DecodeString(client.PublicKey)
+	pub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
 		s.replyError(w, errUnexpected)
 		return false
 	}
 
-	sig, err := base64.URLEncoding.DecodeString(pld.BalanceMsgSig)
+	sig, err := data.ToBytes(pld.BalanceMsgSig)
 	if err != nil {
 		s.replyError(w, errUnexpected)
 		return false
 	}
+
 	if !crypto.VerifySignature(pub, hash(pld), sig[:len(sig)-1]) {
 		s.replyError(w, errInvalidSignature)
 		return false

@@ -23,20 +23,20 @@ var (
 	testServer *Server
 	testDB     *reform.DB
 	testData   struct {
-		client   *data.Subject
-		agent    *data.Subject
+		client   *data.User
+		agent    *data.User
 		offering *data.Offering
 		channel  *data.Channel
 	}
 )
 
 func newTestPayload(amount int64, ch *data.Channel,
-	client *data.Subject) *payload {
+	client *data.User) *payload {
 	pld := &payload{
 		AgentAddress:    "<agent address>",
 		OpenBlockNumber: ch.Block,
 		OfferingHash:    "<offering hash>",
-		Balance:         util.EthNumToBase64(number.Big(amount)),
+		Balance:         data.FromBytes(number.Big(amount).Bytes()),
 		ContractAddress: "<contract address>",
 	}
 	prvBytes, err := client.PrivateKeyBytes()
@@ -104,14 +104,14 @@ func TestInvalidPayments(t *testing.T) {
 		testData.client)
 
 	validCh := data.NewTestChannel(testData.agent, testData.client,
-		testData.offering, 10, 100, data.ChannelOpen)
+		testData.offering, 10, 100, data.ChannelActive)
 	testDB.Insert(validCh)
 	defer func() { testDB.Delete(validCh) }()
 	lessBalance := newTestPayload(9, validCh, testData.client)
 
 	overcharging := newTestPayload(100+1, validCh, testData.client)
 
-	otherUsersSignature := newTestPayload(100, validCh, data.NewTestSubject())
+	otherUsersSignature := newTestPayload(100, validCh, data.NewTestUser())
 
 	for _, pld := range []*payload{
 		// wrong block number
@@ -148,14 +148,18 @@ func TestMain(m *testing.M) {
 	testServer = NewServer(nil, logger, testDB)
 
 	// prepare test data
-	testData.client = data.NewTestSubject()
+	testData.client = data.NewTestUser()
 	testDB.Insert(testData.client)
-	testData.agent = data.NewTestSubject()
+	testData.agent = data.NewTestUser()
 	testDB.Insert(testData.agent)
-	testData.offering = data.NewTestOffering(testData.agent)
+	prt := data.NewTestProduct()
+	testDB.Insert(prt)
+	tpl := data.NewTemplate(data.TemplateOffer)
+	testDB.Insert(tpl)
+	testData.offering = data.NewTestOffering(testData.agent, prt, tpl.ID)
 	testDB.Insert(testData.offering)
 	testData.channel = data.NewTestChannel(testData.agent, testData.client,
-		testData.offering, 0, 100, data.ChannelOpen)
+		testData.offering, 0, 100, data.ChannelActive)
 	testDB.Insert(testData.channel)
 
 	exitcode := m.Run()

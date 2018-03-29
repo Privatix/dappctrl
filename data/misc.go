@@ -18,18 +18,13 @@ func FromBytes(src []byte) string {
 }
 
 // PrivateKeyBytes returns private key's binary representation.
-func (s *Subject) PrivateKeyBytes() ([]byte, error) {
+func (s *User) PrivateKeyBytes() ([]byte, error) {
 	return ToBytes(*s.PrivateKey)
 }
 
 // PublicKeyBytes returns private key's binary representation.
-func (s *Subject) PublicKeyBytes() ([]byte, error) {
+func (s *User) PublicKeyBytes() ([]byte, error) {
 	return ToBytes(s.PublicKey)
-}
-
-// IsOpen returns true if channel's has open state.
-func (ch *Channel) IsOpen() bool {
-	return ch.State == ChannelOpen
 }
 
 // TotalDepositNum returns total deposit as eth's number.Number.

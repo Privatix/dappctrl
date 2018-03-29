@@ -32,43 +32,67 @@ func NewTestDB(conf *DBConfig, logger *util.Logger) *reform.DB {
 	return db
 }
 
-// NewTestSubject returns new subject
-func NewTestSubject() *Subject {
+// NewTestUser returns new subject
+func NewTestUser() *User {
 	priv, _ := ecdsa.GenerateKey(crypto.S256(), cryptorand.Reader)
 	b := crypto.FromECDSA(priv)
 	privB64 := FromBytes(b)
 	priv, _ = crypto.ToECDSA(b)
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
-	return &Subject{
+	return &User{
 		ID:         util.NewUUID(),
 		PrivateKey: &privB64,
 		PublicKey:  pub,
 	}
 }
 
+// NewTestProduct returns new product.
+func NewTestProduct() *Product {
+	return &Product{
+		ID:           util.NewUUID(),
+		Name:         "Test product",
+		UsageRepType: ProductUsageTotal,
+	}
+}
+
+// NewTemplate returns new tempalte.
+func NewTemplate(kind string) *Template {
+	return &Template{
+		ID:   util.NewUUID(),
+		Raw:  []byte("{}"),
+		Kind: kind,
+	}
+}
+
 // NewTestOffering returns new offering.
-func NewTestOffering(agent *Subject) *Offering {
+func NewTestOffering(agent *User, prt *Product, tpl string) *Offering {
 	return &Offering{
-		ID:      util.NewUUID(),
-		Agent:   agent.ID,
-		Service: ServiceVPN,
-		Supply:  1,
+		ID:               util.NewUUID(),
+		Template:         tpl,
+		Agent:            agent.ID,
+		Product:          prt.ID,
+		Supply:           1,
+		Status:           MsgChPublished,
+		UnitType:         UnitSeconds,
+		BillingType:      BillingPostpaid,
+		Nonce:            util.NewUUID(),
+		AdditionalParams: []byte{'{', '}'},
 	}
 }
 
 // NewTestChannel returns new channel.
-func NewTestChannel(agent, client *Subject, offering *Offering,
-	balance, deposit int64, state string) *Channel {
+func NewTestChannel(agent, client *User, offering *Offering,
+	balance, deposit int64, status string) *Channel {
 	return &Channel{
 		ID:             util.NewUUID(),
 		Agent:          agent.ID,
 		Client:         client.ID,
 		Offering:       offering.ID,
 		Block:          uint(rand.Intn(99999999)),
-		State:          state,
+		ChannelStatus:  status,
+		ServiceStatus:  ServiceActive,
 		TotalDeposit:   FromBytes(number.Big(deposit).Bytes()),
-		ClosedDeposit:  FromBytes(number.Big(0).Bytes()),
 		ReceiptBalance: FromBytes(number.Big(balance).Bytes()),
 	}
 }

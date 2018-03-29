@@ -3,8 +3,9 @@
 package lib
 
 import (
-	"pxctrl/eth/lib/tests"
 	"testing"
+
+	"github.com/privatix/dappctrl/eth/lib/tests"
 )
 
 func TestGasPriceFetching(t *testing.T) {

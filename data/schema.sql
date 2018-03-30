@@ -213,10 +213,10 @@ CREATE TABLE endpoints (
     signature text NOT NULL, -- agent's signature
     tpl_version int NOT NULL, -- template version -- todo: [suggestion] add constraint here. What is current versions range?
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
-    dns varchar(100), -- todo: [suggestion] change type to "text"
+    dns varchar(100),
     ip_addr inet,
-    username varchar(100), -- todo: [suggestion] change type to "text"
-    password varchar(48), -- todo: [suggestion] change type to "text"
+    username varchar(100),
+    password varchar(48),
     additional_params json -- all additional parameters stored as JSON
 );
 

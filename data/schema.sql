@@ -88,7 +88,7 @@ CREATE TABLE settings (
 -- Users are party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     public_key text NOT NULL,
     private_key text,
     is_default BOOLEAN DEFAULT FALSE, -- default account
@@ -97,7 +97,7 @@ CREATE TABLE users (
 
 -- Templates.
 CREATE TABLE templates (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
     raw json NOT NULL, -- todo: [suggestion] use jsonb instead of json, it is faster and can be indexed
     kind tpl_kind NOT NULL
@@ -105,7 +105,7 @@ CREATE TABLE templates (
 
 -- Products. Used to store billing and action related settings.
 CREATE TABLE products (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     name VARCHAR(64) NOT NULL, -- todo: [suggestion] change type to "text"
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
@@ -115,7 +115,7 @@ CREATE TABLE products (
 
 -- Service offerings.
 CREATE TABLE offerings (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
@@ -159,7 +159,7 @@ CREATE TABLE offerings (
 
 -- State channels.
 CREATE TABLE channels (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     agent uuid NOT NULL REFERENCES users(id),
     client uuid NOT NULL REFERENCES users(id),
     offering uuid NOT NULL REFERENCES offerings(id),
@@ -179,7 +179,7 @@ CREATE TABLE channels (
 
 -- Client sessions.
 CREATE TABLE sessions (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     channel uuid NOT NULL REFERENCES channels(id),
     started TIMESTAMP WITH TIME ZONE NOT NULL, -- time, when session started
     stopped TIMESTAMP WITH TIME ZONE, -- time, when session stopped
@@ -201,7 +201,7 @@ CREATE TABLE sessions (
 
 -- Smart contracts.
 CREATE TABLE contracts (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     address sha3_256 NOT NULL, -- ethereum address of contract
     type contract_type NOT NULL,
     version SMALLINT, --version of contract. Greater means newer
@@ -210,7 +210,7 @@ CREATE TABLE contracts (
 
 -- Endpoint messages. Messages that include info about service access.
 CREATE TABLE endpoints (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
@@ -227,7 +227,7 @@ CREATE TABLE endpoints (
 
 -- Job queue.
 CREATE TABLE jobs (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     task_name text NOT NULL, -- name of task
     status job_status NOT NULL, -- job status
     parent_obj text NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
@@ -244,7 +244,7 @@ CREATE TABLE jobs (
 
 -- Ethereum transactions.
 CREATE TABLE eth_txs (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
     method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
@@ -268,7 +268,7 @@ CREATE TABLE eth_txs (
 
 -- Ethereum events.
 CREATE TABLE eth_logs (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding endpoint template

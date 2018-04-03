@@ -52,7 +52,7 @@ CREATE TYPE msg_status AS ENUM (
 
 -- Offering status
 CREATE TYPE offer_status AS ENUM (
-	'empty', -- saved in DB, but not published to blockchain
+	'empty',  -- saved in DB, but not published to blockchain
 	'register', -- in registration or registered in blockchain
     'remove' -- being removed or already removed from blockchain
 );

@@ -1,3 +1,4 @@
+test
 -- Subjects are party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE subjects (

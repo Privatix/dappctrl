@@ -50,6 +50,13 @@ CREATE TYPE msg_status AS ENUM (
 	'msg_channel_published' -- published in messaging channel
 );
 
+-- Offering status
+CREATE TYPE offer_status AS ENUM (
+	'empty', -- saved in DB, but not published to blockchain
+	'register', -- in registration or registered in blockchain
+  'remove', -- being removed or already removed from blockchain
+);
+
 -- Transaction statuses.
 CREATE TYPE tx_status AS ENUM (
 	'unsent', -- saved in DB, but not sent
@@ -115,9 +122,11 @@ CREATE TABLE offerings (
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
+    offer_status offer_status NOT NULL, -- offer status in blockchain
+    block_number_updated bigint
+        CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
     agent uuid NOT NULL REFERENCES users(id),
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version
     service_name varchar(64) NOT NULL,
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
@@ -200,7 +209,7 @@ CREATE TABLE contracts (
     address sha3_256 NOT NULL, -- ethereum address of contract
     type contract_type NOT NULL,
     version smallint, --version of contract. Greater means newer
-    enabled BOOLEAN NOT NULL -- contract is in use
+    enabled boolean NOT NULL -- contract is in use
 );
 
 -- Endpoint messages. Messages that include info about service access.
@@ -211,7 +220,6 @@ CREATE TABLE endpoints (
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version -- todo: [suggestion] add constraint here. What is current versions range?
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     dns varchar(100),
     ip_addr inet,

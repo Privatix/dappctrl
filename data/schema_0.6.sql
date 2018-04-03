@@ -1,3 +1,4 @@
+test
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 

@@ -1,8 +1,9 @@
 package somc
 
 import (
-	"encoding/base64"
 	"encoding/json"
+
+	"github.com/privatix/dappctrl/data"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -18,8 +19,8 @@ type publishOfferingParams struct {
 func (c *Conn) PublishOffering(o []byte) error {
 	hash := crypto.Keccak256Hash(o)
 	params := publishOfferingParams{
-		Hash: base64.URLEncoding.EncodeToString(hash.Bytes()),
-		Data: base64.URLEncoding.EncodeToString(o),
+		Hash: data.FromBytes(hash.Bytes()),
+		Data: data.FromBytes(o),
 	}
 
 	data, err := json.Marshal(&params)

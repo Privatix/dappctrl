@@ -16,7 +16,7 @@ CREATE DOMAIN sha3_256 AS char(44);
 -- Etehereum address
 CREATE DOMAIN eth_addr AS char(28);
 
- -- Ethereum's uint192 in base64 (RFC-4648).
+-- Ethereum's uint192 in base64 (RFC-4648).
 CREATE DOMAIN privatix_tokens AS char(32);
 
 -- Contract types.
@@ -54,7 +54,7 @@ CREATE TYPE msg_status AS ENUM (
 CREATE TYPE offer_status AS ENUM (
 	'empty', -- saved in DB, but not published to blockchain
 	'register', -- in registration or registered in blockchain
-  'remove', -- being removed or already removed from blockchain
+  'remove' -- being removed or already removed from blockchain
 );
 
 -- Transaction statuses.
@@ -94,8 +94,8 @@ CREATE TABLE accounts (
     eth_addr eth_addr NOT NULL, -- ethereum address
     public_key text NOT NULL,
     private_key text,
-    is_default boolean DEFAULT FALSE, -- default account
-    in_use boolean DEFAULT TRUE -- this account is in use or not
+    is_default boolean NOT NULL DEFAULT FALSE, -- default account
+    in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
 );
 
 -- Users are external party in distributed trade.
@@ -146,8 +146,8 @@ CREATE TABLE offerings (
     unit_name varchar(10) NOT NULL, -- like megabytes, minutes, etc
     unit_type unit_type NOT NULL, -- type of unit. Time or material.
     billing_type bill_type NOT NULL, -- prepaid/postpaid
-    setup_price privatix_tokens, -- setup fee
-    unit_price privatix_tokens NOT NULL,
+    setup_price bigint NOT NULL, -- setup fee
+    unit_price bigint NOT NULL,
     min_units bigint NOT NULL -- used to calculate min required deposit
         CONSTRAINT positive_min_units CHECK (offerings.min_units >= 0),
 
@@ -168,7 +168,6 @@ CREATE TABLE offerings (
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
-
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
@@ -186,10 +185,12 @@ CREATE TABLE channels (
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
+    -- TODO change to bigint
     total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
     password sha3_256 NOT NULL,
+    -- TODO change to bigint
     receipt_balance privatix_tokens NOT NULL, -- last payment amount received
     receipt_signature text NOT NULL -- signature corresponding to last payment
 );

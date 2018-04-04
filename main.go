@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 
+	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/payment"
 	"github.com/privatix/dappctrl/somc"
@@ -11,6 +12,7 @@ import (
 )
 
 type config struct {
+	AgentServer   *uisrv.Config
 	DB            *data.DBConfig
 	Log           *util.LogConfig
 	PaymentServer *payment.Config
@@ -45,6 +47,12 @@ func main() {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db)
+	go func() {
+		logger.Fatal("failed to run agent server: %s\n",
+			uiSrv.ListenAndServe())
+	}()
 
 	pmt := payment.NewServer(conf.PaymentServer, logger, db)
 	logger.Fatal("failed to start payment server: %s",

@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/number"
-	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -39,15 +38,7 @@ func newTestPayload(amount int64, ch *data.Channel,
 		Balance:         data.FromBytes(number.Big(amount).Bytes()),
 		ContractAddress: "<contract address>",
 	}
-	prvBytes, err := client.PrivateKeyBytes()
-	if err != nil {
-		panic(err)
-	}
-	prv, err := crypto.ToECDSA(prvBytes)
-	if err != nil {
-		panic(err)
-	}
-	sig, err := crypto.Sign(hash(pld), prv)
+	sig, err := client.Sign(hash(pld))
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +51,7 @@ func sendTestRequest(pld *payload) *httptest.ResponseRecorder {
 	json.NewEncoder(body).Encode(pld)
 	r := httptest.NewRequest("POST", payPath, body)
 	w := httptest.NewRecorder()
-	testServer.validateMethod(testServer.handlePay, "POST")(w, r)
+	util.ValidateMethod(testServer.handlePay, "POST")(w, r)
 	return w
 }
 
@@ -154,9 +145,9 @@ func TestMain(m *testing.M) {
 	testDB.Insert(testData.agent)
 	prt := data.NewTestProduct()
 	testDB.Insert(prt)
-	tpl := data.NewTemplate(data.TemplateOffer)
+	tpl := data.NewTestTemplate(data.TemplateOffer)
 	testDB.Insert(tpl)
-	testData.offering = data.NewTestOffering(testData.agent, prt, tpl.ID)
+	testData.offering = data.NewTestOffering(testData.agent.ID, prt.ID, tpl.ID)
 	testDB.Insert(testData.offering)
 	testData.channel = data.NewTestChannel(testData.agent, testData.client,
 		testData.offering, 0, 100, data.ChannelActive)

@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
 )
 
 // serverError is a payment server error.
@@ -56,11 +54,6 @@ func (s *Server) findChannelByBlock(w http.ResponseWriter,
 	return ch, true
 }
 
-// bigger returns true if a > b and false otherwise.
-func bigger(a, b *number.Number) bool {
-	return a.Cmp(b) > 0
-}
-
 func (s *Server) validateChannelState(w http.ResponseWriter,
 	ch *data.Channel) bool {
 	if ch.ChannelStatus != data.ChannelActive {
@@ -72,25 +65,7 @@ func (s *Server) validateChannelState(w http.ResponseWriter,
 
 func (s *Server) validateAmount(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
-	deposit, err := ch.TotalDepositNum()
-	if err != nil {
-		s.replyError(w, errUnexpected)
-		return false
-	}
-
-	current, err := ch.ReceiptBalanceNum()
-	if err != nil {
-		s.replyError(w, errUnexpected)
-		return false
-	}
-
-	payAmount, err := util.Base64ToEthNum(pld.Balance)
-	if err != nil {
-		s.replyError(w, errUnexpected)
-		return false
-	}
-
-	if !bigger(payAmount, current) || bigger(payAmount, deposit) {
+	if pld.Balance <= ch.ReceiptBalance || pld.Balance > ch.TotalDeposit {
 		s.replyError(w, errInvalidAmount)
 		return false
 	}

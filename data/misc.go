@@ -5,9 +5,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/privatix/dappctrl/util"
 )
 
 // ToBytes returns the bytes represented by the base64 string s.
@@ -41,16 +39,6 @@ func (u *User) Sign(data []byte) ([]byte, error) {
 // PublicKeyBytes returns private key's binary representation.
 func (u *User) PublicKeyBytes() ([]byte, error) {
 	return ToBytes(u.PublicKey)
-}
-
-// TotalDepositNum returns total deposit as eth's number.Number.
-func (ch *Channel) TotalDepositNum() (*number.Number, error) {
-	return util.Base64ToEthNum(ch.TotalDeposit)
-}
-
-// ReceiptBalanceNum returns total deposit as eth's number.Number.
-func (ch *Channel) ReceiptBalanceNum() (*number.Number, error) {
-	return util.Base64ToEthNum(ch.ReceiptBalance)
 }
 
 // OfferingHash returns hash for given Offering.

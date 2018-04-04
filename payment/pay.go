@@ -9,7 +9,7 @@ type payload struct {
 	AgentAddress    string `json:"agentAddress"`
 	OpenBlockNumber uint   `json:"openBlockNum"`
 	OfferingHash    string `json:"offeringHash"`
-	Balance         string `json:"balance"`
+	Balance         uint64 `json:"balance"`
 	BalanceMsgSig   string `json:"balanceMsgSig"`
 	ContractAddress string `json:"contractAddress"`
 }

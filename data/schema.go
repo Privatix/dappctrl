@@ -128,11 +128,11 @@ type Channel struct {
 	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
 	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
 	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
-	TotalDeposit       string     `json:"totalDeposit" reform:"total_deposit"`
+	TotalDeposit       uint64     `json:"totalDeposit" reform:"total_deposit"`
 	Salt               uint64     `json:"-" reform:"salt"`
 	Username           *string    `json:"-" reform:"username"`
 	Password           string     `json:"-" reform:"password"`
-	ReceiptBalance     string     `json:"-" reform:"receipt_balance"`   // Last payment.
+	ReceiptBalance     uint64     `json:"-" reform:"receipt_balance"`   // Last payment.
 	ReceiptSignature   string     `json:"-" reform:"receipt_signature"` // Last payment's signature.
 }
 

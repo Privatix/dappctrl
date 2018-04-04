@@ -8,10 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -29,13 +27,13 @@ var (
 	}
 )
 
-func newTestPayload(amount int64, ch *data.Channel,
+func newTestPayload(amount uint64, ch *data.Channel,
 	client *data.User) *payload {
 	pld := &payload{
 		AgentAddress:    "<agent address>",
 		OpenBlockNumber: ch.Block,
 		OfferingHash:    "<offering hash>",
-		Balance:         data.FromBytes(number.Big(amount).Bytes()),
+		Balance:         amount,
 		ContractAddress: "<contract address>",
 	}
 	sig, err := client.Sign(hash(pld))
@@ -70,7 +68,7 @@ func TestValidPayment(t *testing.T) {
 	if updated.ReceiptSignature != pld.BalanceMsgSig {
 		t.Error("receipt signature is not updated")
 	}
-	if strings.TrimSpace(updated.ReceiptBalance) != pld.Balance {
+	if updated.ReceiptBalance != pld.Balance {
 		t.Error("receipt balance is not updated")
 	}
 }

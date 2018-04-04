@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
@@ -9,6 +10,8 @@ import (
 
 // Computes hash of a payload.
 func hash(pld *payload) []byte {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], pld.Balance)
 	data := crypto.Keccak256(
 		crypto.Keccak256(
 			[]byte("string message_id"),
@@ -23,7 +26,7 @@ func hash(pld *payload) []byte {
 			[]byte(pld.AgentAddress),
 			big.NewInt(int64(pld.OpenBlockNumber)).Bytes(),
 			[]byte(pld.OfferingHash),
-			[]byte(pld.Balance),
+			buf[:],
 			[]byte(pld.ContractAddress),
 		),
 	)

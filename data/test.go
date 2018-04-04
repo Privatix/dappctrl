@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
@@ -87,7 +86,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 
 // NewTestChannel returns new channel.
 func NewTestChannel(agent, client *User, offering *Offering,
-	balance, deposit int64, status string) *Channel {
+	balance, deposit uint64, status string) *Channel {
 	return &Channel{
 		ID:             util.NewUUID(),
 		Agent:          agent.ID,
@@ -96,8 +95,8 @@ func NewTestChannel(agent, client *User, offering *Offering,
 		Block:          uint(rand.Intn(99999999)),
 		ChannelStatus:  status,
 		ServiceStatus:  ServiceActive,
-		TotalDeposit:   FromBytes(number.Big(deposit).Bytes()),
-		ReceiptBalance: FromBytes(number.Big(balance).Bytes()),
+		TotalDeposit:   deposit,
+		ReceiptBalance: balance,
 	}
 }
 

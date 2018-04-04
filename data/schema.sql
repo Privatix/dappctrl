@@ -50,6 +50,13 @@ CREATE TYPE msg_status AS ENUM (
 	'msg_channel_published' -- published in messaging channel
 );
 
+-- Offering status
+CREATE TYPE offer_status AS ENUM (
+	'empty', -- saved in DB, but not published to blockchain
+	'register', -- in registration or registered in blockchain
+    'remove' -- being removed or already removed from blockchain
+);
+
 -- Transaction statuses.
 CREATE TYPE tx_status AS ENUM (
 	'unsent', -- saved in DB, but not sent
@@ -115,6 +122,9 @@ CREATE TABLE offerings (
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
+    offer_status offer_status NOT NULL, -- offer status in blockchain
+    block_number_updated bigint
+        CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
     agent uuid NOT NULL REFERENCES users(id),
     signature text NOT NULL, -- agent's signature
     service_name varchar(64) NOT NULL, -- name of service
@@ -200,7 +210,7 @@ CREATE TABLE contracts (
     address sha3_256 NOT NULL, -- ethereum address of contract
     type contract_type NOT NULL,
     version smallint, --version of contract. Greater means newer
-    enabled BOOLEAN NOT NULL -- contract is in use
+    enabled boolean NOT NULL -- contract is in use
 );
 
 -- Endpoint messages. Messages that include info about service access.

@@ -243,6 +243,65 @@ const (
 	JobCanceled = "canceled"
 )
 
+// Job related object types.
+const (
+	JobOfferring = "offering"
+	JobChannel   = "channel"
+	JobEndpoint  = "endpoint"
+)
+
+// Job handler names.
+const (
+	JobPreChannelCreate               = "preChannelCreate"
+	JobAfterChannelCreate             = "afterChannelCreate"
+	JobPreChannelTopUp                = "preChannelTopUp"
+	JobAfterChannelTopUp              = "afterChannelTopUp"
+	JobPreUncooperativeCloseRequest   = "preUncooperativeCloseRequest"
+	JobAfterUncooperativeCloseRequest = "afterUncooperativeCloseRequest"
+	JobPreUncooperativeClose          = "preUncooperativeClose"
+	JobAfterUncooperativeClose        = "afterUncooperativeClose"
+	JobPreCooperativeClose            = "preCooperativeClose"
+	JobAfterCooperativeClose          = "afterCooperativeClose"
+	JobPreServiceCreate               = "preServiceCreate"
+	JobAfterServiceCreate             = "afterServiceCreate"
+	JobPreServiceSuspend              = "preServiceSuspend"
+	JobAfterServiceSuspend            = "afterServiceSuspend"
+	JobPreServiceUnsuspend            = "preServiceUnsuspend"
+	JobAfterServiceUnsuspend          = "afterServiceUnsuspend"
+	JobPreServiceTerminate            = "preServiceTerminate"
+	JobAfterServiceTerminate          = "afterServiceTerminate"
+	JobPreEndpointMsgCreate           = "preEndpointMsgCreate"
+	JobAfterEndpointMsgCreate         = "afterEndpointMsgCreate"
+	JobPreEndpointMsgBCPublish        = "preEndpointMsgBCPublish"
+	JobAfterEndpointMsgBCPublish      = "afterEndpointMsgBCPublish"
+	JobAfterEndpointMsgBCPublished    = "afterEndpointMsgBCPublished"
+	JobPreEndpointMsgSOMCPublish      = "preEndpointMsgSOMCPublish"
+	JobAfterEndpointMsgSOMCPublish    = "afterEndpointMsgSOMCPublish"
+	JobPreEndpointMsgSOMCGet          = "preEndpointMsgSOMCGet"
+	JobPreOfferingMsgBCPublish        = "preOfferingMsgBCPublish"
+	JobAfterOfferingMsgBCPublish      = "afterOfferingMsgBCPublish"
+	JobAfterOfferingMsgBCPublished    = "afterOfferingMsgBCPublished"
+	JobPreOfferingMsgSOMCPublish      = "preOfferingMsgSOMCPublish"
+	JobAfterOfferingMsgSOMCPublish    = "afterOfferingMsgSOMCPublish"
+	JobPreOfferingMsgSOMCGet          = "preOfferingMsgSOMCGet"
+)
+
+// Job is a task within persistent queue.
+//reform:jobs
+type Job struct {
+	ID          string    `reform:"id,pk"`
+	Handler     string    `reform:"handler"`
+	Status      string    `reform:"status"`
+	RelatedType string    `reform:"related_type"`
+	RelatedID   string    `reform:"related_id"`
+	CreatedAt   time.Time `reform:"created_at"`
+	NotBefore   time.Time `reform:"not_before"`
+	CreatedBy   string    `reform:"created_by"`
+	TryPeriod   *uint     `reform:"try_period"`
+	TryLimit    *uint8    `reform:"try_limit"`
+	TryCount    uint8     `reform:"try_count"`
+}
+
 // Transaction statuses.
 const (
 	TxUnsent = "unsent"

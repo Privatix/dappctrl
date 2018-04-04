@@ -87,14 +87,23 @@ CREATE TABLE settings (
 	description text
 );
 
--- Users are party in distributed trade.
--- Each of them can play an agent role, a client role, or both of them.
-CREATE TABLE users (
+-- Accounts are ethereum accounts.
+-- Accounts used to perform Client and/or Agent operations.
+CREATE TABLE accounts (
     id uuid PRIMARY KEY,
+    eth_addr eth_addr NOT NULL, -- ethereum address
     public_key text NOT NULL,
     private_key text,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
     in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
+);
+
+-- Users are external party in distributed trade.
+-- Each of them can play an agent role, a client role, or both of them.
+CREATE TABLE users (
+    id uuid PRIMARY KEY,
+    eth_addr eth_addr NOT NULL, -- ethereum address
+    public_key text NOT NULL,
 );
 
 -- Templates.
@@ -112,12 +121,14 @@ CREATE TABLE products (
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
-    usage_rep_type usage_rep_type NOT NULL -- for billing logic. Reporter provides increment or total usage
+    usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
+    is_server boolean NOT NULL -- product is defined as server (Agent) or client (Client)
 );
 
 -- Service offerings.
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
+    is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
@@ -125,7 +136,8 @@ CREATE TABLE offerings (
     offer_status offer_status NOT NULL, -- offer status in blockchain
     block_number_updated bigint
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
-    agent uuid NOT NULL REFERENCES users(id),
+
+    agent eth_addr NOT NULL,
     signature text NOT NULL, -- agent's signature
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
@@ -163,8 +175,9 @@ CREATE TABLE offerings (
 -- State channels.
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
-    agent uuid NOT NULL REFERENCES users(id),
-    client uuid NOT NULL REFERENCES users(id),
+    is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
+    agent eth_addr NOT NULL,
+    client eth_addr NOT NULL,
     offering uuid NOT NULL REFERENCES offerings(id),
     block int NOT NULL -- block number, when state channel created
         CONSTRAINT positive_block CHECK (channels.block > 0),
@@ -252,13 +265,13 @@ CREATE TABLE eth_txs (
     hash sha3_256 NOT NULL, -- transaction hash
     method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
+    job uuid REFERENCES jobs(id), -- corresponding job id
     issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
     block_number_issued bigint
         CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
 
     addr_from eth_addr NOT NULL, -- from ethereum address
-    addr_to eth_addr NOT NULL, -- from ethereum address
+    addr_to eth_addr NOT NULL, -- to ethereum address
     nonce numeric, -- tx nonce field
     gas_price bigint
         CONSTRAINT positive_gas_price CHECK (eth_txs.gas_price > 0), -- tx gas_price field
@@ -275,11 +288,11 @@ CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
+    job uuid REFERENCES jobs(id), -- corresponding job id
     block_number bigint
         CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
 
-    addr eth_addr NOT NULL, -- address from which this log originated
+    addr eth_addr NOT NULL, -- address of contract from which this log originated
     data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
     topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );

@@ -38,9 +38,9 @@ checks:
       threshold: 4
 
   return-statements:
-    enabled: false
+    enabled: true
     config:
-      threshold: 4
+      threshold: 5
 
 plugins:
   # develop

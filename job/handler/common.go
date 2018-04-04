@@ -1,0 +1,125 @@
+package handler
+
+import (
+	"fmt"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/privatix/dappctrl/data"
+)
+
+// PreAccountAddBalanceApprove approve balance if amount exists.
+func (w *Handler) PreAccountAddBalanceApprove(job *data.Job) error {
+	acc, err := w.relatedAccount(job,
+		data.JobPreAccountAddBalanceApprove)
+	if err != nil {
+		return err
+	}
+
+	jobData, err := w.balanceData(job)
+	if err != nil {
+		return fmt.Errorf("failed to parse job data: %v", err)
+	}
+
+	addr, err := data.ToAddress(acc.EthAddr)
+	if err != nil {
+		return fmt.Errorf("unable to parse account's addr: %v", err)
+	}
+
+	amount, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
+	if err != nil {
+		return fmt.Errorf("could not get account's ptc balance: %v", err)
+	}
+
+	if amount.Uint64() < uint64(jobData.Amount) {
+		return fmt.Errorf("not enough balance at ptc")
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("unable to parse account's priv key: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	err = w.ethBack.PTCIncreaseApproval(auth,
+		w.pscAddr, big.NewInt(int64(jobData.Amount)))
+	if err != nil {
+		return fmt.Errorf("could not ptc increase approve: %v", err)
+	}
+
+	return nil
+}
+
+// PreAccountAddBalance adds balance to psc.
+func (w *Handler) PreAccountAddBalance(job *data.Job) error {
+	acc, err := w.relatedAccount(job, data.JobPreAccountAddBalance)
+	if err != nil {
+		return err
+	}
+
+	jobData, err := w.balanceData(job)
+	if err != nil {
+		return fmt.Errorf("failed to parse job data: %v", err)
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("unable to parse account's priv key: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	err = w.ethBack.PSCAddBalanceERC20(auth, big.NewInt(int64(jobData.Amount)))
+	if err != nil {
+		return fmt.Errorf("could not add balance to psc: %v", err)
+	}
+
+	return nil
+}
+
+// AfterAccountAddBalance updates psc and ptc balance of an account.
+func (w *Handler) AfterAccountAddBalance(job *data.Job) error {
+	return w.updateAccountBalances(job, data.JobAfterAccountAddBalance)
+}
+
+// PreAccountReturnBalance returns from psc to ptc.
+func (w *Handler) PreAccountReturnBalance(job *data.Job) error {
+	acc, err := w.relatedAccount(job, data.JobPreAccountReturnBalance)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return fmt.Errorf("unable to parse account's priv key: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+
+	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
+	if err != nil {
+		return fmt.Errorf("could not get account's psc balance: %v", err)
+	}
+
+	jobData, err := w.balanceData(job)
+	if err != nil {
+		return fmt.Errorf("failed to parse job data: %v", err)
+	}
+
+	if amount.Uint64() > uint64(jobData.Amount) {
+		return fmt.Errorf("not enough psc balance")
+	}
+
+	err = w.ethBack.PSCReturnBalanceERC20(auth,
+		big.NewInt(int64(jobData.Amount)))
+	if err != nil {
+		return fmt.Errorf("could not return balance from psc: %v", err)
+	}
+
+	return nil
+}
+
+// AfterAccountReturnBalance updates psc and ptc balance of an account.
+func (w *Handler) AfterAccountReturnBalance(job *data.Job) error {
+	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
+}

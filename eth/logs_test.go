@@ -4,13 +4,11 @@ package eth
 
 import (
 	"bytes"
-	"encoding/hex"
 	"log"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/privatix/dappctrl/eth/contract"
@@ -46,15 +44,10 @@ func populateEvents() {
 	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
 	failOnErr(err, "Failed to connect to the Ethereum client")
 
-	testAccounts := testTruffleAPI.GetTestAccounts()
+	testAccounts, err := testTruffleAPI.GetTestAccounts()
+	failOnErr(err, "Failed to get test accounts")
 
-	pKeyBytes, err := hex.DecodeString(testAccounts[0].PrivateKey)
-	failOnErr(err, "Failed to fetch test private key from the API")
-
-	key, err := crypto.ToECDSA(pKeyBytes)
-	failOnErr(err, "Failed to parse received test private key")
-
-	auth := bind.NewKeyedTransactor(key)
+	auth := bind.NewKeyedTransactor(testAccounts[0].PrivateKey)
 
 	// Events populating
 	_, err = psc.ThrowEventLogChannelCreated(auth, Addr1, Addr2, B32Zero, big.NewInt(0), B32Full)

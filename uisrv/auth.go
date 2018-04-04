@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"golang.org/x/crypto/bcrypt"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -130,8 +129,7 @@ func (s *Server) correctPassword(w http.ResponseWriter, pwd string) bool {
 		return false
 	}
 
-	salted := append([]byte(pwd), []byte(salt.Value)...)
-	if bcrypt.CompareHashAndPassword([]byte(password.Value), salted) != nil {
+	if data.ValidatePassword(password.Value, pwd, salt.Value) != nil {
 		s.replyErr(w, http.StatusUnauthorized, &serverError{
 			Message: "Wrong password",
 		})
@@ -187,7 +185,7 @@ func (s *Server) setPassword(w http.ResponseWriter, password string, tx *reform.
 		return false
 	}
 
-	hashed, err := hashPassword(salt, password)
+	hashed, err := data.HashPassword(password, salt)
 	if err != nil {
 		s.logger.Error("failed to hash password: %v", err)
 		s.replyUnexpectedErr(w)
@@ -200,9 +198,4 @@ func (s *Server) setPassword(w http.ResponseWriter, password string, tx *reform.
 	}
 
 	return true
-}
-
-func hashPassword(salt, password string) ([]byte, error) {
-	salted := append([]byte(password), []byte(salt)...)
-	return bcrypt.GenerateFromPassword(salted, bcrypt.DefaultCost)
 }

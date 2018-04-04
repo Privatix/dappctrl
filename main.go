@@ -12,6 +12,8 @@ import (
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/job/handler"
+	"github.com/privatix/dappctrl/job/queue"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/sesssrv"
@@ -33,9 +35,10 @@ type config struct {
 	AgentServer   *uisrv.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
-	Job           *job.Config
+	JobQueue      *queue.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
+	PayAddress    string
 	Proc          *proc.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
@@ -45,7 +48,7 @@ func newConfig() *config {
 	return &config{
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
-		Job:           job.NewConfig(),
+		JobQueue:      queue.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
@@ -129,6 +132,20 @@ func main() {
 			exec.ListenAndServe())
 	}()
 
-	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)
+	somcConn, err := somc.NewConn(conf.SOMC, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	handler, err := handler.NewHandler(db, somcConn,
+		handler.NewEthBackend(psc, ptc, gethConn),
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	queue := queue.NewQueue(conf.JobQueue, logger, db, job.HandlersMap(handler))
+	handler.SetQueue(queue)
+
 	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

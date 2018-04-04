@@ -1,15 +1,12 @@
 package util
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -56,17 +53,6 @@ func ExeDirJoin(elem ...string) string {
 	}
 	elem = append([]string{filepath.Dir(exe)}, elem...)
 	return filepath.Join(elem...)
-}
-
-// Base64ToEthNum returns eth's number.Number from base64 encoded string.
-func Base64ToEthNum(b64X string) (*number.Number, error) {
-	b, err := base64.URLEncoding.DecodeString(strings.TrimSpace(b64X))
-	if err != nil {
-		return nil, err
-	}
-	x := number.Big(0)
-	x.SetBytes(b)
-	return x, nil
 }
 
 // RootPath returns a path of the root package.

@@ -5,14 +5,18 @@ package pay
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -20,8 +24,6 @@ var (
 	testServer *Server
 	testDB     *reform.DB
 )
-
-const testPassword = "test-password"
 
 type testFixture struct {
 	clientAcc *data.Account
@@ -32,13 +34,13 @@ type testFixture struct {
 }
 
 func newFixture(t *testing.T) *testFixture {
-	clientAcc := data.NewTestAccount(testPassword)
+	clientAcc := data.NewTestAccount(data.TestPassword)
 
 	client := data.NewTestUser()
 	client.PublicKey = clientAcc.PublicKey
 	client.EthAddr = clientAcc.EthAddr
 
-	agent := data.NewTestAccount(testPassword)
+	agent := data.NewTestAccount(data.TestPassword)
 
 	product := data.NewTestProduct()
 
@@ -46,6 +48,7 @@ func newFixture(t *testing.T) *testFixture {
 
 	offering := data.NewTestOffering(agent.EthAddr,
 		product.ID, template.ID)
+	offering.Hash = data.FromBytes([]byte("test-hash"))
 
 	channel := data.NewTestChannel(agent.EthAddr,
 		client.EthAddr, offering.ID, 0, 100,
@@ -57,20 +60,38 @@ func newFixture(t *testing.T) *testFixture {
 	return &testFixture{clientAcc, client, agent, offering, channel}
 }
 
-func newTestPayload(amount uint64, channel *data.Channel,
+func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 	offering *data.Offering, clientAcc *data.Account) *payload {
+
+	testPSCAddr := common.HexToAddress("0x1")
+
 	pld := &payload{
 		AgentAddress:    channel.Agent,
 		OpenBlockNumber: channel.Block,
 		OfferingHash:    offering.Hash,
 		Balance:         amount,
-		ContractAddress: "<contract address>",
+		ContractAddress: data.FromBytes(testPSCAddr.Bytes()),
 	}
-	sig, err := clientAcc.Sign(hash(pld), data.TestToPrivateKey, testPassword)
+
+	agentAddr := data.TestToAddress(t, channel.Agent)
+
+	offeringHash := data.TestToHash(t, pld.OfferingHash)
+
+	hash := eth.BalanceProofHash(testPSCAddr, agentAddr,
+		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+
+	key, err := data.TestToPrivateKey(clientAcc.PrivateKey, data.TestPassword)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+
+	sig, err := crypto.Sign(hash, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	pld.BalanceMsgSig = data.FromBytes(sig)
+
 	return pld
 }
 
@@ -88,7 +109,7 @@ func TestValidPayment(t *testing.T) {
 	fixture := newFixture(t)
 
 	// 100 is a test payment amount
-	payload := newTestPayload(100, fixture.channel, fixture.offering, fixture.clientAcc)
+	payload := newTestPayload(t, 100, fixture.channel, fixture.offering, fixture.clientAcc)
 	w := sendTestRequest(payload)
 	if w.Code != http.StatusOK {
 		t.Errorf("expect response ok, got: %d", w.Code)
@@ -101,7 +122,7 @@ func TestValidPayment(t *testing.T) {
 		panic(err)
 	}
 
-	if updated.ReceiptSignature != payload.BalanceMsgSig {
+	if *updated.ReceiptSignature != payload.BalanceMsgSig {
 		t.Error("receipt signature is not updated")
 	}
 
@@ -114,7 +135,7 @@ func TestInvalidPayments(t *testing.T) {
 	defer data.CleanTestDB(t, testDB)
 	fixture := newFixture(t)
 
-	validPayload := newTestPayload(1, fixture.channel, fixture.offering, fixture.clientAcc)
+	validPayload := newTestPayload(t, 1, fixture.channel, fixture.offering, fixture.clientAcc)
 	wrongBlock := &payload{
 		AgentAddress:    validPayload.AgentAddress,
 		OpenBlockNumber: validPayload.OpenBlockNumber + 1,
@@ -134,14 +155,14 @@ func TestInvalidPayments(t *testing.T) {
 
 	data.InsertToTestDB(t, testDB, closedChannel, validCh)
 
-	closedState := newTestPayload(1, closedChannel, fixture.offering, fixture.clientAcc)
+	closedState := newTestPayload(t, 1, closedChannel, fixture.offering, fixture.clientAcc)
 
-	lessBalance := newTestPayload(9, validCh, fixture.offering, fixture.clientAcc)
+	lessBalance := newTestPayload(t, 9, validCh, fixture.offering, fixture.clientAcc)
 
-	overcharging := newTestPayload(100+1, validCh, fixture.offering, fixture.clientAcc)
+	overcharging := newTestPayload(t, 100+1, validCh, fixture.offering, fixture.clientAcc)
 
-	otherUser := data.NewTestAccount(testPassword)
-	otherUsersSignature := newTestPayload(100, validCh, fixture.offering, otherUser)
+	otherUser := data.NewTestAccount(data.TestPassword)
+	otherUsersSignature := newTestPayload(t, 100, validCh, fixture.offering, otherUser)
 
 	for _, pld := range []*payload{
 		// wrong block number

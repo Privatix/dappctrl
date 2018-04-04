@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
@@ -45,26 +43,11 @@ func validOfferingPayload() data.Offering {
 		Product:            testProd.ID,
 		ServiceName:        "my-service",
 		SetupPrice:         32,
-		Supply:             uint(1),
+		Supply:             1,
 		Template:           testTpl.ID,
 		UnitName:           "Time",
 		UnitPrice:          76,
 		UnitType:           data.UnitSeconds,
-	}
-}
-
-func testOfferingReply(t *testing.T, offer *data.Offering) {
-	// test hash
-	expectedHash := data.FromBytes(data.OfferingHash(offer))
-	if offer.Hash != expectedHash {
-		t.Errorf("expected hash %s, got: %s", expectedHash, offer.Hash)
-	}
-	// test signature.
-	pub, _ := data.ToBytes(testAgent.PublicKey)
-	sig, _ := data.ToBytes(offer.Signature)
-	hash := data.OfferingHash(offer)
-	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
-		t.Error("wrong signature")
 	}
 }
 
@@ -92,11 +75,6 @@ func TestPostOfferingSuccess(t *testing.T) {
 	if res.StatusCode != http.StatusCreated {
 		t.Errorf("failed to create, response: %d", res.StatusCode)
 	}
-	reply := &replyEntity{}
-	json.NewDecoder(res.Body).Decode(reply)
-	offering := &data.Offering{}
-	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
-	testOfferingReply(t, offering)
 }
 
 func TestPostOfferingValidation(t *testing.T) {
@@ -189,11 +167,6 @@ func TestPutOfferingSuccess(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("failed to put, response: %d", res.StatusCode)
 	}
-	reply := &replyEntity{}
-	json.NewDecoder(res.Body).Decode(reply)
-	offering := &data.Offering{}
-	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
-	testOfferingReply(t, offering)
 }
 
 func testGetOfferings(t *testing.T, id, product, status string, exp int) {
@@ -272,11 +245,13 @@ func TestGetClientOffering(t *testing.T) {
 	// Insert test offerings.
 	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off1.OfferStatus = data.OfferRegister
+	off1.Status = data.MsgChPublished
 	off1.IsLocal = false
 	off1.Country = "US"
 
 	off2 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferRegister
+	off2.Status = data.MsgChPublished
 	off2.IsLocal = false
 	off2.Country = "SU"
 
@@ -305,7 +280,7 @@ func TestGetClientOffering(t *testing.T) {
 	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
 
 	// price range
-	testGetClientOfferings(t, lowPrice, "", "", 2)     // inside range
+	testGetClientOfferings(t, "", "", "", 2)           // inside range
 	testGetClientOfferings(t, "", highPrice, "", 2)    // inside range
 	testGetClientOfferings(t, "", lowPrice, "", 0)     // above range
 	testGetClientOfferings(t, highPrice, "", "", 0)    // below range

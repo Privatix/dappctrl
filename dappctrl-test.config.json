@@ -62,7 +62,11 @@
         "TruffleAPIURL": ""
     },
 
-    "Job": {
+    "JobHanlderTest": {
+        "SOMCTimeout": 10
+    },
+
+    "JobQueue": {
         "CollectJobs": 100,
         "CollectPeriod": 1,
         "WorkerBufLen": 10,
@@ -77,7 +81,7 @@
         }
     },
 
-    "JobTest": {
+    "JobQueueTest": {
         "StressJobs": 100
     },
 

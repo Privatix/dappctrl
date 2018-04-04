@@ -5,7 +5,7 @@ BEGIN TRANSACTION;
 INSERT INTO products (id, name, usage_rep_type, is_server, salt, password,
     client_ident)
 VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'Test VPN service', 'total',
-    true, 6012867121110302348, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=',
+    true, 6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
     'by_channel_id');
 
 INSERT INTO accounts (id, eth_addr, public_key, private_key, name, ptc_balance,
@@ -32,6 +32,6 @@ INSERT INTO channels (id, is_local, agent, client, offering, block,
     receipt_balance, receipt_signature)
 VALUES ('ae5deac9-44c3-4840-bdff-ca9de58c89f4', true, '', '',
     '32000ae1-f752-4d55-8d58-22d05ef08803', 1, 'active', 'active', 1,
-    6012867121110302348, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=', 1, 1);
+    6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 1, 1);
 
 END TRANSACTION;

@@ -11,7 +11,6 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func TestSetPasswordFirstTime(t *testing.T) {
@@ -99,7 +98,7 @@ func TestUpdatePasswordWrongLen(t *testing.T) {
 func insertTestPassword(t *testing.T) string {
 	password := "test-password"
 	salt := util.NewUUID()
-	hashed, _ := hashPassword(salt, password)
+	hashed, _ := data.HashPassword(password, salt)
 	insertItems(t, &data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
 		&data.Setting{Key: passwordKey, Value: string(hashed), Name: "PWD"})
 	return password
@@ -121,12 +120,11 @@ func sendPayloadToAuthAndTestStatus(t *testing.T, method string,
 
 func testPasswordMatchesWithStored(t *testing.T, expected string) {
 	salt := findSetting(t, saltKey)
-	salted := append([]byte(expected), []byte(salt.Value)...)
+	hashed := findSetting(t, passwordKey).Value
 
-	hashed := []byte(findSetting(t, passwordKey).Value)
-
-	if err := bcrypt.CompareHashAndPassword(hashed, salted); err != nil {
-		t.Fatal("wrong password stored: ", err)
+	err := data.ValidatePassword(hashed, expected, salt.Value)
+	if err != nil {
+		t.Fatal("wrong password stored")
 	}
 }
 
@@ -170,7 +168,7 @@ func TestBasicAuthMiddleware(t *testing.T) {
 
 	salt := "salt"
 	password := "test-password"
-	passwordHash, _ := hashPassword(salt, password)
+	passwordHash, _ := data.HashPassword(password, salt)
 	insertItems(t, &data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
 		&data.Setting{Key: passwordKey, Value: string(passwordHash), Name: "PWD"})
 

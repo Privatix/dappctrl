@@ -142,7 +142,7 @@ func TestValidEndpointMessage(t *testing.T) {
 	fxt := newFixture(t)
 	defer fxt.clean()
 
-	s, err := New(testDB, conf.PayServer)
+	s, err := New(testDB, conf.PayServer.Addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestBadProductConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer)
+	s, err := New(testDB, conf.PayServer.Addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestBadProductOfferAccessID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer)
+	s, err := New(testDB, conf.PayServer.Addr)
 	if err != nil {
 		t.Fatal(err)
 	}

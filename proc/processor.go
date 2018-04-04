@@ -3,7 +3,7 @@ package proc
 import (
 	"errors"
 
-	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/job/queue"
 )
 
 // Config is processor configuration.
@@ -18,12 +18,12 @@ func NewConfig() *Config {
 // Processor encapsulates a set of top-level business logic routines.
 type Processor struct {
 	conf  *Config
-	queue *job.Queue
+	queue *queue.Queue
 }
 
 // NewProcessor creates a new processor.
 func NewProcessor(
-	conf *Config, queue *job.Queue) *Processor {
+	conf *Config, queue *queue.Queue) *Processor {
 	return &Processor{
 		conf:  conf,
 		queue: queue,

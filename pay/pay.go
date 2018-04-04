@@ -7,7 +7,7 @@ import (
 // payload is a balance proof received from a client.
 type payload struct {
 	AgentAddress    string `json:"agentAddress"`
-	OpenBlockNumber uint   `json:"openBlockNum"`
+	OpenBlockNumber uint32 `json:"openBlockNum"`
 	OfferingHash    string `json:"offeringHash"`
 	Balance         uint64 `json:"balance"`
 	BalanceMsgSig   string `json:"balanceMsgSig"`

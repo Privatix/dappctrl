@@ -1,0 +1,241 @@
+package handler
+
+import (
+	"database/sql"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	reform "gopkg.in/reform.v1"
+
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job/queue"
+	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/somc"
+	"github.com/privatix/dappctrl/util"
+)
+
+type testConfig struct {
+	DB             *data.DBConfig
+	JobHanlderTest *struct {
+		SOMCTimeout time.Duration // In seconds.
+	}
+	JobQueue  *queue.Config
+	Log       *util.LogConfig
+	PayServer *pay.Config
+	SOMC      *somc.Config
+	SOMCTest  *somc.TestConfig
+	pscAddr   common.Address
+}
+
+func newTestConfig() *testConfig {
+	return &testConfig{
+		DB:       data.NewDBConfig(),
+		JobQueue: queue.NewConfig(),
+		Log:      util.NewLogConfig(),
+		SOMC:     somc.NewConfig(),
+		SOMCTest: somc.NewTestConfig(),
+		pscAddr:  common.HexToAddress("0x1"),
+	}
+}
+
+type handlerTest struct {
+	db       *reform.DB
+	ethBack  *testEthBackend
+	fakeSOMC *somc.FakeSOMC
+	somcConn *somc.Conn
+	handler  *Handler
+}
+
+var (
+	conf   *testConfig
+	db     *reform.DB
+	logger *util.Logger
+)
+
+func newHandlerTest(t *testing.T) *handlerTest {
+
+	fakeSOMC := somc.NewFakeSOMC(t, conf.SOMC.URL,
+		conf.SOMCTest.ServerStartupDelay)
+
+	somcConn, err := somc.NewConn(conf.SOMC, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jobQueue := queue.NewQueue(conf.JobQueue, logger, db, nil)
+
+	ethBack := newTestEthBackend(conf.pscAddr)
+
+	pwdStorage := new(data.PWDStorage)
+	pwdStorage.Set(data.TestPassword)
+
+	handler, err := NewHandler(db, somcConn, ethBack,
+		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
+	if err != nil {
+		fakeSOMC.Close()
+		somcConn.Close()
+		panic(err)
+	}
+	handler.SetQueue(jobQueue)
+
+	return &handlerTest{
+		db:       db,
+		ethBack:  ethBack,
+		fakeSOMC: fakeSOMC,
+		somcConn: somcConn,
+		handler:  handler,
+	}
+}
+
+func (e *handlerTest) close() {
+	e.fakeSOMC.Close()
+	e.somcConn.Close()
+}
+
+func TestMain(m *testing.M) {
+	conf = newTestConfig()
+
+	util.ReadTestConfig(conf)
+
+	var err error
+
+	logger, err = util.NewLogger(conf.Log)
+	if err != nil {
+		panic(err)
+	}
+
+	db, err = data.NewDB(conf.DB, logger)
+	if err != nil {
+		panic(err)
+	}
+	defer data.CloseDB(db)
+
+	os.Exit(m.Run())
+}
+
+func (e *handlerTest) insertToTestDB(t *testing.T, recs ...reform.Struct) {
+	data.InsertToTestDB(t, e.db, recs...)
+}
+
+func (e *handlerTest) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
+	data.DeleteFromTestDB(t, e.db, recs...)
+}
+
+func (e *handlerTest) updateInTestDB(t *testing.T, rec reform.Record) {
+	data.SaveToTestDB(t, e.db, rec)
+}
+
+func (e *handlerTest) findTo(t *testing.T, rec reform.Record, id string) {
+	err := e.db.FindByPrimaryKeyTo(rec, id)
+	if err != nil {
+		t.Fatal("failed to find: ", err)
+	}
+}
+
+func (e *handlerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
+	job := &data.Job{}
+	err := e.db.SelectOneTo(job,
+		"WHERE type=$1 AND status=$2 AND related_type=$3"+
+			" AND related_id=$4 AND created_by=$5",
+		jobType, data.JobActive, relType,
+		relID, data.JobTask)
+	if err != nil {
+		t.Log(err)
+		t.Fatalf("%s job expected", jobType)
+	}
+	e.deleteFromTestDB(t, job)
+}
+
+func runJob(t *testing.T, workerF func(*data.Job) error, job *data.Job) {
+	if err := workerF(job); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type handlerTestFixture struct {
+	*data.TestFixture
+	job *data.Job
+}
+
+func (e *handlerTest) newTestFixture(t *testing.T,
+	jobType, relType string) *handlerTestFixture {
+	f := data.NewTestFixture(t, e.db)
+
+	job := data.NewTestJob(jobType, data.JobBCMonitor, relType)
+	switch relType {
+	case data.JobChannel:
+		job.RelatedID = f.Channel.ID
+	case data.JobEndpoint:
+		job.RelatedID = f.Endpoint.ID
+	case data.JobOfferring:
+		job.RelatedID = f.Offering.ID
+	case data.JobAccount:
+		job.RelatedID = f.Account.ID
+	}
+	e.insertToTestDB(t, job)
+
+	// Clear call stack.
+	e.ethBack.callStack = []testEthBackCall{}
+
+	return &handlerTestFixture{f, job}
+}
+
+func (f *handlerTestFixture) close() {
+	data.DeleteFromTestDB(f.T, f.DB, f.job)
+	f.TestFixture.Close()
+}
+
+func (f *handlerTestFixture) setJobData(t *testing.T, d interface{}) {
+	b, err := json.Marshal(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.job.Data = b
+	data.SaveToTestDB(t, f.DB, f.job)
+}
+
+func testCommonErrors(t *testing.T, workerF func(*data.Job) error, job data.Job) {
+	for _, f := range []func(*testing.T, func(*data.Job) error, data.Job){
+		testWrongType,
+		// testWrongRelatedType,
+		// testNoRelatedFound,
+	} {
+		t.Run(funcName(f), func(t *testing.T) {
+			f(t, workerF, job)
+		})
+	}
+}
+
+func funcName(f interface{}) string {
+	funcName := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+	funcName = filepath.Ext(funcName)
+	return strings.TrimPrefix(funcName, ".")
+}
+
+func testWrongRelatedType(t *testing.T, f func(*data.Job) error, job data.Job) {
+	job.RelatedType = "wrong-rel-type"
+	if f(&job) != ErrInvalidJob {
+		t.Fatal("related type not validated")
+	}
+}
+
+func testWrongType(t *testing.T, f func(*data.Job) error, job data.Job) {
+	job.Type = "wrong-type"
+	if err := f(&job); err != ErrInvalidJob {
+		t.Fatal("type not validated: ", err, ErrInvalidJob)
+	}
+}
+
+func testNoRelatedFound(t *testing.T, f func(*data.Job) error, job data.Job) {
+	job.RelatedID = util.NewUUID()
+	if err := f(&job); err != sql.ErrNoRows {
+		t.Fatal("no error on related absence, got: ", err)
+	}
+}

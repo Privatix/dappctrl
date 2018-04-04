@@ -1,6 +1,6 @@
 // +build !nojobtest
 
-package job
+package queue
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ type jobTestConfig struct {
 	StressJobs uint
 }
 
-func newJobTestConfig() *jobTestConfig {
+func newJobQueueTestConfig() *jobTestConfig {
 	return &jobTestConfig{
 		StressJobs: 100,
 	}
@@ -27,10 +27,10 @@ func newJobTestConfig() *jobTestConfig {
 
 var (
 	conf struct {
-		DB      *data.DBConfig
-		Job     *Config
-		JobTest *jobTestConfig
-		Log     *util.LogConfig
+		DB           *data.DBConfig
+		JobQueue     *Config
+		JobQueueTest *jobTestConfig
+		Log          *util.LogConfig
 	}
 
 	logger *util.Logger
@@ -53,11 +53,12 @@ func createJob() *data.Job {
 		RelatedType: data.JobChannel,
 		CreatedBy:   data.JobUser,
 		CreatedAt:   time.Now(),
+		Data:        []byte("{}"),
 	}
 }
 
 func TestAdd(t *testing.T) {
-	queue := NewQueue(conf.Job, logger, db, nil)
+	queue := NewQueue(conf.JobQueue, logger, db, nil)
 	defer queue.Close()
 
 	job := createJob()
@@ -77,7 +78,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestHandlerNotFound(t *testing.T) {
-	queue := NewQueue(conf.Job, logger, db, nil)
+	queue := NewQueue(conf.JobQueue, logger, db, nil)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -115,9 +116,9 @@ func TestFailure(t *testing.T) {
 	}
 
 	handlerMap := HandlerMap{
-		data.JobClientPreChannelCreate: makeHandler(conf.Job.TryLimit),
+		data.JobClientPreChannelCreate: makeHandler(conf.JobQueue.TryLimit),
 	}
-	queue := NewQueue(conf.Job, logger, db, handlerMap)
+	queue := NewQueue(conf.JobQueue, logger, db, handlerMap)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -134,7 +135,7 @@ func TestFailure(t *testing.T) {
 	job.TryCount = 0
 	job.Status = data.JobActive
 	handlerMap[data.JobClientPreChannelCreate] =
-		makeHandler(conf.Job.TryLimit + 1)
+		makeHandler(conf.JobQueue.TryLimit + 1)
 	util.TestExpectResult(t, "Save", nil, db.Save(job))
 
 	go waitForJob(queue, job, ch)
@@ -147,7 +148,7 @@ func TestFailure(t *testing.T) {
 
 func TestStress(t *testing.T) {
 	started := time.Now()
-	numStressJobs := int(conf.JobTest.StressJobs)
+	numStressJobs := int(conf.JobQueueTest.StressJobs)
 
 	ch := make(chan struct{})
 	handler := func(j *data.Job) error {
@@ -155,7 +156,7 @@ func TestStress(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 
-		if j.TryCount+1 < conf.Job.TryLimit && rand.Uint32()%2 == 0 {
+		if j.TryCount+1 < conf.JobQueue.TryLimit && rand.Uint32()%2 == 0 {
 			return errors.New("some error")
 		}
 
@@ -167,7 +168,7 @@ func TestStress(t *testing.T) {
 		return nil
 	}
 
-	queue := NewQueue(conf.Job, logger, db,
+	queue := NewQueue(conf.JobQueue, logger, db,
 		HandlerMap{data.JobClientPreChannelCreate: handler})
 
 	ch2 := make(chan error)
@@ -190,9 +191,9 @@ func TestStress(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.Job = NewConfig()
+	conf.JobQueue = NewConfig()
 	conf.Log = util.NewLogConfig()
-	conf.JobTest = newJobTestConfig()
+	conf.JobQueueTest = newJobQueueTestConfig()
 	conf.DB = data.NewDBConfig()
 	util.ReadTestConfig(&conf)
 

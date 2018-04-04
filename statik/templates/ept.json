@@ -13,7 +13,7 @@
     },
     "properties": {
         "templateHash": {
-            "$ref":"#/definitions/uuid"
+            "type": "string"
         },
         "username":  {
             "$ref":"#/definitions/uuid"

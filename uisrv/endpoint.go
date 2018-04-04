@@ -14,6 +14,6 @@ func (s *Server) handleGetEndpoints(w http.ResponseWriter, r *http.Request) {
 			{Name: "id", Field: "id"},
 			{Name: "template", Field: "template"},
 		},
-		View: data.EndpointTable,
+		View: data.EndpointUITable,
 	})
 }

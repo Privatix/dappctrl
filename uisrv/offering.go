@@ -96,24 +96,17 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	if offering.ID == "" {
 		offering.ID = util.NewUUID()
 	}
+
+	agent := &data.Account{}
+	if err := s.db.FindByPrimaryKeyTo(agent, offering.Agent); err != nil {
+		return err
+	}
+
 	offering.OfferStatus = data.OfferRegister
 	offering.Status = data.MsgUnpublished
-	agent := &data.Account{}
-	err := s.db.FindByPrimaryKeyTo(agent, offering.Agent)
-	if err != nil {
-		return err
-	}
 	offering.Agent = agent.EthAddr
-	// TODO: fix this
 	offering.BlockNumberUpdated = 1
-	hash := data.OfferingHash(offering)
-	offering.Hash = data.FromBytes(hash)
 
-	sig, err := agent.Sign(hash, s.decryptKeyFunc, s.pwdStorage.Get())
-	if err != nil {
-		return err
-	}
-	offering.Signature = data.FromBytes(sig)
 	return nil
 }
 

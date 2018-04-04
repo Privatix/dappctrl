@@ -21,7 +21,7 @@
         "GethURL": ""
     },
 
-    "Job": {
+    "JobQueue": {
         "CollectJobs": 100,
         "CollectPeriod": 1000,
         "WorkerBufLen": 10,
@@ -40,10 +40,7 @@
         "Level": "info"
     },
 
-    "AgentServer": {
-        "Addr": "localhost:3000",
-        "TLS": null
-    },
+    "PayAddress": "http://localhost:9000/v1/pmtChannel/pay",
 
     "PayServer": {
         "Addr": "localhost:9000",

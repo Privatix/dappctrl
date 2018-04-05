@@ -1,28 +1,40 @@
+BEGIN;
+
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
+DROP TYPE IF EXISTS usage_rep_type;
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates kinds.
+DROP TYPE IF EXISTS tpl_kind;
 CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
+DROP TYPE IF EXISTS bill_type;
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
 
 -- Unit types. Used for billing calculation.
+DROP TYPE IF EXISTS unit_type;
 CREATE TYPE unit_type AS ENUM ('units','seconds');
 
+-- Contract types.
+DROP TYPE IF EXISTS contract_type;
+CREATE TYPE contract_type AS ENUM ('ptc','psc');
+
+
 -- SHA3-256 in base64 (RFC-4648).
+DROP DOMAIN IF EXISTS sha3_256;
 CREATE DOMAIN sha3_256 AS char(44);
 
 -- Etehereum address
+DROP DOMAIN IF EXISTS eth_addr;
 CREATE DOMAIN eth_addr AS char(28);
 
 -- Ethereum's uint192 in base64 (RFC-4648).
-CREATE DOMAIN privatix_tokens AS char(32);
-
--- Contract types.
-CREATE TYPE contract_type AS ENUM ('ptc','psc');
+DROP DOMAIN IF EXISTS privatix_tokens;
+CREATE DOMAIN privatix_tokens AS char(32); -- todo: propose NUMERIC https://www.postgresql.org/docs/9.1/static/datatype-numeric.html [8.1.1]
 
 -- Service operational status.
+DROP TYPE IF EXISTS svc_status;
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
     'active', -- service is now active and can be used.
@@ -31,6 +43,7 @@ CREATE TYPE svc_status AS ENUM (
 );
 
 -- State channel states.
+DROP TYPE IF EXISTS chan_status;
 CREATE TYPE chan_status AS ENUM (
     'pending', -- waiting to be opened
     'active', -- opened
@@ -43,52 +56,59 @@ CREATE TYPE chan_status AS ENUM (
 );
 
 -- Messages statuses.
+DROP TYPE IF EXISTS msg_status;
 CREATE TYPE msg_status AS ENUM (
-	'unpublished', -- saved in DB, but not published
-	'bchain_publishing', -- publishing in blockchain
-	'bchain_published', -- published in blockchain
-	'msg_channel_published' -- published in messaging channel
+    'unpublished', -- saved in DB, but not published
+    'bchain_publishing', -- publishing in blockchain
+    'bchain_published', -- published in blockchain
+    'msg_channel_published' -- published in messaging channel
 );
 
 -- Offering status
+DROP TYPE IF EXISTS offer_status;
 CREATE TYPE offer_status AS ENUM (
-	'empty', -- saved in DB, but not published to blockchain
-	'register', -- in registration or registered in blockchain
-  'remove' -- being removed or already removed from blockchain
+    'empty', -- saved in DB, but not published to blockchain
+    'register', -- in registration or registered in blockchain
+    'remove' -- being removed or already removed from blockchain
 );
 
 -- Transaction statuses.
+DROP TYPE IF EXISTS tx_status;
 CREATE TYPE tx_status AS ENUM (
-	'unsent', -- saved in DB, but not sent
-	'sent', -- sent w/o error to eth node
-	'mined', -- tx mined
-	'uncle' -- tx is went to uncle block
+    'unsent', -- saved in DB, but not sent
+    'sent', -- sent w/o error to eth node
+    'mined', -- tx mined
+    'uncle' -- tx is went to uncle block
 );
 
 -- Job creator.
+DROP TYPE IF EXISTS job_creator;
 CREATE TYPE job_creator AS ENUM (
-	'user', -- by user through UI
-	'billing_checker', -- by billing checker procedure
-	'bc_monitor', -- by blockchain monitor
-	'task' -- by another task
+    'user', -- by user through UI
+    'billing_checker', -- by billing checker procedure
+    'bc_monitor', -- by blockchain monitor
+    'task' -- by another task
 );
 
 -- Job status.
+DROP TYPE IF EXISTS job_status;
 CREATE TYPE job_status AS ENUM (
-	'new', -- previously never executed
-	'failed', -- failed to sucessfully execute
-	'skipped', -- skipped by user
-	'done' -- successfully executed
+    'new', -- previously never executed
+    'failed', -- failed to successfully execute
+    'skipped', -- skipped by user
+    'done' -- successfully executed
 );
 
+DROP TABLE IF EXISTS settings;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
-	description text
+    description text
 );
 
 -- Accounts are ethereum accounts.
 -- Accounts used to perform Client and/or Agent operations.
+DROP TABLE IF EXISTS accounts;
 CREATE TABLE accounts (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
@@ -100,13 +120,15 @@ CREATE TABLE accounts (
 
 -- Users are external party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
+DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
-    public_key text NOT NULL,
+    public_key text NOT NULL
 );
 
 -- Templates.
+DROP TABLE IF EXISTS templates;
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
@@ -115,6 +137,7 @@ CREATE TABLE templates (
 );
 
 -- Products. Used to store billing and action related settings.
+DROP TABLE IF EXISTS products;
 CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
@@ -126,6 +149,7 @@ CREATE TABLE products (
 );
 
 -- Service offerings.
+DROP TABLE IF EXISTS offerings;
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
     is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
@@ -173,6 +197,7 @@ CREATE TABLE offerings (
 );
 
 -- State channels.
+DROP TABLE IF EXISTS channels;
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
     is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
@@ -196,6 +221,7 @@ CREATE TABLE channels (
 );
 
 -- Client sessions.
+DROP TABLE IF EXISTS sessions;
 CREATE TABLE sessions (
     id uuid PRIMARY KEY,
     channel uuid NOT NULL REFERENCES channels(id),
@@ -218,6 +244,7 @@ CREATE TABLE sessions (
 );
 
 -- Smart contracts.
+DROP TABLE IF EXISTS contracts;
 CREATE TABLE contracts (
     id uuid PRIMARY KEY,
     address sha3_256 NOT NULL, -- ethereum address of contract
@@ -227,6 +254,7 @@ CREATE TABLE contracts (
 );
 
 -- Endpoint messages. Messages that include info about service access.
+DROP TABLE IF EXISTS endpoints;
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding endpoint template
@@ -243,6 +271,7 @@ CREATE TABLE endpoints (
 );
 
 -- Job queue.
+DROP TABLE IF EXISTS jobs;
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
     task_name text NOT NULL, -- name of task
@@ -260,6 +289,7 @@ CREATE TABLE jobs (
 );
 
 -- Ethereum transactions.
+DROP TABLE IF EXISTS eth_txs;
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
@@ -282,8 +312,8 @@ CREATE TABLE eth_txs (
     tx_raw jsonb -- raw tx as was sent
 );
 
-
 -- Ethereum events.
+DROP TABLE IF EXISTS eth_logs;
 CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
@@ -296,3 +326,5 @@ CREATE TABLE eth_logs (
     data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
     topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );
+
+END;

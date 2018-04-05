@@ -31,7 +31,7 @@ CREATE DOMAIN eth_addr AS char(28);
 
 -- Ethereum's uint192 in base64 (RFC-4648).
 DROP DOMAIN IF EXISTS privatix_tokens CASCADE;
-CREATE DOMAIN privatix_tokens AS NUMERIC;
+CREATE DOMAIN privatix_tokens AS char(32);
 
 -- Service operational status.
 DROP TYPE IF EXISTS svc_status CASCADE;

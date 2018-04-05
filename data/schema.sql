@@ -1,28 +1,40 @@
+BEGIN TRANSACTION;
+
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
+DROP TYPE IF EXISTS usage_rep_type CASCADE;
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates kinds.
+DROP TYPE IF EXISTS tpl_kind CASCADE;
 CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
+DROP TYPE IF EXISTS bill_type CASCADE;
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
 
 -- Unit types. Used for billing calculation.
+DROP TYPE IF EXISTS unit_type CASCADE;
 CREATE TYPE unit_type AS ENUM ('units','seconds');
 
+-- Contract types.
+DROP TYPE IF EXISTS contract_type CASCADE;
+CREATE TYPE contract_type AS ENUM ('ptc','psc');
+
+
 -- SHA3-256 in base64 (RFC-4648).
+DROP DOMAIN IF EXISTS sha3_256 CASCADE;
 CREATE DOMAIN sha3_256 AS char(44);
 
 -- Etehereum address
+DROP DOMAIN IF EXISTS eth_addr CASCADE;
 CREATE DOMAIN eth_addr AS char(28);
 
 -- Ethereum's uint192 in base64 (RFC-4648).
+DROP DOMAIN IF EXISTS privatix_tokens CASCADE;
 CREATE DOMAIN privatix_tokens AS char(32);
 
--- Contract types.
-CREATE TYPE contract_type AS ENUM ('ptc','psc');
-
 -- Service operational status.
+DROP TYPE IF EXISTS svc_status CASCADE;
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
     'active', -- service is now active and can be used.
@@ -31,6 +43,7 @@ CREATE TYPE svc_status AS ENUM (
 );
 
 -- State channel states.
+DROP TYPE IF EXISTS chan_status CASCADE;
 CREATE TYPE chan_status AS ENUM (
     'pending', -- waiting to be opened
     'active', -- opened
@@ -43,61 +56,79 @@ CREATE TYPE chan_status AS ENUM (
 );
 
 -- Messages statuses.
+DROP TYPE IF EXISTS msg_status CASCADE;
 CREATE TYPE msg_status AS ENUM (
-	'unpublished', -- saved in DB, but not published
-	'bchain_publishing', -- publishing in blockchain
-	'bchain_published', -- published in blockchain
-	'msg_channel_published' -- published in messaging channel
+    'unpublished', -- saved in DB, but not published
+    'bchain_publishing', -- publishing in blockchain
+    'bchain_published', -- published in blockchain
+    'msg_channel_published' -- published in messaging channel
 );
 
 -- Offering status
+DROP TYPE IF EXISTS offer_status CASCADE;
 CREATE TYPE offer_status AS ENUM (
-	'empty', -- saved in DB, but not published to blockchain
-	'register', -- in registration or registered in blockchain
+    'empty', -- saved in DB, but not published to blockchain
+    'register', -- in registration or registered in blockchain
     'remove' -- being removed or already removed from blockchain
 );
 
 -- Transaction statuses.
+DROP TYPE IF EXISTS tx_status CASCADE;
 CREATE TYPE tx_status AS ENUM (
-	'unsent', -- saved in DB, but not sent
-	'sent', -- sent w/o error to eth node
-	'mined', -- tx mined
-	'uncle' -- tx is went to uncle block
+    'unsent', -- saved in DB, but not sent
+    'sent', -- sent w/o error to eth node
+    'mined', -- tx mined
+    'uncle' -- tx is went to uncle block
 );
 
 -- Job creator.
+DROP TYPE IF EXISTS job_creator CASCADE;
 CREATE TYPE job_creator AS ENUM (
-	'user', -- by user through UI
-	'billing_checker', -- by billing checker procedure
-	'bc_monitor', -- by blockchain monitor
-	'task' -- by another task
+    'user', -- by user through UI
+    'billing_checker', -- by billing checker procedure
+    'bc_monitor', -- by blockchain monitor
+    'task' -- by another task
 );
 
 -- Job status.
+DROP TYPE IF EXISTS job_status CASCADE;
 CREATE TYPE job_status AS ENUM (
-	'new', -- previously never executed
-	'failed', -- failed to sucessfully execute
-	'skipped', -- skipped by user
-	'done' -- successfully executed
+    'new', -- previously never executed
+    'failed', -- failed to successfully execute
+    'skipped', -- skipped by user
+    'done' -- successfully executed
 );
 
+DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
-	description text
+    description text
 );
 
--- Users are party in distributed trade.
--- Each of them can play an agent role, a client role, or both of them.
-CREATE TABLE users (
+-- Accounts are ethereum accounts.
+-- Accounts used to perform Client and/or Agent operations.
+DROP TABLE IF EXISTS accounts CASCADE;
+CREATE TABLE accounts (
     id uuid PRIMARY KEY,
+    eth_addr eth_addr NOT NULL, -- ethereum address
     public_key text NOT NULL,
     private_key text,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
     in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
 );
 
+-- Users are external party in distributed trade.
+-- Each of them can play an agent role, a client role, or both of them.
+DROP TABLE IF EXISTS users CASCADE;
+CREATE TABLE users (
+    id uuid PRIMARY KEY,
+    eth_addr eth_addr NOT NULL, -- ethereum address
+    public_key text NOT NULL
+);
+
 -- Templates.
+DROP TABLE IF EXISTS templates CASCADE;
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
@@ -106,18 +137,22 @@ CREATE TABLE templates (
 );
 
 -- Products. Used to store billing and action related settings.
+DROP TABLE IF EXISTS products CASCADE;
 CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
-    usage_rep_type usage_rep_type NOT NULL -- for billing logic. Reporter provides increment or total usage
+    usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
+    is_server boolean NOT NULL -- product is defined as server (Agent) or client (Client)
 );
 
 -- Service offerings.
+DROP TABLE IF EXISTS offerings CASCADE;
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
+    is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
@@ -125,7 +160,8 @@ CREATE TABLE offerings (
     offer_status offer_status NOT NULL, -- offer status in blockchain
     block_number_updated bigint
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
-    agent uuid NOT NULL REFERENCES users(id),
+
+    agent eth_addr NOT NULL,
     signature text NOT NULL, -- agent's signature
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
@@ -161,10 +197,12 @@ CREATE TABLE offerings (
 );
 
 -- State channels.
+DROP TABLE IF EXISTS channels CASCADE;
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
-    agent uuid NOT NULL REFERENCES users(id),
-    client uuid NOT NULL REFERENCES users(id),
+    is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
+    agent eth_addr NOT NULL,
+    client eth_addr NOT NULL,
     offering uuid NOT NULL REFERENCES offerings(id),
     block int NOT NULL -- block number, when state channel created
         CONSTRAINT positive_block CHECK (channels.block > 0),
@@ -183,6 +221,7 @@ CREATE TABLE channels (
 );
 
 -- Client sessions.
+DROP TABLE IF EXISTS sessions CASCADE;
 CREATE TABLE sessions (
     id uuid PRIMARY KEY,
     channel uuid NOT NULL REFERENCES channels(id),
@@ -205,6 +244,7 @@ CREATE TABLE sessions (
 );
 
 -- Smart contracts.
+DROP TABLE IF EXISTS contracts CASCADE;
 CREATE TABLE contracts (
     id uuid PRIMARY KEY,
     address sha3_256 NOT NULL, -- ethereum address of contract
@@ -214,6 +254,7 @@ CREATE TABLE contracts (
 );
 
 -- Endpoint messages. Messages that include info about service access.
+DROP TABLE IF EXISTS endpoints CASCADE;
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding endpoint template
@@ -230,6 +271,7 @@ CREATE TABLE endpoints (
 );
 
 -- Job queue.
+DROP TABLE IF EXISTS jobs CASCADE;
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
     task_name text NOT NULL, -- name of task
@@ -247,18 +289,19 @@ CREATE TABLE jobs (
 );
 
 -- Ethereum transactions.
+DROP TABLE IF EXISTS eth_txs CASCADE;
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
     method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
+    job uuid REFERENCES jobs(id), -- corresponding job id
     issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
     block_number_issued bigint
         CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
 
     addr_from eth_addr NOT NULL, -- from ethereum address
-    addr_to eth_addr NOT NULL, -- from ethereum address
+    addr_to eth_addr NOT NULL, -- to ethereum address
     nonce numeric, -- tx nonce field
     gas_price bigint
         CONSTRAINT positive_gas_price CHECK (eth_txs.gas_price > 0), -- tx gas_price field
@@ -269,17 +312,19 @@ CREATE TABLE eth_txs (
     tx_raw jsonb -- raw tx as was sent
 );
 
-
 -- Ethereum events.
+DROP TABLE IF EXISTS eth_logs CASCADE;
 CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
+    job uuid REFERENCES jobs(id), -- corresponding job id
     block_number bigint
         CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
 
-    addr eth_addr NOT NULL, -- address from which this log originated
+    addr eth_addr NOT NULL, -- address of contract from which this log originated
     data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
     topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );
+
+END TRANSACTION;

@@ -20,7 +20,7 @@ var (
 	testServer *Server
 	testDB     *reform.DB
 	testData   struct {
-		client   *data.User
+		client   *data.Account
 		agent    *data.User
 		offering *data.Offering
 		channel  *data.Channel
@@ -28,7 +28,7 @@ var (
 )
 
 func newTestPayload(amount uint64, ch *data.Channel,
-	client *data.User) *payload {
+	client *data.Account) *payload {
 	pld := &payload{
 		AgentAddress:    "<agent address>",
 		OpenBlockNumber: ch.Block,
@@ -84,23 +84,23 @@ func TestInvalidPayments(t *testing.T) {
 		ContractAddress: validPayload.ContractAddress,
 	}
 
-	closedChannel := data.NewTestChannel(testData.agent, testData.client,
-		testData.offering, 0, 100, data.ChannelClosedCoop)
+	closedChannel := data.NewTestChannel(testData.agent.ID, testData.client.ID,
+		testData.offering.ID, 0, 100, data.ChannelClosedCoop)
 	testDB.Insert(closedChannel)
 	defer func() { testDB.Delete(closedChannel) }()
 	closedState := newTestPayload(1,
 		closedChannel,
 		testData.client)
 
-	validCh := data.NewTestChannel(testData.agent, testData.client,
-		testData.offering, 10, 100, data.ChannelActive)
+	validCh := data.NewTestChannel(testData.agent.ID, testData.client.ID,
+		testData.offering.ID, 10, 100, data.ChannelActive)
 	testDB.Insert(validCh)
 	defer func() { testDB.Delete(validCh) }()
 	lessBalance := newTestPayload(9, validCh, testData.client)
 
 	overcharging := newTestPayload(100+1, validCh, testData.client)
 
-	otherUsersSignature := newTestPayload(100, validCh, data.NewTestUser())
+	otherUsersSignature := newTestPayload(100, validCh, data.NewTestAccount())
 
 	for _, pld := range []*payload{
 		// wrong block number
@@ -137,19 +137,45 @@ func TestMain(m *testing.M) {
 	testServer = NewServer(nil, logger, testDB)
 
 	// prepare test data
-	testData.client = data.NewTestUser()
-	testDB.Insert(testData.client)
+	testData.client = data.NewTestAccount()
+	err := testDB.Insert(testData.client)
+	if err != nil {
+		panic(err)
+	}
+	err = testDB.Insert(&data.User{
+		ID:        util.NewUUID(),
+		EthAddr:   testData.client.EthAddr,
+		PublicKey: testData.client.PublicKey,
+	})
+	if err != nil {
+		panic(err)
+	}
 	testData.agent = data.NewTestUser()
-	testDB.Insert(testData.agent)
+	err = testDB.Insert(testData.agent)
+	if err != nil {
+		panic(err)
+	}
 	prt := data.NewTestProduct()
-	testDB.Insert(prt)
+	err = testDB.Insert(prt)
+	if err != nil {
+		panic(err)
+	}
 	tpl := data.NewTestTemplate(data.TemplateOffer)
-	testDB.Insert(tpl)
-	testData.offering = data.NewTestOffering(testData.agent.ID, prt.ID, tpl.ID)
-	testDB.Insert(testData.offering)
-	testData.channel = data.NewTestChannel(testData.agent, testData.client,
-		testData.offering, 0, 100, data.ChannelActive)
-	testDB.Insert(testData.channel)
+	err = testDB.Insert(tpl)
+	if err != nil {
+		panic(err)
+	}
+	testData.offering = data.NewTestOffering(testData.agent.EthAddr, prt.ID, tpl.ID)
+	err = testDB.Insert(testData.offering)
+	if err != nil {
+		panic(err)
+	}
+	testData.channel = data.NewTestChannel(testData.agent.EthAddr, testData.client.EthAddr,
+		testData.offering.ID, 0, 100, data.ChannelActive)
+	err = testDB.Insert(testData.channel)
+	if err != nil {
+		panic(err)
+	}
 
 	exitcode := m.Run()
 

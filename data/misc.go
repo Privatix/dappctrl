@@ -18,14 +18,16 @@ func FromBytes(src []byte) string {
 	return base64.URLEncoding.EncodeToString(src)
 }
 
-// PrivateKeyBytes returns private key's binary representation.
-func (u *User) PrivateKeyBytes() ([]byte, error) {
-	return ToBytes(*u.PrivateKey)
+// DecryptPrivateKey is a stub for key decryption.
+func DecryptPrivateKey(b []byte) []byte {
+	// TODO: implement this.
+	return b
 }
 
 // Sign signs a data.
-func (u *User) Sign(data []byte) ([]byte, error) {
-	prvBytes, err := u.PrivateKeyBytes()
+func (a *Account) Sign(data []byte) ([]byte, error) {
+	prvBytes, err := ToBytes(a.PrivateKey)
+	prvBytes = DecryptPrivateKey(prvBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -34,11 +36,6 @@ func (u *User) Sign(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return crypto.Sign(data, prv)
-}
-
-// PublicKeyBytes returns private key's binary representation.
-func (u *User) PublicKeyBytes() ([]byte, error) {
-	return ToBytes(u.PublicKey)
 }
 
 // OfferingHash returns hash for given Offering.

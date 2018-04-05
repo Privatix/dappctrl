@@ -19,13 +19,13 @@ import (
 var (
 	testTpl   *data.Template
 	testProd  *data.Product
-	testAgent *data.User
+	testAgent *data.Account
 )
 
 func createOfferingFixtures() func() {
 	testTpl = data.NewTestTemplate(data.TemplateAccess)
 	testProd = data.NewTestProduct()
-	testAgent = data.NewTestUser()
+	testAgent = data.NewTestAccount()
 	return insertItems(testTpl, testProd, testAgent)
 }
 
@@ -175,7 +175,7 @@ func TestPostOfferingValidation(t *testing.T) {
 func TestPutOfferingSuccess(t *testing.T) {
 	deleteFixtures := createOfferingFixtures()
 	defer deleteFixtures()
-	testOffering := data.NewTestOffering(testAgent.ID, testProd.ID, testTpl.ID)
+	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
 	deleteOffering := insertItems(testOffering)
 	defer deleteOffering()
 
@@ -213,8 +213,8 @@ func TestGetOffering(t *testing.T) {
 
 	// Get all offerings.
 	testOfferings := []*data.Offering{
-		data.NewTestOffering(testAgent.ID, testProd.ID, testTpl.ID),
-		data.NewTestOffering(testAgent.ID, testProd.ID, testTpl.ID),
+		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
+		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
 	}
 	deleteOfferings := insertItems(testOfferings[0], testOfferings[1])
 	defer deleteOfferings()
@@ -252,7 +252,7 @@ func TestPutOfferingStatus(t *testing.T) {
 func TestGetOfferingStatus(t *testing.T) {
 	deleteFixtures := createOfferingFixtures()
 	defer deleteFixtures()
-	testOffering := data.NewTestOffering(testAgent.ID, testProd.ID, testTpl.ID)
+	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
 	deleteOffering := insertItems(testOffering)
 	defer deleteOffering()
 	// Get offering status with a match.

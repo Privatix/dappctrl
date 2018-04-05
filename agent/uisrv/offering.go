@@ -41,14 +41,19 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 		offering.ID = util.NewUUID()
 	}
 	offering.Nonce = util.NewUUID()
+	offering.OfferStatus = data.OfferRegister
 	offering.Status = data.MsgUnpublished
-	hash := data.OfferingHash(offering)
-	offering.Hash = data.FromBytes(hash)
-	agent := &data.User{}
+	agent := &data.Account{}
 	err := s.db.FindByPrimaryKeyTo(agent, offering.Agent)
 	if err != nil {
 		return err
 	}
+	offering.Agent = agent.EthAddr
+	// TODO: fix this
+	offering.BlockNumberUpdated = 1
+	hash := data.OfferingHash(offering)
+	offering.Hash = data.FromBytes(hash)
+
 	sig, err := agent.Sign(hash)
 	if err != nil {
 		return err

@@ -76,7 +76,7 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
 
 	client := &data.User{}
-	if s.db.FindByPrimaryKeyTo(client, ch.Client) != nil {
+	if s.db.FindOneTo(client, "eth_addr", ch.Client) != nil {
 		s.replyError(w, errUnexpected)
 		return false
 	}

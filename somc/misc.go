@@ -10,7 +10,8 @@ import (
 
 const jsonRPCVersion = "2.0"
 
-type jsonRPCMessage struct {
+// JSONRPCMessage is a format of the rpc message.
+type JSONRPCMessage struct {
 	Version   string          `json:"jsonrpc"`
 	ID        uint32          `json:"id"`
 	Method    string          `json:"method,omitempty"`
@@ -19,11 +20,13 @@ type jsonRPCMessage struct {
 	ErrorData json.RawMessage `json:"error,omitempty"`
 }
 
-func (m *jsonRPCMessage) IDString() string {
+// IDString helper func returns message id as string.
+func (m *JSONRPCMessage) IDString() string {
 	return fmt.Sprint(m.ID)
 }
 
-func (m *jsonRPCMessage) Error() error {
+// Error returns error if any.
+func (m *JSONRPCMessage) Error() error {
 	if len(m.ErrorData) == 0 {
 		return nil
 	}
@@ -49,7 +52,7 @@ func (c *Conn) handleMessages() {
 	for !c.exit {
 		var err error
 		for {
-			var msg jsonRPCMessage
+			var msg JSONRPCMessage
 			if err = c.conn.ReadJSON(&msg); err != nil {
 				break
 			}
@@ -85,7 +88,7 @@ func (c *Conn) handleMessages() {
 	}
 }
 
-func (c *Conn) handleMessage(m *jsonRPCMessage) {
+func (c *Conn) handleMessage(m *JSONRPCMessage) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -117,7 +120,7 @@ func (c *Conn) request(method string, params json.RawMessage) reply {
 	c.mtx.Lock()
 
 	c.id++
-	msg := jsonRPCMessage{
+	msg := JSONRPCMessage{
 		Version: jsonRPCVersion,
 		ID:      c.id,
 		Method:  method,

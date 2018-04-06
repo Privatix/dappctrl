@@ -32,6 +32,7 @@ type obj struct {
 	ch    data.Channel
 	offer data.Offering
 	prod  data.Product
+	tmpl  data.Template
 }
 
 // Message structure for Endpoint Message
@@ -91,6 +92,7 @@ func (s *Service) objects(done chan bool, errC chan error,
 	var ch data.Channel
 	var offer data.Offering
 	var prod data.Product
+	var tmpl data.Template
 
 	localErr := make(chan error)
 	terminate := make(chan bool)
@@ -149,13 +151,25 @@ func (s *Service) objects(done chan bool, errC chan error,
 				terminate <- true
 			}
 		}
+
+		go s.find(done, localErr, &tmpl, prod.OfferAccessID)
+
+		select {
+		case <-done:
+			terminate <- true
+		case err := <-localErr:
+			if err != nil {
+				errC <- errWrapper(err, invalidProduct)
+				terminate <- true
+			}
+		}
 	}()
 	wg.Wait()
 
 	select {
 	case <-done:
 	case <-terminate:
-	case objCh <- &obj{prod: prod, offer: offer, ch: ch}:
+	case objCh <- &obj{prod: prod, offer: offer, ch: ch, tmpl: tmpl}:
 	}
 }
 
@@ -202,26 +216,7 @@ func (s *Service) processing(req *req) {
 			return
 		}
 
-		tempCh := make(chan data.Template)
-
-		var temp data.Template
-
-		go s.findTemp(req.done, errC, tempCh, *o.prod.OfferAccessID)
-
-		select {
-		case <-req.done:
-			exit = true
-		case temp = <-tempCh:
-		case err := <-errC:
-			resp <- newResult(nil, err)
-			exit = true
-		}
-
-		if exit {
-			return
-		}
-
-		if !validMsg(temp.Raw, *m) {
+		if !validMsg(o.tmpl.Raw, *m) {
 			select {
 			case <-req.done:
 			case resp <- newResult(nil, ErrInvalidFormat):
@@ -265,26 +260,6 @@ func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
 	case <-done:
 	case msgCh <- msg:
 	}
-}
-
-func (s *Service) findTemp(done chan bool, errC chan error,
-	tempCh chan data.Template, id string) {
-	var temp data.Template
-
-	localErrC := make(chan error)
-
-	go s.find(done, localErrC, &temp, id)
-
-	select {
-	case <-done:
-		return
-	case err := <-localErrC:
-		if err != nil {
-			errC <- errWrapper(err, invalidTemplate)
-		}
-		tempCh <- temp
-	}
-
 }
 
 func (s *Service) find(done chan bool, errC chan error,

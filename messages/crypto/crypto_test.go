@@ -9,7 +9,7 @@ import (
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/crypto"
+	"github.com/privatix/dappctrl/messages/crypto"
 	"github.com/privatix/dappctrl/util"
 )
 

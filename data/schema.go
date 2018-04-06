@@ -116,7 +116,7 @@ type Offering struct {
 	ServiceName        string  `json:"serviceName" reform:"service_name" validate:"required"`
 	Description        *string `json:"description" reform:"description"`
 	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
-	Supply             uint    `json:"supply" reform:"supply" validate:"required"`
+	Supply             uint16  `json:"supply" reform:"supply" validate:"required"`
 	UnitName           string  `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
 	UnitType           string  `json:"unitType" reform:"unit_type" validate:"required"`
 	BillingType        string  `json:"billingType" reform:"billing_type" validate:"required"`
@@ -160,7 +160,7 @@ type Channel struct {
 	Agent              string     `json:"agent" reform:"agent"`
 	Client             string     `json:"client" reform:"client"`
 	Offering           string     `json:"offering" reform:"offering"`
-	Block              uint       `json:"block" reform:"block"`                  // When state channel created.
+	Block              uint32     `json:"block" reform:"block"`                  // When state channel created.
 	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
 	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
 	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
@@ -222,9 +222,16 @@ type Endpoint struct {
 	Status                 string  `json:"status" reform:"status"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
 	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
-	Username               *string `json:"-" reform:"username"`
-	Password               *string `json:"-" reform:"password"`
+	Username               *string `json:"username" reform:"username"`
+	Password               *string `json:"password" reform:"password"`
 	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
+}
+
+// EndpointUI contains only certain fields of endpoints table.
+//reform:endpoints
+type EndpointUI struct {
+	ID               string `json:"id" reform:"id,pk"`
+	AdditionalParams []byte `json:"additionalParams" reform:"additional_params"`
 }
 
 // Job creators.
@@ -248,6 +255,7 @@ const (
 	JobOfferring = "offering"
 	JobChannel   = "channel"
 	JobEndpoint  = "endpoint"
+	JobAccount   = "account"
 )
 
 // Job handler names.
@@ -262,8 +270,6 @@ const (
 	JobAfterUncooperativeClose        = "afterUncooperativeClose"
 	JobPreCooperativeClose            = "preCooperativeClose"
 	JobAfterCooperativeClose          = "afterCooperativeClose"
-	JobPreServiceCreate               = "preServiceCreate"
-	JobAfterServiceCreate             = "afterServiceCreate"
 	JobPreServiceSuspend              = "preServiceSuspend"
 	JobAfterServiceSuspend            = "afterServiceSuspend"
 	JobPreServiceUnsuspend            = "preServiceUnsuspend"
@@ -281,26 +287,7 @@ const (
 	JobPreOfferingMsgBCPublish        = "preOfferingMsgBCPublish"
 	JobAfterOfferingMsgBCPublish      = "afterOfferingMsgBCPublish"
 	JobAfterOfferingMsgBCPublished    = "afterOfferingMsgBCPublished"
-	JobPreOfferingMsgSOMCPublish      = "preOfferingMsgSOMCPublish"
-	JobAfterOfferingMsgSOMCPublish    = "afterOfferingMsgSOMCPublish"
-	JobPreOfferingMsgSOMCGet          = "preOfferingMsgSOMCGet"
 )
-
-// Job is a task within persistent queue.
-//reform:jobs
-type Job struct {
-	ID          string    `reform:"id,pk"`
-	Handler     string    `reform:"handler"`
-	Status      string    `reform:"status"`
-	RelatedType string    `reform:"related_type"`
-	RelatedID   string    `reform:"related_id"`
-	CreatedAt   time.Time `reform:"created_at"`
-	NotBefore   time.Time `reform:"not_before"`
-	CreatedBy   string    `reform:"created_by"`
-	TryPeriod   *uint     `reform:"try_period"`
-	TryLimit    *uint8    `reform:"try_limit"`
-	TryCount    uint8     `reform:"try_count"`
-}
 
 // Transaction statuses.
 const (
@@ -308,13 +295,6 @@ const (
 	TxSent   = "sent"
 	TxMined  = "mined"
 	TxUncle  = "uncle"
-)
-
-// Job related object types.
-const (
-	JobOfferring = "offering"
-	JobChannel   = "channel"
-	JobEndpoint  = "endpoint"
 )
 
 // Job types.
@@ -334,7 +314,6 @@ const (
 	JobAgentPreCooperativeClose             = "agentPreCooperativeClose"
 	JobClientAfterCooperativeClose          = "clientAfterCooperativeClose"
 	JobAgentAfterCooperativeClose           = "agentAfterCooperativeClose"
-	JobAgentPreServiceCreate                = "agentPreServiceCreate"
 	JobAgentPreServiceSuspend               = "agentPreServiceSuspend"
 	JobAgentPreServiceUnsuspend             = "agentPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
@@ -346,10 +325,22 @@ const (
 	JobAgentAfterEndpointMsgSOMCPublish     = "agentAfterEndpointMsgSOMCPublish"
 	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"
 	JobAgentPreOfferingMsgBCPublish         = "agentPreOfferingMsgBCPublish"
+	JobAgentAfterOfferingMsgBCPublish       = "agentAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
+	JobAgentAfterOfferingMsgSOMCPublish     = "agentAfterOfferingMsgSOMCPublish"
 	JobClientPreOfferingMsgSOMCGet          = "clientPreOfferingMsgSOMCGet"
+	JobAgentPreAccountAddBalanceApprove     = "agentPreAccountAddBalanceApprove"
+	JobAgentPreAccountAddBalance            = "agentPreAccountAddBalance"
+	JobAgentAfterAccountAddBalance          = "agentAfterAccountAddBalance"
+	JobAgentPreAccountReturnBalance         = "agentPreAccountReturnBalance"
+	JobAgentAfterAccountReturnBalance       = "agentAfterAccountReturnBalance"
 )
+
+// JobBalanceData is data required for transfer jobs.
+type JobBalanceData struct {
+	Amount uint
+}
 
 // Job is a task within persistent queue.
 //reform:jobs
@@ -363,4 +354,18 @@ type Job struct {
 	NotBefore   time.Time `reform:"not_before"`
 	CreatedBy   string    `reform:"created_by"`
 	TryCount    uint8     `reform:"try_count"`
+	Data        []byte    `reform:"data"`
+}
+
+// EthLog is ethereum events.
+//reform:eth_logs
+type EthLog struct {
+	ID          string `reform:"id,pk"`
+	TxHash      string `reform:"tx_hash"`
+	Status      string `reform:"status"`
+	Job         string `reform:"job"`
+	BlockNumber uint64 `reform:"block_number"`
+	Addr        string `reform:"addr"`
+	Data        string `reform:"data"`
+	Topics      []byte `reform:"topics"`
 }

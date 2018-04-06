@@ -41,12 +41,3 @@ func ToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
 	}
 	return key.PrivateKey, nil
 }
-
-// Sign signs a data.
-func (a *Account) Sign(data []byte, toPrvFunc ToPrivateKeyFunc, auth string) ([]byte, error) {
-	prvKey, err := toPrvFunc(a.PrivateKey, auth)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.Sign(data, prvKey)
-}

@@ -53,6 +53,7 @@ func createJob() *data.Job {
 		RelatedType: data.JobChannel,
 		CreatedBy:   data.JobUser,
 		CreatedAt:   time.Now(),
+		Data:        []byte("{}"),
 	}
 }
 

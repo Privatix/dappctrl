@@ -2,6 +2,7 @@ package ept
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -12,6 +13,7 @@ func validMsg(schema []byte, msg Message) bool {
 
 	result, err := gojsonschema.Validate(sch, loader)
 	if err != nil || !result.Valid() || len(result.Errors()) != 0 {
+		fmt.Printf("%+v\n", result.Errors())
 		return false
 	}
 	return true
@@ -25,7 +27,7 @@ func fillMsg(o *obj, paymentReceiverAddress, serviceEndpointAddress string,
 	}
 
 	return &Message{
-		TemplateHash:           *o.prod.OfferAccessID,
+		TemplateHash:           o.tmpl.Hash,
 		Username:               o.ch.ID,
 		Password:               o.ch.Password,
 		PaymentReceiverAddress: paymentReceiverAddress,

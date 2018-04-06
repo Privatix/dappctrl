@@ -87,7 +87,8 @@ CREATE TYPE job_status AS ENUM (
 CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
-    'endpoint' -- service endpoint
+    'endpoint', -- service endpoint
+    'account' -- for transfre and approve jobs
 );
 
 CREATE TABLE settings (
@@ -212,7 +213,7 @@ CREATE TABLE channels (
         CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
-    password sha3_256 NOT NULL,
+    password text NOT NULL,
     -- TODO change to bigint
     receipt_balance bigint NOT NULL -- last payment amount received
         CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
@@ -271,7 +272,8 @@ CREATE TABLE jobs (
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
     not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    try_count smallint NOT NULL -- number of tries performed
+    try_count smallint NOT NULL, -- number of tries performed
+    data json -- information required for standalone jobs like token transfers
 );
 
 -- Ethereum transactions.

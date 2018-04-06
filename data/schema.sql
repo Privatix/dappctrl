@@ -1,40 +1,31 @@
 BEGIN TRANSACTION;
 
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
-DROP TYPE IF EXISTS usage_rep_type CASCADE;
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates kinds.
-DROP TYPE IF EXISTS tpl_kind CASCADE;
 CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
 
 -- Billing types.
-DROP TYPE IF EXISTS bill_type CASCADE;
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
 
 -- Unit types. Used for billing calculation.
-DROP TYPE IF EXISTS unit_type CASCADE;
 CREATE TYPE unit_type AS ENUM ('units','seconds');
 
 -- Contract types.
-DROP TYPE IF EXISTS contract_type CASCADE;
 CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
 
 -- SHA3-256 in base64 (RFC-4648).
-DROP DOMAIN IF EXISTS sha3_256 CASCADE;
 CREATE DOMAIN sha3_256 AS char(44);
 
 -- Etehereum address
-DROP DOMAIN IF EXISTS eth_addr CASCADE;
 CREATE DOMAIN eth_addr AS char(28);
 
 -- Ethereum's uint192 in base64 (RFC-4648).
-DROP DOMAIN IF EXISTS privatix_tokens CASCADE;
 CREATE DOMAIN privatix_tokens AS char(32);
 
 -- Service operational status.
-DROP TYPE IF EXISTS svc_status CASCADE;
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
     'active', -- service is now active and can be used.
@@ -43,7 +34,6 @@ CREATE TYPE svc_status AS ENUM (
 );
 
 -- State channel states.
-DROP TYPE IF EXISTS chan_status CASCADE;
 CREATE TYPE chan_status AS ENUM (
     'pending', -- waiting to be opened
     'active', -- opened
@@ -56,7 +46,6 @@ CREATE TYPE chan_status AS ENUM (
 );
 
 -- Messages statuses.
-DROP TYPE IF EXISTS msg_status CASCADE;
 CREATE TYPE msg_status AS ENUM (
     'unpublished', -- saved in DB, but not published
     'bchain_publishing', -- publishing in blockchain
@@ -65,7 +54,6 @@ CREATE TYPE msg_status AS ENUM (
 );
 
 -- Offering status
-DROP TYPE IF EXISTS offer_status CASCADE;
 CREATE TYPE offer_status AS ENUM (
     'empty', -- saved in DB, but not published to blockchain
     'register', -- in registration or registered in blockchain
@@ -73,7 +61,6 @@ CREATE TYPE offer_status AS ENUM (
 );
 
 -- Transaction statuses.
-DROP TYPE IF EXISTS tx_status CASCADE;
 CREATE TYPE tx_status AS ENUM (
     'unsent', -- saved in DB, but not sent
     'sent', -- sent w/o error to eth node
@@ -82,7 +69,6 @@ CREATE TYPE tx_status AS ENUM (
 );
 
 -- Job creator.
-DROP TYPE IF EXISTS job_creator CASCADE;
 CREATE TYPE job_creator AS ENUM (
     'user', -- by user through UI
     'billing_checker', -- by billing checker procedure
@@ -91,7 +77,6 @@ CREATE TYPE job_creator AS ENUM (
 );
 
 -- Job status.
-DROP TYPE IF EXISTS job_status CASCADE;
 CREATE TYPE job_status AS ENUM (
     'new', -- previously never executed
     'failed', -- failed to successfully execute
@@ -99,7 +84,6 @@ CREATE TYPE job_status AS ENUM (
     'done' -- successfully executed
 );
 
-DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
@@ -108,7 +92,6 @@ CREATE TABLE settings (
 
 -- Accounts are ethereum accounts.
 -- Accounts used to perform Client and/or Agent operations.
-DROP TABLE IF EXISTS accounts CASCADE;
 CREATE TABLE accounts (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
@@ -120,7 +103,6 @@ CREATE TABLE accounts (
 
 -- Users are external party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
-DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
@@ -128,7 +110,6 @@ CREATE TABLE users (
 );
 
 -- Templates.
-DROP TABLE IF EXISTS templates CASCADE;
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL,
@@ -137,7 +118,6 @@ CREATE TABLE templates (
 );
 
 -- Products. Used to store billing and action related settings.
-DROP TABLE IF EXISTS products CASCADE;
 CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
@@ -149,7 +129,6 @@ CREATE TABLE products (
 );
 
 -- Service offerings.
-DROP TABLE IF EXISTS offerings CASCADE;
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
     is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
@@ -197,7 +176,6 @@ CREATE TABLE offerings (
 );
 
 -- State channels.
-DROP TABLE IF EXISTS channels CASCADE;
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
     is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
@@ -221,7 +199,6 @@ CREATE TABLE channels (
 );
 
 -- Client sessions.
-DROP TABLE IF EXISTS sessions CASCADE;
 CREATE TABLE sessions (
     id uuid PRIMARY KEY,
     channel uuid NOT NULL REFERENCES channels(id),
@@ -244,7 +221,6 @@ CREATE TABLE sessions (
 );
 
 -- Smart contracts.
-DROP TABLE IF EXISTS contracts CASCADE;
 CREATE TABLE contracts (
     id uuid PRIMARY KEY,
     address sha3_256 NOT NULL, -- ethereum address of contract
@@ -254,7 +230,6 @@ CREATE TABLE contracts (
 );
 
 -- Endpoint messages. Messages that include info about service access.
-DROP TABLE IF EXISTS endpoints CASCADE;
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
     tpl uuid REFERENCES templates(id), -- corresponding endpoint template
@@ -271,7 +246,6 @@ CREATE TABLE endpoints (
 );
 
 -- Job queue.
-DROP TABLE IF EXISTS jobs CASCADE;
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
     task_name text NOT NULL, -- name of task
@@ -289,7 +263,6 @@ CREATE TABLE jobs (
 );
 
 -- Ethereum transactions.
-DROP TABLE IF EXISTS eth_txs CASCADE;
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
@@ -313,7 +286,6 @@ CREATE TABLE eth_txs (
 );
 
 -- Ethereum events.
-DROP TABLE IF EXISTS eth_logs CASCADE;
 CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash

@@ -6,14 +6,14 @@ import (
 	"gopkg.in/reform.v1"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 	"time"
-	"path"
 )
 
 type config struct {
-	DB      *data.DBConfig
-	Log     *util.LogConfig
+	DB  *data.DBConfig
+	Log *util.LogConfig
 }
 
 var (

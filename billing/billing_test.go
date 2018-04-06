@@ -8,16 +8,12 @@ import (
 	"os"
 	"testing"
 	"time"
+	"path"
 )
-
-type BillingTestsConfig struct {
-	SourceDataDir string
-}
 
 type config struct {
 	DB      *data.DBConfig
 	Log     *util.LogConfig
-	Billing BillingTestsConfig
 }
 
 var (
@@ -185,7 +181,7 @@ func TestE1(t *testing.T) {
 }
 
 func populateDataAndCallValidation(t *testing.T, dataSetFilename string, callback func() error) {
-	err := executeSQLFile(conf.Billing.SourceDataDir + dataSetFilename)
+	err := executeSQLFile(path.Join(os.Getenv("DAPPCTRL_DIR"), "billing/tests", dataSetFilename))
 	if err != nil {
 		t.Fatal("Can't populate source test data. Details: ", err)
 	}

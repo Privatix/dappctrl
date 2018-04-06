@@ -47,9 +47,5 @@
             "host": "localhost",
             "port": 5000
         }
-    },
-
-    "Billing": {
-        "SourceDataDir": "<full path to the project>/dappctrl/billing/tests/"
     }
 }

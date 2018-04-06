@@ -11,6 +11,8 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+//go:generate go generate github.com/privatix/dappctrl/data
+
 type config struct {
 	AgentServer   *uisrv.Config
 	DB            *data.DBConfig

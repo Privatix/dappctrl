@@ -29,10 +29,6 @@ CREATE DOMAIN sha3_256 AS char(44);
 DROP DOMAIN IF EXISTS eth_addr CASCADE;
 CREATE DOMAIN eth_addr AS char(28);
 
--- Ethereum's uint192 in base64 (RFC-4648).
-DROP DOMAIN IF EXISTS privatix_tokens CASCADE;
-CREATE DOMAIN privatix_tokens AS char(32);
-
 -- Service operational status.
 DROP TYPE IF EXISTS svc_status CASCADE;
 CREATE TYPE svc_status AS ENUM (
@@ -113,7 +109,7 @@ CREATE TABLE accounts (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
     public_key text NOT NULL,
-    private_key text,
+    private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
     in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
 );
@@ -210,13 +206,14 @@ CREATE TABLE channels (
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
-    -- TODO change to bigint
-    total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
+    total_deposit bigint NOT NULL -- total deposit after all top-ups
+        CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
     password sha3_256 NOT NULL,
     -- TODO change to bigint
-    receipt_balance privatix_tokens NOT NULL, -- last payment amount received
+    receipt_balance bigint NOT NULL -- last payment amount received
+        CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
     receipt_signature text NOT NULL -- signature corresponding to last payment
 );
 

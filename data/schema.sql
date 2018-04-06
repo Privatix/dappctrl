@@ -89,10 +89,18 @@ CREATE TYPE job_creator AS ENUM (
 -- Job status.
 DROP TYPE IF EXISTS job_status CASCADE;
 CREATE TYPE job_status AS ENUM (
-    'new', -- previously never executed
-    'failed', -- failed to successfully execute
-    'skipped', -- skipped by user
-    'done' -- successfully executed
+    'active', -- processing or to be processed
+    'done', -- successfully finished
+    'failed', -- failed: retry limit is reached
+    'canceled' -- canceled
+);
+
+-- Job related object types.
+DROP TYPE IF EXISTS related_type CASCADE;
+CREATE TYPE related_type AS ENUM (
+    'offering', -- service offering
+    'channel', -- state channel
+    'endpoint' -- service endpoint
 );
 
 DROP TABLE IF EXISTS settings CASCADE;
@@ -254,7 +262,7 @@ CREATE TABLE contracts (
 DROP TABLE IF EXISTS endpoints CASCADE;
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
-    tpl uuid REFERENCES templates(id), -- corresponding endpoint template
+    template uuid NOT NULL REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
@@ -271,18 +279,14 @@ CREATE TABLE endpoints (
 DROP TABLE IF EXISTS jobs CASCADE;
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
-    task_name text NOT NULL, -- name of task
+    type varchar(64) NOT NULL, -- type of task
     status job_status NOT NULL, -- job status
-    parent_obj text NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
-    rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    related_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
-    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    fail_count smallint DEFAULT 0
-        CONSTRAINT positive_fail_count CHECK (jobs.fail_count >= 0), -- number of failures
-
-    try_count smallint DEFAULT 0 -- todo: [suggestion] renate to attempts_count
-        CONSTRAINT positive_attempts_count CHECK (jobs.try_count >= 0) -- number of times job was executed
+    try_count smallint NOT NULL -- number of tries performed
 );
 
 -- Ethereum transactions.

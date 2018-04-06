@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Billing monitor provides logic for checking channels for various cases,
+// Monitor provides logic for checking channels for various cases,
 // in which service(s) must be suspended/terminated/or unsuspended (continued).
 // All conditions are checked on the DB level,
 // so it is safe to call monitors methods from separate goroutines.
@@ -24,6 +24,8 @@ type Monitor struct {
 	testsSelectedChannelsIDs []string
 }
 
+// NewMonitor creates new instance of billing monitor.
+// 'interval' specifies how often channels checks must be performed.
 func NewMonitor(interval time.Duration, db *reform.DB, logger *util.Logger) (*Monitor, error) {
 	if db == nil {
 		return nil, errors.New("`db` is required")
@@ -32,6 +34,8 @@ func NewMonitor(interval time.Duration, db *reform.DB, logger *util.Logger) (*Mo
 	return &Monitor{db, logger, interval, nil}, nil
 }
 
+// Run begins monitoring of channels.
+// In case of error - doesn't restarts automatically.
 func (m *Monitor) Run() error {
 	m.logger.Info("Billing monitor started")
 
@@ -44,6 +48,8 @@ func (m *Monitor) Run() error {
 	}
 }
 
+// VerifySecondsBasedChannels checks all active seconds based channels
+// for not using more units, than provided by quota and not exceeding over total deposit.
 func (m *Monitor) VerifySecondsBasedChannels() error {
 	// Selects all channels, which
 	// 1. used tokens >= deposit tokens
@@ -73,6 +79,8 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
 	return m.processEachChannel(query, m.terminateService)
 }
 
+// VerifyUnitsBasedChannels checks all active units based channels
+// for not using more units, than provided by quota and not exceeding over total deposit.
 func (m *Monitor) VerifyUnitsBasedChannels() error {
 	query := `
 		SELECT channels.id::text
@@ -97,6 +105,9 @@ func (m *Monitor) VerifyUnitsBasedChannels() error {
 
 	return m.processEachChannel(query, m.terminateService)
 }
+
+// VerifyBillingLags checks all active channels for billing lags,
+// and schedules suspending of those, who are suffering from billing lags.
 func (m *Monitor) VerifyBillingLags() error {
 	// Checking billing lags.
 	// All channels, that are not suspended and are not terminated,
@@ -118,6 +129,9 @@ func (m *Monitor) VerifyBillingLags() error {
 	return m.processEachChannel(query, m.unsuspendService)
 }
 
+// VerifySuspendedChannelsAndTryToUnsuspend scans all supsended channels,
+// and checks if all conditions are met to unsuspend them.
+// Is so - schedules task for appropriate channel unsuspending.
 func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
 	// All channels, that are suspended, but now seems to be payed - must be unsuspended.
 	query := `
@@ -137,6 +151,8 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
 	return m.processEachChannel(query, m.unsuspendService)
 }
 
+// VerifyChannelsForInactivity scans all channels, that are not terminated,
+// and terminates those of them, who are staying inactive too long.
 func (m *Monitor) VerifyChannelsForInactivity() error {
 	query := `
 		SELECT channels.id::text
@@ -152,6 +168,8 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
 	return m.processEachChannel(query, m.terminateService)
 }
 
+// VerifySuspendedChannelsAndTryToTerminate scans all suspended channels,
+// and terminates those of them, who are staying suspended too long.
 func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
 	query := `
 		SELECT channels.id::text

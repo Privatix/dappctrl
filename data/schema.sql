@@ -299,4 +299,12 @@ CREATE TABLE eth_logs (
     topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );
 
+CREATE TABLE article (
+    article_id bigserial primary key,
+    article_name varchar(20) NOT NULL,
+    article_desc text NOT NULL,
+    date_added timestamp default NULL
+);
+
+
 END TRANSACTION;

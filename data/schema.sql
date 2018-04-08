@@ -299,18 +299,12 @@ CREATE TABLE eth_logs (
     topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );
 
--- Ethereum events.
-CREATE TABLE eth_logs_test (
-    id uuid PRIMARY KEY,
-    tx_hash sha3_256, -- transaction hash
-    status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding job id
-    block_number bigint
-        CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
-
-    addr eth_addr NOT NULL, -- address of contract from which this log originated
-    data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
-    topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
+CREATE TABLE article (
+    article_id bigserial primary key,
+    article_name varchar(20) NOT NULL,
+    article_desc text NOT NULL,
+    date_added timestamp default NULL
 );
+
 
 END TRANSACTION;

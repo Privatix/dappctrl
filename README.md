@@ -42,7 +42,7 @@ go install -tags=notest $DAPPCTRL
 Prepare a `dappctrl` database instance:
 
 ```bash
-psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/db.sql
+psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```

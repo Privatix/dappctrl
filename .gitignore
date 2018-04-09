@@ -4,3 +4,5 @@
 *_reform.go
 .idea/*
 .docker_data/*
+
+dappctrl-test.config.local.json

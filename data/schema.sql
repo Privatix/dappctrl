@@ -22,9 +22,6 @@ CREATE DOMAIN sha3_256 AS char(44);
 -- Etehereum address
 CREATE DOMAIN eth_addr AS char(28);
 
--- Ethereum's uint192 in base64 (RFC-4648).
-CREATE DOMAIN privatix_tokens AS char(32);
-
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
     'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
@@ -78,12 +75,21 @@ CREATE TYPE job_creator AS ENUM (
 
 -- Job status.
 CREATE TYPE job_status AS ENUM (
-    'new', -- previously never executed
-    'failed', -- failed to successfully execute
-    'skipped', -- skipped by user
-    'done' -- successfully executed
+    'active', -- processing or to be processed
+    'done', -- successfully finished
+    'failed', -- failed: retry limit is reached
+    'canceled' -- canceled
 );
 
+-- Job related object types.
+DROP TYPE IF EXISTS related_type CASCADE;
+CREATE TYPE related_type AS ENUM (
+    'offering', -- service offering
+    'channel', -- state channel
+    'endpoint' -- service endpoint
+);
+
+DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
@@ -96,7 +102,7 @@ CREATE TABLE accounts (
     id uuid PRIMARY KEY,
     eth_addr eth_addr NOT NULL, -- ethereum address
     public_key text NOT NULL,
-    private_key text,
+    private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
     in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
 );
@@ -188,13 +194,14 @@ CREATE TABLE channels (
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
-    -- TODO change to bigint
-    total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
+    total_deposit bigint NOT NULL -- total deposit after all top-ups
+        CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
     password sha3_256 NOT NULL,
     -- TODO change to bigint
-    receipt_balance privatix_tokens NOT NULL, -- last payment amount received
+    receipt_balance bigint NOT NULL -- last payment amount received
+        CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
     receipt_signature text NOT NULL -- signature corresponding to last payment
 );
 
@@ -232,7 +239,7 @@ CREATE TABLE contracts (
 -- Endpoint messages. Messages that include info about service access.
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
-    tpl uuid REFERENCES templates(id), -- corresponding endpoint template
+    template uuid NOT NULL REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
@@ -248,18 +255,14 @@ CREATE TABLE endpoints (
 -- Job queue.
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
-    task_name text NOT NULL, -- name of task
+    type varchar(64) NOT NULL, -- type of task
     status job_status NOT NULL, -- job status
-    parent_obj text NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
-    rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    related_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
-    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    fail_count smallint DEFAULT 0
-        CONSTRAINT positive_fail_count CHECK (jobs.fail_count >= 0), -- number of failures
-
-    try_count smallint DEFAULT 0 -- todo: [suggestion] renate to attempts_count
-        CONSTRAINT positive_attempts_count CHECK (jobs.try_count >= 0) -- number of times job was executed
+    try_count smallint NOT NULL -- number of tries performed
 );
 
 -- Ethereum transactions.

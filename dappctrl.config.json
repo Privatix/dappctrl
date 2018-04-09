@@ -7,6 +7,21 @@
         }
     },
 
+    "Job": {
+        "CollectJobs": 100,
+        "CollectPeriod": 1000,
+        "WorkerBufLen": 10,
+        "Workers": 0,
+        "TryLimit": 3,
+        "TryPeriod": 60000,
+        "Types": {
+            "clientPreChannelCreate": {
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            }
+        }
+    },
+
     "Log": {
         "Level": "info"
     },

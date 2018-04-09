@@ -6,14 +6,18 @@ import (
 
 	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/payment"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
 
+//go:generate go generate github.com/privatix/dappctrl/data
+
 type config struct {
 	AgentServer   *uisrv.Config
 	DB            *data.DBConfig
+	Job           *job.Config
 	Log           *util.LogConfig
 	PaymentServer *payment.Config
 	SOMC          *somc.Config
@@ -22,6 +26,7 @@ type config struct {
 func newConfig() *config {
 	return &config{
 		DB:   data.NewDBConfig(),
+		Job:  job.NewConfig(),
 		Log:  util.NewLogConfig(),
 		SOMC: somc.NewConfig(),
 	}
@@ -55,6 +60,12 @@ func main() {
 	}()
 
 	pmt := payment.NewServer(conf.PaymentServer, logger, db)
-	logger.Fatal("failed to start payment server: %s",
-		pmt.ListenAndServe())
+	go func() {
+		logger.Fatal("failed to start payment server: %s",
+			pmt.ListenAndServe())
+	}()
+
+	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)
+	defer queue.Close()
+	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

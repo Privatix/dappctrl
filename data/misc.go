@@ -5,9 +5,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common/number"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/privatix/dappctrl/util"
 )
 
 // ToBytes returns the bytes represented by the base64 string s.
@@ -20,14 +18,16 @@ func FromBytes(src []byte) string {
 	return base64.URLEncoding.EncodeToString(src)
 }
 
-// PrivateKeyBytes returns private key's binary representation.
-func (u *User) PrivateKeyBytes() ([]byte, error) {
-	return ToBytes(*u.PrivateKey)
+// DecryptPrivateKey is a stub for key decryption.
+func DecryptPrivateKey(b []byte) []byte {
+	// TODO: implement this.
+	return b
 }
 
 // Sign signs a data.
-func (u *User) Sign(data []byte) ([]byte, error) {
-	prvBytes, err := u.PrivateKeyBytes()
+func (a *Account) Sign(data []byte) ([]byte, error) {
+	prvBytes, err := ToBytes(a.PrivateKey)
+	prvBytes = DecryptPrivateKey(prvBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -36,21 +36,6 @@ func (u *User) Sign(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return crypto.Sign(data, prv)
-}
-
-// PublicKeyBytes returns private key's binary representation.
-func (u *User) PublicKeyBytes() ([]byte, error) {
-	return ToBytes(u.PublicKey)
-}
-
-// TotalDepositNum returns total deposit as eth's number.Number.
-func (ch *Channel) TotalDepositNum() (*number.Number, error) {
-	return util.Base64ToEthNum(ch.TotalDeposit)
-}
-
-// ReceiptBalanceNum returns total deposit as eth's number.Number.
-func (ch *Channel) ReceiptBalanceNum() (*number.Number, error) {
-	return util.Base64ToEthNum(ch.ReceiptBalance)
 }
 
 // OfferingHash returns hash for given Offering.

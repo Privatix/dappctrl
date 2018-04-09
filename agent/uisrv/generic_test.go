@@ -32,11 +32,11 @@ func createTestChannel() (*data.Channel, func()) {
 	client := data.NewTestUser()
 	product := data.NewTestProduct()
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
-	offering := data.NewTestOffering(agent.ID, product.ID, tplOffer.ID)
+	offering := data.NewTestOffering(agent.EthAddr, product.ID, tplOffer.ID)
 	ch := data.NewTestChannel(
-		agent,
-		client,
-		offering,
+		agent.EthAddr,
+		client.EthAddr,
+		offering.ID,
 		0,
 		1,
 		data.ChannelActive)

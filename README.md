@@ -47,10 +47,14 @@ psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
-Modify `dappctrl.config.json` if you need non-default configuration and run:
+Make a copy of `dappctrl.config.json`:
+```bash
+cp dappctrl.config.json dappctrl.config.local.json
+```
+Modify `dappctrl.config.local.json` if you need non-default configuration and run:
 
 ```bash
-dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.json
+dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
 Build OpenVPN session trigger:

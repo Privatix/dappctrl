@@ -1,10 +1,12 @@
+// +build !noethtest
+
 package lib
 
 import (
 	"testing"
-	"pxctrl/eth/lib/tests"
-)
 
+	"github.com/privatix/dappctrl/eth/lib/tests"
+)
 
 func TestGasPriceFetching(t *testing.T) {
 	node := tests.GethEthereumConfig().Geth

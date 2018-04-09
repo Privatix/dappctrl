@@ -1,6 +1,0 @@
-{
-    "LogFile": "dapptrig.log",
-    "ServerAddr": "localhost:8080",
-    "ServerTLS": false,
-    "ChannelDir": "channels"
-}

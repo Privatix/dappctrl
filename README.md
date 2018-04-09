@@ -42,15 +42,19 @@ go install -tags=notest $DAPPCTRL
 Prepare a `dappctrl` database instance:
 
 ```bash
-psql -U postgres -c 'CREATE DATABASE dappctrl'
+psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
-Modify `dappctrl.config.json` if you need non-default configuration and run:
+Make a copy of `dappctrl.config.json`:
+```bash
+cp dappctrl.config.json dappctrl.config.local.json
+```
+Modify `dappctrl.config.local.json` if you need non-default configuration and run:
 
 ```bash
-dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.json
+dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
 Build OpenVPN session trigger:
@@ -77,10 +81,34 @@ docker-compose up
 
 # Tests
 
+## Preparing the tests environment
+
+Make a copy of `dappctrl-test.config.json` file:
+
+```bash
+cp dappctrl-test.config.json  dappctrl-test.config.local.json
+```
+
+Modify `dappctrl-test.config.local.json` if you need non-default configuration.
+
 ## Running the tests
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json
+go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.local.json
+```
+
+## Excluding specific tests from test run
+
+It's possible to exclude arbitrary package tests from test runs. To do so use
+a dedicated *build tag*. Name of a such tag is composed from the `no`-prefix,
+name of the package and the `test` suffix. For example, using `noethtest` tag
+will disable Ethereum library tests and disabling `novpnmontest` will disable
+VPN monitor tests.
+
+Example of a test run with the tags above:
+
+```bash
+go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json -tags=noethtest,novpnmontest
 ```
 
 # Contributing

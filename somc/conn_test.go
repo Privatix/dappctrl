@@ -1,8 +1,9 @@
+// +build !nosomctest
+
 package somc
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/privatix/dappctrl/data"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gorilla/websocket"
@@ -168,7 +171,7 @@ func TestFindOffering(t *testing.T) {
 
 	off := []byte("{}")
 	hash := crypto.Keccak256Hash(off)
-	hstr := base64.URLEncoding.EncodeToString(hash.Bytes())
+	hstr := data.FromBytes(hash.Bytes())
 
 	ch := make(chan findOfferingsReturn)
 	go func() {
@@ -176,7 +179,7 @@ func TestFindOffering(t *testing.T) {
 		ch <- findOfferingsReturn{data, err}
 	}()
 
-	ostr := base64.URLEncoding.EncodeToString(off)
+	ostr := data.FromBytes(off)
 	res := findOfferingsResult{{Hash: hstr, Data: ostr}}
 	data, _ := json.Marshal(res)
 

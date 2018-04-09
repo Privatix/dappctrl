@@ -4,30 +4,31 @@ import (
 	"flag"
 	"log"
 
+	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/payment"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
-	vpnmon "github.com/privatix/dappctrl/vpn/mon"
-	vpnsrv "github.com/privatix/dappctrl/vpn/srv"
 )
 
+//go:generate go generate github.com/privatix/dappctrl/data
+
 type config struct {
+	AgentServer   *uisrv.Config
 	DB            *data.DBConfig
+	Job           *job.Config
 	Log           *util.LogConfig
 	PaymentServer *payment.Config
 	SOMC          *somc.Config
-	VPNServer     *vpnsrv.Config
-	VPNMonitor    *vpnmon.Config
 }
 
 func newConfig() *config {
 	return &config{
-		DB:         data.NewDBConfig(),
-		Log:        util.NewLogConfig(),
-		SOMC:       somc.NewConfig(),
-		VPNServer:  vpnsrv.NewConfig(),
-		VPNMonitor: vpnmon.NewConfig(),
+		DB:   data.NewDBConfig(),
+		Job:  job.NewConfig(),
+		Log:  util.NewLogConfig(),
+		SOMC: somc.NewConfig(),
 	}
 }
 
@@ -52,21 +53,19 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	srv := vpnsrv.NewServer(conf.VPNServer, logger, db)
-	defer srv.Close()
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db)
 	go func() {
-		logger.Fatal("failed to serve vpn session requests: %s",
-			srv.ListenAndServe())
-	}()
-
-	mon := vpnmon.NewMonitor(conf.VPNMonitor, logger, db)
-	defer mon.Close()
-	go func() {
-		logger.Fatal("failed to monitor vpn traffic: %s\n",
-			mon.MonitorTraffic())
+		logger.Fatal("failed to run agent server: %s\n",
+			uiSrv.ListenAndServe())
 	}()
 
 	pmt := payment.NewServer(conf.PaymentServer, logger, db)
-	logger.Fatal("failed to start payment server: %s",
-		pmt.ListenAndServe())
+	go func() {
+		logger.Fatal("failed to start payment server: %s",
+			pmt.ListenAndServe())
+	}()
+
+	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)
+	defer queue.Close()
+	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

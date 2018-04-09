@@ -1,19 +1,23 @@
+// +build !noethtest
+
 package lib
 
 import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
-	"eth/contract"
-	"eth/lib/tests"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/eth/lib/tests"
 )
 
 var (

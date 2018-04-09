@@ -1,11 +1,11 @@
 package somc
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/privatix/dappctrl/data"
 )
 
 const findOfferingsMethod = "getOfferings"
@@ -29,12 +29,12 @@ type OfferingData struct {
 func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
 	params := findOfferingsParams{hashes}
 
-	data, err := json.Marshal(&params)
+	bytes, err := json.Marshal(&params)
 	if err != nil {
 		return nil, err
 	}
 
-	repl := c.request(findOfferingsMethod, data)
+	repl := c.request(findOfferingsMethod, bytes)
 	if repl.err != nil {
 		return nil, repl.err
 	}
@@ -46,19 +46,19 @@ func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
 
 	var ret []OfferingData
 	for _, v := range res {
-		data, err := base64.URLEncoding.DecodeString(v.Data)
+		bytes, err := data.ToBytes(v.Data)
 		if err != nil {
 			return nil, err
 		}
 
-		hash := crypto.Keccak256Hash(data)
-		hstr := base64.URLEncoding.EncodeToString(hash.Bytes())
+		hash := crypto.Keccak256Hash(bytes)
+		hstr := data.FromBytes(hash.Bytes())
 		if hstr != v.Hash {
 			return nil, fmt.Errorf(
 				"SOMC hash mismatch: %s != %s", hstr, v.Hash)
 		}
 
-		ret = append(ret, OfferingData{hstr, data})
+		ret = append(ret, OfferingData{hstr, bytes})
 	}
 
 	return ret, nil

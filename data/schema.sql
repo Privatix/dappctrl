@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
@@ -10,17 +12,15 @@ CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
 -- Unit types. Used for billing calculation.
 CREATE TYPE unit_type AS ENUM ('units','seconds');
 
+-- Contract types.
+CREATE TYPE contract_type AS ENUM ('ptc','psc');
+
+
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
 -- Etehereum address
 CREATE DOMAIN eth_addr AS char(28);
-
- -- Ethereum's uint192 in base64 (RFC-4648).
-CREATE DOMAIN privatix_tokens AS char(32);
-
--- Contract types.
-CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
@@ -44,44 +44,75 @@ CREATE TYPE chan_status AS ENUM (
 
 -- Messages statuses.
 CREATE TYPE msg_status AS ENUM (
-	'unpublished', -- saved in DB, but not published
-	'bchain_publishing', -- publishing in blockchain
-	'bchain_published', -- published in blockchain
-	'msg_channel_published' -- published in messaging channel
+    'unpublished', -- saved in DB, but not published
+    'bchain_publishing', -- publishing in blockchain
+    'bchain_published', -- published in blockchain
+    'msg_channel_published' -- published in messaging channel
+);
+
+-- Offering status
+CREATE TYPE offer_status AS ENUM (
+    'empty', -- saved in DB, but not published to blockchain
+    'register', -- in registration or registered in blockchain
+    'remove' -- being removed or already removed from blockchain
 );
 
 -- Transaction statuses.
 CREATE TYPE tx_status AS ENUM (
-	'unsent', -- saved in DB, but not sent
-	'sent', -- sent w/o error to eth node
-	'mined', -- tx mined
-	'uncle' -- tx is went to uncle block
+    'unsent', -- saved in DB, but not sent
+    'sent', -- sent w/o error to eth node
+    'mined', -- tx mined
+    'uncle' -- tx is went to uncle block
 );
 
 -- Job creator.
 CREATE TYPE job_creator AS ENUM (
-	'user', -- by user through UI
-	'billing_checker', -- by billing checker procedure
-	'bc_monitor', -- by blockchain monitor
-	'task' -- by another task
+    'user', -- by user through UI
+    'billing_checker', -- by billing checker procedure
+    'bc_monitor', -- by blockchain monitor
+    'task' -- by another task
 );
 
 -- Job status.
 CREATE TYPE job_status AS ENUM (
-	'new', -- previously never executed
-	'failed', -- failed to sucessfully execute
-	'skipped', -- skipped by user
-	'done' -- successfully executed
+    'active', -- processing or to be processed
+    'done', -- successfully finished
+    'failed', -- failed: retry limit is reached
+    'canceled' -- canceled
 );
 
--- Users are party in distributed trade.
+-- Job related object types.
+DROP TYPE IF EXISTS related_type CASCADE;
+CREATE TYPE related_type AS ENUM (
+    'offering', -- service offering
+    'channel', -- state channel
+    'endpoint' -- service endpoint
+);
+
+DROP TABLE IF EXISTS settings CASCADE;
+CREATE TABLE settings (
+    key text PRIMARY KEY,
+    value text NOT NULL,
+    description text
+);
+
+-- Accounts are ethereum accounts.
+-- Accounts used to perform Client and/or Agent operations.
+CREATE TABLE accounts (
+    id uuid PRIMARY KEY,
+    eth_addr eth_addr NOT NULL, -- ethereum address
+    public_key text NOT NULL,
+    private_key text NOT NULL,
+    is_default boolean NOT NULL DEFAULT FALSE, -- default account
+    in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
+);
+
+-- Users are external party in distributed trade.
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
     id uuid PRIMARY KEY,
-    public_key text NOT NULL,
-    private_key text,
-    is_default boolean DEFAULT false, -- default account
-    in_use boolean DEFAULT true-- this account is in use or not
+    eth_addr eth_addr NOT NULL, -- ethereum address
+    public_key text NOT NULL
 );
 
 -- Templates.
@@ -99,19 +130,24 @@ CREATE TABLE products (
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
-    usage_rep_type usage_rep_type NOT NULL -- for billing logic. Reporter provides increment or total usage
+    usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
+    is_server boolean NOT NULL -- product is defined as server (Agent) or client (Client)
 );
 
 -- Service offerings.
 CREATE TABLE offerings (
     id uuid PRIMARY KEY,
+    is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL, -- offering hash
     status msg_status NOT NULL, -- message status
-    agent uuid NOT NULL REFERENCES users(id),
+    offer_status offer_status NOT NULL, -- offer status in blockchain
+    block_number_updated bigint
+        CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
+
+    agent eth_addr NOT NULL,
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
@@ -119,34 +155,53 @@ CREATE TABLE offerings (
     unit_name varchar(10) NOT NULL, -- like megabytes, minutes, etc
     unit_type unit_type NOT NULL, -- type of unit. Time or material.
     billing_type bill_type NOT NULL, -- prepaid/postpaid
-    setup_price privatix_tokens, -- setup fee
-    unit_price privatix_tokens NOT NULL,
-    min_units bigint NOT NULL, -- used to calculate min required deposit
-    max_unit bigint, -- optional. If specified automatic termination can be invoked
-    billing_interval int NOT NULL, -- every unit numbers, that should be paid, after free units consumed
-    max_billing_unit_lag int NOT NULL, --maximum tolerance for payment lag (in units)
-    max_suspended_time int NOT NULL, -- maximum time in suspend state, after which service will be terminated (in seconds)
-    max_inactive_time_sec bigint, -- maximum inactive time before channel will be closed
-    free_units smallint NOT NULL DEFAULT 0, -- free units (test, bonus)
+    setup_price bigint NOT NULL, -- setup fee
+    unit_price bigint NOT NULL,
+    min_units bigint NOT NULL -- used to calculate min required deposit
+        CONSTRAINT positive_min_units CHECK (offerings.min_units >= 0),
+
+    max_unit bigint -- optional. If specified automatic termination can be invoked
+        CONSTRAINT positive_max_unit CHECK (offerings.max_unit >= 0),
+
+    billing_interval int NOT NULL -- every unit numbers, that should be paid, after free units consumed
+        CONSTRAINT positive_billing_interval CHECK (offerings.billing_interval > 0),
+
+    max_billing_unit_lag int NOT NULL --maximum tolerance for payment lag (in units)
+        CONSTRAINT positive_max_billing_unit_lag CHECK (offerings.max_billing_unit_lag >= 0),
+
+    max_suspended_time int NOT NULL -- maximum time in suspend state, after which service will be terminated (in seconds)
+        CONSTRAINT positive_max_suspended_time CHECK (offerings.max_suspended_time >= 0),
+
+    max_inactive_time_sec bigint -- maximum inactive time before channel will be closed
+        CONSTRAINT positive_max_inactive_time_sec CHECK (offerings.max_inactive_time_sec > 0),
+
+    free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
+        CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
     nonce uuid NOT NULL, -- random number to get different hash, with same parameters
-    additional_params json -- all additional parameters stored as JSON
+    additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
 
 -- State channels.
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
-    agent uuid NOT NULL REFERENCES users(id),
-    client uuid NOT NULL REFERENCES users(id),
+    is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
+    agent eth_addr NOT NULL,
+    client eth_addr NOT NULL,
     offering uuid NOT NULL REFERENCES offerings(id),
-    block int NOT NULL, -- block number, when state channel created
+    block int NOT NULL -- block number, when state channel created
+        CONSTRAINT positive_block CHECK (channels.block > 0),
+
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
-    total_deposit privatix_tokens NOT NULL, -- total deposit after all top-ups
+    total_deposit bigint NOT NULL -- total deposit after all top-ups
+        CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
     salt bigint NOT NULL, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
     password sha3_256 NOT NULL,
-    receipt_balance privatix_tokens NOT NULL, -- last payment amount received
+    -- TODO change to bigint
+    receipt_balance bigint NOT NULL -- last payment amount received
+        CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
     receipt_signature text NOT NULL -- signature corresponding to last payment
 );
 
@@ -156,13 +211,20 @@ CREATE TABLE sessions (
     channel uuid NOT NULL REFERENCES channels(id),
     started timestamp with time zone NOT NULL, -- time, when session started
     stopped timestamp with time zone, -- time, when session stopped
-    units_used bigint NOT NULL, -- total units used in this session.
-    seconds_consumed bigint NOT NULL, -- total seconds interval from started is recorded
+    units_used bigint NOT NULL -- total units used in this session.
+        CONSTRAINT positive_units_used CHECK (sessions.units_used >= 0),
+
+    seconds_consumed bigint NOT NULL -- total seconds interval from started is recorded
+        CONSTRAINT positive_seconds_consumed CHECK (sessions.seconds_consumed >= 0),
+
     last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
     server_ip inet,
-    server_port int,
+    server_port int
+        CONSTRAINT server_port_ct CHECK (sessions.server_port > 0 AND sessions.server_port <= 65535),
+
     client_ip inet,
     client_port int
+        CONSTRAINT client_port_ct CHECK (sessions.client_port > 0 AND sessions.client_port <= 65535)
 );
 
 -- Smart contracts.
@@ -177,12 +239,11 @@ CREATE TABLE contracts (
 -- Endpoint messages. Messages that include info about service access.
 CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
-    tpl uuid REFERENCES templates(id), -- corresponding endpoint template
+    template uuid NOT NULL REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
     signature text NOT NULL, -- agent's signature
-    tpl_version int NOT NULL, -- template version
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     dns varchar(100),
     ip_addr inet,
@@ -194,32 +255,37 @@ CREATE TABLE endpoints (
 -- Job queue.
 CREATE TABLE jobs (
     id uuid PRIMARY KEY,
-    task_name char(30) NOT NULL, -- name of task
+    type varchar(64) NOT NULL, -- type of task
     status job_status NOT NULL, -- job status
-    parent_obj char(30) NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
-    rel_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
+    related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    related_id uuid NOT NULL, -- related object (offering, channel, endpoint, etc.)
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
-    not_before timestamp with time zone, -- timestamp, used to create deffered job
+    not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    fail_count smallint, -- number of failures
-    try_count smallint -- number of times job was executed
+    try_count smallint NOT NULL -- number of tries performed
 );
 
 -- Ethereum transactions.
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
     hash sha3_256 NOT NULL, -- transaction hash
-    method char(30) NOT NULL, -- contract method
+    method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
+    job uuid REFERENCES jobs(id), -- corresponding job id
     issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
-    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
-    addr_from eth_addr NOT NULL, -- from etehereum address
-    addr_to eth_addr NOT NULL, -- from etehereum address
+    block_number_issued bigint
+        CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
+
+    addr_from eth_addr NOT NULL, -- from ethereum address
+    addr_to eth_addr NOT NULL, -- to ethereum address
     nonce numeric, -- tx nonce field
-    gas_price bigint, -- tx gas_price field
-    gas bigint, -- tx gas field
-    tx_raw text -- raw tx as was sent
+    gas_price bigint
+        CONSTRAINT positive_gas_price CHECK (eth_txs.gas_price > 0), -- tx gas_price field
+
+    gas bigint
+        CONSTRAINT positive_gas CHECK (eth_txs.gas > 0), -- tx gas field
+
+    tx_raw jsonb -- raw tx as was sent
 );
 
 -- Ethereum events.
@@ -227,10 +293,13 @@ CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
     tx_hash sha3_256, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding endpoint template
-    block_number int, -- event block number field
-    block_number_confirmed int, -- block number, when tx considered confirmed. Always greater or equal to real block number.
-    addr eth_addr NOT NULL, -- address from which this log originated
-    data text, -- contains one or more 32 Bytes non-indexed arguments of the log
-    topics text -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    job uuid REFERENCES jobs(id), -- corresponding job id
+    block_number bigint
+        CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
+
+    addr eth_addr NOT NULL, -- address of contract from which this log originated
+    data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
+    topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
 );
+
+END TRANSACTION;

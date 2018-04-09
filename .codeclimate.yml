@@ -18,7 +18,7 @@ checks:
       threshold: 250
 
   method-complexity:
-    enabled: true
+    enabled: false
     config:
       threshold: 5
 
@@ -30,7 +30,7 @@ checks:
   method-lines:
     enabled: true
     config:
-      threshold: 25
+      threshold: 40
 
   nested-control-flow:
     enabled: true
@@ -40,7 +40,7 @@ checks:
   return-statements:
     enabled: true
     config:
-      threshold: 4
+      threshold: 5
 
 plugins:
   # develop
@@ -52,7 +52,7 @@ plugins:
 
   golint:
     enabled: true
-    
+
   govet:
     enabled: true
 

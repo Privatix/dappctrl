@@ -77,10 +77,20 @@ docker-compose up
 
 # Tests
 
+## Preparing the tests environment
+
+Make a copy of `dappctrl-test.config.json` file:
+
+```bash
+cp dappctrl-test.config.json  dappctrl-test.config.local.json
+```
+
+Change necessary variables in `dappctrl-test.config.local.json` file. For example a database connection IP address.
+
 ## Running the tests
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json
+go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.local.json
 ```
 
 ## Excluding specific tests from test run

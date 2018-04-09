@@ -9,6 +9,36 @@
         }
     },
 
+    "EthereumLib": {
+        "geth": {
+            "host": "localhost",
+            "port": 8545
+        },
+        "truffle": {
+            "host": "localhost",
+            "port": 5000
+        }
+    },
+
+    "Job": {
+        "CollectJobs": 100,
+        "CollectPeriod": 1,
+        "WorkerBufLen": 10,
+        "Workers": 0,
+        "TryLimit": 3,
+        "TryPeriod": 1,
+        "Types": {
+            "clientPreChannelCreate": {
+                "TryLimit": 3,
+                "TryPeriod": 1
+            }
+        }
+    },
+
+    "JobTest": {
+        "StressJobs": 100
+    },
+
     "Log": {
         "Level": "info"
     },
@@ -21,21 +51,5 @@
     "SOMC": {
         "ReconnPeriod": 1,
         "URL": "ws://localhost:8080"
-    },
-
-    "TestData": {
-        "Channel": "e5b23706-16ed-11e8-b642-0ed5f89f718b",
-        "Password": "secret"
-    },
-
-    "EthereumLib": {
-        "geth": {
-            "host": "localhost",
-            "port": 8545
-        },
-        "truffle": {
-            "host": "localhost",
-            "port": 5000
-        }
     }
 }

@@ -201,7 +201,7 @@ type Setting struct {
 //reform:endpoints
 type Endpoint struct {
 	ID                     string  `json:"id" reform:"id,pk"`
-	Template               string  `json:"template" reform:"tpl"`
+	Template               string  `json:"template" reform:"template"`
 	Channel                string  `json:"channel" reform:"channel"`
 	Hash                   string  `json:"hash" reform:"hash"`
 	Status                 string  `json:"status" reform:"status"`
@@ -224,10 +224,10 @@ const (
 
 // Job statuses.
 const (
-	JobStatusNew     = "new"
-	JobStatusFailed  = "failed"
-	JobStatusSkipped = "skipped"
-	JobStatusDone    = "done"
+	JobActive   = "active"
+	JobDone     = "done"
+	JobFailed   = "failed"
+	JobCanceled = "canceled"
 )
 
 // Transaction statuses.
@@ -237,3 +237,56 @@ const (
 	TxMined  = "mined"
 	TxUncle  = "uncle"
 )
+
+// Job related object types.
+const (
+	JobOfferring = "offering"
+	JobChannel   = "channel"
+	JobEndpoint  = "endpoint"
+)
+
+// Job types.
+const (
+	JobClientPreChannelCreate               = "clientPreChannelCreate"
+	JobClientAfterChannelCreate             = "clientAfterChannelCreate"
+	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
+	JobClientPreChannelTopUp                = "clientPreChannelTopUp"
+	JobClientAfterChannelTopUp              = "clientAfterChannelTopUp"
+	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
+	JobClientPreUncooperativeCloseRequest   = "clientPreUncooperativeCloseRequest"
+	JobClientAfterUncooperativeCloseRequest = "clientAfterUncooperativeCloseRequest"
+	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
+	JobClientPreUncooperativeClose          = "clientPreUncooperativeClose"
+	JobClientAfterUncooperativeClose        = "clientAfterUncooperativeClose"
+	JobAgentAfterUncooperativeClose         = "agentAfterUncooperativeClose"
+	JobAgentPreCooperativeClose             = "agentPreCooperativeClose"
+	JobClientAfterCooperativeClose          = "clientAfterCooperativeClose"
+	JobAgentAfterCooperativeClose           = "agentAfterCooperativeClose"
+	JobAgentPreServiceCreate                = "agentPreServiceCreate"
+	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
+	JobAgentPreServiceTerminate             = "agentPreServiceTerminate"
+	JobClientAfterServiceTerminate          = "clientAfterServiceTerminate"
+	JobAgentAfterServiceTerminate           = "agentAfterServiceTerminate"
+	JobAgentPreEndpointMsgCreate            = "agentPreEndpointMsgCreate"
+	JobAgentPreEndpointMsgSOMCPublish       = "agentPreEndpointMsgSOMCPublish"
+	JobAgentAfterEndpointMsgSOMCPublish     = "agentAfterEndpointMsgSOMCPublish"
+	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"
+	JobAgentPreOfferingMsgBCPublish         = "agentPreOfferingMsgBCPublish"
+	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
+	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
+	JobClientPreOfferingMsgSOMCGet          = "clientPreOfferingMsgSOMCGet"
+)
+
+// Job is a task within persistent queue.
+//reform:jobs
+type Job struct {
+	ID          string    `reform:"id,pk"`
+	Type        string    `reform:"type"`
+	Status      string    `reform:"status"`
+	RelatedType string    `reform:"related_type"`
+	RelatedID   string    `reform:"related_id"`
+	CreatedAt   time.Time `reform:"created_at"`
+	NotBefore   time.Time `reform:"not_before"`
+	CreatedBy   string    `reform:"created_by"`
+	TryCount    uint8     `reform:"try_count"`
+}

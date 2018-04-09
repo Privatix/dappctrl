@@ -3,7 +3,6 @@
 package lib
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
@@ -16,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"bytes"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/lib/tests"
 )
@@ -101,13 +101,13 @@ func populateEvents() {
 	failOnErr(err, "Failed to parse received contract address")
 
 	psc, err := contract.NewPrivatixServiceContract(contractAddress.Bytes(), conn)
-	failOnErr(err, "Failed to connect to the EthereumConf client")
+	failOnErr(err, "Failed to connect to the Ethereum client")
 
 	pKeyBytes, err := hex.DecodeString(fetchTestPrivateKey())
 	failOnErr(err, "Failed to fetch test private key from the API")
 
 	key, err := crypto.ToECDSA(pKeyBytes)
-	failOnErr(err, "Failed parse received test private key")
+	failOnErr(err, "Failed to parse received test private key")
 
 	auth := bind.NewKeyedTransactor(key)
 
@@ -115,34 +115,36 @@ func populateEvents() {
 	_, err = psc.ThrowEventLogChannelCreated(auth, addr1, addr2, b32Zero, big.NewInt(0), b32Full)
 	failOnErr(err, "Failed to call ThrowEventLogChannelCreated")
 
-	_, err = psc.ThrowEventLogChannelToppedUp(auth, addr1, addr2, 0, b32Full, big.NewInt(0))
+	_, err = psc.ThrowEventLogChannelToppedUp(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogChannelToppedUp")
 
-	// todo: uncomment when API would be fixed
-	//_, err = psc.ThrowEventLogChannelCloseRequested(
-	//	auth, addr1, addr2, 0, b32Full, big.NewInt(0))
-	//failOnErr(err, "Failed to call ThrowEventLogChannelCloseRequested")
+	_, err = psc.ThrowEventLogChannelCloseRequested(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
+	failOnErr(err, "Failed to call ThrowEventLogChannelCloseRequested")
 
-	_, err = psc.ThrowEventLogServiceOfferingCreated(auth, addr1, b32Zero, big.NewInt(0), 0)
-	failOnErr(err, "Failed to call ThrowEventLogServiceOfferingCreated")
+	_, err = psc.ThrowEventLogOfferingCreated(auth, addr1, b32Zero, big.NewInt(0), 0)
+	failOnErr(err, "Failed to call ThrowEventLogOfferingCreated")
 
-	_, err = psc.ThrowEventLogServiceOfferingDeleted(auth, b32Zero)
-	failOnErr(err, "Failed to call ThrowEventLogServiceOfferingDeleted")
+	_, err = psc.ThrowEventLogOfferingDeleted(auth, addr1, b32Zero)
+	failOnErr(err, "Failed to call ThrowEventLogOfferingDeleted")
 
-	_, err = psc.ThrowEventLogServiceOfferingEndpoint(auth, addr1, b32Zero, 0, b32Full)
-	failOnErr(err, "Failed to call ThrowEventLogServiceOfferingEndpoint")
+	_, err = psc.ThrowEventLogOfferingEndpoint(auth, addr1, addr2, b32Zero, 0, b32Full)
+	failOnErr(err, "Failed to call ThrowEventLogOfferingEndpoint")
 
-	_, err = psc.ThrowEventLogServiceOfferingSupplyChanged(auth, b32Zero, 0)
-	failOnErr(err, "Failed to call ThrowEventLogServiceOfferingSupplyChanged")
+	_, err = psc.ThrowEventLogOfferingSupplyChanged(auth, addr1, b32Zero, 0)
+	failOnErr(err, "Failed to call ThrowEventLogOfferingSupplyChanged")
 
-	_, err = psc.ThrowEventLogServiceOfferingPopedUp(auth, b32Zero)
-	failOnErr(err, "Failed to call ThrowEventLogServiceOfferingPopedUp")
+	_, err = psc.ThrowEventLogOfferingPopedUp(auth, addr1, b32Zero)
+	failOnErr(err, "Failed to call ThrowEventLogOfferingPopedUp")
 
-	_, err = psc.ThrowEventLogCooperativeChannelClose(auth, addr1, addr2, 0, b32Full, big.NewInt(0))
+	_, err = psc.ThrowEventLogCooperativeChannelClose(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogCooperativeChannelClose")
 
-	_, err = psc.ThrowEventLogUnCooperativeChannelClose(auth, addr1, addr2, 0, b32Full, big.NewInt(0))
+	_, err = psc.ThrowEventLogUnCooperativeChannelClose(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogUnCooperativeChannelClose")
+
+	//truffleAPI := tests.GethEthereumConfig().TruffleAPI
+	//_, err = http.Get(truffleAPI.Interface() + "/skip/100/")
+	//failOnErr(err, "Failed to call skip blocks method")
 }
 
 func TestNormalLogsFetching(t *testing.T) {
@@ -189,28 +191,28 @@ func TestNormalLogsFetching(t *testing.T) {
 
 	{
 		topics, data := fetchEventData(EthDigestChannelCreated)
-		event, err := NewEventChannelCreated([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
-		failOnErr(err, "Can't create EventChannelCreated")
+		event, err := NewChannelCreatedEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		failOnErr(err, "Can't create ChannelCreatedEvent")
 
-		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
+		client := event.Client.Bytes()
 
-		cmpBytes(client[:], addr1[:], "ChannelCreated: client is unexpected")
-		cmpBytes(agent[:], addr2[:], "ChannelCreated: agent is unexpected")
+		cmpBytes(agent[:], addr1[:], "ChannelCreated: agent is unexpected")
+		cmpBytes(client[:], addr2[:], "ChannelCreated: client is unexpected")
 		cmpU256(event.OfferingHash, u256Zero, "ChannelCreated: offering hash is unexpected")
 		cmpU192(event.Deposit, u192Zero, "ChannelCreated: deposit is unexpected")
 	}
 
 	{
 		topics, data := fetchEventData(EthDigestChannelToppedUp)
-		event, err := NewEventChannelToppedUp([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
-		failOnErr(err, "Can't create EventChannelToppedUp")
+		event, err := NewChannelToppedUpEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		failOnErr(err, "Can't create ChannelToppedUpEvent")
 
-		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
+		client := event.Client.Bytes()
 
-		cmpBytes(client[:], addr1[:], "ChannelToppedUp: client address is unexpected")
-		cmpBytes(agent[:], addr2[:], "ChannelToppedUp: agent address is unexpected")
+		cmpBytes(agent[:], addr1[:], "ChannelToppedUp: agent is unexpected")
+		cmpBytes(client[:], addr2[:], "ChannelToppedUp: client is unexpected")
 		cmpU256(event.OpenBlockNumber, u256Zero, "ChannelToppedUp: open block number is unexpected")
 		cmpU256(event.OfferingHash, u256Full, "ChannelToppedUp: offering hash is unexpected")
 		cmpU192(event.AddedDeposit, u192Zero, "ChannelToppedUp: added deposit is unexpected")
@@ -218,79 +220,88 @@ func TestNormalLogsFetching(t *testing.T) {
 
 	{
 		topics, data := fetchEventData(EthOfferingCreated)
-		event, err := NewEventServiceOfferingCreated([3]string{topics[0], topics[1], topics[2]}, data)
-		failOnErr(err, "Can't create EventOfferingCreated")
+		event, err := NewOfferingCreatedEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		failOnErr(err, "Can't create OfferingCreatedEvent")
 
 		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingCreated: client address is unexpected")
+		cmpBytes(agent[:], addr1[:], "OfferingCreated: agent address is unexpected")
 		cmpU256(event.OfferingHash, u256Zero, "OfferingCreated: offering hash is unexpected")
 		cmpU192(event.MinDeposit, u192Zero, "OfferingCreated: min deposit is unexpected")
-		cmpU192(event.CurrentSupply, u192Zero, "OfferingCreated: current supply is unexpected")
+		cmpU256(event.CurrentSupply, u256Zero, "OfferingCreated: current supply is unexpected")
 	}
 
 	{
 		topics, _ := fetchEventData(EthOfferingDeleted)
-		event, err := NewEventServiceOfferingDeleted([2]string{topics[0], topics[1]})
-		failOnErr(err, "Can't create EventServiceOfferingDeleted")
+		event, err := NewOfferingDeletedEvent([3]string{topics[0], topics[1], topics[2]})
+		failOnErr(err, "Can't create EventOfferingDeleted")
 
-		cmpU256(event.OfferingHash, u256Zero, "OfferingCreated: offering hash is unexpected")
+		agent := event.Agent.Bytes()
+		cmpBytes(agent[:], addr1[:], "OfferingDeleted: agent address is unexpected")
+		cmpU256(event.OfferingHash, u256Zero, "OfferingDeleted: offering hash is unexpected")
 	}
 
 	{
-		topics, data := fetchEventData(EthServiceOfferingEndpoint)
-		event, err := NewEventServiceOfferingEndpoint([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
-		failOnErr(err, "Can't create EventServiceOfferingEndpoint")
+		topics, data := fetchEventData(EthOfferingEndpoint)
+		event, err := NewOfferingEndpointEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		failOnErr(err, "Can't create EventOfferingEndpoint")
 
+		agent := event.Agent.Bytes()
 		client := event.Client.Bytes()
-		cmpBytes(client[:], addr1[:], "ServiceOfferingEndpoint: client address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "ServiceOfferingEndpoint: offering hash is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "ServiceOfferingEndpoint: open block number is unexpected")
-		cmpU256(event.EndpointHash, u256Full, "ServiceOfferingEndpoint: endpoint hash is unexpected")
+		cmpBytes(agent[:], addr1[:], "OfferingEndpoint: agent address is unexpected")
+		cmpBytes(client[:], addr2[:], "OfferingEndpoint: client address is unexpected")
+		cmpU256(event.OfferingHash, u256Zero, "OfferingEndpoint: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, u256Zero, "OfferingEndpoint: open block number is unexpected")
+		cmpU256(event.EndpointHash, u256Full, "OfferingEndpoint: endpoint hash is unexpected")
 	}
 
 	{
-		topics, data := fetchEventData(EthServiceOfferingSupplyChanged)
-		event, err := NewEventServiceOfferingSupplyChanged([2]string{topics[0], topics[1]}, data)
-		failOnErr(err, "Can't create EventServiceOfferingSupplyChanged")
+		topics, data := fetchEventData(EthOfferingSupplyChanged)
+		event, err := NewOfferingSupplyChangedEvent([3]string{topics[0], topics[1], topics[2]}, data)
+		failOnErr(err, "Can't create EventOfferingSupplyChanged")
 
-		cmpU256(event.OfferingHash, u256Zero, "ServiceOfferingSupplyChanged: offering hash is unexpected")
-		cmpU192(event.CurrentSupply, u192Zero, "ServiceOfferingSupplyChanged: current supply is unexpected")
+		agent := event.Agent.Bytes()
+		cmpBytes(agent[:], addr1[:], "OfferingSupplyChanged: agent address is unexpected")
+		cmpU256(event.OfferingHash, u256Zero, "OfferingSupplyChanged: offering hash is unexpected")
+		cmpU192(event.CurrentSupply, u192Zero, "OfferingSupplyChanged: current supply is unexpected")
 	}
 
 	{
-		topics, _ := fetchEventData(EthServiceOfferingPoppedUp)
-		event, err := NewEventServiceOfferingPoppedUp([2]string{topics[0], topics[1]})
-		failOnErr(err, "Can't create EventServiceOfferingPoppedUp")
-		cmpU256(event.OfferingHash, u256Zero, "ServiceOfferingPoppedUp: offering hash is unexpected")
+		topics, _ := fetchEventData(EthOfferingPoppedUp)
+		event, err := NewOfferingPoppedUpEvent([3]string{topics[0], topics[1], topics[2]})
+		failOnErr(err, "Can't create EventOfferingPoppedUp")
+
+		agent := event.Agent.Bytes()
+		cmpBytes(agent[:], addr1[:], "OfferingPoppedUp: agent address is unexpected")
+		cmpU256(event.OfferingHash, u256Zero, "OfferingPoppedUp: offering hash is unexpected")
 	}
 
 	{
 		topics, data := fetchEventData(EthCooperativeChannelClose)
-		event, err := NewEventCooperativeChannelClose([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
-		failOnErr(err, "Can't create EventCooperativeChannelClose")
+		event, err := NewCooperativeChannelCloseEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		failOnErr(err, "Can't create CooperativeChannelCloseEvent")
 
 		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
 
-		cmpBytes(client[:], addr1[:], "CooperativeChannelClose: client is unexpected")
-		cmpBytes(agent[:], addr2[:], "CooperativeChannelClose: agent is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "CooperativeChannelClose: open block number is unexpected")
+		cmpBytes(agent[:], addr1[:], "CooperativeChannelClose: client is unexpected")
+		cmpBytes(client[:], addr2[:], "CooperativeChannelClose: agent is unexpected")
 		cmpU256(event.OfferingHash, u256Full, "CooperativeChannelClose: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, u256Zero, "CooperativeChannelClose: open block number is unexpected")
 		cmpU192(event.Balance, u192Zero, "CooperativeChannelClose: balance is unexpected")
 	}
 
 	{
 		topics, data := fetchEventData(EthUncooperativeChannelClose)
-		event, err := NewEventUnCooperativeChannelClose([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
+		event, err := NewUnCooperativeChannelCloseEvent([4]string{topics[0], topics[1], topics[2], topics[3]}, data)
 		failOnErr(err, "Can't create EventUnCooperativeChannelClose")
 
 		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
 
-		cmpBytes(client[:], addr1[:], "UnCooperativeChannelClose: client is unexpected")
-		cmpBytes(agent[:], addr2[:], "UnCooperativeChannelClose: agent is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "UnCooperativeChannelClose: open block number is unexpected")
+		cmpBytes(agent[:], addr1[:], "CooperativeChannelClose: client is unexpected")
+		cmpBytes(client[:], addr2[:], "CooperativeChannelClose: agent is unexpected")
 		cmpU256(event.OfferingHash, u256Full, "UnCooperativeChannelClose: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, u256Zero, "UnCooperativeChannelClose: open block number is unexpected")
 		cmpU192(event.Balance, u192Zero, "UnCooperativeChannelClose: balance is unexpected")
 	}
 }

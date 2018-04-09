@@ -39,6 +39,7 @@ type TransactionReceiptAPIResponse struct {
 	apiResponse
 	Result string `json:"result"`
 }
+
 // GetTransactionReceipt returns receipt of the transaction,
 // specified by the hash.
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_gettransactionreceipt
@@ -50,5 +51,5 @@ func (e *EthereumClient) GetTransactionReceipt(hash string) (*TransactionReceipt
 	}
 
 	response := &TransactionReceiptAPIResponse{}
-	return response, e.fetch("eth_getTransactionReceipt", `"` + hash + `"`, response)
+	return response, e.fetch("eth_getTransactionReceipt", `"`+hash+`"`, response)
 }

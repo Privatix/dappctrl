@@ -4,3 +4,7 @@
 *_reform.go
 .idea/*
 .docker_data/*
+
+eth/contract/psc.go
+eth/contract/ptc.go
+eth/contract/sale.go

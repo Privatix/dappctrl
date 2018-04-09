@@ -89,7 +89,7 @@ Make a copy of `dappctrl-test.config.json` file:
 cp dappctrl-test.config.json  dappctrl-test.config.local.json
 ```
 
-Change necessary variables in `dappctrl-test.config.local.json` file. For example a database connection IP address.
+Modify `dappctrl-test.config.local.json` if you need non-default configuration.
 
 ## Running the tests
 

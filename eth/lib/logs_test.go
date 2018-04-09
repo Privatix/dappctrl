@@ -141,10 +141,6 @@ func populateEvents() {
 
 	_, err = psc.ThrowEventLogUnCooperativeChannelClose(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogUnCooperativeChannelClose")
-
-	//truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	//_, err = http.Get(truffleAPI.Interface() + "/skip/100/")
-	//failOnErr(err, "Failed to call skip blocks method")
 }
 
 func TestNormalLogsFetching(t *testing.T) {

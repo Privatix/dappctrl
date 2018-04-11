@@ -49,6 +49,8 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		s.replyUnexpectedErr(w)
 		return
 	}
-
+    if(items == nil){
+        items = make([]reform.Struct, 0)
+    }
 	s.reply(w, items)
 }

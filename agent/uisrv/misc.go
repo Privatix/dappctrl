@@ -32,10 +32,10 @@ func idFromStatusPath(prefix, path string) string {
 		return ""
 	}
 	parts = strings.Split(parts[1], "/")
-	if len(parts) != 3 || parts[2] != "status" {
+	if len(parts) != 2 || parts[1] != "status" {
 		return ""
 	}
-	return parts[1]
+	return parts[0]
 }
 
 func invalidUnitType(v string) bool {

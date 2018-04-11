@@ -33,13 +33,14 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 }
 
 const (
-	channelsPath  = "/ui/channels"
+	channelsPath  = "/ui/channels/"
 	endpointsPath = "/ui/endpoints"
-	offeringsPath = "/ui/offerings"
+	offeringsPath = "/ui/offerings/"
 	productsPath  = "/ui/products"
 	sessionsPath  = "/ui/sessions"
 	settingsPath  = "/ui/settings"
 	templatePath  = "/ui/templates"
+	notFoundPath  = "/"
 )
 
 // ListenAndServe starts a server.
@@ -52,6 +53,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(sessionsPath, s.handleSessions)
 	mux.HandleFunc(settingsPath, s.handleSettings)
 	mux.HandleFunc(templatePath, s.handleTempaltes)
+	mux.HandleFunc(notFoundPath, s.notFoundHandler)
 
 	if s.conf.TLS != nil {
 		return http.ListenAndServeTLS(

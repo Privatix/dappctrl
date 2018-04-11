@@ -44,5 +44,10 @@ func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, 
 }
 
 func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+    req := &data.ActionRequest{}
+	if !s.parsePayload(w, r, req) {
+		return
+	}
+    s.logger.Warn("action ( %v )  request for channel with id: %v recieved.", req.Action, id);
 	// TODO once job queue implemented.
 }

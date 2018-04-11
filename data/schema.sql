@@ -105,6 +105,10 @@ CREATE TABLE accounts (
     private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
     in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
+    ptc_balance bigint NOT NULL -- PTC balance
+        CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
+    psc_balance bigint NOT NULL -- PSC balance
+        CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0)
 );
 
 -- Users are external party in distributed trade.

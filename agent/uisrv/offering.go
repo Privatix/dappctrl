@@ -6,9 +6,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
-func (s *Server) notFoundHandler(w http.ResponseWriter, r *http.Request) {
-    s.logger.Warn("NOT FOUND!!! %v", r.URL.Path);
-}
+
 // handleOfferings calls appropriate handler by scanning incoming request.
 func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
 	if id := idFromStatusPath(offeringsPath, r.URL.Path); id != "" {
@@ -119,11 +117,11 @@ const (
 
 func (s *Server) handlePutOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
-	req := &data.ActionRequest{}
+	req := &ActionPayload{}
 	if !s.parsePayload(w, r, req) {
 		return
 	}
-	s.logger.Warn("action ( %v )  request for offering with id: %v recieved.", req.Action, id);
+	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
 	// TODO once job queue implemented.
 }
 

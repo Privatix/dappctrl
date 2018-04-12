@@ -117,10 +117,6 @@ type Offering struct {
 	AdditionalParams   []byte  `json:"additionalParams" reform:"additional_params" validate:"required"`
 }
 
-type ActionRequest struct {
-	Action string `json:"action"`
-}
-
 // State channel statuses.
 const (
 	ChannelPending       = "pending"

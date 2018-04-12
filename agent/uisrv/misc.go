@@ -25,7 +25,7 @@ type serverError struct {
 	Message string `json:"message"`
 }
 
-// idFromStatusPath returns id from path of format prefix/id/status.
+// idFromStatusPath returns id from path of format {prefix}{id}/status.
 func idFromStatusPath(prefix, path string) string {
 	parts := strings.Split(path, prefix)
 	if len(parts) != 2 {

@@ -225,7 +225,7 @@ func TestGetOffering(t *testing.T) {
 }
 
 func sendToOfferingStatus(id, action, method string) *httptest.ResponseRecorder {
-	path := fmt.Sprintf("%s/%s/status", offeringsPath, id)
+	path := fmt.Sprintf("%s%s/status", offeringsPath, id)
 	var r *http.Request
 	if action != "" {
 		r.Form = make(url.Values)

@@ -42,7 +42,7 @@ func TestGetChannels(t *testing.T) {
 }
 
 func getChannelStatus(id string) *httptest.ResponseRecorder {
-	path := fmt.Sprintf("%s/%s/status", channelsPath, id)
+	path := fmt.Sprintf("%s%s/status", channelsPath, id)
 	r := httptest.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	testServer.handleChannels(w, r)

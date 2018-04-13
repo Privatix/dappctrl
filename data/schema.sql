@@ -93,7 +93,9 @@ DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
-    description text
+    description text, -- extended description
+    name varchar(30) NOT NULL -- display name
+      CONSTRAINT unique_name UNIQUE
 );
 
 -- Accounts are ethereum accounts.
@@ -110,7 +112,10 @@ CREATE TABLE accounts (
     ptc_balance bigint NOT NULL -- PTC balance
         CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
     psc_balance bigint NOT NULL -- PSC balance
-        CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0)
+        CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
+    eth_balance NUMERIC(22,18) -- ethereum balance up to 10000 ETH
+      CONSTRAINT positive_eth_balance CHECK (accounts.eth_balance > 0),
+    last_balance_check timestamp with time zone -- time when balance was checked
 );
 
 -- Users are external party in distributed trade.

@@ -15,7 +15,7 @@ Install prerequisite software if it's not installed.
 
 * Install [Golang](https://golang.org/doc/install):
 
-  * Make sure that installed `go/bin` directory is added to `$PATH`. It location depends on OS and may be:
+  * Make sure that installed `go/bin` directory is have been added to `$PATH`. The directory location depends on OS and may be:
     * `/usr/local/go/bin`
     * `$HOME/go/bin`
     * `/usr/bin/go`

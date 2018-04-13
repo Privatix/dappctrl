@@ -103,7 +103,7 @@ func (s *Server) handlePutOffering(w http.ResponseWriter, r *http.Request) {
 // handleGetOfferings replies with all offerings or an offering by id.
 func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: []queryParam{{Name: "id", Field: "id"}},
+		Params: []queryParam{{Name: "id", Field: "id"}, {Name: "product", Field: "product"}},
 		View:   data.OfferingTable,
 	})
 }
@@ -117,6 +117,11 @@ const (
 
 func (s *Server) handlePutOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
+	req := &ActionPayload{}
+	if !s.parsePayload(w, r, req) {
+		return
+	}
+	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
 	// TODO once job queue implemented.
 }
 

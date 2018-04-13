@@ -25,17 +25,17 @@ type serverError struct {
 	Message string `json:"message"`
 }
 
-// idFromStatusPath returns id from path of format prefix/id/status.
+// idFromStatusPath returns id from path of format {prefix}{id}/status.
 func idFromStatusPath(prefix, path string) string {
 	parts := strings.Split(path, prefix)
 	if len(parts) != 2 {
 		return ""
 	}
 	parts = strings.Split(parts[1], "/")
-	if len(parts) != 3 || parts[2] != "status" {
+	if len(parts) != 2 || parts[1] != "status" {
 		return ""
 	}
-	return parts[1]
+	return parts[0]
 }
 
 func invalidUnitType(v string) bool {

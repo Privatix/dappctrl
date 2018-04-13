@@ -8,6 +8,11 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+// ActionPayload is a body format for action requests.
+type ActionPayload struct {
+	Action string `json:"action"`
+}
+
 // TLSConfig is a tls configuration.
 type TLSConfig struct {
 	CertFile string
@@ -33,9 +38,9 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 }
 
 const (
-	channelsPath  = "/ui/channels"
+	channelsPath  = "/ui/channels/"
 	endpointsPath = "/ui/endpoints"
-	offeringsPath = "/ui/offerings"
+	offeringsPath = "/ui/offerings/"
 	productsPath  = "/ui/products"
 	sessionsPath  = "/ui/sessions"
 	settingsPath  = "/ui/settings"
@@ -52,6 +57,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(sessionsPath, s.handleSessions)
 	mux.HandleFunc(settingsPath, s.handleSettings)
 	mux.HandleFunc(templatePath, s.handleTempaltes)
+	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {
 		return http.ListenAndServeTLS(

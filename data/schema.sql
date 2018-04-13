@@ -113,7 +113,7 @@ CREATE TABLE accounts (
         CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
     psc_balance bigint NOT NULL -- PSC balance
         CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
-    eth_balance NUMERIC(22,18) -- ethereum balance up to 10000 ETH
+    eth_balance NUMERIC(23,18) -- ethereum balance up to 10000 ETH
       CONSTRAINT positive_eth_balance CHECK (accounts.eth_balance > 0),
     last_balance_check timestamp with time zone -- time when balance was checked
 );

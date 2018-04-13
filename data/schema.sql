@@ -82,14 +82,12 @@ CREATE TYPE job_status AS ENUM (
 );
 
 -- Job related object types.
-DROP TYPE IF EXISTS related_type CASCADE;
 CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
     'endpoint' -- service endpoint
 );
 
-DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,

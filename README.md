@@ -11,10 +11,18 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Prerequisites
 
-Install prerequisite software:
-* Install Golang if it's not installed. Make sure that `$HOME/go/bin` is added
-to `$PATH`.
-* Install [PostgreSQL](https://www.postgresql.org/download/) if it's not installed.
+Install prerequisite software if it's not installed.
+
+* Install [Golang](https://golang.org/doc/install):
+
+  * Make sure that installed `go/bin` directory is added to `$PATH`. It location depends on OS and may be:
+    * `/usr/local/go/bin`
+    * `$HOME/go/bin`
+    * `/usr/bin/go`
+
+* Install [PostgreSQL](https://www.postgresql.org/download/).
+
+* Install [gcc](https://gcc.gnu.org/install/).
 
 ## Installation steps
 

@@ -16,8 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"bytes"
-	"github.com/privatix/dappctrl/eth/contract"
+	//"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/lib/tests"
+	"dappctrl/eth/contract"
 )
 
 var (

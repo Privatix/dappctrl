@@ -7,7 +7,3 @@
 
 dappctrl.config.local.json
 dappctrl-test.config.local.json
-
-eth/contract/psc.go
-eth/contract/ptc.go
-eth/contract/sale.go

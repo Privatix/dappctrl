@@ -7,7 +7,7 @@ import (
 	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
-	"github.com/privatix/dappctrl/payment"
+	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
@@ -17,7 +17,7 @@ type config struct {
 	DB            *data.DBConfig
 	Job           *job.Config
 	Log           *util.LogConfig
-	PaymentServer *payment.Config
+	PaymentServer *pay.Config
 	SOMC          *somc.Config
 }
 
@@ -57,10 +57,10 @@ func main() {
 			uiSrv.ListenAndServe())
 	}()
 
-	pmt := payment.NewServer(conf.PaymentServer, logger, db)
+	paySrv := pay.NewServer(conf.PaymentServer, logger, db)
 	go func() {
-		logger.Fatal("failed to start payment server: %s",
-			pmt.ListenAndServe())
+		logger.Fatal("failed to start pay server: %s",
+			paySrv.ListenAndServe())
 	}()
 
 	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)

@@ -1,6 +1,6 @@
 // +build !nopaymenttest
 
-package payment
+package pay
 
 import (
 	"bytes"

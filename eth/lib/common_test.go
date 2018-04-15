@@ -11,9 +11,13 @@ import (
 	"testing"
 )
 
-func TestGasPriceFetching(t *testing.T) {
+func getClient() *EthereumClient {
 	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
+	return NewEthereumClient(node.Host, node.Port)
+}
+
+func TestGasPriceFetching(t *testing.T) {
+	client := getClient()
 	response, err := client.GetGasPrice()
 	if err != nil {
 		t.Fatal(err)
@@ -25,8 +29,7 @@ func TestGasPriceFetching(t *testing.T) {
 }
 
 func TestBlockNumberFetching(t *testing.T) {
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
+	client := getClient()
 	response, err := client.GetBlockNumber()
 	if err != nil {
 		t.Fatal(err)
@@ -39,8 +42,7 @@ func TestBlockNumberFetching(t *testing.T) {
 
 func TestTransactionReceipt(t *testing.T) {
 	transactionHash := getContractTransactionHash()
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
+	client := getClient()
 	response, err := client.GetTransactionReceipt(transactionHash)
 	if err != nil {
 		t.Fatal(err)
@@ -53,8 +55,7 @@ func TestTransactionReceipt(t *testing.T) {
 
 func TestTransactionByHash(t *testing.T) {
 	transactionHash := getContractTransactionHash()
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
+	client := getClient()
 	response, err := client.GetTransactionByHash(transactionHash)
 	if err != nil {
 		t.Fatal(err)
@@ -82,4 +83,51 @@ func getContractTransactionHash() string {
 	json.Unmarshal(body, &data)
 
 	return data["contract"].(map[string]interface{})["transactionHash"].(string)
+}
+
+func TestBalanceOnLastBlock(t *testing.T) {
+	account := getTestAccountAddress()
+	client := getClient()
+
+	response, err := client.GetBalance(account, "latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Result != "0x554d9fa8811bcd000" {
+		t.Fatal("Unexpected balance occurred")
+	}
+}
+
+func TestBalanceOnFirstBlock(t *testing.T) {
+	account := getTestAccountAddress()
+	client := getClient()
+
+	response, err := client.GetBalance(account, "earliest")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.Result != "0x56bc75e2d63100000" {
+		t.Fatal("Unexpected balance occurred")
+	}
+}
+
+func getTestAccountAddress() string {
+	truffleAPI := tests.GethEthereumConfig().TruffleAPI
+	response, err := http.Get(truffleAPI.Interface() + "/getKeys")
+	if err != nil || response.StatusCode != 200 {
+		log.Fatal("Can't fetch private key. It seems that test environment is broken.")
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	defer response.Body.Close()
+	if err != nil {
+		log.Fatal("Can't read response body. It seems that test environment is broken.")
+	}
+
+	data := make([]interface{}, 0, 0)
+	json.Unmarshal(body, &data)
+
+	return data[0].(map[string]interface{})["account"].(string)
 }

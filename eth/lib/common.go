@@ -27,6 +27,18 @@ func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
 	return response, e.fetch("eth_blockNumber", "", response)
 }
 
+type BalanceAPIResponse GasPriceAPIResponse
+
+// GetBalance returns the balance of the account of given address in wei.
+// For the details, please, refer to:
+// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getbalance
+func (e *EthereumClient) GetBalance(addressHex, blockNumberHex string) (*BalanceAPIResponse, error) {
+	response := &BalanceAPIResponse{}
+	return response, e.fetch("eth_getBalance", `"`+
+		addressHex+`", "`+
+		blockNumberHex+`"`, response)
+}
+
 type TransactionReceiptAPIResponse struct {
 	apiResponse
 	Result struct {

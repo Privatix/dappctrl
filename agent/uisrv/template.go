@@ -1,6 +1,7 @@
 package uisrv
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -12,11 +13,11 @@ import (
 // handleTempaltes calls appropriate handler by scanning incoming request.
 func (s *Server) handleTempaltes(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		s.handleTemplateCreate(w, r)
+		basicAuthMiddlewareFunc(s, s.handleTemplateCreate)(w, r)
 		return
 	}
 	if r.Method == "GET" {
-		s.handleGetTemplates(w, r)
+		basicAuthMiddlewareFunc(s, s.handleGetTemplates)(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
@@ -30,12 +31,26 @@ func (s *Server) handleTemplateCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	tpl.ID = util.NewUUID()
 	tpl.Hash = data.FromBytes(crypto.Keccak256(tpl.Raw))
-	if err := s.db.Insert(tpl); err != nil {
-		s.logger.Warn("failed to insert template: %v", err)
-		s.replyUnexpectedErr(w)
+	if !s.insert(w, tpl) {
 		return
 	}
 	s.replyEntityCreated(w, tpl.ID)
+}
+
+func (s *Server) parseTemplatePayload(w http.ResponseWriter,
+	r *http.Request, tpl *data.Template) bool {
+	v := make(map[string]interface{})
+	if !s.parsePayload(w, r, tpl) ||
+		invalidTemplateKind(tpl.Kind) ||
+		json.Unmarshal(tpl.Raw, &v) != nil {
+		s.replyInvalidPayload(w)
+		return false
+	}
+	return true
+}
+
+func invalidTemplateKind(v string) bool {
+	return v != data.TemplateOffer && v != data.TemplateAccess
 }
 
 // handleGetTemplates replies with all templates or template by id and/or type.

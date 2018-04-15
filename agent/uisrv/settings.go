@@ -9,11 +9,11 @@ import (
 // handleSettings calls appropriate handler by scanning incoming request.
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		s.handleGetSettings(w, r)
+		basicAuthMiddlewareFunc(s, s.handleGetSettings)(w, r)
 		return
 	}
 	if r.Method == "PUT" {
-		s.handlePutSettings(w, r)
+		basicAuthMiddlewareFunc(s, s.handlePutSettings)(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)

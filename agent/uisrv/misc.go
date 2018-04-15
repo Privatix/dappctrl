@@ -110,14 +110,13 @@ func (s *Server) findByID(w http.ResponseWriter, v reform.Record, id string) boo
 	return true
 }
 
-func (s *Server) replyErr(w http.ResponseWriter, reply *serverError) {
-	w.WriteHeader(reply.Code)
+func (s *Server) replyErr(w http.ResponseWriter, status int, reply *serverError) {
+	w.WriteHeader(status)
 	s.reply(w, reply)
 }
 
 func (s *Server) replyNotFound(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusNotFound,
+	s.replyErr(w, http.StatusNotFound, &serverError{
 		Message: "requested resources was not found",
 	})
 }
@@ -131,15 +130,13 @@ func (s *Server) replyOK(w http.ResponseWriter, msg string) {
 }
 
 func (s *Server) replyUnexpectedErr(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusInternalServerError,
+	s.replyErr(w, http.StatusInternalServerError, &serverError{
 		Message: "An unexpected error occurred",
 	})
 }
 
 func (s *Server) replyInvalidPayload(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusBadRequest,
+	s.replyErr(w, http.StatusBadRequest, &serverError{
 		Message: "",
 	})
 }
@@ -163,7 +160,7 @@ type statusReply struct {
 }
 
 func (s *Server) replyStatus(w http.ResponseWriter, status string) {
-	s.reply(w, &statusReply{Code: http.StatusOK, Status: status})
+	s.reply(w, &statusReply{Status: status})
 }
 
 func (s *Server) reply(w http.ResponseWriter, v interface{}) {

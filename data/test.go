@@ -137,3 +137,24 @@ func NewTestSession(chanID string) *Session {
 		Started: time.Now(),
 	}
 }
+
+// InsertItems inserts items to db.
+func InsertItems(db *reform.DB, items ...reform.Struct) {
+	for _, item := range items {
+		db.Insert(item)
+	}
+}
+
+// CleanDB deletes all records from all tables.
+func CleanDB(db *reform.DB) {
+	db.DeleteFrom(JobTable, "")
+	db.DeleteFrom(EndpointTable, "")
+	db.DeleteFrom(SessionTable, "")
+	db.DeleteFrom(ChannelTable, "")
+	db.DeleteFrom(OfferingTable, "")
+	db.DeleteFrom(UserTable, "")
+	db.DeleteFrom(TemplateTable, "")
+	db.DeleteFrom(ProductTable, "")
+	db.DeleteFrom(ContractTable, "")
+	db.DeleteFrom(SettingTable, "")
+}

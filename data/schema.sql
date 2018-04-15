@@ -91,7 +91,9 @@ CREATE TYPE related_type AS ENUM (
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
-    description text
+    description text, -- extended description
+    name varchar(30) NOT NULL -- display name
+      CONSTRAINT unique_name UNIQUE
 );
 
 -- Accounts are ethereum accounts.
@@ -102,7 +104,16 @@ CREATE TABLE accounts (
     public_key text NOT NULL,
     private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
-    in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
+    in_use boolean NOT NULL DEFAULT TRUE, -- this account is in use or not
+    name varchar(30) NOT NULL -- display name
+        CONSTRAINT unique_name UNIQUE,
+    ptc_balance bigint NOT NULL -- PTC balance
+        CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
+    psc_balance bigint NOT NULL -- PSC balance
+        CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
+    eth_balance NUMERIC(23,18) -- ethereum balance up to 99999 ETH
+      CONSTRAINT positive_eth_balance CHECK (accounts.eth_balance > 0),
+    last_balance_check timestamp with time zone -- time when balance was checked
 );
 
 -- Users are external party in distributed trade.

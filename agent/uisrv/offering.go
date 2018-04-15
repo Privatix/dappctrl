@@ -35,6 +35,62 @@ func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
+// handlePostOffering creates offering.
+func (s *Server) handlePostOffering(w http.ResponseWriter, r *http.Request) {
+	offering := &data.Offering{}
+	if !s.parseOfferingPayload(w, r, offering) {
+		return
+	}
+	err := s.fillOffering(offering)
+	if err != nil {
+		s.replyInvalidPayload(w)
+		return
+	}
+	if !s.insert(w, offering) {
+		return
+	}
+	s.replyEntityCreated(w, offering.ID)
+}
+
+// handlePutOffering updates offering.
+func (s *Server) handlePutOffering(w http.ResponseWriter, r *http.Request) {
+	offering := &data.Offering{}
+	if !s.parseOfferingPayload(w, r, offering) {
+		return
+	}
+	err := s.fillOffering(offering)
+	if err != nil {
+		s.replyUnexpectedErr(w)
+		return
+	}
+	if err := s.db.Update(offering); err != nil {
+		s.logger.Warn("failed to update offering: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+	s.replyEntityUpdated(w, offering.ID)
+}
+
+func (s *Server) parseOfferingPayload(w http.ResponseWriter,
+	r *http.Request, offering *data.Offering) bool {
+	if !s.parsePayload(w, r, offering) ||
+		validate.Struct(offering) != nil ||
+		invalidUnitType(offering.UnitType) ||
+		invalidBillingType(offering.BillingType) {
+		s.replyInvalidPayload(w)
+		return false
+	}
+	return true
+}
+
+func invalidUnitType(v string) bool {
+	return v != data.UnitScalar && v != data.UnitSeconds
+}
+
+func invalidBillingType(v string) bool {
+	return v != data.BillingPrepaid && v != data.BillingPostpaid
+}
+
 // fillOffering fills offerings nonce, status, hash and signature.
 func (s *Server) fillOffering(offering *data.Offering) error {
 	if offering.ID == "" {
@@ -60,44 +116,6 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	}
 	offering.Signature = data.FromBytes(sig)
 	return nil
-}
-
-// handlePostOffering creates offering.
-func (s *Server) handlePostOffering(w http.ResponseWriter, r *http.Request) {
-	offering := &data.Offering{}
-	if !s.parseOfferingPayload(w, r, offering) {
-		return
-	}
-	err := s.fillOffering(offering)
-	if err != nil {
-		s.replyInvalidPayload(w)
-		return
-	}
-	if err := s.db.Insert(offering); err != nil {
-		s.logger.Warn("failed to insert offering: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-	s.replyEntityCreated(w, offering.ID)
-}
-
-// handlePutOffering updates offering.
-func (s *Server) handlePutOffering(w http.ResponseWriter, r *http.Request) {
-	offering := &data.Offering{}
-	if !s.parseOfferingPayload(w, r, offering) {
-		return
-	}
-	err := s.fillOffering(offering)
-	if err != nil {
-		s.replyUnexpectedErr(w)
-		return
-	}
-	if err := s.db.Update(offering); err != nil {
-		s.logger.Warn("failed to update offering: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-	s.replyEntityUpdated(w, offering.ID)
 }
 
 // handleGetOfferings replies with all offerings or an offering by id.
@@ -129,7 +147,7 @@ func (s *Server) handlePutOfferingStatus(
 func (s *Server) handleGetOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
 	offering := &data.Offering{}
-	if !s.findByID(w, offering, id) {
+	if !s.findTo(w, offering, id) {
 		return
 	}
 	s.replyStatus(w, offering.Status)

@@ -23,6 +23,13 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	// Disable middleware during tests.
+	basicAuthMiddlewareFunc = func(_ *Server, h http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			h(w, r)
+		}
+	}
+
 	var conf struct {
 		AgentServer *Config
 		DB          *data.DBConfig

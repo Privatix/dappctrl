@@ -45,11 +45,13 @@ func TestUpdateSettingsSuccess(t *testing.T) {
 			Key:         "name1",
 			Value:       "value1",
 			Description: nil,
+			Name:        "Name 1",
 		},
 		{
 			Key:         "name2",
 			Value:       "value2",
 			Description: nil,
+			Name:        "Name 2",
 		},
 	}
 	insertItems(&settings[0], &settings[1])

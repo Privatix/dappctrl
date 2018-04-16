@@ -11,10 +11,13 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Prerequisites
 
-Install prerequisite software:
-* Install Golang if it's not installed. Make sure that `$HOME/go/bin` is added
-to `$PATH`.
-* Install [PostgreSQL](https://www.postgresql.org/download/) if it's not installed.
+Install prerequisite software if it's not installed.
+
+* Install [Golang](https://golang.org/doc/install). Make sure that `$HOME/go/bin` (default `GOPATH`) is added to system path `$PATH`.
+
+* Install [PostgreSQL](https://www.postgresql.org/download/).
+
+* Install [gcc](https://gcc.gnu.org/install/).
 
 ## Installation steps
 
@@ -117,7 +120,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/Privatix/dapp-somc/tags).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/Privatix/dappctrl/tags).
 
 ## Authors
 
@@ -125,7 +128,7 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 * [HaySayCheese](https://github.com/HaySayCheese)
 * [furkhat](https://github.com/furkhat)
 
-See also the list of [contributors](https://github.com/Privatix/dapp-somc/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/Privatix/dappctrl/contributors) who participated in this project.
 
 # License
 

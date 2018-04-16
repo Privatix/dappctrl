@@ -7,12 +7,17 @@ import "time"
 // Account is an ethereum account.
 //reform:accounts
 type Account struct {
-	ID         string `json:"id" reform:"id,pk"`
-	EthAddr    string `json:"ethAddr" reform:"eth_addr"`
-	PublicKey  string `json:"publicKey" reform:"public_key"`
-	PrivateKey string `json:"privateKey" reform:"private_key"`
-	IsDefault  bool   `json:"isDefault" reform:"is_default"`
-	InUse      bool   `json:"inUse" reform:"in_use"`
+	ID               string     `json:"id" reform:"id,pk"`
+	EthAddr          string     `json:"ethAddr" reform:"eth_addr"`
+	PublicKey        string     `json:"publicKey" reform:"public_key"`
+	PrivateKey       string     `json:"privateKey" reform:"private_key"`
+	IsDefault        bool       `json:"isDefault" reform:"is_default"`
+	InUse            bool       `json:"inUse" reform:"in_use"`
+	Name             string     `json:"name" reform:"name"`
+	PTCBalance       uint64     `json:"ptcBalance" reform:"ptc_balance"`
+	PSCBalance       uint64     `json:"psc_balance" reform:"psc_balance"`
+	EthBalance       float64    `json:"ethBalance" reform:"eth_balance"`
+	LastBalanceCheck *time.Time `json:"lastBalanceCheck" reform:"last_balance_check"`
 }
 
 // User is party in distributed trade.
@@ -195,6 +200,7 @@ type Setting struct {
 	Key         string  `json:"key" reform:"key,pk"`
 	Value       string  `json:"value" reform:"value"`
 	Description *string `json:"description" reform:"description"`
+	Name        string  `json:"name" reform:"name"`
 }
 
 // Endpoint messages is info about service access.

@@ -10,16 +10,19 @@ import (
 func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	if id := idFromStatusPath(channelsPath, r.URL.Path); id != "" {
 		if r.Method == "GET" {
-			s.handleGetChannelStatus(w, r, id)
+			basicAuthMiddlewareFunc(s, func(w http.ResponseWriter, r *http.Request) {
+				s.handleGetChannelStatus(w, r, id)
+			})(w, r)
 			return
 		}
 		if r.Method == "PUT" {
-			s.handlePutChannelStatus(w, r, id)
-			return
+			basicAuthMiddlewareFunc(s, func(w http.ResponseWriter, r *http.Request) {
+				s.handlePutChannelStatus(w, r, id)
+			})(w, r)
 		}
 	} else {
 		if r.Method == "GET" {
-			s.handleGetChannels(w, r)
+			basicAuthMiddlewareFunc(s, s.handleGetChannels)(w, r)
 			return
 		}
 	}
@@ -37,7 +40,7 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 // handleGetChannelStatus replies with channels status by id.
 func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
 	channel := &data.Channel{}
-	if !s.findByID(w, channel, id) {
+	if !s.findTo(w, channel, id) {
 		return
 	}
 	s.replyStatus(w, channel.ChannelStatus)

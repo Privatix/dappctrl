@@ -10,15 +10,15 @@ import (
 // handleProducts calls appropriate handler by scanning incoming request.
 func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		s.handlePostProducts(w, r)
+		basicAuthMiddlewareFunc(s, s.handlePostProducts)(w, r)
 		return
 	}
 	if r.Method == "PUT" {
-		s.handlePutProducts(w, r)
+		basicAuthMiddlewareFunc(s, s.handlePutProducts)(w, r)
 		return
 	}
 	if r.Method == "GET" {
-		s.handleGetProducts(w, r)
+		basicAuthMiddlewareFunc(s, s.handleGetProducts)(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
@@ -31,9 +31,7 @@ func (s *Server) handlePostProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product.ID = util.NewUUID()
-	if err := s.db.Insert(product); err != nil {
-		s.logger.Warn("failed to insert product: %v", err)
-		s.replyUnexpectedErr(w)
+	if !s.insert(w, product) {
 		return
 	}
 	s.replyEntityCreated(w, product.ID)
@@ -51,6 +49,20 @@ func (s *Server) handlePutProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.replyEntityUpdated(w, product.ID)
+}
+
+func (s *Server) parseProductPayload(w http.ResponseWriter,
+	r *http.Request, product *data.Product) bool {
+	if !s.parsePayload(w, r, product) ||
+		validate.Struct(product) != nil ||
+		product.OfferTplID == nil ||
+		product.OfferAccessID == nil ||
+		(product.UsageRepType != data.ProductUsageIncremental &&
+			product.UsageRepType != data.ProductUsageTotal) {
+		s.replyInvalidPayload(w)
+		return false
+	}
+	return true
 }
 
 // handleGetProducts replies with all products.

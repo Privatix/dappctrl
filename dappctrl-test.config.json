@@ -1,4 +1,9 @@
 {
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",

@@ -1,4 +1,4 @@
-package payment
+package pay
 
 import (
 	"encoding/binary"

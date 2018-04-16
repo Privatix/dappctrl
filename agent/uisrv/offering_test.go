@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -22,11 +20,11 @@ var (
 	testAgent *data.Account
 )
 
-func createOfferingFixtures() func() {
+func createOfferingFixtures() {
 	testTpl = data.NewTestTemplate(data.TemplateAccess)
 	testProd = data.NewTestProduct()
 	testAgent = data.NewTestAccount()
-	return insertItems(testTpl, testProd, testAgent)
+	insertItems(testTpl, testProd, testAgent)
 }
 
 func validOfferingPayload() data.Offering {
@@ -69,40 +67,40 @@ func testOfferingReply(t *testing.T, offer *data.Offering) {
 	}
 }
 
-func sendOffering(v *data.Offering, m string) *httptest.ResponseRecorder {
-	return sendPayload(m, offeringsPath, v, testServer.handleOfferings)
+func sendOffering(t *testing.T, v *data.Offering, m string) *http.Response {
+	return sendPayload(t, m, offeringsPath, v)
 }
 
-func postOffering(v *data.Offering) *httptest.ResponseRecorder {
-	return sendOffering(v, "POST")
+func postOffering(t *testing.T, v *data.Offering) *http.Response {
+	return sendOffering(t, v, "POST")
 }
 
-func putOffering(v *data.Offering) *httptest.ResponseRecorder {
-	return sendOffering(v, "PUT")
+func putOffering(t *testing.T, v *data.Offering) *http.Response {
+	return sendOffering(t, v, "PUT")
 }
 
 func TestPostOfferingSuccess(t *testing.T) {
-	deleteFixtures := createOfferingFixtures()
-	defer deleteFixtures()
+	defer cleanDB()
+
+	createOfferingFixtures()
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
-	res := postOffering(&payload)
-	if res.Code != http.StatusCreated {
-		t.Errorf("failed to create, response: %d", res.Code)
+	res := postOffering(t, &payload)
+	if res.StatusCode != http.StatusCreated {
+		t.Errorf("failed to create, response: %d", res.StatusCode)
 	}
 	reply := &replyEntity{}
 	json.NewDecoder(res.Body).Decode(reply)
 	offering := &data.Offering{}
 	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
 	testOfferingReply(t, offering)
-	testServer.db.Delete(offering)
 }
 
 func TestPostOfferingValidation(t *testing.T) {
+	defer cleanDB()
 	// Prepare test data.
-	deleteFixtures := createOfferingFixtures()
-	defer deleteFixtures()
+	createOfferingFixtures()
 	validPld := validOfferingPayload()
 
 	invalidUnitType := validPld
@@ -165,49 +163,48 @@ func TestPostOfferingValidation(t *testing.T) {
 		noUnitName,
 		noUnitType,
 	} {
-		res := postOffering(&payload)
-		if res.Code != http.StatusBadRequest {
-			t.Errorf("failed with response: %d", res.Code)
+		res := postOffering(t, &payload)
+		if res.StatusCode != http.StatusBadRequest {
+			t.Errorf("failed with response: %d", res.StatusCode)
 		}
 	}
 }
 
 func TestPutOfferingSuccess(t *testing.T) {
-	deleteFixtures := createOfferingFixtures()
-	defer deleteFixtures()
+	defer cleanDB()
+
+	createOfferingFixtures()
 	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	deleteOffering := insertItems(testOffering)
-	defer deleteOffering()
+	insertItems(testOffering)
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
 	payload.ID = testOffering.ID
-	res := putOffering(&payload)
-	if res.Code != http.StatusOK {
-		t.Fatalf("failed to put, response: %d", res.Code)
+	res := putOffering(t, &payload)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("failed to put, response: %d", res.StatusCode)
 	}
 	reply := &replyEntity{}
 	json.NewDecoder(res.Body).Decode(reply)
 	offering := &data.Offering{}
 	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
 	testOfferingReply(t, offering)
-	testServer.db.Delete(offering)
 }
 
-func getOfferings(id string) *httptest.ResponseRecorder {
-	return getResources(offeringsPath,
-		map[string]string{"id": id},
-		testServer.handleOfferings)
+func getOfferings(t *testing.T, id string) *http.Response {
+	return getResources(t, offeringsPath,
+		map[string]string{"id": id})
 }
 
 func testGetOfferings(t *testing.T, id string, exp int) {
-	res := getOfferings(id)
+	res := getOfferings(t, id)
 	testGetResources(t, res, exp)
 }
 
 func TestGetOffering(t *testing.T) {
-	deleteFixtures := createOfferingFixtures()
-	defer deleteFixtures()
+	defer cleanDB()
+
+	createOfferingFixtures()
 	// Get empty list.
 	testGetOfferings(t, "", 0)
 
@@ -216,33 +213,37 @@ func TestGetOffering(t *testing.T) {
 		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
 		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
 	}
-	deleteOfferings := insertItems(testOfferings[0], testOfferings[1])
-	defer deleteOfferings()
+	insertItems(testOfferings[0], testOfferings[1])
 	testGetOfferings(t, "", 2)
 
 	// Get offering by id.
 	testGetOfferings(t, testOfferings[0].ID, 1)
 }
 
-func sendToOfferingStatus(id, action, method string) *httptest.ResponseRecorder {
-	path := fmt.Sprintf("%s%s/status", offeringsPath, id)
-	var r *http.Request
+func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {
+	url := fmt.Sprintf("http://%s%s%s/status",
+		testServer.conf.Addr, offeringsPath, id)
 	if action != "" {
-		r.Form = make(url.Values)
-		r.Form.Add("action", action)
+		url += "?action=" + action
 	}
-	r = httptest.NewRequest(method, path, nil)
-	w := httptest.NewRecorder()
-	testServer.handleOfferings(w, r)
-	return w
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		t.Fatal("failed to create a request: ", err)
+	}
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal("failed to perform a request: ", err)
+	}
+	return res
 }
 
-func putOfferingStatus(id, action string) *httptest.ResponseRecorder {
-	return sendToOfferingStatus(id, action, "PUT")
+func putOfferingStatus(t *testing.T, id, action string) *http.Response {
+	return sendToOfferingStatus(t, id, action, "PUT")
 }
 
-func getOfferingStatus(id string) *httptest.ResponseRecorder {
-	return sendToOfferingStatus(id, "", "GET")
+func getOfferingStatus(t *testing.T, id string) *http.Response {
+	return sendToOfferingStatus(t, id, "", "GET")
 }
 
 func TestPutOfferingStatus(t *testing.T) {
@@ -250,24 +251,24 @@ func TestPutOfferingStatus(t *testing.T) {
 }
 
 func TestGetOfferingStatus(t *testing.T) {
-	deleteFixtures := createOfferingFixtures()
-	defer deleteFixtures()
-	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	deleteOffering := insertItems(testOffering)
-	defer deleteOffering()
+	defer cleanDB()
+
+	createOfferingFixtures()
+	offer := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	insertItems(offer)
 	// Get offering status with a match.
-	res := getOfferingStatus(testOffering.ID)
-	if res.Code != http.StatusOK {
-		t.Fatalf("failed to get status: %d", res.Code)
+	res := getOfferingStatus(t, offer.ID)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("failed to get status: %d", res.StatusCode)
 	}
 	reply := &statusReply{}
 	json.NewDecoder(res.Body).Decode(reply)
-	if testOffering.Status != reply.Status {
-		t.Fatalf("expected %s, got: %s", testOffering.Status, reply.Status)
+	if offer.Status != reply.Status {
+		t.Fatalf("expected %s, got: %s", offer.Status, reply.Status)
 	}
 	// Get offering status without a match.
-	res = getOfferingStatus(util.NewUUID())
-	if res.Code != http.StatusNotFound {
-		t.Fatalf("expected not found, got: %d", res.Code)
+	res = getOfferingStatus(t, util.NewUUID())
+	if res.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected not found, got: %d", res.StatusCode)
 	}
 }

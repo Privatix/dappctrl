@@ -60,6 +60,10 @@ func NewTestAccount() *Account {
 		PrivateKey: FromBytes(b),
 		IsDefault:  true,
 		InUse:      true,
+		Name:       util.NewUUID()[:30],
+		PTCBalance: 0,
+		PSCBalance: 0,
+		EthBalance: 0.1,
 	}
 }
 
@@ -136,4 +140,26 @@ func NewTestSession(chanID string) *Session {
 		Channel: chanID,
 		Started: time.Now(),
 	}
+}
+
+// InsertItems inserts items to db.
+func InsertItems(db *reform.DB, items ...reform.Struct) {
+	for _, item := range items {
+		db.Insert(item)
+	}
+}
+
+// CleanDB deletes all records from all tables.
+func CleanDB(db *reform.DB) {
+	db.DeleteFrom(JobTable, "")
+	db.DeleteFrom(EndpointTable, "")
+	db.DeleteFrom(SessionTable, "")
+	db.DeleteFrom(ChannelTable, "")
+	db.DeleteFrom(OfferingTable, "")
+	db.DeleteFrom(UserTable, "")
+	db.DeleteFrom(AccountTable, "")
+	db.DeleteFrom(TemplateTable, "")
+	db.DeleteFrom(ProductTable, "")
+	db.DeleteFrom(ContractTable, "")
+	db.DeleteFrom(SettingTable, "")
 }

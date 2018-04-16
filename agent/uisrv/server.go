@@ -38,6 +38,7 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 }
 
 const (
+	authPath      = "/ui/auth"
 	channelsPath  = "/ui/channels/"
 	endpointsPath = "/ui/endpoints"
 	offeringsPath = "/ui/offerings/"
@@ -50,13 +51,14 @@ const (
 // ListenAndServe starts a server.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(channelsPath, s.handleChannels)
-	mux.HandleFunc(endpointsPath, s.handleGetEndpoints)
-	mux.HandleFunc(offeringsPath, s.handleOfferings)
-	mux.HandleFunc(productsPath, s.handleProducts)
-	mux.HandleFunc(sessionsPath, s.handleSessions)
-	mux.HandleFunc(settingsPath, s.handleSettings)
-	mux.HandleFunc(templatePath, s.handleTempaltes)
+	mux.HandleFunc(authPath, s.handleAuth)
+	mux.HandleFunc(channelsPath, basicAuthMiddlewareFunc(s, s.handleChannels))
+	mux.HandleFunc(endpointsPath, basicAuthMiddlewareFunc(s, s.handleGetEndpoints))
+	mux.HandleFunc(offeringsPath, basicAuthMiddlewareFunc(s, s.handleOfferings))
+	mux.HandleFunc(productsPath, basicAuthMiddlewareFunc(s, s.handleProducts))
+	mux.HandleFunc(sessionsPath, basicAuthMiddlewareFunc(s, s.handleGetSessions))
+	mux.HandleFunc(settingsPath, basicAuthMiddlewareFunc(s, s.handleSettings))
+	mux.HandleFunc(templatePath, basicAuthMiddlewareFunc(s, s.handleTempaltes))
 	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {

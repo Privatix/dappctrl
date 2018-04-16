@@ -1,4 +1,4 @@
-package payment
+package pay
 
 import (
 	"encoding/json"
@@ -19,27 +19,21 @@ type serverError struct {
 
 var (
 	errInvalidPayload = &serverError{
-		Code:    http.StatusBadRequest,
 		Message: "",
 	}
 	errNoChannel = &serverError{
-		Code:    http.StatusUnauthorized,
 		Message: "Channel is not found",
 	}
 	errUnexpected = &serverError{
-		Code:    http.StatusInternalServerError,
 		Message: "An unexpected error occurred",
 	}
 	errChannelClosed = &serverError{
-		Code:    http.StatusUnauthorized,
 		Message: "Channel is closed",
 	}
 	errInvalidAmount = &serverError{
-		Code:    http.StatusUnauthorized,
 		Message: "Invalid balance amount",
 	}
 	errInvalidSignature = &serverError{
-		Code:    http.StatusUnauthorized,
 		Message: "Client signature does not match",
 	}
 )
@@ -48,7 +42,7 @@ func (s *Server) findChannelByBlock(w http.ResponseWriter,
 	b uint) (*data.Channel, bool) {
 	ch := &data.Channel{}
 	if err := s.db.FindOneTo(ch, "block", b); err != nil {
-		s.replyError(w, errNoChannel)
+		s.replyErr(w, http.StatusUnauthorized, errNoChannel)
 		return nil, false
 	}
 	return ch, true
@@ -57,7 +51,7 @@ func (s *Server) findChannelByBlock(w http.ResponseWriter,
 func (s *Server) validateChannelState(w http.ResponseWriter,
 	ch *data.Channel) bool {
 	if ch.ChannelStatus != data.ChannelActive {
-		s.replyError(w, errChannelClosed)
+		s.replyErr(w, http.StatusUnauthorized, errChannelClosed)
 		return false
 	}
 	return true
@@ -66,7 +60,7 @@ func (s *Server) validateChannelState(w http.ResponseWriter,
 func (s *Server) validateAmount(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
 	if pld.Balance <= ch.ReceiptBalance || pld.Balance > ch.TotalDeposit {
-		s.replyError(w, errInvalidAmount)
+		s.replyErr(w, http.StatusBadRequest, errInvalidAmount)
 		return false
 	}
 	return true
@@ -77,24 +71,24 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 
 	client := &data.User{}
 	if s.db.FindOneTo(client, "eth_addr", ch.Client) != nil {
-		s.replyError(w, errUnexpected)
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	pub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
-		s.replyError(w, errUnexpected)
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	sig, err := data.ToBytes(pld.BalanceMsgSig)
 	if err != nil {
-		s.replyError(w, errUnexpected)
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	if !crypto.VerifySignature(pub, hash(pld), sig[:len(sig)-1]) {
-		s.replyError(w, errInvalidSignature)
+		s.replyErr(w, http.StatusBadRequest, errInvalidSignature)
 		return false
 	}
 	return true
@@ -113,7 +107,7 @@ func (s *Server) updateChannelWithPayment(w http.ResponseWriter,
 	ch.ReceiptSignature = pld.BalanceMsgSig
 	if err := s.db.Update(ch); err != nil {
 		s.logger.Warn("failed to update channel: %v", err)
-		s.replyError(w, errUnexpected)
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 	return true
@@ -123,15 +117,15 @@ func (s *Server) parsePayload(w http.ResponseWriter,
 	r *http.Request, v interface{}) bool {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		s.logger.Warn("failed to parse request body: %v", err)
-		s.replyError(w, errInvalidPayload)
+		s.replyErr(w, http.StatusBadRequest, errInvalidPayload)
 		return false
 	}
 	return true
 }
 
-// replyError writes error to reponse.
-func (s *Server) replyError(w http.ResponseWriter, reply *serverError) {
-	w.WriteHeader(reply.Code)
+// replyErr writes error to reponse.
+func (s *Server) replyErr(w http.ResponseWriter, status int, reply *serverError) {
+	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	if err := json.NewEncoder(w).Encode(reply); err != nil {

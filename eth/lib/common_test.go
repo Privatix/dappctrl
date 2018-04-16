@@ -94,7 +94,7 @@ func TestBalanceOnLastBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if response.Result != "0x554d9fa8811bcd000" {
+	if response.Result != "" {
 		t.Fatal("Unexpected balance occurred")
 	}
 }
@@ -108,7 +108,7 @@ func TestBalanceOnFirstBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if response.Result != "0x56bc75e2d63100000" {
+	if response.Result != "" {
 		t.Fatal("Unexpected balance occurred")
 	}
 }

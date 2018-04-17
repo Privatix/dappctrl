@@ -29,7 +29,7 @@ type Event interface {
 	Digest() string
 }
 
-// Contract event wrapper.
+// ChannelCreatedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelCreatedEvent struct {
 	Agent             *Address // Indexed.
@@ -62,7 +62,7 @@ func (e *ChannelCreatedEvent) Digest() string {
 	return EthDigestChannelCreated
 }
 
-// Contract event wrapper.
+// ChannelToppedUpEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelToppedUpEvent struct {
 	Agent           *Address // Indexed.
@@ -95,7 +95,7 @@ func (e *ChannelToppedUpEvent) Digest() string {
 	return EthDigestChannelToppedUp
 }
 
-// Contract event wrapper.
+// ChannelCloseRequestedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelCloseRequestedEvent struct {
 	Client          *Address // Indexed.
@@ -128,7 +128,7 @@ func (e *ChannelCloseRequestedEvent) Digest() string {
 	return EthChannelCloseRequested
 }
 
-// Contract event wrapper.
+// OfferingCreatedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingCreatedEvent struct {
 	Agent         *Address // Indexed.
@@ -159,7 +159,7 @@ func (e *OfferingCreatedEvent) Digest() string {
 	return EthOfferingCreated
 }
 
-// Contract event wrapper.
+// OfferingDeletedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingDeletedEvent struct {
 	Agent        *Address // Indexed.
@@ -185,7 +185,7 @@ func (e *OfferingDeletedEvent) Digest() string {
 	return EthOfferingDeleted
 }
 
-// Contract event wrapper.
+// OfferingEndpointEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingEndpointEvent struct {
 	Agent           *Address // Indexed.
@@ -218,7 +218,7 @@ func (e *OfferingEndpointEvent) Digest() string {
 	return EthOfferingEndpoint
 }
 
-// Contract event wrapper.
+// OfferingSupplyChangedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingSupplyChangedEvent struct {
 	Agent         *Address // Indexed.
@@ -247,7 +247,7 @@ func (e *OfferingSupplyChangedEvent) Digest() string {
 	return EthOfferingSupplyChanged
 }
 
-// Contract event wrapper.
+// OfferingPoppedUpEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingPoppedUpEvent struct {
 	Agent        *Address // Indexed.
@@ -273,7 +273,7 @@ func (e *OfferingPoppedUpEvent) Digest() string {
 	return EthOfferingPoppedUp
 }
 
-// Contract event wrapper.
+// CooperativeChannelCloseEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type CooperativeChannelCloseEvent struct {
 	Agent           *Address // Indexed.
@@ -306,7 +306,7 @@ func (e *CooperativeChannelCloseEvent) Digest() string {
 	return EthCooperativeChannelClose
 }
 
-// Contract event wrapper.
+// UncooperativeChannelCloseEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type UncooperativeChannelCloseEvent struct {
 	Agent           *Address // Indexed.

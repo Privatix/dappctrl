@@ -4,6 +4,8 @@ package lib
 // For detailed API description, please refer to:
 // https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html
 
+// API Response wrapper.
+// Please see corresponding web3.js method for the details.
 type GasPriceAPIResponse struct {
 	apiResponse
 	Result string `json:"result"`
@@ -17,6 +19,8 @@ func (e *EthereumClient) GetGasPrice() (*GasPriceAPIResponse, error) {
 	return response, e.fetch("eth_gasPrice", "", response)
 }
 
+// API Response wrapper.
+// Please see corresponding web3.js method for the details.
 type BlockNumberAPIResponse GasPriceAPIResponse
 
 // GetBlockNumber returns the number of most recent block in blockchain.
@@ -27,6 +31,8 @@ func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
 	return response, e.fetch("eth_blockNumber", "", response)
 }
 
+// API Response wrapper.
+// Please see corresponding web3.js method for the details.
 type BalanceAPIResponse GasPriceAPIResponse
 
 // GetBalance returns the balance of the account of given address in wei.
@@ -39,6 +45,8 @@ func (e *EthereumClient) GetBalance(addressHex, blockNumberHex string) (*Balance
 		blockNumberHex+`"`, response)
 }
 
+// API Response wrapper.
+// Please see corresponding web3.js method for the details.
 type TransactionReceiptAPIResponse struct {
 	apiResponse
 	Result struct {
@@ -63,6 +71,8 @@ func (e *EthereumClient) GetTransactionReceipt(hash string) (*TransactionReceipt
 	return response, e.fetch("eth_getTransactionReceipt", `"`+hash+`"`, response)
 }
 
+// API Response wrapper.
+// Please see corresponding web3.js method for the details.
 type TransactionByHashAPIResponse struct {
 	apiResponse
 	Result struct {

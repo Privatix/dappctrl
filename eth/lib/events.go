@@ -28,6 +28,9 @@ const (
 type Event interface {
 	Digest() string
 }
+
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type ChannelCreatedEvent struct {
 	Agent             *Address // Indexed.
 	Client            *Address // Indexed.
@@ -36,6 +39,8 @@ type ChannelCreatedEvent struct {
 	AuthenticatedHash *Uint256
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewChannelCreatedEvent(topics [4]string, hexData string) (*ChannelCreatedEvent, error) {
 	var err error
 	e := &ChannelCreatedEvent{}
@@ -52,10 +57,13 @@ func NewChannelCreatedEvent(topics [4]string, hexData string) (*ChannelCreatedEv
 	return e, err
 }
 
+// Digest returns keccak512 hash sum of the event signature.
 func (e *ChannelCreatedEvent) Digest() string {
 	return EthDigestChannelCreated
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type ChannelToppedUpEvent struct {
 	Agent           *Address // Indexed.
 	Client          *Address // Indexed.
@@ -64,6 +72,8 @@ type ChannelToppedUpEvent struct {
 	AddedDeposit    *Uint192
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewChannelToppedUpEvent(topics [4]string, hexData string) (*ChannelToppedUpEvent, error) {
 	var err error
 	e := &ChannelToppedUpEvent{}
@@ -80,10 +90,13 @@ func NewChannelToppedUpEvent(topics [4]string, hexData string) (*ChannelToppedUp
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *ChannelToppedUpEvent) Digest() string {
 	return EthDigestChannelToppedUp
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type ChannelCloseRequestedEvent struct {
 	Client          *Address // Indexed.
 	Agent           *Address // Indexed.
@@ -92,6 +105,8 @@ type ChannelCloseRequestedEvent struct {
 	Balance         *Uint192
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewChannelCloseRequestedEvent(topics [4]string, hexData string) (*ChannelCloseRequestedEvent, error) {
 	var err error
 	e := &ChannelCloseRequestedEvent{}
@@ -108,10 +123,13 @@ func NewChannelCloseRequestedEvent(topics [4]string, hexData string) (*ChannelCl
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *ChannelCloseRequestedEvent) Digest() string {
 	return EthChannelCloseRequested
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type OfferingCreatedEvent struct {
 	Agent         *Address // Indexed.
 	OfferingHash  *Uint256 // Indexed.
@@ -119,6 +137,8 @@ type OfferingCreatedEvent struct {
 	CurrentSupply *Uint256
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewOfferingCreatedEvent(topics [4]string, hexData string) (*OfferingCreatedEvent, error) {
 	var err error
 	e := &OfferingCreatedEvent{}
@@ -134,15 +154,20 @@ func NewOfferingCreatedEvent(topics [4]string, hexData string) (*OfferingCreated
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *OfferingCreatedEvent) Digest() string {
 	return EthOfferingCreated
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type OfferingDeletedEvent struct {
 	Agent        *Address // Indexed.
 	OfferingHash *Uint256 // Indexed.
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewOfferingDeletedEvent(topics [3]string) (*OfferingDeletedEvent, error) {
 	var err error
 	e := &OfferingDeletedEvent{}
@@ -155,10 +180,13 @@ func NewOfferingDeletedEvent(topics [3]string) (*OfferingDeletedEvent, error) {
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *OfferingDeletedEvent) Digest() string {
 	return EthOfferingDeleted
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type OfferingEndpointEvent struct {
 	Agent           *Address // Indexed.
 	Client          *Address // Indexed.
@@ -167,6 +195,8 @@ type OfferingEndpointEvent struct {
 	EndpointHash    *Uint256
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewOfferingEndpointEvent(topics [4]string, hexData string) (*OfferingEndpointEvent, error) {
 	var err error
 	e := &OfferingEndpointEvent{}
@@ -183,16 +213,21 @@ func NewOfferingEndpointEvent(topics [4]string, hexData string) (*OfferingEndpoi
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *OfferingEndpointEvent) Digest() string {
 	return EthOfferingEndpoint
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type OfferingSupplyChangedEvent struct {
 	Agent         *Address // Indexed.
 	OfferingHash  *Uint256 // Indexed.
 	CurrentSupply *Uint192
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewOfferingSupplyChangedEvent(topics [3]string, hexData string) (*OfferingSupplyChangedEvent, error) {
 	var err error
 	e := &OfferingSupplyChangedEvent{}
@@ -207,15 +242,20 @@ func NewOfferingSupplyChangedEvent(topics [3]string, hexData string) (*OfferingS
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *OfferingSupplyChangedEvent) Digest() string {
 	return EthOfferingSupplyChanged
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type OfferingPoppedUpEvent struct {
 	Agent        *Address // Indexed.
 	OfferingHash *Uint256 // Indexed.
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewOfferingPoppedUpEvent(topics [3]string) (*OfferingPoppedUpEvent, error) {
 	var err error
 	e := &OfferingPoppedUpEvent{}
@@ -228,10 +268,13 @@ func NewOfferingPoppedUpEvent(topics [3]string) (*OfferingPoppedUpEvent, error) 
 	return e, err
 }
 
+// Digest returns keccak512 hash sum of the event signature.
 func (e *OfferingPoppedUpEvent) Digest() string {
 	return EthOfferingPoppedUp
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type CooperativeChannelCloseEvent struct {
 	Agent           *Address // Indexed.
 	Client          *Address // Indexed.
@@ -240,6 +283,8 @@ type CooperativeChannelCloseEvent struct {
 	Balance         *Uint192
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewCooperativeChannelCloseEvent(topics [4]string, hexData string) (*CooperativeChannelCloseEvent, error) {
 	var err error
 	e := &CooperativeChannelCloseEvent{}
@@ -256,10 +301,13 @@ func NewCooperativeChannelCloseEvent(topics [4]string, hexData string) (*Coopera
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *CooperativeChannelCloseEvent) Digest() string {
 	return EthCooperativeChannelClose
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 type UncooperativeChannelCloseEvent struct {
 	Agent           *Address // Indexed.
 	Client          *Address // Indexed.
@@ -268,6 +316,8 @@ type UncooperativeChannelCloseEvent struct {
 	Balance         *Uint192
 }
 
+// Contract event wrapper.
+// Please see contract implementation for the details.
 func NewUnCooperativeChannelCloseEvent(topics [4]string, hexData string) (*UncooperativeChannelCloseEvent, error) {
 	var err error
 	e := &UncooperativeChannelCloseEvent{}
@@ -284,6 +334,7 @@ func NewUnCooperativeChannelCloseEvent(topics [4]string, hexData string) (*Uncoo
 	return e, err
 }
 
+// Digests returns keccak512 hash sum of the event signature.
 func (e *UncooperativeChannelCloseEvent) Digest() string {
 	return EthUncooperativeChannelClose
 }

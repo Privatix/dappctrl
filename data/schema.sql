@@ -186,7 +186,6 @@ CREATE TABLE offerings (
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
-    nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
 

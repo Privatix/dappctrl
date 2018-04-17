@@ -118,7 +118,6 @@ type Offering struct {
 	MaxSuspendTime     uint    `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
 	MaxInactiveTimeSec *uint64 `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
 	FreeUnits          uint8   `json:"freeUnits" reform:"free_units"`
-	Nonce              string  `json:"nonce" reform:"nonce"`
 	AdditionalParams   []byte  `json:"additionalParams" reform:"additional_params" validate:"required"`
 }
 

@@ -59,7 +59,6 @@ func OfferingHash(offering *Offering) []byte {
 		big.NewInt(int64(offering.MaxSuspendTime)).Bytes(),
 		big.NewInt(int64(maxUnit)).Bytes(),
 		big.NewInt(int64(offering.MinUnits)).Bytes(),
-		[]byte(offering.Nonce),
 		[]byte(offering.Product),
 		[]byte(offering.ServiceName),
 		big.NewInt(int64(offering.SetupPrice)).Bytes(),

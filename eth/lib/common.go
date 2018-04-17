@@ -4,7 +4,7 @@ package lib
 // For detailed API description, please refer to:
 // https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html
 
-// API Response wrapper.
+// GasPriceAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type GasPriceAPIResponse struct {
 	apiResponse
@@ -19,7 +19,7 @@ func (e *EthereumClient) GetGasPrice() (*GasPriceAPIResponse, error) {
 	return response, e.fetch("eth_gasPrice", "", response)
 }
 
-// API Response wrapper.
+// BlockNumberAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type BlockNumberAPIResponse GasPriceAPIResponse
 
@@ -31,7 +31,7 @@ func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
 	return response, e.fetch("eth_blockNumber", "", response)
 }
 
-// API Response wrapper.
+// BalanceAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type BalanceAPIResponse GasPriceAPIResponse
 
@@ -45,7 +45,7 @@ func (e *EthereumClient) GetBalance(addressHex, blockNumberHex string) (*Balance
 		blockNumberHex+`"`, response)
 }
 
-// API Response wrapper.
+// TransactionReceiptAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type TransactionReceiptAPIResponse struct {
 	apiResponse
@@ -71,7 +71,7 @@ func (e *EthereumClient) GetTransactionReceipt(hash string) (*TransactionReceipt
 	return response, e.fetch("eth_getTransactionReceipt", `"`+hash+`"`, response)
 }
 
-// API Response wrapper.
+// TransactionByHashAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type TransactionByHashAPIResponse struct {
 	apiResponse

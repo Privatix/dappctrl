@@ -17,8 +17,7 @@ func getClient() *EthereumClient {
 }
 
 func TestGasPriceFetching(t *testing.T) {
-	client := getClient()
-	response, err := client.GetGasPrice()
+	response, err := getClient().GetGasPrice()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,8 +28,7 @@ func TestGasPriceFetching(t *testing.T) {
 }
 
 func TestBlockNumberFetching(t *testing.T) {
-	client := getClient()
-	response, err := client.GetBlockNumber()
+	response, err := getClient().GetBlockNumber()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +40,7 @@ func TestBlockNumberFetching(t *testing.T) {
 
 func TestTransactionReceipt(t *testing.T) {
 	transactionHash := getContractTransactionHash()
-	client := getClient()
-	response, err := client.GetTransactionReceipt(transactionHash)
+	response, err := getClient().GetTransactionReceipt(transactionHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,8 +52,7 @@ func TestTransactionReceipt(t *testing.T) {
 
 func TestTransactionByHash(t *testing.T) {
 	transactionHash := getContractTransactionHash()
-	client := getClient()
-	response, err := client.GetTransactionByHash(transactionHash)
+	response, err := getClient().GetTransactionByHash(transactionHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,10 +82,7 @@ func getContractTransactionHash() string {
 }
 
 func TestBalanceOnLastBlock(t *testing.T) {
-	account := getTestAccountAddress()
-	client := getClient()
-
-	response, err := client.GetBalance(account, "latest")
+	response, err := getClient().GetBalance(getTestAccountAddress(), "latest")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,10 +93,7 @@ func TestBalanceOnLastBlock(t *testing.T) {
 }
 
 func TestBalanceOnFirstBlock(t *testing.T) {
-	account := getTestAccountAddress()
-	client := getClient()
-
-	response, err := client.GetBalance(account, "earliest")
+	response, err := getClient().GetBalance(getTestAccountAddress(), "earliest")
 	if err != nil {
 		t.Fatal(err)
 	}

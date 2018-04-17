@@ -166,7 +166,7 @@ type OfferingDeletedEvent struct {
 	OfferingHash *Uint256 // Indexed.
 }
 
-// OfferingDeletedEvent creates event of type OfferingDeletedEvent..
+// NewOfferingDeletedEvent creates event of type OfferingDeletedEvent..
 // Please see contract implementation for the details.
 func NewOfferingDeletedEvent(topics [3]string) (*OfferingDeletedEvent, error) {
 	var err error
@@ -213,7 +213,7 @@ func NewOfferingEndpointEvent(topics [4]string, hexData string) (*OfferingEndpoi
 	return e, err
 }
 
-// Digests returns keccak512 hash sum of the event signature.
+// Digest returns keccak512 hash sum of the event signature.
 func (e *OfferingEndpointEvent) Digest() string {
 	return EthOfferingEndpoint
 }

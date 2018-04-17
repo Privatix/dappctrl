@@ -25,13 +25,13 @@ var (
 	PSCAddress = ""
 
 	// Test sets of dummy data.
-	addr1       = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	addr2       = [20]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
-	b32Zero     = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	b32Full     = [32]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
-	u256Zero, _ = NewUint256("0")
-	u256Full, _ = NewUint256("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-	u192Zero, _ = NewUint192("0")
+	Addr1       = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	Addr2       = [20]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+	B32Zero     = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	B32Full     = [32]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+	U256Zero, _ = NewUint256("0")
+	U256Full, _ = NewUint256("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	U192Zero, _ = NewUint192("0")
 )
 
 // fetchPSCAddress returns address of PSC is the currently active test chain.
@@ -112,34 +112,34 @@ func populateEvents() {
 	auth := bind.NewKeyedTransactor(key)
 
 	// Events populating
-	_, err = psc.ThrowEventLogChannelCreated(auth, addr1, addr2, b32Zero, big.NewInt(0), b32Full)
+	_, err = psc.ThrowEventLogChannelCreated(auth, Addr1, Addr2, B32Zero, big.NewInt(0), B32Full)
 	failOnErr(err, "Failed to call ThrowEventLogChannelCreated")
 
-	_, err = psc.ThrowEventLogChannelToppedUp(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
+	_, err = psc.ThrowEventLogChannelToppedUp(auth, Addr1, Addr2, B32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogChannelToppedUp")
 
-	_, err = psc.ThrowEventLogChannelCloseRequested(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
+	_, err = psc.ThrowEventLogChannelCloseRequested(auth, Addr1, Addr2, B32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogChannelCloseRequested")
 
-	_, err = psc.ThrowEventLogOfferingCreated(auth, addr1, b32Zero, big.NewInt(0), 0)
+	_, err = psc.ThrowEventLogOfferingCreated(auth, Addr1, B32Zero, big.NewInt(0), 0)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingCreated")
 
-	_, err = psc.ThrowEventLogOfferingDeleted(auth, addr1, b32Zero)
+	_, err = psc.ThrowEventLogOfferingDeleted(auth, Addr1, B32Zero)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingDeleted")
 
-	_, err = psc.ThrowEventLogOfferingEndpoint(auth, addr1, addr2, b32Zero, 0, b32Full)
+	_, err = psc.ThrowEventLogOfferingEndpoint(auth, Addr1, Addr2, B32Zero, 0, B32Full)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingEndpoint")
 
-	_, err = psc.ThrowEventLogOfferingSupplyChanged(auth, addr1, b32Zero, 0)
+	_, err = psc.ThrowEventLogOfferingSupplyChanged(auth, Addr1, B32Zero, 0)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingSupplyChanged")
 
-	_, err = psc.ThrowEventLogOfferingPopedUp(auth, addr1, b32Zero)
+	_, err = psc.ThrowEventLogOfferingPopedUp(auth, Addr1, B32Zero)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingPopedUp")
 
-	_, err = psc.ThrowEventLogCooperativeChannelClose(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
+	_, err = psc.ThrowEventLogCooperativeChannelClose(auth, Addr1, Addr2, B32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogCooperativeChannelClose")
 
-	_, err = psc.ThrowEventLogUnCooperativeChannelClose(auth, addr1, addr2, b32Full, 0, big.NewInt(0))
+	_, err = psc.ThrowEventLogUnCooperativeChannelClose(auth, Addr1, Addr2, B32Full, 0, big.NewInt(0))
 	failOnErr(err, "Failed to call ThrowEventLogUnCooperativeChannelClose")
 }
 
@@ -193,10 +193,10 @@ func TestNormalLogsFetching(t *testing.T) {
 		agent := event.Agent.Bytes()
 		client := event.Client.Bytes()
 
-		cmpBytes(agent[:], addr1[:], "ChannelCreated: agent is unexpected")
-		cmpBytes(client[:], addr2[:], "ChannelCreated: client is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "ChannelCreated: offering hash is unexpected")
-		cmpU192(event.Deposit, u192Zero, "ChannelCreated: deposit is unexpected")
+		cmpBytes(agent[:], Addr1[:], "ChannelCreated: agent is unexpected")
+		cmpBytes(client[:], Addr2[:], "ChannelCreated: client is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "ChannelCreated: offering hash is unexpected")
+		cmpU192(event.Deposit, U192Zero, "ChannelCreated: deposit is unexpected")
 	}
 
 	{
@@ -207,11 +207,11 @@ func TestNormalLogsFetching(t *testing.T) {
 		agent := event.Agent.Bytes()
 		client := event.Client.Bytes()
 
-		cmpBytes(agent[:], addr1[:], "ChannelToppedUp: agent is unexpected")
-		cmpBytes(client[:], addr2[:], "ChannelToppedUp: client is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "ChannelToppedUp: open block number is unexpected")
-		cmpU256(event.OfferingHash, u256Full, "ChannelToppedUp: offering hash is unexpected")
-		cmpU192(event.AddedDeposit, u192Zero, "ChannelToppedUp: added deposit is unexpected")
+		cmpBytes(agent[:], Addr1[:], "ChannelToppedUp: agent is unexpected")
+		cmpBytes(client[:], Addr2[:], "ChannelToppedUp: client is unexpected")
+		cmpU256(event.OpenBlockNumber, U256Zero, "ChannelToppedUp: open block number is unexpected")
+		cmpU256(event.OfferingHash, U256Full, "ChannelToppedUp: offering hash is unexpected")
+		cmpU192(event.AddedDeposit, U192Zero, "ChannelToppedUp: added deposit is unexpected")
 	}
 
 	{
@@ -220,10 +220,10 @@ func TestNormalLogsFetching(t *testing.T) {
 		failOnErr(err, "Can't create OfferingCreatedEvent")
 
 		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingCreated: agent address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "OfferingCreated: offering hash is unexpected")
-		cmpU192(event.MinDeposit, u192Zero, "OfferingCreated: min deposit is unexpected")
-		cmpU256(event.CurrentSupply, u256Zero, "OfferingCreated: current supply is unexpected")
+		cmpBytes(agent[:], Addr1[:], "OfferingCreated: agent address is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "OfferingCreated: offering hash is unexpected")
+		cmpU192(event.MinDeposit, U192Zero, "OfferingCreated: min deposit is unexpected")
+		cmpU256(event.CurrentSupply, U256Zero, "OfferingCreated: current supply is unexpected")
 	}
 
 	{
@@ -232,8 +232,8 @@ func TestNormalLogsFetching(t *testing.T) {
 		failOnErr(err, "Can't create EventOfferingDeleted")
 
 		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingDeleted: agent address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "OfferingDeleted: offering hash is unexpected")
+		cmpBytes(agent[:], Addr1[:], "OfferingDeleted: agent address is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "OfferingDeleted: offering hash is unexpected")
 	}
 
 	{
@@ -243,11 +243,11 @@ func TestNormalLogsFetching(t *testing.T) {
 
 		agent := event.Agent.Bytes()
 		client := event.Client.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingEndpoint: agent address is unexpected")
-		cmpBytes(client[:], addr2[:], "OfferingEndpoint: client address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "OfferingEndpoint: offering hash is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "OfferingEndpoint: open block number is unexpected")
-		cmpU256(event.EndpointHash, u256Full, "OfferingEndpoint: endpoint hash is unexpected")
+		cmpBytes(agent[:], Addr1[:], "OfferingEndpoint: agent address is unexpected")
+		cmpBytes(client[:], Addr2[:], "OfferingEndpoint: client address is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "OfferingEndpoint: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, U256Zero, "OfferingEndpoint: open block number is unexpected")
+		cmpU256(event.EndpointHash, U256Full, "OfferingEndpoint: endpoint hash is unexpected")
 	}
 
 	{
@@ -256,9 +256,9 @@ func TestNormalLogsFetching(t *testing.T) {
 		failOnErr(err, "Can't create EventOfferingSupplyChanged")
 
 		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingSupplyChanged: agent address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "OfferingSupplyChanged: offering hash is unexpected")
-		cmpU192(event.CurrentSupply, u192Zero, "OfferingSupplyChanged: current supply is unexpected")
+		cmpBytes(agent[:], Addr1[:], "OfferingSupplyChanged: agent address is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "OfferingSupplyChanged: offering hash is unexpected")
+		cmpU192(event.CurrentSupply, U192Zero, "OfferingSupplyChanged: current supply is unexpected")
 	}
 
 	{
@@ -267,8 +267,8 @@ func TestNormalLogsFetching(t *testing.T) {
 		failOnErr(err, "Can't create EventOfferingPoppedUp")
 
 		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], addr1[:], "OfferingPoppedUp: agent address is unexpected")
-		cmpU256(event.OfferingHash, u256Zero, "OfferingPoppedUp: offering hash is unexpected")
+		cmpBytes(agent[:], Addr1[:], "OfferingPoppedUp: agent address is unexpected")
+		cmpU256(event.OfferingHash, U256Zero, "OfferingPoppedUp: offering hash is unexpected")
 	}
 
 	{
@@ -279,11 +279,11 @@ func TestNormalLogsFetching(t *testing.T) {
 		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
 
-		cmpBytes(agent[:], addr1[:], "CooperativeChannelClose: client is unexpected")
-		cmpBytes(client[:], addr2[:], "CooperativeChannelClose: agent is unexpected")
-		cmpU256(event.OfferingHash, u256Full, "CooperativeChannelClose: offering hash is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "CooperativeChannelClose: open block number is unexpected")
-		cmpU192(event.Balance, u192Zero, "CooperativeChannelClose: balance is unexpected")
+		cmpBytes(agent[:], Addr1[:], "CooperativeChannelClose: client is unexpected")
+		cmpBytes(client[:], Addr2[:], "CooperativeChannelClose: agent is unexpected")
+		cmpU256(event.OfferingHash, U256Full, "CooperativeChannelClose: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, U256Zero, "CooperativeChannelClose: open block number is unexpected")
+		cmpU192(event.Balance, U192Zero, "CooperativeChannelClose: balance is unexpected")
 	}
 
 	{
@@ -294,42 +294,10 @@ func TestNormalLogsFetching(t *testing.T) {
 		client := event.Client.Bytes()
 		agent := event.Agent.Bytes()
 
-		cmpBytes(agent[:], addr1[:], "CooperativeChannelClose: client is unexpected")
-		cmpBytes(client[:], addr2[:], "CooperativeChannelClose: agent is unexpected")
-		cmpU256(event.OfferingHash, u256Full, "UnCooperativeChannelClose: offering hash is unexpected")
-		cmpU256(event.OpenBlockNumber, u256Zero, "UnCooperativeChannelClose: open block number is unexpected")
-		cmpU192(event.Balance, u192Zero, "UnCooperativeChannelClose: balance is unexpected")
-	}
-}
-
-func TestNegativeLogsFetching(t *testing.T) {
-	failIfNoError := func(err error, args ...interface{}) {
-		if err == nil {
-			t.Fatal(args)
-		}
-	}
-
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
-
-	_, err := client.GetLogs("", []string{"0x0"}, "", "")
-	failIfNoError(err, "Error must be returned")
-
-	_, err = client.GetLogs(fetchPSCAddress(), []string{"0x0"}, "", "")
-	failIfNoError(err, "Error must be returned")
-
-	_, err = client.GetLogs(fetchPSCAddress(), []string{"", ""}, "", "")
-	failIfNoError(err, "Error must be returned")
-}
-
-func TestLogsFetchingWithBrokenNetwork(t *testing.T) {
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port+1) // Note: invalid port is used.
-
-	{
-		_, err := client.GetLogs(fetchPSCAddress(), []string{EthOfferingCreated}, "", "")
-		if err == nil {
-			t.Fatal("Error must be returned")
-		}
+		cmpBytes(agent[:], Addr1[:], "CooperativeChannelClose: client is unexpected")
+		cmpBytes(client[:], Addr2[:], "CooperativeChannelClose: agent is unexpected")
+		cmpU256(event.OfferingHash, U256Full, "UnCooperativeChannelClose: offering hash is unexpected")
+		cmpU256(event.OpenBlockNumber, U256Zero, "UnCooperativeChannelClose: open block number is unexpected")
+		cmpU192(event.Balance, U192Zero, "UnCooperativeChannelClose: balance is unexpected")
 	}
 }

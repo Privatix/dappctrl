@@ -6,7 +6,7 @@ package lib
 // https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
 //
 // Note:
-// "abigen" is available in contract/tools, no need for building it itself.
+// "abigen_linux" is available in contract/tools, no need for building it itself.
 //
 // For details about events (logs in EthereumConf terminology) fetching:
 // https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html

@@ -16,7 +16,7 @@ import (
 )
 
 // PrivatixServiceContractABI is the input ABI used to generate the binding from.
-const PrivatixServiceContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"challenge_period\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"internal_balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"channel_deposit_bugbounty_limit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"network_fee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"closing_requests\",\"outputs\":[{\"name\":\"closing_balance\",\"type\":\"uint192\"},{\"name\":\"settle_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"channels\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint192\"},{\"name\":\"open_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"meta_version\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_token_address\",\"type\":\"address\"},{\"name\":\"_network_fee_address\",\"type\":\"address\"},{\"name\":\"_challenge_period\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_deposit\",\"type\":\"uint192\"},{\"indexed\":false,\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"LogChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"LogChannelToppedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogChannelCloseRequested\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent_address\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogServiceOfferingCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogServiceOfferingDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"LogServiceOfferingEndpoint\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogServiceOfferingSupplyChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogServiceOfferingPopedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogUnCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"addBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"returnBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee_address\",\"type\":\"address\"}],\"name\":\"setNetworkFeeAddress\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee\",\"type\":\"uint32\"}],\"name\":\"setNetworkFee\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"topUpChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_balance_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_closing_sig\",\"type\":\"bytes\"}],\"name\":\"cooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"uncooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"settle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getChannelInfo\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"uint192\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"publishServiceOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"name\":\"_max_supply\",\"type\":\"uint16\"}],\"name\":\"registerServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"removeServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"popupServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_balance_msg_sig\",\"type\":\"bytes\"}],\"name\":\"extractBalanceProofSignature\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_closing_sig\",\"type\":\"bytes\"}],\"name\":\"extractClosingSignature\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getKey\",\"outputs\":[{\"name\":\"data\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogChannelCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelToppedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogServiceOfferingCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogServiceOfferingDeleted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogServiceOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogServiceOfferingSupplyChanged\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogServiceOfferingPopedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogUnCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const PrivatixServiceContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"challenge_period\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"internal_balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"channel_deposit_bugbounty_limit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"network_fee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"closing_requests\",\"outputs\":[{\"name\":\"closing_balance\",\"type\":\"uint192\"},{\"name\":\"settle_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"channels\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint192\"},{\"name\":\"open_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"meta_version\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_token_address\",\"type\":\"address\"},{\"name\":\"_network_fee_address\",\"type\":\"address\"},{\"name\":\"_challenge_period\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_deposit\",\"type\":\"uint192\"},{\"indexed\":false,\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"LogChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"LogChannelToppedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogChannelCloseRequested\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogOfferingCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingEndpoint\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogOfferingSupplyChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingPopedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogUnCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"addBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"returnBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee_address\",\"type\":\"address\"}],\"name\":\"setNetworkFeeAddress\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee\",\"type\":\"uint32\"}],\"name\":\"setNetworkFee\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"topUpChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_balance_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_closing_sig\",\"type\":\"bytes\"}],\"name\":\"cooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"uncooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"settle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getChannelInfo\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"uint192\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"publishServiceOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint192\"},{\"name\":\"_max_supply\",\"type\":\"uint16\"}],\"name\":\"registerServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"removeServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"popupServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_type\",\"type\":\"bool\"}],\"name\":\"extractSignature\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getKey\",\"outputs\":[{\"name\":\"data\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogChannelCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelToppedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelCloseRequested\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogOfferingCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingDeleted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogOfferingSupplyChanged\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingPopedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogUnCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // PrivatixServiceContract is an auto generated Go binding around an Ethereum contract.
 type PrivatixServiceContract struct {
@@ -160,6 +160,32 @@ func (_PrivatixServiceContract *PrivatixServiceContractTransactorRaw) Transact(o
 	return _PrivatixServiceContract.Contract.contract.Transact(opts, method, params...)
 }
 
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(_address address) constant returns(uint256)
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) BalanceOf(opts *bind.CallOpts, _address common.Address) (*big.Int, error) {
+	var (
+		ret0 = new(*big.Int)
+	)
+	out := ret0
+	err := _PrivatixServiceContract.contract.Call(opts, out, "balanceOf", _address)
+	return *ret0, err
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(_address address) constant returns(uint256)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) BalanceOf(_address common.Address) (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.BalanceOf(&_PrivatixServiceContract.CallOpts, _address)
+}
+
+// BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
+//
+// Solidity: function balanceOf(_address address) constant returns(uint256)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) BalanceOf(_address common.Address) (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.BalanceOf(&_PrivatixServiceContract.CallOpts, _address)
+}
+
 // Challenge_period is a free data retrieval call binding the contract method 0x0a00840c.
 //
 // Solidity: function challenge_period() constant returns(uint32)
@@ -284,56 +310,30 @@ func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Closing_re
 	return _PrivatixServiceContract.Contract.Closing_requests(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
-// ExtractBalanceProofSignature is a free data retrieval call binding the contract method 0xc585dfd3.
+// ExtractSignature is a free data retrieval call binding the contract method 0x4c4b3c41.
 //
-// Solidity: function extractBalanceProofSignature(_agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _balance_msg_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) ExtractBalanceProofSignature(opts *bind.CallOpts, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _balance_msg_sig []byte) (common.Address, error) {
+// Solidity: function extractSignature(_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _msg_sig bytes, _type bool) constant returns(address)
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) ExtractSignature(opts *bind.CallOpts, _address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _msg_sig []byte, _type bool) (common.Address, error) {
 	var (
 		ret0 = new(common.Address)
 	)
 	out := ret0
-	err := _PrivatixServiceContract.contract.Call(opts, out, "extractBalanceProofSignature", _agent_address, _open_block_number, _offering_hash, _balance, _balance_msg_sig)
+	err := _PrivatixServiceContract.contract.Call(opts, out, "extractSignature", _address, _open_block_number, _offering_hash, _balance, _msg_sig, _type)
 	return *ret0, err
 }
 
-// ExtractBalanceProofSignature is a free data retrieval call binding the contract method 0xc585dfd3.
+// ExtractSignature is a free data retrieval call binding the contract method 0x4c4b3c41.
 //
-// Solidity: function extractBalanceProofSignature(_agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _balance_msg_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ExtractBalanceProofSignature(_agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _balance_msg_sig []byte) (common.Address, error) {
-	return _PrivatixServiceContract.Contract.ExtractBalanceProofSignature(&_PrivatixServiceContract.CallOpts, _agent_address, _open_block_number, _offering_hash, _balance, _balance_msg_sig)
+// Solidity: function extractSignature(_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _msg_sig bytes, _type bool) constant returns(address)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ExtractSignature(_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _msg_sig []byte, _type bool) (common.Address, error) {
+	return _PrivatixServiceContract.Contract.ExtractSignature(&_PrivatixServiceContract.CallOpts, _address, _open_block_number, _offering_hash, _balance, _msg_sig, _type)
 }
 
-// ExtractBalanceProofSignature is a free data retrieval call binding the contract method 0xc585dfd3.
+// ExtractSignature is a free data retrieval call binding the contract method 0x4c4b3c41.
 //
-// Solidity: function extractBalanceProofSignature(_agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _balance_msg_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ExtractBalanceProofSignature(_agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _balance_msg_sig []byte) (common.Address, error) {
-	return _PrivatixServiceContract.Contract.ExtractBalanceProofSignature(&_PrivatixServiceContract.CallOpts, _agent_address, _open_block_number, _offering_hash, _balance, _balance_msg_sig)
-}
-
-// ExtractClosingSignature is a free data retrieval call binding the contract method 0x647b5f79.
-//
-// Solidity: function extractClosingSignature(_client_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _closing_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) ExtractClosingSignature(opts *bind.CallOpts, _client_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _closing_sig []byte) (common.Address, error) {
-	var (
-		ret0 = new(common.Address)
-	)
-	out := ret0
-	err := _PrivatixServiceContract.contract.Call(opts, out, "extractClosingSignature", _client_address, _open_block_number, _offering_hash, _balance, _closing_sig)
-	return *ret0, err
-}
-
-// ExtractClosingSignature is a free data retrieval call binding the contract method 0x647b5f79.
-//
-// Solidity: function extractClosingSignature(_client_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _closing_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ExtractClosingSignature(_client_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _closing_sig []byte) (common.Address, error) {
-	return _PrivatixServiceContract.Contract.ExtractClosingSignature(&_PrivatixServiceContract.CallOpts, _client_address, _open_block_number, _offering_hash, _balance, _closing_sig)
-}
-
-// ExtractClosingSignature is a free data retrieval call binding the contract method 0x647b5f79.
-//
-// Solidity: function extractClosingSignature(_client_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _closing_sig bytes) constant returns(address)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ExtractClosingSignature(_client_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _closing_sig []byte) (common.Address, error) {
-	return _PrivatixServiceContract.Contract.ExtractClosingSignature(&_PrivatixServiceContract.CallOpts, _client_address, _open_block_number, _offering_hash, _balance, _closing_sig)
+// Solidity: function extractSignature(_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192, _msg_sig bytes, _type bool) constant returns(address)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ExtractSignature(_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int, _msg_sig []byte, _type bool) (common.Address, error) {
+	return _PrivatixServiceContract.Contract.ExtractSignature(&_PrivatixServiceContract.CallOpts, _address, _open_block_number, _offering_hash, _balance, _msg_sig, _type)
 }
 
 // GetChannelInfo is a free data retrieval call binding the contract method 0x52994187.
@@ -398,7 +398,7 @@ func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) GetKey(_cl
 
 // Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
 //
-// Solidity: function internal_balances( address) constant returns(uint256)
+// Solidity: function internal_balances( address) constant returns(uint192)
 func (_PrivatixServiceContract *PrivatixServiceContractCaller) Internal_balances(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -410,14 +410,14 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Internal_balances
 
 // Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
 //
-// Solidity: function internal_balances( address) constant returns(uint256)
+// Solidity: function internal_balances( address) constant returns(uint192)
 func (_PrivatixServiceContract *PrivatixServiceContractSession) Internal_balances(arg0 common.Address) (*big.Int, error) {
 	return _PrivatixServiceContract.Contract.Internal_balances(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
 // Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
 //
-// Solidity: function internal_balances( address) constant returns(uint256)
+// Solidity: function internal_balances( address) constant returns(uint192)
 func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Internal_balances(arg0 common.Address) (*big.Int, error) {
 	return _PrivatixServiceContract.Contract.Internal_balances(&_PrivatixServiceContract.CallOpts, arg0)
 }
@@ -631,23 +631,23 @@ func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) Publis
 	return _PrivatixServiceContract.Contract.PublishServiceOfferingEndpoint(&_PrivatixServiceContract.TransactOpts, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
 }
 
-// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x04f93d79.
+// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x68c6b821.
 //
-// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint256, _max_supply uint16) returns(success bool)
+// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint192, _max_supply uint16) returns(success bool)
 func (_PrivatixServiceContract *PrivatixServiceContractTransactor) RegisterServiceOffering(opts *bind.TransactOpts, _offering_hash [32]byte, _min_deposit *big.Int, _max_supply uint16) (*types.Transaction, error) {
 	return _PrivatixServiceContract.contract.Transact(opts, "registerServiceOffering", _offering_hash, _min_deposit, _max_supply)
 }
 
-// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x04f93d79.
+// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x68c6b821.
 //
-// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint256, _max_supply uint16) returns(success bool)
+// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint192, _max_supply uint16) returns(success bool)
 func (_PrivatixServiceContract *PrivatixServiceContractSession) RegisterServiceOffering(_offering_hash [32]byte, _min_deposit *big.Int, _max_supply uint16) (*types.Transaction, error) {
 	return _PrivatixServiceContract.Contract.RegisterServiceOffering(&_PrivatixServiceContract.TransactOpts, _offering_hash, _min_deposit, _max_supply)
 }
 
-// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x04f93d79.
+// RegisterServiceOffering is a paid mutator transaction binding the contract method 0x68c6b821.
 //
-// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint256, _max_supply uint16) returns(success bool)
+// Solidity: function registerServiceOffering(_offering_hash bytes32, _min_deposit uint192, _max_supply uint16) returns(success bool)
 func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) RegisterServiceOffering(_offering_hash [32]byte, _min_deposit *big.Int, _max_supply uint16) (*types.Transaction, error) {
 	return _PrivatixServiceContract.Contract.RegisterServiceOffering(&_PrivatixServiceContract.TransactOpts, _offering_hash, _min_deposit, _max_supply)
 }
@@ -757,193 +757,214 @@ func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) Settle
 	return _PrivatixServiceContract.Contract.Settle(&_PrivatixServiceContract.TransactOpts, _agent_address, _open_block_number, _offering_hash)
 }
 
-// ThrowEventLogChannelCreated is a paid mutator transaction binding the contract method 0x0a5ce4df.
+// ThrowEventLogChannelCloseRequested is a paid mutator transaction binding the contract method 0x92e24537.
 //
-// Solidity: function throwEventLogChannelCreated(_client_address address, _agent_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogChannelCreated(opts *bind.TransactOpts, _client_address common.Address, _agent_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogChannelCreated", _client_address, _agent_address, _offering_hash, _deposit, _authentication_hash)
+// Solidity: function throwEventLogChannelCloseRequested(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogChannelCloseRequested(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogChannelCloseRequested", _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
+}
+
+// ThrowEventLogChannelCloseRequested is a paid mutator transaction binding the contract method 0x92e24537.
+//
+// Solidity: function throwEventLogChannelCloseRequested(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogChannelCloseRequested(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCloseRequested(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
+}
+
+// ThrowEventLogChannelCloseRequested is a paid mutator transaction binding the contract method 0x92e24537.
+//
+// Solidity: function throwEventLogChannelCloseRequested(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogChannelCloseRequested(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCloseRequested(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
 // ThrowEventLogChannelCreated is a paid mutator transaction binding the contract method 0x0a5ce4df.
 //
-// Solidity: function throwEventLogChannelCreated(_client_address address, _agent_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogChannelCreated(_client_address common.Address, _agent_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCreated(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _offering_hash, _deposit, _authentication_hash)
+// Solidity: function throwEventLogChannelCreated(_agent_address address, _client_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogChannelCreated(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogChannelCreated", _agent_address, _client_address, _offering_hash, _deposit, _authentication_hash)
 }
 
 // ThrowEventLogChannelCreated is a paid mutator transaction binding the contract method 0x0a5ce4df.
 //
-// Solidity: function throwEventLogChannelCreated(_client_address address, _agent_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogChannelCreated(_client_address common.Address, _agent_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCreated(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _offering_hash, _deposit, _authentication_hash)
+// Solidity: function throwEventLogChannelCreated(_agent_address address, _client_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogChannelCreated(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _deposit, _authentication_hash)
 }
 
-// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x8bbe41ff.
+// ThrowEventLogChannelCreated is a paid mutator transaction binding the contract method 0x0a5ce4df.
 //
-// Solidity: function throwEventLogChannelToppedUp(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _added_deposit uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogChannelToppedUp(opts *bind.TransactOpts, _client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _added_deposit *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogChannelToppedUp", _client_address, _agent_address, _open_block_number, _offering_hash, _added_deposit)
+// Solidity: function throwEventLogChannelCreated(_agent_address address, _client_address address, _offering_hash bytes32, _deposit uint192, _authentication_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogChannelCreated(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _deposit *big.Int, _authentication_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _deposit, _authentication_hash)
 }
 
-// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x8bbe41ff.
+// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x4a6cb9d9.
 //
-// Solidity: function throwEventLogChannelToppedUp(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _added_deposit uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogChannelToppedUp(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _added_deposit *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogChannelToppedUp(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _added_deposit)
+// Solidity: function throwEventLogChannelToppedUp(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _added_deposit uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogChannelToppedUp(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _added_deposit *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogChannelToppedUp", _agent_address, _client_address, _offering_hash, _open_block_number, _added_deposit)
 }
 
-// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x8bbe41ff.
+// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x4a6cb9d9.
 //
-// Solidity: function throwEventLogChannelToppedUp(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _added_deposit uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogChannelToppedUp(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _added_deposit *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogChannelToppedUp(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _added_deposit)
+// Solidity: function throwEventLogChannelToppedUp(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _added_deposit uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogChannelToppedUp(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _added_deposit *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelToppedUp(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _added_deposit)
 }
 
-// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xfca03dcb.
+// ThrowEventLogChannelToppedUp is a paid mutator transaction binding the contract method 0x4a6cb9d9.
 //
-// Solidity: function throwEventLogCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogCooperativeChannelClose(opts *bind.TransactOpts, _client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogCooperativeChannelClose", _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogChannelToppedUp(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _added_deposit uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogChannelToppedUp(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _added_deposit *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogChannelToppedUp(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _added_deposit)
 }
 
-// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xfca03dcb.
+// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xc0aa2dd3.
 //
-// Solidity: function throwEventLogCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogCooperativeChannelClose(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogCooperativeChannelClose(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogCooperativeChannelClose", _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
-// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xfca03dcb.
+// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xc0aa2dd3.
 //
-// Solidity: function throwEventLogCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogCooperativeChannelClose(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogCooperativeChannelClose(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
-// ThrowEventLogServiceOfferingCreated is a paid mutator transaction binding the contract method 0xeb1320b7.
+// ThrowEventLogCooperativeChannelClose is a paid mutator transaction binding the contract method 0xc0aa2dd3.
 //
-// Solidity: function throwEventLogServiceOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogServiceOfferingCreated(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogServiceOfferingCreated", _agent_address, _offering_hash, _min_deposit, _current_supply)
+// Solidity: function throwEventLogCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogCooperativeChannelClose(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
-// ThrowEventLogServiceOfferingCreated is a paid mutator transaction binding the contract method 0xeb1320b7.
+// ThrowEventLogOfferingCreated is a paid mutator transaction binding the contract method 0x6bbe1f35.
 //
-// Solidity: function throwEventLogServiceOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogServiceOfferingCreated(_agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _min_deposit, _current_supply)
+// Solidity: function throwEventLogOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingCreated(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingCreated", _agent_address, _offering_hash, _min_deposit, _current_supply)
 }
 
-// ThrowEventLogServiceOfferingCreated is a paid mutator transaction binding the contract method 0xeb1320b7.
+// ThrowEventLogOfferingCreated is a paid mutator transaction binding the contract method 0x6bbe1f35.
 //
-// Solidity: function throwEventLogServiceOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogServiceOfferingCreated(_agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _min_deposit, _current_supply)
+// Solidity: function throwEventLogOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingCreated(_agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _min_deposit, _current_supply)
 }
 
-// ThrowEventLogServiceOfferingDeleted is a paid mutator transaction binding the contract method 0xd0080d07.
+// ThrowEventLogOfferingCreated is a paid mutator transaction binding the contract method 0x6bbe1f35.
 //
-// Solidity: function throwEventLogServiceOfferingDeleted(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogServiceOfferingDeleted(opts *bind.TransactOpts, _offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogServiceOfferingDeleted", _offering_hash)
+// Solidity: function throwEventLogOfferingCreated(_agent_address address, _offering_hash bytes32, _min_deposit uint256, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingCreated(_agent_address common.Address, _offering_hash [32]byte, _min_deposit *big.Int, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingCreated(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _min_deposit, _current_supply)
 }
 
-// ThrowEventLogServiceOfferingDeleted is a paid mutator transaction binding the contract method 0xd0080d07.
+// ThrowEventLogOfferingDeleted is a paid mutator transaction binding the contract method 0x2262a4ae.
 //
-// Solidity: function throwEventLogServiceOfferingDeleted(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogServiceOfferingDeleted(_offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingDeleted(&_PrivatixServiceContract.TransactOpts, _offering_hash)
+// Solidity: function throwEventLogOfferingDeleted(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingDeleted(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingDeleted", _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingDeleted is a paid mutator transaction binding the contract method 0xd0080d07.
+// ThrowEventLogOfferingDeleted is a paid mutator transaction binding the contract method 0x2262a4ae.
 //
-// Solidity: function throwEventLogServiceOfferingDeleted(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogServiceOfferingDeleted(_offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingDeleted(&_PrivatixServiceContract.TransactOpts, _offering_hash)
+// Solidity: function throwEventLogOfferingDeleted(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingDeleted(_agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingDeleted(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingEndpoint is a paid mutator transaction binding the contract method 0x1f5da34d.
+// ThrowEventLogOfferingDeleted is a paid mutator transaction binding the contract method 0x2262a4ae.
 //
-// Solidity: function throwEventLogServiceOfferingEndpoint(_client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogServiceOfferingEndpoint(opts *bind.TransactOpts, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogServiceOfferingEndpoint", _client_address, _offering_hash, _open_block_number, _endpoint_hash)
+// Solidity: function throwEventLogOfferingDeleted(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingDeleted(_agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingDeleted(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingEndpoint is a paid mutator transaction binding the contract method 0x1f5da34d.
+// ThrowEventLogOfferingEndpoint is a paid mutator transaction binding the contract method 0x71a87244.
 //
-// Solidity: function throwEventLogServiceOfferingEndpoint(_client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogServiceOfferingEndpoint(_client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingEndpoint(&_PrivatixServiceContract.TransactOpts, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
+// Solidity: function throwEventLogOfferingEndpoint(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingEndpoint(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingEndpoint", _agent_address, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
 }
 
-// ThrowEventLogServiceOfferingEndpoint is a paid mutator transaction binding the contract method 0x1f5da34d.
+// ThrowEventLogOfferingEndpoint is a paid mutator transaction binding the contract method 0x71a87244.
 //
-// Solidity: function throwEventLogServiceOfferingEndpoint(_client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogServiceOfferingEndpoint(_client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingEndpoint(&_PrivatixServiceContract.TransactOpts, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
+// Solidity: function throwEventLogOfferingEndpoint(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingEndpoint(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingEndpoint(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
 }
 
-// ThrowEventLogServiceOfferingPopedUp is a paid mutator transaction binding the contract method 0xfacba8f0.
+// ThrowEventLogOfferingEndpoint is a paid mutator transaction binding the contract method 0x71a87244.
 //
-// Solidity: function throwEventLogServiceOfferingPopedUp(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogServiceOfferingPopedUp(opts *bind.TransactOpts, _offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogServiceOfferingPopedUp", _offering_hash)
+// Solidity: function throwEventLogOfferingEndpoint(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _endpoint_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingEndpoint(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _endpoint_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingEndpoint(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _endpoint_hash)
 }
 
-// ThrowEventLogServiceOfferingPopedUp is a paid mutator transaction binding the contract method 0xfacba8f0.
+// ThrowEventLogOfferingPopedUp is a paid mutator transaction binding the contract method 0xfec5be78.
 //
-// Solidity: function throwEventLogServiceOfferingPopedUp(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogServiceOfferingPopedUp(_offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingPopedUp(&_PrivatixServiceContract.TransactOpts, _offering_hash)
+// Solidity: function throwEventLogOfferingPopedUp(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingPopedUp(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingPopedUp", _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingPopedUp is a paid mutator transaction binding the contract method 0xfacba8f0.
+// ThrowEventLogOfferingPopedUp is a paid mutator transaction binding the contract method 0xfec5be78.
 //
-// Solidity: function throwEventLogServiceOfferingPopedUp(_offering_hash bytes32) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogServiceOfferingPopedUp(_offering_hash [32]byte) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingPopedUp(&_PrivatixServiceContract.TransactOpts, _offering_hash)
+// Solidity: function throwEventLogOfferingPopedUp(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingPopedUp(_agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingPopedUp(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x2c864b5a.
+// ThrowEventLogOfferingPopedUp is a paid mutator transaction binding the contract method 0xfec5be78.
 //
-// Solidity: function throwEventLogServiceOfferingSupplyChanged(_offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogServiceOfferingSupplyChanged(opts *bind.TransactOpts, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogServiceOfferingSupplyChanged", _offering_hash, _current_supply)
+// Solidity: function throwEventLogOfferingPopedUp(_agent_address address, _offering_hash bytes32) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingPopedUp(_agent_address common.Address, _offering_hash [32]byte) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingPopedUp(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash)
 }
 
-// ThrowEventLogServiceOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x2c864b5a.
+// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
 //
-// Solidity: function throwEventLogServiceOfferingSupplyChanged(_offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogServiceOfferingSupplyChanged(_offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _offering_hash, _current_supply)
+// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingSupplyChanged(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingSupplyChanged", _agent_address, _offering_hash, _current_supply)
 }
 
-// ThrowEventLogServiceOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x2c864b5a.
+// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
 //
-// Solidity: function throwEventLogServiceOfferingSupplyChanged(_offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogServiceOfferingSupplyChanged(_offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogServiceOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _offering_hash, _current_supply)
+// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingSupplyChanged(_agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _current_supply)
 }
 
-// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x5a2c6d29.
+// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
 //
-// Solidity: function throwEventLogUnCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogUnCooperativeChannelClose(opts *bind.TransactOpts, _client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogUnCooperativeChannelClose", _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingSupplyChanged(_agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _current_supply)
 }
 
-// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x5a2c6d29.
+// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x3045e326.
 //
-// Solidity: function throwEventLogUnCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogUnCooperativeChannelClose(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogUnCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogUnCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogUnCooperativeChannelClose(opts *bind.TransactOpts, _agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogUnCooperativeChannelClose", _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
-// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x5a2c6d29.
+// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x3045e326.
 //
-// Solidity: function throwEventLogUnCooperativeChannelClose(_client_address address, _agent_address address, _open_block_number uint32, _offering_hash bytes32, _balance uint192) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogUnCooperativeChannelClose(_client_address common.Address, _agent_address common.Address, _open_block_number uint32, _offering_hash [32]byte, _balance *big.Int) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogUnCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _client_address, _agent_address, _open_block_number, _offering_hash, _balance)
+// Solidity: function throwEventLogUnCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogUnCooperativeChannelClose(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogUnCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
+}
+
+// ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x3045e326.
+//
+// Solidity: function throwEventLogUnCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
+func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogUnCooperativeChannelClose(_agent_address common.Address, _client_address common.Address, _offering_hash [32]byte, _open_block_number uint32, _balance *big.Int) (*types.Transaction, error) {
+	return _PrivatixServiceContract.Contract.ThrowEventLogUnCooperativeChannelClose(&_PrivatixServiceContract.TransactOpts, _agent_address, _client_address, _offering_hash, _open_block_number, _balance)
 }
 
 // TopUpChannel is a paid mutator transaction binding the contract method 0xd4e2c042.
@@ -1078,58 +1099,58 @@ func (it *PrivatixServiceContractLogChannelCloseRequestedIterator) Close() error
 
 // PrivatixServiceContractLogChannelCloseRequested represents a LogChannelCloseRequested event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelCloseRequested struct {
-	Client            common.Address
 	Agent             common.Address
-	Open_block_number uint32
+	Client            common.Address
 	Offering_hash     [32]byte
+	Open_block_number uint32
 	Balance           *big.Int
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogChannelCloseRequested is a free log retrieval operation binding the contract event 0x21ff66d79903f9d4ab6ab3c7c903af993e709be2ce2f4532d572925dea741cb1.
+// FilterLogChannelCloseRequested is a free log retrieval operation binding the contract event 0xb40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e.
 //
-// Solidity: event LogChannelCloseRequested(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelCloseRequested(opts *bind.FilterOpts, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (*PrivatixServiceContractLogChannelCloseRequestedIterator, error) {
+// Solidity: event LogChannelCloseRequested(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelCloseRequested(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogChannelCloseRequestedIterator, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelCloseRequested", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelCloseRequested", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
 	return &PrivatixServiceContractLogChannelCloseRequestedIterator{contract: _PrivatixServiceContract.contract, event: "LogChannelCloseRequested", logs: logs, sub: sub}, nil
 }
 
-// WatchLogChannelCloseRequested is a free log subscription operation binding the contract event 0x21ff66d79903f9d4ab6ab3c7c903af993e709be2ce2f4532d572925dea741cb1.
+// WatchLogChannelCloseRequested is a free log subscription operation binding the contract event 0xb40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e.
 //
-// Solidity: event LogChannelCloseRequested(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelCloseRequested(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelCloseRequested, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (event.Subscription, error) {
+// Solidity: event LogChannelCloseRequested(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelCloseRequested(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelCloseRequested, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelCloseRequested", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelCloseRequested", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1230,8 +1251,8 @@ func (it *PrivatixServiceContractLogChannelCreatedIterator) Close() error {
 
 // PrivatixServiceContractLogChannelCreated represents a LogChannelCreated event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelCreated struct {
-	Client              common.Address
 	Agent               common.Address
+	Client              common.Address
 	Offering_hash       [32]byte
 	Deposit             *big.Int
 	Authentication_hash [32]byte
@@ -1240,23 +1261,23 @@ type PrivatixServiceContractLogChannelCreated struct {
 
 // FilterLogChannelCreated is a free log retrieval operation binding the contract event 0xa6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c.
 //
-// Solidity: event LogChannelCreated(_client indexed address, _agent indexed address, _offering_hash indexed bytes32, _deposit uint192, _authentication_hash bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelCreated(opts *bind.FilterOpts, _client []common.Address, _agent []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogChannelCreatedIterator, error) {
+// Solidity: event LogChannelCreated(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _deposit uint192, _authentication_hash bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelCreated(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogChannelCreatedIterator, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
+	}
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
 	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelCreated", _clientRule, _agentRule, _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelCreated", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1265,23 +1286,23 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChanne
 
 // WatchLogChannelCreated is a free log subscription operation binding the contract event 0xa6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c.
 //
-// Solidity: event LogChannelCreated(_client indexed address, _agent indexed address, _offering_hash indexed bytes32, _deposit uint192, _authentication_hash bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelCreated(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelCreated, _client []common.Address, _agent []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
+// Solidity: event LogChannelCreated(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _deposit uint192, _authentication_hash bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelCreated(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelCreated, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
+	}
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
 	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelCreated", _clientRule, _agentRule, _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelCreated", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,58 +1403,58 @@ func (it *PrivatixServiceContractLogChannelToppedUpIterator) Close() error {
 
 // PrivatixServiceContractLogChannelToppedUp represents a LogChannelToppedUp event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelToppedUp struct {
-	Client            common.Address
 	Agent             common.Address
-	Open_block_number uint32
+	Client            common.Address
 	Offering_hash     [32]byte
+	Open_block_number uint32
 	Added_deposit     *big.Int
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogChannelToppedUp is a free log retrieval operation binding the contract event 0x392a992c1a7b756e553d8d97f43d59fafe79bc672808247debc077a6cdaba7b9.
+// FilterLogChannelToppedUp is a free log retrieval operation binding the contract event 0xa3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce.
 //
-// Solidity: event LogChannelToppedUp(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _added_deposit uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelToppedUp(opts *bind.FilterOpts, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (*PrivatixServiceContractLogChannelToppedUpIterator, error) {
+// Solidity: event LogChannelToppedUp(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _added_deposit uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogChannelToppedUp(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogChannelToppedUpIterator, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelToppedUp", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogChannelToppedUp", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
 	return &PrivatixServiceContractLogChannelToppedUpIterator{contract: _PrivatixServiceContract.contract, event: "LogChannelToppedUp", logs: logs, sub: sub}, nil
 }
 
-// WatchLogChannelToppedUp is a free log subscription operation binding the contract event 0x392a992c1a7b756e553d8d97f43d59fafe79bc672808247debc077a6cdaba7b9.
+// WatchLogChannelToppedUp is a free log subscription operation binding the contract event 0xa3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce.
 //
-// Solidity: event LogChannelToppedUp(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _added_deposit uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelToppedUp(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelToppedUp, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (event.Subscription, error) {
+// Solidity: event LogChannelToppedUp(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _added_deposit uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogChannelToppedUp(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogChannelToppedUp, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelToppedUp", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogChannelToppedUp", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1534,58 +1555,58 @@ func (it *PrivatixServiceContractLogCooperativeChannelCloseIterator) Close() err
 
 // PrivatixServiceContractLogCooperativeChannelClose represents a LogCooperativeChannelClose event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogCooperativeChannelClose struct {
-	Client            common.Address
 	Agent             common.Address
-	Open_block_number uint32
+	Client            common.Address
 	Offering_hash     [32]byte
+	Open_block_number uint32
 	Balance           *big.Int
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogCooperativeChannelClose is a free log retrieval operation binding the contract event 0x56a4dfc7b9f93649d9142c7bef0a429decf8d3be895a3180c67a76a18d79f4ab.
+// FilterLogCooperativeChannelClose is a free log retrieval operation binding the contract event 0xb488ea0f49970f556cf18e57588e78dcc1d3fd45c71130aa5099a79e8b06c8e7.
 //
-// Solidity: event LogCooperativeChannelClose(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogCooperativeChannelClose(opts *bind.FilterOpts, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (*PrivatixServiceContractLogCooperativeChannelCloseIterator, error) {
+// Solidity: event LogCooperativeChannelClose(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogCooperativeChannelClose(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogCooperativeChannelCloseIterator, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogCooperativeChannelClose", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogCooperativeChannelClose", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
 	return &PrivatixServiceContractLogCooperativeChannelCloseIterator{contract: _PrivatixServiceContract.contract, event: "LogCooperativeChannelClose", logs: logs, sub: sub}, nil
 }
 
-// WatchLogCooperativeChannelClose is a free log subscription operation binding the contract event 0x56a4dfc7b9f93649d9142c7bef0a429decf8d3be895a3180c67a76a18d79f4ab.
+// WatchLogCooperativeChannelClose is a free log subscription operation binding the contract event 0xb488ea0f49970f556cf18e57588e78dcc1d3fd45c71130aa5099a79e8b06c8e7.
 //
-// Solidity: event LogCooperativeChannelClose(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogCooperativeChannelClose(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogCooperativeChannelClose, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (event.Subscription, error) {
+// Solidity: event LogCooperativeChannelClose(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogCooperativeChannelClose(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogCooperativeChannelClose, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogCooperativeChannelClose", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogCooperativeChannelClose", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1617,9 +1638,9 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogCoopera
 	}), nil
 }
 
-// PrivatixServiceContractLogServiceOfferingCreatedIterator is returned from FilterLogServiceOfferingCreated and is used to iterate over the raw logs and unpacked data for LogServiceOfferingCreated events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingCreatedIterator struct {
-	Event *PrivatixServiceContractLogServiceOfferingCreated // Event containing the contract specifics and raw log
+// PrivatixServiceContractLogOfferingCreatedIterator is returned from FilterLogOfferingCreated and is used to iterate over the raw logs and unpacked data for LogOfferingCreated events raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingCreatedIterator struct {
+	Event *PrivatixServiceContractLogOfferingCreated // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1633,7 +1654,7 @@ type PrivatixServiceContractLogServiceOfferingCreatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Next() bool {
+func (it *PrivatixServiceContractLogOfferingCreatedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1642,7 +1663,7 @@ func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogServiceOfferingCreated)
+			it.Event = new(PrivatixServiceContractLogOfferingCreated)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1657,7 +1678,7 @@ func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogServiceOfferingCreated)
+		it.Event = new(PrivatixServiceContractLogOfferingCreated)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1673,62 +1694,70 @@ func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Error() error {
+func (it *PrivatixServiceContractLogOfferingCreatedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PrivatixServiceContractLogServiceOfferingCreatedIterator) Close() error {
+func (it *PrivatixServiceContractLogOfferingCreatedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PrivatixServiceContractLogServiceOfferingCreated represents a LogServiceOfferingCreated event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingCreated struct {
-	Agent_address  common.Address
+// PrivatixServiceContractLogOfferingCreated represents a LogOfferingCreated event raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingCreated struct {
+	Agent          common.Address
 	Offering_hash  [32]byte
 	Min_deposit    *big.Int
 	Current_supply uint16
 	Raw            types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogServiceOfferingCreated is a free log retrieval operation binding the contract event 0x49d573efb7cbb057727f6cadb4150ba6d5041c4fb55afe606508be636e158127.
+// FilterLogOfferingCreated is a free log retrieval operation binding the contract event 0x32c1913dfde418197923027c2f2260f19903a2e86a93ed83c4689ac91a96bafd.
 //
-// Solidity: event LogServiceOfferingCreated(_agent_address indexed address, _offering_hash indexed bytes32, _min_deposit uint256, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServiceOfferingCreated(opts *bind.FilterOpts, _agent_address []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogServiceOfferingCreatedIterator, error) {
+// Solidity: event LogOfferingCreated(_agent indexed address, _offering_hash indexed bytes32, _min_deposit indexed uint256, _current_supply uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingCreated(opts *bind.FilterOpts, _agent []common.Address, _offering_hash [][32]byte, _min_deposit []*big.Int) (*PrivatixServiceContractLogOfferingCreatedIterator, error) {
 
-	var _agent_addressRule []interface{}
-	for _, _agent_addressItem := range _agent_address {
-		_agent_addressRule = append(_agent_addressRule, _agent_addressItem)
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
 	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
+	var _min_depositRule []interface{}
+	for _, _min_depositItem := range _min_deposit {
+		_min_depositRule = append(_min_depositRule, _min_depositItem)
+	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogServiceOfferingCreated", _agent_addressRule, _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingCreated", _agentRule, _offering_hashRule, _min_depositRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PrivatixServiceContractLogServiceOfferingCreatedIterator{contract: _PrivatixServiceContract.contract, event: "LogServiceOfferingCreated", logs: logs, sub: sub}, nil
+	return &PrivatixServiceContractLogOfferingCreatedIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingCreated", logs: logs, sub: sub}, nil
 }
 
-// WatchLogServiceOfferingCreated is a free log subscription operation binding the contract event 0x49d573efb7cbb057727f6cadb4150ba6d5041c4fb55afe606508be636e158127.
+// WatchLogOfferingCreated is a free log subscription operation binding the contract event 0x32c1913dfde418197923027c2f2260f19903a2e86a93ed83c4689ac91a96bafd.
 //
-// Solidity: event LogServiceOfferingCreated(_agent_address indexed address, _offering_hash indexed bytes32, _min_deposit uint256, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogServiceOfferingCreated(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogServiceOfferingCreated, _agent_address []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
+// Solidity: event LogOfferingCreated(_agent indexed address, _offering_hash indexed bytes32, _min_deposit indexed uint256, _current_supply uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingCreated(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingCreated, _agent []common.Address, _offering_hash [][32]byte, _min_deposit []*big.Int) (event.Subscription, error) {
 
-	var _agent_addressRule []interface{}
-	for _, _agent_addressItem := range _agent_address {
-		_agent_addressRule = append(_agent_addressRule, _agent_addressItem)
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
 	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
+	var _min_depositRule []interface{}
+	for _, _min_depositItem := range _min_deposit {
+		_min_depositRule = append(_min_depositRule, _min_depositItem)
+	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogServiceOfferingCreated", _agent_addressRule, _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingCreated", _agentRule, _offering_hashRule, _min_depositRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1738,8 +1767,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogServiceOfferingCreated)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogServiceOfferingCreated", log); err != nil {
+				event := new(PrivatixServiceContractLogOfferingCreated)
+				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingCreated", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1760,9 +1789,9 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 	}), nil
 }
 
-// PrivatixServiceContractLogServiceOfferingDeletedIterator is returned from FilterLogServiceOfferingDeleted and is used to iterate over the raw logs and unpacked data for LogServiceOfferingDeleted events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingDeletedIterator struct {
-	Event *PrivatixServiceContractLogServiceOfferingDeleted // Event containing the contract specifics and raw log
+// PrivatixServiceContractLogOfferingDeletedIterator is returned from FilterLogOfferingDeleted and is used to iterate over the raw logs and unpacked data for LogOfferingDeleted events raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingDeletedIterator struct {
+	Event *PrivatixServiceContractLogOfferingDeleted // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1776,7 +1805,7 @@ type PrivatixServiceContractLogServiceOfferingDeletedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Next() bool {
+func (it *PrivatixServiceContractLogOfferingDeletedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1785,7 +1814,7 @@ func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogServiceOfferingDeleted)
+			it.Event = new(PrivatixServiceContractLogOfferingDeleted)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1800,7 +1829,7 @@ func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogServiceOfferingDeleted)
+		it.Event = new(PrivatixServiceContractLogOfferingDeleted)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1816,51 +1845,60 @@ func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Error() error {
+func (it *PrivatixServiceContractLogOfferingDeletedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PrivatixServiceContractLogServiceOfferingDeletedIterator) Close() error {
+func (it *PrivatixServiceContractLogOfferingDeletedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PrivatixServiceContractLogServiceOfferingDeleted represents a LogServiceOfferingDeleted event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingDeleted struct {
+// PrivatixServiceContractLogOfferingDeleted represents a LogOfferingDeleted event raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingDeleted struct {
+	Agent         common.Address
 	Offering_hash [32]byte
 	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogServiceOfferingDeleted is a free log retrieval operation binding the contract event 0x21652905a07e2790c3a220d14394aee13681876bfbf38e658fa82ee5afe0c862.
+// FilterLogOfferingDeleted is a free log retrieval operation binding the contract event 0xc3013cd9dd5c33b95a9cc1bc076481c9a6a1970be6d7f1ed33adafad6e57d3d6.
 //
-// Solidity: event LogServiceOfferingDeleted(_offering_hash indexed bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServiceOfferingDeleted(opts *bind.FilterOpts, _offering_hash [][32]byte) (*PrivatixServiceContractLogServiceOfferingDeletedIterator, error) {
+// Solidity: event LogOfferingDeleted(_agent indexed address, _offering_hash indexed bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingDeleted(opts *bind.FilterOpts, _agent []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogOfferingDeletedIterator, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogServiceOfferingDeleted", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingDeleted", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PrivatixServiceContractLogServiceOfferingDeletedIterator{contract: _PrivatixServiceContract.contract, event: "LogServiceOfferingDeleted", logs: logs, sub: sub}, nil
+	return &PrivatixServiceContractLogOfferingDeletedIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingDeleted", logs: logs, sub: sub}, nil
 }
 
-// WatchLogServiceOfferingDeleted is a free log subscription operation binding the contract event 0x21652905a07e2790c3a220d14394aee13681876bfbf38e658fa82ee5afe0c862.
+// WatchLogOfferingDeleted is a free log subscription operation binding the contract event 0xc3013cd9dd5c33b95a9cc1bc076481c9a6a1970be6d7f1ed33adafad6e57d3d6.
 //
-// Solidity: event LogServiceOfferingDeleted(_offering_hash indexed bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogServiceOfferingDeleted(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogServiceOfferingDeleted, _offering_hash [][32]byte) (event.Subscription, error) {
+// Solidity: event LogOfferingDeleted(_agent indexed address, _offering_hash indexed bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingDeleted(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingDeleted, _agent []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogServiceOfferingDeleted", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingDeleted", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1870,8 +1908,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogServiceOfferingDeleted)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogServiceOfferingDeleted", log); err != nil {
+				event := new(PrivatixServiceContractLogOfferingDeleted)
+				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingDeleted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1892,9 +1930,9 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 	}), nil
 }
 
-// PrivatixServiceContractLogServiceOfferingEndpointIterator is returned from FilterLogServiceOfferingEndpoint and is used to iterate over the raw logs and unpacked data for LogServiceOfferingEndpoint events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingEndpointIterator struct {
-	Event *PrivatixServiceContractLogServiceOfferingEndpoint // Event containing the contract specifics and raw log
+// PrivatixServiceContractLogOfferingEndpointIterator is returned from FilterLogOfferingEndpoint and is used to iterate over the raw logs and unpacked data for LogOfferingEndpoint events raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingEndpointIterator struct {
+	Event *PrivatixServiceContractLogOfferingEndpoint // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1908,7 +1946,7 @@ type PrivatixServiceContractLogServiceOfferingEndpointIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Next() bool {
+func (it *PrivatixServiceContractLogOfferingEndpointIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1917,7 +1955,7 @@ func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Next() bool
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogServiceOfferingEndpoint)
+			it.Event = new(PrivatixServiceContractLogOfferingEndpoint)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1932,7 +1970,7 @@ func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Next() bool
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogServiceOfferingEndpoint)
+		it.Event = new(PrivatixServiceContractLogOfferingEndpoint)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1948,19 +1986,20 @@ func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Next() bool
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Error() error {
+func (it *PrivatixServiceContractLogOfferingEndpointIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PrivatixServiceContractLogServiceOfferingEndpointIterator) Close() error {
+func (it *PrivatixServiceContractLogOfferingEndpointIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PrivatixServiceContractLogServiceOfferingEndpoint represents a LogServiceOfferingEndpoint event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingEndpoint struct {
+// PrivatixServiceContractLogOfferingEndpoint represents a LogOfferingEndpoint event raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingEndpoint struct {
+	Agent             common.Address
 	Client            common.Address
 	Offering_hash     [32]byte
 	Open_block_number uint32
@@ -1968,11 +2007,15 @@ type PrivatixServiceContractLogServiceOfferingEndpoint struct {
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogServiceOfferingEndpoint is a free log retrieval operation binding the contract event 0x00a7695de2bf4b4a523002334437d52e135b7a2a892d4471b5dd9005e5cd0681.
+// FilterLogOfferingEndpoint is a free log retrieval operation binding the contract event 0x450e7ab61f9e1c40dd7c79edcba274a7a96f025fab1733b3fa1087a1b5d1db7d.
 //
-// Solidity: event LogServiceOfferingEndpoint(_client indexed address, _offering_hash indexed bytes32, _open_block_number indexed uint32, _endpoint_hash bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServiceOfferingEndpoint(opts *bind.FilterOpts, _client []common.Address, _offering_hash [][32]byte, _open_block_number []uint32) (*PrivatixServiceContractLogServiceOfferingEndpointIterator, error) {
+// Solidity: event LogOfferingEndpoint(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _endpoint_hash bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingEndpoint(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogOfferingEndpointIterator, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _clientRule []interface{}
 	for _, _clientItem := range _client {
 		_clientRule = append(_clientRule, _clientItem)
@@ -1981,23 +2024,23 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServic
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
-	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogServiceOfferingEndpoint", _clientRule, _offering_hashRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingEndpoint", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PrivatixServiceContractLogServiceOfferingEndpointIterator{contract: _PrivatixServiceContract.contract, event: "LogServiceOfferingEndpoint", logs: logs, sub: sub}, nil
+	return &PrivatixServiceContractLogOfferingEndpointIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingEndpoint", logs: logs, sub: sub}, nil
 }
 
-// WatchLogServiceOfferingEndpoint is a free log subscription operation binding the contract event 0x00a7695de2bf4b4a523002334437d52e135b7a2a892d4471b5dd9005e5cd0681.
+// WatchLogOfferingEndpoint is a free log subscription operation binding the contract event 0x450e7ab61f9e1c40dd7c79edcba274a7a96f025fab1733b3fa1087a1b5d1db7d.
 //
-// Solidity: event LogServiceOfferingEndpoint(_client indexed address, _offering_hash indexed bytes32, _open_block_number indexed uint32, _endpoint_hash bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogServiceOfferingEndpoint(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogServiceOfferingEndpoint, _client []common.Address, _offering_hash [][32]byte, _open_block_number []uint32) (event.Subscription, error) {
+// Solidity: event LogOfferingEndpoint(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _endpoint_hash bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingEndpoint(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingEndpoint, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _clientRule []interface{}
 	for _, _clientItem := range _client {
 		_clientRule = append(_clientRule, _clientItem)
@@ -2006,12 +2049,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
-	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogServiceOfferingEndpoint", _clientRule, _offering_hashRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingEndpoint", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2021,8 +2060,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogServiceOfferingEndpoint)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogServiceOfferingEndpoint", log); err != nil {
+				event := new(PrivatixServiceContractLogOfferingEndpoint)
+				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingEndpoint", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2043,9 +2082,9 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 	}), nil
 }
 
-// PrivatixServiceContractLogServiceOfferingPopedUpIterator is returned from FilterLogServiceOfferingPopedUp and is used to iterate over the raw logs and unpacked data for LogServiceOfferingPopedUp events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingPopedUpIterator struct {
-	Event *PrivatixServiceContractLogServiceOfferingPopedUp // Event containing the contract specifics and raw log
+// PrivatixServiceContractLogOfferingPopedUpIterator is returned from FilterLogOfferingPopedUp and is used to iterate over the raw logs and unpacked data for LogOfferingPopedUp events raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingPopedUpIterator struct {
+	Event *PrivatixServiceContractLogOfferingPopedUp // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -2059,7 +2098,7 @@ type PrivatixServiceContractLogServiceOfferingPopedUpIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Next() bool {
+func (it *PrivatixServiceContractLogOfferingPopedUpIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -2068,7 +2107,7 @@ func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogServiceOfferingPopedUp)
+			it.Event = new(PrivatixServiceContractLogOfferingPopedUp)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -2083,7 +2122,7 @@ func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogServiceOfferingPopedUp)
+		it.Event = new(PrivatixServiceContractLogOfferingPopedUp)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -2099,51 +2138,60 @@ func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Error() error {
+func (it *PrivatixServiceContractLogOfferingPopedUpIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PrivatixServiceContractLogServiceOfferingPopedUpIterator) Close() error {
+func (it *PrivatixServiceContractLogOfferingPopedUpIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PrivatixServiceContractLogServiceOfferingPopedUp represents a LogServiceOfferingPopedUp event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingPopedUp struct {
+// PrivatixServiceContractLogOfferingPopedUp represents a LogOfferingPopedUp event raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingPopedUp struct {
+	Agent         common.Address
 	Offering_hash [32]byte
 	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogServiceOfferingPopedUp is a free log retrieval operation binding the contract event 0xc8404827c21b5491a6c3dc0881307e47bfa40c3baf3d607c2d14f6bc808d4bfb.
+// FilterLogOfferingPopedUp is a free log retrieval operation binding the contract event 0xc37352067a3ca1eafcf2dc5ba537fc473509c4e4aaca729cb1dab7053ec1ffbf.
 //
-// Solidity: event LogServiceOfferingPopedUp(_offering_hash indexed bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServiceOfferingPopedUp(opts *bind.FilterOpts, _offering_hash [][32]byte) (*PrivatixServiceContractLogServiceOfferingPopedUpIterator, error) {
+// Solidity: event LogOfferingPopedUp(_agent indexed address, _offering_hash indexed bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingPopedUp(opts *bind.FilterOpts, _agent []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogOfferingPopedUpIterator, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogServiceOfferingPopedUp", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingPopedUp", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PrivatixServiceContractLogServiceOfferingPopedUpIterator{contract: _PrivatixServiceContract.contract, event: "LogServiceOfferingPopedUp", logs: logs, sub: sub}, nil
+	return &PrivatixServiceContractLogOfferingPopedUpIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingPopedUp", logs: logs, sub: sub}, nil
 }
 
-// WatchLogServiceOfferingPopedUp is a free log subscription operation binding the contract event 0xc8404827c21b5491a6c3dc0881307e47bfa40c3baf3d607c2d14f6bc808d4bfb.
+// WatchLogOfferingPopedUp is a free log subscription operation binding the contract event 0xc37352067a3ca1eafcf2dc5ba537fc473509c4e4aaca729cb1dab7053ec1ffbf.
 //
-// Solidity: event LogServiceOfferingPopedUp(_offering_hash indexed bytes32)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogServiceOfferingPopedUp(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogServiceOfferingPopedUp, _offering_hash [][32]byte) (event.Subscription, error) {
+// Solidity: event LogOfferingPopedUp(_agent indexed address, _offering_hash indexed bytes32)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingPopedUp(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingPopedUp, _agent []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogServiceOfferingPopedUp", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingPopedUp", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2153,8 +2201,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogServiceOfferingPopedUp)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogServiceOfferingPopedUp", log); err != nil {
+				event := new(PrivatixServiceContractLogOfferingPopedUp)
+				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingPopedUp", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2175,9 +2223,9 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 	}), nil
 }
 
-// PrivatixServiceContractLogServiceOfferingSupplyChangedIterator is returned from FilterLogServiceOfferingSupplyChanged and is used to iterate over the raw logs and unpacked data for LogServiceOfferingSupplyChanged events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingSupplyChangedIterator struct {
-	Event *PrivatixServiceContractLogServiceOfferingSupplyChanged // Event containing the contract specifics and raw log
+// PrivatixServiceContractLogOfferingSupplyChangedIterator is returned from FilterLogOfferingSupplyChanged and is used to iterate over the raw logs and unpacked data for LogOfferingSupplyChanged events raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingSupplyChangedIterator struct {
+	Event *PrivatixServiceContractLogOfferingSupplyChanged // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -2191,7 +2239,7 @@ type PrivatixServiceContractLogServiceOfferingSupplyChangedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Next() bool {
+func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -2200,7 +2248,7 @@ func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Next()
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogServiceOfferingSupplyChanged)
+			it.Event = new(PrivatixServiceContractLogOfferingSupplyChanged)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -2215,7 +2263,7 @@ func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Next()
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogServiceOfferingSupplyChanged)
+		it.Event = new(PrivatixServiceContractLogOfferingSupplyChanged)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -2231,52 +2279,61 @@ func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Next()
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Error() error {
+func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PrivatixServiceContractLogServiceOfferingSupplyChangedIterator) Close() error {
+func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PrivatixServiceContractLogServiceOfferingSupplyChanged represents a LogServiceOfferingSupplyChanged event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogServiceOfferingSupplyChanged struct {
+// PrivatixServiceContractLogOfferingSupplyChanged represents a LogOfferingSupplyChanged event raised by the PrivatixServiceContract contract.
+type PrivatixServiceContractLogOfferingSupplyChanged struct {
+	Agent          common.Address
 	Offering_hash  [32]byte
 	Current_supply uint16
 	Raw            types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogServiceOfferingSupplyChanged is a free log retrieval operation binding the contract event 0x1337b30376128e64c2ffd4e95d4c900b4ab42af11202b328722020216eeb46df.
+// FilterLogOfferingSupplyChanged is a free log retrieval operation binding the contract event 0x5848091ba8411ca73c2b3bcfa5ffdcc4db482c6bf114dfa984f75c03dd878cf3.
 //
-// Solidity: event LogServiceOfferingSupplyChanged(_offering_hash indexed bytes32, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogServiceOfferingSupplyChanged(opts *bind.FilterOpts, _offering_hash [][32]byte) (*PrivatixServiceContractLogServiceOfferingSupplyChangedIterator, error) {
+// Solidity: event LogOfferingSupplyChanged(_agent indexed address, _offering_hash indexed bytes32, _current_supply uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingSupplyChanged(opts *bind.FilterOpts, _agent []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogOfferingSupplyChangedIterator, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogServiceOfferingSupplyChanged", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingSupplyChanged", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PrivatixServiceContractLogServiceOfferingSupplyChangedIterator{contract: _PrivatixServiceContract.contract, event: "LogServiceOfferingSupplyChanged", logs: logs, sub: sub}, nil
+	return &PrivatixServiceContractLogOfferingSupplyChangedIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingSupplyChanged", logs: logs, sub: sub}, nil
 }
 
-// WatchLogServiceOfferingSupplyChanged is a free log subscription operation binding the contract event 0x1337b30376128e64c2ffd4e95d4c900b4ab42af11202b328722020216eeb46df.
+// WatchLogOfferingSupplyChanged is a free log subscription operation binding the contract event 0x5848091ba8411ca73c2b3bcfa5ffdcc4db482c6bf114dfa984f75c03dd878cf3.
 //
-// Solidity: event LogServiceOfferingSupplyChanged(_offering_hash indexed bytes32, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogServiceOfferingSupplyChanged(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogServiceOfferingSupplyChanged, _offering_hash [][32]byte) (event.Subscription, error) {
+// Solidity: event LogOfferingSupplyChanged(_agent indexed address, _offering_hash indexed bytes32, _current_supply uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingSupplyChanged(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingSupplyChanged, _agent []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
+	var _agentRule []interface{}
+	for _, _agentItem := range _agent {
+		_agentRule = append(_agentRule, _agentItem)
+	}
 	var _offering_hashRule []interface{}
 	for _, _offering_hashItem := range _offering_hash {
 		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogServiceOfferingSupplyChanged", _offering_hashRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingSupplyChanged", _agentRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2286,8 +2343,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogService
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogServiceOfferingSupplyChanged)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogServiceOfferingSupplyChanged", log); err != nil {
+				event := new(PrivatixServiceContractLogOfferingSupplyChanged)
+				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingSupplyChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2377,58 +2434,58 @@ func (it *PrivatixServiceContractLogUnCooperativeChannelCloseIterator) Close() e
 
 // PrivatixServiceContractLogUnCooperativeChannelClose represents a LogUnCooperativeChannelClose event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogUnCooperativeChannelClose struct {
-	Client            common.Address
 	Agent             common.Address
-	Open_block_number uint32
+	Client            common.Address
 	Offering_hash     [32]byte
+	Open_block_number uint32
 	Balance           *big.Int
 	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterLogUnCooperativeChannelClose is a free log retrieval operation binding the contract event 0x8a79bd24ee9bcfd977d6fc685befa8775c8a933f0abe82ab73b716cf419f968e.
+// FilterLogUnCooperativeChannelClose is a free log retrieval operation binding the contract event 0x7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6.
 //
-// Solidity: event LogUnCooperativeChannelClose(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogUnCooperativeChannelClose(opts *bind.FilterOpts, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (*PrivatixServiceContractLogUnCooperativeChannelCloseIterator, error) {
+// Solidity: event LogUnCooperativeChannelClose(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogUnCooperativeChannelClose(opts *bind.FilterOpts, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogUnCooperativeChannelCloseIterator, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogUnCooperativeChannelClose", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogUnCooperativeChannelClose", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}
 	return &PrivatixServiceContractLogUnCooperativeChannelCloseIterator{contract: _PrivatixServiceContract.contract, event: "LogUnCooperativeChannelClose", logs: logs, sub: sub}, nil
 }
 
-// WatchLogUnCooperativeChannelClose is a free log subscription operation binding the contract event 0x8a79bd24ee9bcfd977d6fc685befa8775c8a933f0abe82ab73b716cf419f968e.
+// WatchLogUnCooperativeChannelClose is a free log subscription operation binding the contract event 0x7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6.
 //
-// Solidity: event LogUnCooperativeChannelClose(_client indexed address, _agent indexed address, _open_block_number indexed uint32, _offering_hash bytes32, _balance uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogUnCooperativeChannelClose(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogUnCooperativeChannelClose, _client []common.Address, _agent []common.Address, _open_block_number []uint32) (event.Subscription, error) {
+// Solidity: event LogUnCooperativeChannelClose(_agent indexed address, _client indexed address, _offering_hash indexed bytes32, _open_block_number uint32, _balance uint192)
+func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogUnCooperativeChannelClose(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogUnCooperativeChannelClose, _agent []common.Address, _client []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
 
-	var _clientRule []interface{}
-	for _, _clientItem := range _client {
-		_clientRule = append(_clientRule, _clientItem)
-	}
 	var _agentRule []interface{}
 	for _, _agentItem := range _agent {
 		_agentRule = append(_agentRule, _agentItem)
 	}
-	var _open_block_numberRule []interface{}
-	for _, _open_block_numberItem := range _open_block_number {
-		_open_block_numberRule = append(_open_block_numberRule, _open_block_numberItem)
+	var _clientRule []interface{}
+	for _, _clientItem := range _client {
+		_clientRule = append(_clientRule, _clientItem)
+	}
+	var _offering_hashRule []interface{}
+	for _, _offering_hashItem := range _offering_hash {
+		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
 	}
 
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogUnCooperativeChannelClose", _clientRule, _agentRule, _open_block_numberRule)
+	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogUnCooperativeChannelClose", _agentRule, _clientRule, _offering_hashRule)
 	if err != nil {
 		return nil, err
 	}

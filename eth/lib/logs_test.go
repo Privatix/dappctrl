@@ -14,8 +14,8 @@ import (
 
 	"bytes"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/eth/utils"
 	"github.com/privatix/dappctrl/eth/lib/tests"
+	"github.com/privatix/dappctrl/eth/utils"
 )
 
 var (

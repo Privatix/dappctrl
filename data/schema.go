@@ -212,8 +212,7 @@ type Endpoint struct {
 	Status                 string  `json:"status" reform:"status"`
 	Signature              string  `json:"signature" reform:"signature"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
-	DNS                    *string `json:"dns" reform:"dns"`
-	IPAddress              *string `json:"ipAddress" reform:"ip_addr"`
+	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 	Username               *string `json:"-" reform:"username"`
 	Password               *string `json:"-" reform:"password"`
 	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`

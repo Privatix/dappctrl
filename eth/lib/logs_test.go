@@ -12,9 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"dappctrl/eth/utils"
 	"bytes"
-	"github.com/privatix/dappctrl/eth/contract"
+	"dappctrl/eth/utils"
+	"dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/lib/tests"
 )
 

@@ -17,7 +17,7 @@ type Address struct {
 func NewAddress(hexRepresentation string) (*Address, error) {
 	hexSource := hexRepresentation
 
-	if len(hexSource) != addressBytesLength*2 && len(hexSource) != (addressBytesLength*2) + 2 { // "0x..."
+	if len(hexSource) != addressBytesLength*2 && len(hexSource) != (addressBytesLength*2)+2 { // "0x..."
 		return nil, errors.New("address might be decoded from 40 symbols long hex string literal only")
 	}
 
@@ -61,12 +61,12 @@ func NewUint256(hexRepresentation string) (*Uint256, error) {
 
 	// Hex representation might be shorter, than 64 symbols,
 	// but must not be longer than 64 symbols.
-	const hexRepresentationLength = 256/8*2
-	if len(hexSource) == 0 || len(hexSource) > 2 + hexRepresentationLength {
+	const hexRepresentationLength = 256 / 8 * 2
+	if len(hexSource) == 0 || len(hexSource) > 2+hexRepresentationLength {
 		return nil, errors.New("uint256 might be decoded from strings like 0x{64 symbols}")
 	}
 
-	if len(hexSource) == 2 + hexRepresentationLength && hexSource[:2] != "0x" {
+	if len(hexSource) == 2+hexRepresentationLength && hexSource[:2] != "0x" {
 		return nil, errors.New("uint256 might be decoded from strings like 0x{64 symbols}")
 	}
 
@@ -100,7 +100,6 @@ func (i *Uint256) ToBigInt() *big.Int {
 	return i.number
 }
 
-
 // todo: try to use type Uint192 *BigInt instead of current realisation.
 type Uint192 struct {
 	number *big.Int
@@ -111,12 +110,12 @@ func NewUint192(hexRepresentation string) (*Uint192, error) {
 
 	// Hex representation might be shorter, than 48 symbols,
 	// but must not be longer than 42 symbols.
-	const hexRepresentationLength = 192/8*2
-	if len(hexSource) == 0 || len(hexSource) > 2 + hexRepresentationLength {
+	const hexRepresentationLength = 192 / 8 * 2
+	if len(hexSource) == 0 || len(hexSource) > 2+hexRepresentationLength {
 		return nil, errors.New("uint256 might be decoded from strings like 0x{48 symbols}")
 	}
 
-	if len(hexSource) == 2 + hexRepresentationLength && hexSource[:2] != "0x" {
+	if len(hexSource) == 2+hexRepresentationLength && hexSource[:2] != "0x" {
 		return nil, errors.New("uint256 might be decoded from strings like 0x{48 symbols}")
 	}
 

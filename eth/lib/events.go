@@ -288,7 +288,6 @@ func validateTopics(topics []string) error {
 	return nil
 }
 
-
 func checkEventDigest(topic string, expectedDigest string, err error) error {
 	if err != nil {
 		return err
@@ -334,7 +333,6 @@ func parseDataFieldAsUint192(hexData string, offset uint8, err error) (*Uint192,
 	return NewUint192(get192BitsDataField(hexData, offset))
 }
 
-
 func topicToHex(topic string) string {
 	if len(topic) <= 2 {
 		return ""
@@ -350,7 +348,7 @@ func toAddressHex(hex string) string {
 }
 
 func get256BitsDataField(hexData string, offset uint8) string {
-	offsetFrom := 2+(offset*64) // skipping "0x"
+	offsetFrom := 2 + (offset * 64) // skipping "0x"
 	offsetTo := offsetFrom + 64
 	if len(hexData) < int(offsetTo) {
 		return ""

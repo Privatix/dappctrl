@@ -38,7 +38,7 @@ type EthereumConf struct {
 }
 
 var (
-	conf *EthereumConf = nil
+	conf *EthereumConf
 )
 
 // GethEthereumConfig returns ethereum configuration.

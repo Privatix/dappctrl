@@ -96,7 +96,6 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	if offering.ID == "" {
 		offering.ID = util.NewUUID()
 	}
-	offering.Nonce = util.NewUUID()
 	offering.OfferStatus = data.OfferRegister
 	offering.Status = data.MsgUnpublished
 	agent := &data.Account{}

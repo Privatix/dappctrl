@@ -99,7 +99,6 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		UnitType:           UnitSeconds,
 		BillingType:        BillingPostpaid,
 		BillingInterval:    100,
-		Nonce:              util.NewUUID(),
 		AdditionalParams:   []byte("{}"),
 		SetupPrice:         11,
 		UnitPrice:          22,

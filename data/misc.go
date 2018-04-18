@@ -48,6 +48,7 @@ func OfferingHash(offering *Offering) []byte {
 		maxUnit = *offering.MaxUnit
 	}
 	return crypto.Keccak256(
+		[]byte(offering.ID),
 		offering.AdditionalParams,
 		[]byte(offering.Agent),
 		big.NewInt(int64(offering.BillingInterval)).Bytes(),
@@ -59,7 +60,6 @@ func OfferingHash(offering *Offering) []byte {
 		big.NewInt(int64(offering.MaxSuspendTime)).Bytes(),
 		big.NewInt(int64(maxUnit)).Bytes(),
 		big.NewInt(int64(offering.MinUnits)).Bytes(),
-		[]byte(offering.Nonce),
 		[]byte(offering.Product),
 		[]byte(offering.ServiceName),
 		big.NewInt(int64(offering.SetupPrice)).Bytes(),

@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"bytes"
-	"dappctrl/eth/contract"
-	"dappctrl/eth/utils"
+	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/eth/utils"
 	"github.com/privatix/dappctrl/eth/lib/tests"
 )
 

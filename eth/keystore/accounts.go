@@ -15,7 +15,6 @@ import (
 
 // AccountsManagerConf stores configuration, related to accounts manager.
 type AccountsManagerConf struct {
-
 	// Specifies path to the dir with encrypted private keystore of accounts.
 	KeystorePath string `json:"keystorePath"`
 }
@@ -30,13 +29,13 @@ type AccountsManager struct {
 }
 
 // NewAccountsManager returns account manager, configured with "conf".
-// It doesn't performs any checks of "conf" correctness.
-// In case of invalid "conf" - other methods would report corresponding error in runtime.
+// It doesn't perform any checks of "conf" correctness.
+// In case of invalid "conf" - other methods might report corresponding error in runtime.
 func NewAccountsManager(conf *AccountsManagerConf) *AccountsManager {
 	return &AccountsManager{
 		keystore: keystore.NewKeyStore(
 			conf.KeystorePath,
-
+			
 			// More details about used password encryption algorithm:
 			// https://github.com/Tarsnap/scrypt
 			// Current realisation uses "StandardScryptN" and "StandardScryptP"
@@ -70,7 +69,7 @@ func (m *AccountsManager) SetPrivateKeyFromHex(pKeyHex, passPhrase string) (acco
 }
 
 // SetPrivateKeyFromJSON creates account (private and public keystore pair) from enc-json format.
-// used by geth by default. This format stores key and related constants in json file.
+// Used by geth by default. This format stores key and related constants in JSON file.
 // For the format details, please, see internally stored JSON file in keystore dir.
 func (m *AccountsManager) SetPrivateKeyFromJSON(filePath string, passPhrase string) (accounts.Account, error) {
 	if len(m.keystore.Accounts()) != 0 {

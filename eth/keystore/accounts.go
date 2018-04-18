@@ -129,6 +129,8 @@ func (m *AccountsManager) SignTransaction(tx *types.Transaction, chainID *big.In
 }
 
 // SignTransaction signs "hash" with private key.
+// Internally it uses default method of ethereum's keystore - SignHashWithPassword.
+// This wrapper only ensures account presence before signing attempt.
 func (m *AccountsManager) SignHash(hash []byte, passPhrase string) ([]byte, error) {
 	if len(m.keystore.Accounts()) == 0 {
 		return nil, errors.New("no ethereum account is present yet")

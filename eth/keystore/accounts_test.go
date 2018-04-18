@@ -1,19 +1,16 @@
 package keystore
 
 import (
-	"testing"
-	"os"
-	"path/filepath"
-	"path"
-	"math/big"
+	"dappctrl/eth/utils"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/privatix/dappctrl/eth/lib/tests"
 	"github.com/privatix/dappctrl/eth/contract"
-	"net/http"
-	"io/ioutil"
-	"encoding/json"
-	"log"
 	"github.com/privatix/dappctrl/eth/lib"
+	"github.com/privatix/dappctrl/eth/lib/tests"
+	"math/big"
+	"os"
+	"path"
+	"path/filepath"
+	"testing"
 )
 
 var (
@@ -22,10 +19,10 @@ var (
 	password     = "test password"
 
 	// Test sets of dummy data.
-	addr1       = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	addr2       = [20]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
-	b32Zero     = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	b32Full     = [32]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+	addr1   = [20]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	addr2   = [20]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+	b32Zero = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	b32Full = [32]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
 )
 
 func TestManagerCreation(t *testing.T) {
@@ -36,7 +33,7 @@ func TestManagerCreation(t *testing.T) {
 	}
 
 	// Even if path wasn't transferred - manager must be created.
-	if man := NewAccountsManager(&AccountsManagerConf{KeystorePath:""}); man == nil {
+	if man := NewAccountsManager(&AccountsManagerConf{KeystorePath: ""}); man == nil {
 		t.Fatal("Accounts manager should be created, but wasn't.")
 	}
 }
@@ -55,7 +52,7 @@ func TestKeySettingFromJSON(t *testing.T) {
 
 	// Creating json file
 	man := NewAccountsManager(&AccountsManagerConf{KeystorePath: keystorePath})
-	account, err :=  man.SetPrivateKeyFromHex(pKey, password)
+	account, err := man.SetPrivateKeyFromHex(pKey, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +65,7 @@ func TestKeySettingFromJSON(t *testing.T) {
 	}
 
 	// Attempt to use generated key as JSON
-	man =  NewAccountsManager(&AccountsManagerConf{KeystorePath: keystorePath})
+	man = NewAccountsManager(&AccountsManagerConf{KeystorePath: keystorePath})
 	_, err = man.SetPrivateKeyFromJSON(jsonKeyFilePath, password)
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +75,7 @@ func TestKeySettingFromJSON(t *testing.T) {
 func TestPasswordUpdating(t *testing.T) {
 	removeContents(keystorePath)
 	man := NewAccountsManager(&AccountsManagerConf{KeystorePath: keystorePath})
-	_, err :=  man.SetPrivateKeyFromHex(pKey, password)
+	_, err := man.SetPrivateKeyFromHex(pKey, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,15 +97,14 @@ func TestContractCalling(t *testing.T) {
 	conn, err := ethclient.Dial(geth.Interface())
 	failOnErr(t, err, "Failed to connect to the EthereumConf client")
 
-	contractAddress, err :=  lib.NewAddress(fetchPSCAddress())
+	contractAddress, err := lib.NewAddress(utils.FetchPSCAddress())
 	failOnErr(t, err, "Failed to parse received contract address")
-
 
 	psc, err := contract.NewPrivatixServiceContract(contractAddress.Bytes(), conn)
 	failOnErr(t, err, "Failed to connect to the EthereumConf client")
 
 	man := NewAccountsManager(&AccountsManagerConf{KeystorePath: keystorePath})
-	_, err =  man.SetPrivateKeyFromHex(fetchTestPrivateKey(), password)
+	_, err = man.SetPrivateKeyFromHex(utils.FetchTestPrivateKey(), password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,42 +141,4 @@ func failOnErr(t *testing.T, err error, args ...interface{}) {
 	if err != nil {
 		t.Fatal(args, " / Error details: ", err)
 	}
-}
-
-func fetchPSCAddress() string {
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getPSC")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	return data["contract"].(map[string]interface{})["address"].(string)
-}
-
-func fetchTestPrivateKey() string {
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getKeys")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch private key. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make([]interface{}, 0, 0)
-	json.Unmarshal(body, &data)
-
-	return data[0].(map[string]interface{})["privateKey"].(string)
 }

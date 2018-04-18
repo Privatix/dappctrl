@@ -5,17 +5,15 @@ package lib
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"math/big"
-	"net/http"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"dappctrl/eth/utils"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/lib/tests"
 )
@@ -42,22 +40,7 @@ func fetchPSCAddress() string {
 		return PSCAddress
 	}
 
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getPSC")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	PSCAddress = data["contract"].(map[string]interface{})["address"].(string)
+	PSCAddress = utils.FetchPSCAddress()
 	return PSCAddress
 }
 
@@ -67,22 +50,7 @@ func fetchTestPrivateKey() string {
 		return PrivateKey
 	}
 
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getKeys")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch private key. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make([]interface{}, 0, 0)
-	json.Unmarshal(body, &data)
-
-	PrivateKey = data[0].(map[string]interface{})["privateKey"].(string)
+	PrivateKey = utils.FetchTestPrivateKey()
 	return PrivateKey
 }
 

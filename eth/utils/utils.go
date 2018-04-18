@@ -1,6 +1,6 @@
 // +build !noethtest
 
-package tests
+package utils
 
 import (
 	"encoding/json"

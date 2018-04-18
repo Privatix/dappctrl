@@ -253,8 +253,7 @@ CREATE TABLE endpoints (
     status msg_status NOT NULL, -- message status
     signature text NOT NULL, -- agent's signature
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
-    dns varchar(100),
-    ip_addr inet,
+    service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
     username varchar(100),
     password varchar(48),
     additional_params json -- all additional parameters stored as JSON

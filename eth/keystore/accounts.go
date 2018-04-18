@@ -20,7 +20,7 @@ type AccountsManagerConf struct {
 	KeystorePath string `json:"keystorePath"`
 }
 
-// Accounts manager provides safe access to the private key(s) of ethereum account.
+// AccountsManager provides safe access to the private key(s) of ethereum account.
 //
 // By default, current implementation enforces only one account at a time,
 // due to the current bossiness model, but there is a possibility of wider count of private keystore support.
@@ -128,7 +128,7 @@ func (m *AccountsManager) SignTransaction(tx *types.Transaction, chainID *big.In
 	return m.keystore.SignTxWithPassphrase(account, passPhrase, tx, chainID)
 }
 
-// SignTransaction signs "hash" with private key.
+// SignHash signs "hash" with private key.
 // Internally it uses default method of ethereum's keystore - SignHashWithPassword.
 // This wrapper only ensures account presence before signing attempt.
 func (m *AccountsManager) SignHash(hash []byte, passPhrase string) ([]byte, error) {

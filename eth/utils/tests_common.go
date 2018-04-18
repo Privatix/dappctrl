@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// FetchPSCAddress is utility method for fetching contract address in test environment.
 func FetchPSCAddress() string {
 	truffleAPI := GethEthereumConfig().TruffleAPI
 	response, err := http.Get(truffleAPI.Interface() + "/getPSC")
@@ -26,6 +27,7 @@ func FetchPSCAddress() string {
 	return data["contract"].(map[string]interface{})["address"].(string)
 }
 
+// FetchTestPrivateKey is utility method for fetching account private key in test environment.
 func FetchTestPrivateKey() string {
 	truffleAPI := GethEthereumConfig().TruffleAPI
 	response, err := http.Get(truffleAPI.Interface() + "/getKeys")

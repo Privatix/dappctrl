@@ -20,9 +20,20 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+type somcTestConfig struct {
+	ServerStartupDelay uint // In milliseconds.
+}
+
+func newSOMCTestConfig() *somcTestConfig {
+	return &somcTestConfig{
+		ServerStartupDelay: 10,
+	}
+}
+
 var conf struct {
-	Log  *util.LogConfig
-	SOMC *Config
+	Log      *util.LogConfig
+	SOMC     *Config
+	SOMCTest *somcTestConfig
 }
 
 var logger *util.Logger
@@ -69,6 +80,9 @@ func newServer(t *testing.T) *server {
 			t.Fatalf("failed to listen and serve: %s", err)
 		}
 	}()
+
+	time.Sleep(time.Duration(conf.SOMCTest.ServerStartupDelay) *
+		time.Millisecond)
 
 	return srv
 }
@@ -288,6 +302,7 @@ func TestWaitForEndpoint(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.Log = util.NewLogConfig()
 	conf.SOMC = NewConfig()
+	conf.SOMCTest = newSOMCTestConfig()
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)

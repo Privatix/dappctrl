@@ -51,5 +51,9 @@
     "SOMC": {
         "ReconnPeriod": 1,
         "URL": "ws://localhost:8080"
+    },
+
+    "SOMCTest": {
+        "ServerStartupDelay": 10
     }
 }

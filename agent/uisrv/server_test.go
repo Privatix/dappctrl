@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/reform.v1"
 
@@ -22,6 +23,10 @@ var (
 	testServer *Server
 )
 
+type testConfig struct {
+	ServerStartupDelay uint // In milliseconds.
+}
+
 func TestMain(m *testing.M) {
 	// Disable middleware during tests.
 	basicAuthMiddlewareFunc = func(_ *Server, h http.HandlerFunc) http.HandlerFunc {
@@ -31,18 +36,24 @@ func TestMain(m *testing.M) {
 	}
 
 	var conf struct {
-		AgentServer *Config
-		DB          *data.DBConfig
-		Log         *util.LogConfig
+		AgentServer     *Config
+		AgentServerTest *testConfig
+		DB              *data.DBConfig
+		Log             *util.LogConfig
 	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.AgentServerTest = &testConfig{}
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
 	db := data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(db)
 	testServer = NewServer(conf.AgentServer, logger, db)
 	go testServer.ListenAndServe()
+
+	time.Sleep(time.Duration(conf.AgentServerTest.ServerStartupDelay) *
+		time.Millisecond)
+
 	os.Exit(m.Run())
 }
 

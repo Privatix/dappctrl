@@ -13,12 +13,12 @@ import (
 )
 
 type config struct {
-	AgentServer   *uisrv.Config
-	DB            *data.DBConfig
-	Job           *job.Config
-	Log           *util.LogConfig
-	PaymentServer *pay.Config
-	SOMC          *somc.Config
+	AgentServer *uisrv.Config
+	DB          *data.DBConfig
+	Job         *job.Config
+	Log         *util.LogConfig
+	PayServer   *pay.Config
+	SOMC        *somc.Config
 }
 
 func newConfig() *config {
@@ -57,7 +57,7 @@ func main() {
 			uiSrv.ListenAndServe())
 	}()
 
-	paySrv := pay.NewServer(conf.PaymentServer, logger, db)
+	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
 		logger.Fatal("failed to start pay server: %s",
 			paySrv.ListenAndServe())

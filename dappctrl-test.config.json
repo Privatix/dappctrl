@@ -13,7 +13,7 @@
             "dbname": "dappctrl",
             "sslmode": "disable",
             "user": "postgres",
-            "host": "localhost",
+            "host": "10.16.194.21",
             "port": "5432"
         }
     },

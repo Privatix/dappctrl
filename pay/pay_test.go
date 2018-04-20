@@ -138,52 +138,29 @@ func TestMain(m *testing.M) {
 
 	// prepare test data
 	testData.client = data.NewTestAccount()
-	err := testDB.Insert(testData.client)
-	if err != nil {
-		panic(err)
-	}
-	err = testDB.Insert(&data.User{
-		ID:        util.NewUUID(),
-		EthAddr:   testData.client.EthAddr,
-		PublicKey: testData.client.PublicKey,
-	})
-	if err != nil {
-		panic(err)
-	}
 	testData.agent = data.NewTestUser()
-	err = testDB.Insert(testData.agent)
-	if err != nil {
-		panic(err)
-	}
 	prt := data.NewTestProduct()
-	err = testDB.Insert(prt)
-	if err != nil {
-		panic(err)
-	}
 	tpl := data.NewTestTemplate(data.TemplateOffer)
-	err = testDB.Insert(tpl)
-	if err != nil {
-		panic(err)
-	}
 	testData.offering = data.NewTestOffering(testData.agent.EthAddr, prt.ID, tpl.ID)
-	err = testDB.Insert(testData.offering)
-	if err != nil {
-		panic(err)
-	}
 	testData.channel = data.NewTestChannel(testData.agent.EthAddr, testData.client.EthAddr,
 		testData.offering.ID, 0, 100, data.ChannelActive)
-	err = testDB.Insert(testData.channel)
-	if err != nil {
-		panic(err)
-	}
+
+	data.InsertItems(testDB,
+		testData.client, &data.User{
+			ID:        util.NewUUID(),
+			EthAddr:   testData.client.EthAddr,
+			PublicKey: testData.client.PublicKey,
+		},
+		testData.agent,
+		prt,
+		tpl,
+		testData.offering,
+		testData.channel)
 
 	exitcode := m.Run()
 
 	// clean up
-	testDB.Delete(testData.channel)
-	testDB.Delete(testData.offering)
-	testDB.Delete(testData.client)
-	testDB.Delete(testData.agent)
+	data.CleanDB(testDB)
 
 	os.Exit(exitcode)
 }

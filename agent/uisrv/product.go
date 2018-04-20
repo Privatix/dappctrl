@@ -9,15 +9,15 @@ import (
 
 // handleProducts calls appropriate handler by scanning incoming request.
 func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		s.handlePostProducts(w, r)
 		return
 	}
-	if r.Method == "PUT" {
+	if r.Method == http.MethodPut {
 		s.handlePutProducts(w, r)
 		return
 	}
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		s.handleGetProducts(w, r)
 		return
 	}

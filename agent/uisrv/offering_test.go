@@ -72,7 +72,7 @@ func sendOffering(t *testing.T, v *data.Offering, m string) *http.Response {
 }
 
 func postOffering(t *testing.T, v *data.Offering) *http.Response {
-	return sendOffering(t, v, "POST")
+	return sendOffering(t, v, http.MethodPost)
 }
 
 func putOffering(t *testing.T, v *data.Offering) *http.Response {

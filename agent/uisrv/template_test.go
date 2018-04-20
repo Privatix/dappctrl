@@ -12,7 +12,7 @@ import (
 )
 
 func postTemplate(t *testing.T, tpl *data.Template) *http.Response {
-	return sendPayload(t, "POST", templatePath, tpl)
+	return sendPayload(t, http.MethodPost, templatePath, tpl)
 }
 
 func TestPostTemplateValidation(t *testing.T) {

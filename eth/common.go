@@ -1,4 +1,4 @@
-package lib
+package eth
 
 // This module provides low-level methods for accessing common ethereum info.
 // For detailed API description, please refer to:
@@ -34,6 +34,11 @@ func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
 // BalanceAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type BalanceAPIResponse GasPriceAPIResponse
+
+// block constants.
+const (
+	BlockLatest = "latest"
+)
 
 // GetBalance returns the balance of the account of given address in wei.
 // For the details, please, refer to:

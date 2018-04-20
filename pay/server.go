@@ -37,7 +37,7 @@ const payPath = "/v1/pmtChannel/pay"
 // ListenAndServe starts to listen and serve to requests.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(payPath, util.ValidateMethod(s.handlePay, "POST"))
+	mux.HandleFunc(payPath, util.ValidateMethod(s.handlePay, http.MethodPost))
 
 	if s.conf.TLS != nil {
 		return http.ListenAndServeTLS(

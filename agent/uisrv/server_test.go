@@ -12,15 +12,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/privatix/dappctrl/eth/truffle"
+
+	"github.com/ethereum/go-ethereum/ethclient"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
 
 // used throughout all tests in the package.
 var (
-	testServer *Server
+	testServer         *Server
+	testTruffleAPI     truffle.API
+	testEthereumClient *eth.EthereumClient
 )
 
 type testConfig struct {
@@ -40,6 +47,10 @@ func TestMain(m *testing.M) {
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
 		Log             *util.LogConfig
+		Eth             struct {
+			GethURL       string
+			TruffleAPIURL string
+		}
 	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
@@ -48,7 +59,34 @@ func TestMain(m *testing.M) {
 	logger := util.NewTestLogger(conf.Log)
 	db := data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(db)
-	testServer = NewServer(conf.AgentServer, logger, db)
+
+	testEthereumClient = eth.NewEthereumClient(conf.Eth.GethURL)
+
+	conn, err := ethclient.Dial(conf.Eth.GethURL)
+	if err != nil {
+		panic(err)
+	}
+
+	testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
+
+	contractAddress, err := eth.NewAddress(testTruffleAPI.FetchPTCAddress())
+	if err != nil {
+		panic(err)
+	}
+	ptc, err := contract.NewPrivatixTokenContract(contractAddress, conn)
+	if err != nil {
+		panic(err)
+	}
+
+	contractAddress, err = eth.NewAddress(testTruffleAPI.FetchPSCAddress())
+	if err != nil {
+		panic(err)
+	}
+	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
+	if err != nil {
+		panic(err)
+	}
+	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc)
 	go testServer.ListenAndServe()
 
 	time.Sleep(time.Duration(conf.AgentServerTest.ServerStartupDelay) *

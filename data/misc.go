@@ -20,6 +20,12 @@ func FromBytes(src []byte) string {
 	return base64.URLEncoding.EncodeToString(src)
 }
 
+// EncryptPrivateKey is a stub for key encryption.
+func EncryptPrivateKey(pk, passphrase []byte) []byte {
+	// TODO: implement this.
+	return pk
+}
+
 // DecryptPrivateKey is a stub for key decryption.
 func DecryptPrivateKey(b []byte) []byte {
 	// TODO: implement this.

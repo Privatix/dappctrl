@@ -23,11 +23,11 @@ func sendProductPayload(t *testing.T, m string, pld *data.Product) *http.Respons
 }
 
 func postProduct(t *testing.T, payload *data.Product) *http.Response {
-	return sendProductPayload(t, "POST", payload)
+	return sendProductPayload(t, http.MethodPost, payload)
 }
 
 func putProduct(t *testing.T, payload *data.Product) *http.Response {
-	return sendProductPayload(t, "PUT", payload)
+	return sendProductPayload(t, http.MethodPut, payload)
 }
 
 func TestPostProductSuccess(t *testing.T) {

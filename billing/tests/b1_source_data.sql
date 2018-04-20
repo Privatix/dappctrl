@@ -68,7 +68,6 @@ INSERT INTO offerings
   max_suspended_time,
   max_inactive_time_sec,
   free_units,
-  nonce,
   additional_params
 )
 VALUES
@@ -99,7 +98,6 @@ VALUES
     10,
     10,
     0,
-    '00000000-0000-0000-0000-000000000000',
     '{}'
   );
 

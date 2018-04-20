@@ -1,14 +1,16 @@
 package billing
 
 import (
-	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
-	"gopkg.in/reform.v1"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 	"time"
+
+	"gopkg.in/reform.v1"
+
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util"
 )
 
 type config struct {
@@ -181,7 +183,7 @@ func TestE1(t *testing.T) {
 }
 
 func populateDataAndCallValidation(t *testing.T, dataSetFilename string, callback func() error) {
-	err := executeSQLFile(path.Join(os.Getenv("DAPPCTRL_DIR"), "billing/tests", dataSetFilename))
+	err := executeSQLFile(path.Join(util.RootPath(), "billing", "tests", dataSetFilename))
 	if err != nil {
 		t.Fatal("Can't populate source test data. Details: ", err)
 	}

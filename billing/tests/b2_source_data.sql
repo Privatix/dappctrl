@@ -32,7 +32,7 @@ INSERT INTO offerings (
     min_units, max_unit, billing_interval,
     max_billing_unit_lag, max_suspended_time,
     max_inactive_time_sec, free_units,
-    nonce, additional_params
+    additional_params
 )
 VALUES
     (
@@ -45,7 +45,7 @@ VALUES
         '0000000000000000000000000001',
         'test service', 'test description',
         'UA', 10, '1', 'units', 'postpaid',
-        100, 1, 10, 900, 10, 10, 10, 10, 0, '00000000-0000-0000-0000-000000000000',
+        100, 1, 10, 900, 10, 10, 10, 10, 0,
         '{}'
     );
 TRUNCATE TABLE channels CASCADE;

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/number"
@@ -46,4 +47,13 @@ func Base64ToEthNum(b64X string) (*number.Number, error) {
 	x := number.Big(0)
 	x.SetBytes(b)
 	return x, nil
+}
+
+// RootPath returns a path of the root package.
+func RootPath() string {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return "?"
+	}
+	return filepath.Dir(filepath.Dir(file))
 }

@@ -143,11 +143,9 @@ func NewTestSession(chanID string) *Session {
 
 // InsertItems inserts items to db.
 func InsertItems(db *reform.DB, items ...reform.Struct) {
-	tx, _ := db.Begin()
 	for _, item := range items {
-		tx.Insert(item)
+		db.Insert(item)
 	}
-	tx.Commit()
 }
 
 // CleanDB deletes all records from all tables.

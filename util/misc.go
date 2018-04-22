@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -51,9 +52,26 @@ func Base64ToEthNum(b64X string) (*number.Number, error) {
 
 // RootPath returns a path of the root package.
 func RootPath() string {
-	_, file, _, ok := runtime.Caller(1)
+	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		return "?"
 	}
 	return filepath.Dir(filepath.Dir(file))
+}
+
+// Caller returns a caller's call location. If F1 calls F2 which in its turn
+// calls Caller, then this function will return a location within F1 where it
+// calls F2.
+func Caller() string {
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		return "?"
+	}
+
+	rel, err := filepath.Rel(RootPath(), file)
+	if err != nil {
+		return "?"
+	}
+
+	return fmt.Sprintf("%s:%d", rel, line)
 }

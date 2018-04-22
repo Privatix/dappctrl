@@ -209,7 +209,7 @@ func (q *Queue) processMain() error {
 
 		jobs, err := q.db.SelectAllFrom(data.JobTable, `
 			WHERE status = $1 AND not_before <= $2
-			ORDER BY not_before LIMIT $3`,
+			ORDER BY created_at LIMIT $3`,
 			data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err
@@ -238,8 +238,7 @@ func (q *Queue) processWorker(w workerIO) {
 
 		// Job was collected active, but delivered here with some delay,
 		// so make sure it's still relevant.
-		err = q.db.FindByPrimaryKeyTo(job, job.ID)
-		if err != nil {
+		if err = q.db.FindByPrimaryKeyTo(job, job.ID); err != nil {
 			break
 		}
 		if job.Status != data.JobActive {
@@ -253,6 +252,19 @@ func (q *Queue) processWorker(w workerIO) {
 		}
 
 		q.processJob(job, handler)
+
+		// If job was cancelled while running a handler make sure it
+		// won't be retried.
+		if job.Status == data.JobActive {
+			var tmp data.Job
+			err = q.db.FindByPrimaryKeyTo(&tmp, job.ID)
+			if err != nil {
+				break
+			}
+			if tmp.Status == data.JobCanceled {
+				job.Status = data.JobCanceled
+			}
+		}
 
 		err = q.db.Save(job)
 	}

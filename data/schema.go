@@ -51,6 +51,11 @@ const (
 	ProductUsageTotal       = "total"
 )
 
+// Product authentication types.
+const (
+	ClientIdentByChannelID = "by_channel_id"
+)
+
 // Product stores billing and action related settings.
 //reform:products
 type Product struct {
@@ -60,6 +65,9 @@ type Product struct {
 	OfferAccessID *string `json:"offerAccessID" reform:"offer_access_id"`
 	UsageRepType  string  `json:"usageRepType" reform:"usage_rep_type"`
 	IsServer      bool    `json:"isServer" reform:"is_server"`
+	Salt          uint64  `json:"-" reform:"salt"`
+	Password      string  `json:"-" reform:"password"`
+	ClientIdent   string  `json:"clientIdent" reform:"client_ident"`
 }
 
 // Unit used for billing calculation.
@@ -171,10 +179,8 @@ type Session struct {
 	UnitsUsed       uint64     `json:"unitsUsed" reform:"units_used"`
 	SecondsConsumed uint64     `json:"secondsConsumed" reform:"seconds_consumed"`
 	LastUsageTime   time.Time  `json:"lastUsageTime" reform:"last_usage_time"`
-	ServerIP        *string    `json:"serverIP" reform:"server_ip"`
-	ServerPort      *int16     `json:"serverPort" reform:"server_port"`
 	ClientIP        *string    `json:"clientIP" reform:"client_ip"`
-	ClientPort      *int16     `json:"clientPort" reform:"client_port"`
+	ClientPort      *uint16    `json:"clientPort" reform:"client_port"`
 }
 
 // Contract types.

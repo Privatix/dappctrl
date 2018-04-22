@@ -28,7 +28,10 @@ INSERT INTO products
   offer_tpl_id,
   offer_access_id,
   usage_rep_type,
-  is_server
+  is_server,
+  salt,
+  password,
+  client_ident
 )
 VALUES
   (
@@ -37,7 +40,10 @@ VALUES
     '00000000-0000-0000-0000-000000000000',
     '00000000-0000-0000-0000-000000000000',
     'total',
-    TRUE
+    TRUE,
+    0,
+    '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=',
+    'by_channel_id'
   );
 
 INSERT INTO offerings

@@ -13,7 +13,7 @@ import (
 )
 
 func TestSetPasswordFirstTime(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	testPwd := "test-password"
 
@@ -23,9 +23,9 @@ func TestSetPasswordFirstTime(t *testing.T) {
 }
 
 func TestSetPasswordRepeat(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	insertItems(&data.Setting{Key: passwordKey})
+	insertItems(t, &data.Setting{Key: passwordKey})
 
 	res := sendSetPasswordAndTestStatus(t,
 		&passwordPayload{"test-password"}, http.StatusUnauthorized)
@@ -34,9 +34,9 @@ func TestSetPasswordRepeat(t *testing.T) {
 }
 
 func TestSetPasswordAccountsExist(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	insertItems(data.NewTestAccount())
+	insertItems(t, data.NewTestAccount())
 
 	res := sendSetPasswordAndTestStatus(t,
 		&passwordPayload{"test-password"}, http.StatusUnauthorized)
@@ -45,7 +45,7 @@ func TestSetPasswordAccountsExist(t *testing.T) {
 }
 
 func TestSetPasswordOfWrongLen(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	sendSetPasswordAndTestStatus(t,
 		&passwordPayload{"short"}, http.StatusBadRequest)
@@ -60,9 +60,9 @@ func sendSetPasswordAndTestStatus(t *testing.T,
 }
 
 func TestUpdatePassword(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	password := insertTestPassword()
+	password := insertTestPassword(t)
 
 	updatedPwd := password + "-updated"
 
@@ -73,9 +73,9 @@ func TestUpdatePassword(t *testing.T) {
 }
 
 func TestUpdatePasswordWrongCurrentPassword(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	password := insertTestPassword()
+	password := insertTestPassword(t)
 
 	updatedPwd := password + "-updated"
 
@@ -85,20 +85,20 @@ func TestUpdatePasswordWrongCurrentPassword(t *testing.T) {
 }
 
 func TestUpdatePasswordWrongLen(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	password := insertTestPassword()
+	password := insertTestPassword(t)
 
 	sendUpdatedPasswordAndTestStatus(t,
 		&newPasswordPayload{password, "short"},
 		http.StatusBadRequest)
 }
 
-func insertTestPassword() string {
+func insertTestPassword(t *testing.T) string {
 	password := "test-password"
 	salt := util.NewUUID()
 	hashed, _ := hashPassword(salt, password)
-	insertItems(&data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
+	insertItems(t, &data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
 		&data.Setting{Key: passwordKey, Value: string(hashed), Name: "PWD"})
 	return password
 }
@@ -137,7 +137,7 @@ func findSetting(t *testing.T, key string) *data.Setting {
 }
 
 func TestBasicAuthMiddleware(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	var called bool
 	var resRecorder *httptest.ResponseRecorder
@@ -169,7 +169,7 @@ func TestBasicAuthMiddleware(t *testing.T) {
 	salt := "salt"
 	password := "test-password"
 	passwordHash, _ := hashPassword(salt, password)
-	insertItems(&data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
+	insertItems(t, &data.Setting{Key: saltKey, Value: salt, Name: "SALT"},
 		&data.Setting{Key: passwordKey, Value: string(passwordHash), Name: "PWD"})
 
 	// Test wrong password.

@@ -1,3 +1,5 @@
+// +build !nobillingtest
+
 package billing
 
 import (

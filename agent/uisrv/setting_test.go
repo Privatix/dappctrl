@@ -20,7 +20,7 @@ func testGetSettings(t *testing.T, exp int) {
 }
 
 func TestGetSettings(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	// get empty list.
 	testGetSettings(t, 0)
 	// get settings.
@@ -29,7 +29,7 @@ func TestGetSettings(t *testing.T) {
 		Value:       "bar",
 		Description: nil,
 	}
-	insertItems(setting)
+	insertItems(t, setting)
 	testGetSettings(t, 1)
 }
 
@@ -38,7 +38,7 @@ func putSetting(t *testing.T, pld settingPayload) *http.Response {
 }
 
 func TestUpdateSettingsSuccess(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	settings := []data.Setting{
 		{
@@ -54,7 +54,7 @@ func TestUpdateSettingsSuccess(t *testing.T) {
 			Name:        "Name 2",
 		},
 	}
-	insertItems(&settings[0], &settings[1])
+	insertItems(t, &settings[0], &settings[1])
 
 	settings[0].Value = "changed"
 	settings[1].Value = "changed"

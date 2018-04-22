@@ -22,12 +22,12 @@ func testGetChannels(t *testing.T, exp int, id string) {
 }
 
 func TestGetChannels(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	// Get empty list.
 	testGetChannels(t, 0, "")
 
-	ch := createTestChannel()
+	ch := createTestChannel(t)
 
 	// Get all channels.
 	testGetChannels(t, 1, "")
@@ -46,8 +46,8 @@ func getChannelStatus(t *testing.T, id string) *http.Response {
 }
 
 func TestGetChannelStatus(t *testing.T) {
-	defer cleanDB()
-	ch := createTestChannel()
+	defer cleanDB(t)
+	ch := createTestChannel(t)
 	// get channel status with a match.
 	res := getChannelStatus(t, ch.ID)
 	reply := &statusReply{}

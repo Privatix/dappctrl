@@ -9,16 +9,13 @@ import (
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
 )
 
 func validProductPayload(tplOffer, tplAccess string) data.Product {
-	return data.Product{
-		Name:          "test-product",
-		OfferTplID:    &tplOffer,
-		OfferAccessID: &tplOffer,
-		UsageRepType:  data.ProductUsageIncremental,
-	}
+	prod := data.NewTestProduct()
+	prod.OfferTplID = &tplOffer
+	prod.OfferAccessID = &tplOffer
+	return *prod
 }
 
 func sendProductPayload(t *testing.T, m string, pld *data.Product) *http.Response {
@@ -36,7 +33,7 @@ func putProduct(t *testing.T, payload *data.Product) *http.Response {
 func TestPostProductSuccess(t *testing.T) {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	insertItems(tplOffer, tplAccess)
+	insertItems(t, tplOffer, tplAccess)
 	payload := validProductPayload(tplOffer.ID, tplAccess.ID)
 	res := postProduct(t, &payload)
 	if res.StatusCode != http.StatusCreated {
@@ -53,7 +50,7 @@ func TestPostProductSuccess(t *testing.T) {
 func TestPostProductValidation(t *testing.T) {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	insertItems(tplOffer, tplAccess)
+	insertItems(t, tplOffer, tplAccess)
 	validPld := validProductPayload(tplOffer.ID, tplAccess.ID)
 
 	noOfferingTemplate := validPld
@@ -87,23 +84,19 @@ type productTestData struct {
 	Product   *data.Product
 }
 
-func createProductTestData() *productTestData {
+func createProductTestData(t *testing.T) *productTestData {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	product := &data.Product{
-		ID:            util.NewUUID(),
-		Name:          "foo",
-		OfferTplID:    &tplOffer.ID,
-		OfferAccessID: &tplAccess.ID,
-		UsageRepType:  data.ProductUsageTotal,
-	}
-	insertItems(tplOffer, tplAccess, product)
-	return &productTestData{tplOffer, tplAccess, product}
+	prod := data.NewTestProduct()
+	prod.OfferTplID = &tplOffer.ID
+	prod.OfferAccessID = &tplAccess.ID
+	insertItems(t, tplOffer, tplAccess, prod)
+	return &productTestData{tplOffer, tplAccess, prod}
 }
 
 func TestPutProduct(t *testing.T) {
-	defer cleanDB()
-	testData := createProductTestData()
+	defer cleanDB(t)
+	testData := createProductTestData(t)
 	payload := validProductPayload(testData.TplOffer.ID, testData.TplAccess.ID)
 	payload.ID = testData.Product.ID
 	res := putProduct(t, &payload)
@@ -130,10 +123,10 @@ func testGetProducts(t *testing.T, exp int) {
 }
 
 func TestGetProducts(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	// Get empty list.
 	testGetProducts(t, 0)
 	// Get all products.
-	createProductTestData()
+	createProductTestData(t)
 	testGetProducts(t, 1)
 }

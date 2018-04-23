@@ -8,17 +8,19 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
 
 type config struct {
-	AgentServer *uisrv.Config
-	DB          *data.DBConfig
-	Job         *job.Config
-	Log         *util.LogConfig
-	PayServer   *pay.Config
-	SOMC        *somc.Config
+	AgentServer   *uisrv.Config
+	DB            *data.DBConfig
+	Job           *job.Config
+	Log           *util.LogConfig
+	PayServer     *pay.Config
+	SessionServer *sesssrv.Config
+	SOMC          *somc.Config
 }
 
 func newConfig() *config {
@@ -63,7 +65,12 @@ func main() {
 			paySrv.ListenAndServe())
 	}()
 
+	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	go func() {
+		logger.Fatal("failed to start session server: %s",
+			sess.ListenAndServe())
+	}()
+
 	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)
-	defer queue.Close()
 	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

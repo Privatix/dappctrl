@@ -57,15 +57,15 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func cleanDB() {
-	data.CleanDB(testServer.db)
+func cleanDB(t *testing.T) {
+	data.CleanTestDB(t, testServer.db)
 }
 
-func insertItems(items ...reform.Struct) {
-	data.InsertItems(testServer.db, items...)
+func insertItems(t *testing.T, items ...reform.Struct) {
+	data.InsertToTestDB(t, testServer.db, items...)
 }
 
-func createTestChannel() *data.Channel {
+func createTestChannel(t *testing.T) *data.Channel {
 	agent := data.NewTestUser()
 	client := data.NewTestUser()
 	product := data.NewTestProduct()
@@ -78,7 +78,7 @@ func createTestChannel() *data.Channel {
 		0,
 		1,
 		data.ChannelActive)
-	insertItems(
+	insertItems(t,
 		agent,
 		client,
 		product,

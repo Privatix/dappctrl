@@ -13,7 +13,7 @@
             "dbname": "dappctrl",
             "sslmode": "disable",
             "user": "postgres",
-            "host": "10.16.194.21",
+            "host": "localhost",
             "port": "5432"
         }
     },
@@ -55,6 +55,15 @@
     "PayServer": {
         "Addr": "localhost:9000",
         "TLS": null
+    },
+
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+
+    "SessionServerTest": {
+        "ServerStartupDelay": 10
     },
 
     "SOMC": {

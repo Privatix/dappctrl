@@ -84,20 +84,30 @@ docker-compose up
 
 # Tests
 
-## Preparing the tests environment
+## Preparing the test environment
 
-Make a copy of `dappctrl-test.config.json` file:
+1. Set variables for your test environment, e.g.:
 
-```bash
-cp dappctrl-test.config.json  dappctrl-test.config.local.json
-```
+    ```bash
+    CONF_FILE=$DAPPCTRL_DIR/dappctrl-test.config.json
+    LOCAL_CONF_FILE=$HOME/dappctrl-test.config.json
+    DB_IP=10.16.194.21
+    STRESS_JOBS=1000
+    ```
 
-Modify `dappctrl-test.config.local.json` if you need non-default configuration.
+2. Generate local a configuration file using these variables, e.g.:
+
+    ```bash
+    jq ".DB.Conn.host=\"$DB_IP\" | .JobTest.StressJobs=$STRESS_JOBS" $CONF_FILE > $LOCAL_CONF_FILE
+    ```
+
+    **Note**: See `jq` [manual](https://stedolan.github.io/jq/manual) for
+    syntax details.
 
 ## Running the tests
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.local.json
+go test $DAPPCTRL/... -p=1 -config=$LOCAL_CONF_FILE
 ```
 
 ## Excluding specific tests from test run
@@ -111,7 +121,7 @@ VPN monitor tests.
 Example of a test run with the tags above:
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json -tags=noethtest,novpnmontest
+go test $DAPPCTRL/... -p=1 -tags="noethtest nojobtest" -config=$LOCAL_CONF_FILE
 ```
 
 # Contributing

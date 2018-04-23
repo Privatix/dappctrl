@@ -22,13 +22,13 @@ func testGetSessions(t *testing.T, exp int, chanID string) {
 }
 
 func TestGetSessions(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	// Get empty list.
 	testGetSessions(t, 0, "")
 	// Get all.
-	ch := createTestChannel()
+	ch := createTestChannel(t)
 	sess := data.NewTestSession(ch.ID)
-	insertItems(sess)
+	insertItems(t, sess)
 	testGetSessions(t, 1, "")
 	// Get by channel id.
 	testGetSessions(t, 1, sess.Channel)

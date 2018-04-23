@@ -20,11 +20,11 @@ var (
 	testAgent *data.Account
 )
 
-func createOfferingFixtures() {
+func createOfferingFixtures(t *testing.T) {
 	testTpl = data.NewTestTemplate(data.TemplateAccess)
 	testProd = data.NewTestProduct()
 	testAgent = data.NewTestAccount()
-	insertItems(testTpl, testProd, testAgent)
+	insertItems(t, testTpl, testProd, testAgent)
 }
 
 func validOfferingPayload() data.Offering {
@@ -80,9 +80,9 @@ func putOffering(t *testing.T, v *data.Offering) *http.Response {
 }
 
 func TestPostOfferingSuccess(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	createOfferingFixtures()
+	createOfferingFixtures(t)
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
@@ -98,9 +98,9 @@ func TestPostOfferingSuccess(t *testing.T) {
 }
 
 func TestPostOfferingValidation(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	// Prepare test data.
-	createOfferingFixtures()
+	createOfferingFixtures(t)
 	validPld := validOfferingPayload()
 
 	invalidUnitType := validPld
@@ -171,11 +171,11 @@ func TestPostOfferingValidation(t *testing.T) {
 }
 
 func TestPutOfferingSuccess(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	createOfferingFixtures()
+	createOfferingFixtures(t)
 	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	insertItems(testOffering)
+	insertItems(t, testOffering)
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
@@ -202,9 +202,9 @@ func testGetOfferings(t *testing.T, id string, exp int) {
 }
 
 func TestGetOffering(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	createOfferingFixtures()
+	createOfferingFixtures(t)
 	// Get empty list.
 	testGetOfferings(t, "", 0)
 
@@ -213,7 +213,7 @@ func TestGetOffering(t *testing.T) {
 		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
 		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
 	}
-	insertItems(testOfferings[0], testOfferings[1])
+	insertItems(t, testOfferings[0], testOfferings[1])
 	testGetOfferings(t, "", 2)
 
 	// Get offering by id.
@@ -251,11 +251,11 @@ func TestPutOfferingStatus(t *testing.T) {
 }
 
 func TestGetOfferingStatus(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
-	createOfferingFixtures()
+	createOfferingFixtures(t)
 	offer := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	insertItems(offer)
+	insertItems(t, offer)
 	// Get offering status with a match.
 	res := getOfferingStatus(t, offer.ID)
 	if res.StatusCode != http.StatusOK {

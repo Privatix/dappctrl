@@ -21,17 +21,17 @@ func testGetEndpoint(t *testing.T, exp int, ch, id string) {
 }
 
 func TestGetEndpoints(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	// Get empty list.
 	testGetEndpoint(t, 0, "", "")
 
 	// Get all endpoints.
 
 	// Prepare test data.
-	ch := createTestChannel()
+	ch := createTestChannel(t)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
 	endpoint := data.NewTestEndpoint(ch.ID, tplAccess.ID)
-	insertItems(tplAccess, endpoint)
+	insertItems(t, tplAccess, endpoint)
 
 	testGetEndpoint(t, 1, "", "")
 

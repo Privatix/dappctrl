@@ -15,6 +15,8 @@ CREATE TYPE unit_type AS ENUM ('units','seconds');
 -- Contract types.
 CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
+-- Client identification types.
+CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
@@ -140,7 +142,10 @@ CREATE TABLE products (
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
     usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
-    is_server boolean NOT NULL -- product is defined as server (Agent) or client (Client)
+    is_server boolean NOT NULL, -- product is defined as server (Agent) or client (Client)
+    salt bigint NOT NULL, -- password salt
+    password sha3_256 NOT NULL,
+    client_ident client_ident_type NOT NULL
 );
 
 -- Service offerings.
@@ -226,10 +231,6 @@ CREATE TABLE sessions (
         CONSTRAINT positive_seconds_consumed CHECK (sessions.seconds_consumed >= 0),
 
     last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
-    server_ip inet,
-    server_port int
-        CONSTRAINT server_port_ct CHECK (sessions.server_port > 0 AND sessions.server_port <= 65535),
-
     client_ip inet,
     client_port int
         CONSTRAINT client_port_ct CHECK (sessions.client_port > 0 AND sessions.client_port <= 65535)

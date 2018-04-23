@@ -16,7 +16,7 @@ func postTemplate(t *testing.T, tpl *data.Template) *http.Response {
 }
 
 func TestPostTemplateValidation(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	for _, testcase := range []struct {
 		Payload *data.Template
 		Code    int
@@ -52,7 +52,7 @@ func TestPostTemplateValidation(t *testing.T) {
 }
 
 func TestPostTemplateSuccess(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 	for _, payload := range []data.Template{
 		{
 			Kind: data.TemplateOffer,
@@ -87,7 +87,7 @@ func testGetTemplates(t *testing.T, tplType, id string, exp int) {
 }
 
 func TestGetTemplate(t *testing.T) {
-	defer cleanDB()
+	defer cleanDB(t)
 
 	// Get zerro templates.
 	testGetTemplates(t, "", "", 0)
@@ -110,7 +110,7 @@ func TestGetTemplate(t *testing.T) {
 			Raw:  []byte("{}"),
 		},
 	}
-	insertItems(records[0], records[1], records[2])
+	insertItems(t, records[0], records[1], records[2])
 
 	// Get all templates.
 	testGetTemplates(t, "", "", len(records))

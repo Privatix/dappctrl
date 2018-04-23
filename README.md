@@ -3,6 +3,7 @@
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_shield)
 
 # Privatix Controller.
+
 Privatix Controller is a core of Agent and Client functionality.
 
 # Getting Started
@@ -51,33 +52,41 @@ psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
 Make a copy of `dappctrl.config.json`:
+
 ```bash
 cp dappctrl.config.json dappctrl.config.local.json
 ```
+
 Modify `dappctrl.config.local.json` if you need non-default configuration and run:
 
 ```bash
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build OpenVPN session trigger:
+Build `OpenVPN` session trigger:
 
 ```bash
 go install $DAPPCTRL/tool/dapptrig
 ```
 
 ## Using docker
-We have prepared two images and a compose file to make it easier to run app and its dependencies.
-There are 3 services in compose file:
-  1. db — uses public postgres image
-  2. vpn — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
-  3. dappctrl — image `privatix/dappctrl` is a main controller app
 
-If you want to develop dappctrl then it is convenient to run its dependencies using docker, but controller itself at your host machine:
+We have prepared two images and a compose file to make it easier to run app and its dependencies.
+
+There are 3 services in compose file:
+
+1. `db` — uses public `postgres` image
+1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
+1. `dappctrl` — image `privatix/dappctrl` is a main controller app
+
+If you want to develop `dappctrl` then it is convenient to run its dependencies using `docker`, but controller itself at your host machine:
+
 ```
 docker-compose up vpn db
 ```
-If your app is using dappctrl or you are not planning to develop controller run
+
+If your app is using `dappctrl` or you are not planning to develop controller run
+
 ```
 docker-compose up
 ```
@@ -95,7 +104,7 @@ docker-compose up
     STRESS_JOBS=1000
     ```
 
-2. Generate local a configuration file using these variables, e.g.:
+2. Generate locally a configuration file using these variables, e.g.:
 
     ```bash
     jq ".DB.Conn.host=\"$DB_IP\" | .JobTest.StressJobs=$STRESS_JOBS" $CONF_FILE > $LOCAL_CONF_FILE

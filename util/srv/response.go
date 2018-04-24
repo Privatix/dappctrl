@@ -14,8 +14,8 @@ type Response struct {
 func (s *Server) respond(w http.ResponseWriter, r *Response) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	if r.Error != nil && r.Error.status != 0 {
-		w.WriteHeader(r.Error.status)
+	if r.Error != nil && r.Error.Status != 0 {
+		w.WriteHeader(r.Error.Status)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}

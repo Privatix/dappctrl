@@ -7,7 +7,7 @@ import (
 
 // Error is a server error.
 type Error struct {
-	status  int
+	Status  int    `json:"-"`
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
@@ -30,22 +30,22 @@ const (
 // Common server errors.
 var (
 	ErrMethodNotAllowed = &Error{
-		status:  http.StatusMethodNotAllowed,
+		Status:  http.StatusMethodNotAllowed,
 		Code:    ErrCodeMethodNotAllowed,
 		Message: "HTTP method not allowed",
 	}
 	ErrInternalServerError = &Error{
-		status:  http.StatusInternalServerError,
+		Status:  http.StatusInternalServerError,
 		Code:    ErrCodeInternalServerError,
 		Message: "internal server error",
 	}
 	ErrFailedToParseRequest = &Error{
-		status:  http.StatusBadRequest,
+		Status:  http.StatusBadRequest,
 		Code:    ErrCodeFailedToParseRequest,
 		Message: "failed to parse request",
 	}
 	ErrAccessDenied = &Error{
-		status:  http.StatusForbidden,
+		Status:  http.StatusForbidden,
 		Code:    ErrCodeAccessDenied,
 		Message: "access denied",
 	}

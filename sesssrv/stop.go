@@ -32,18 +32,20 @@ func (s *Server) handleUpdateStop(
 		return
 	}
 
-	prod, ok := s.findProduct(w, ctx.Username)
-	if !ok {
-		return
-	}
+	if args.Units != 0 {
+		prod, ok := s.findProduct(w, ctx.Username)
+		if !ok {
+			return
+		}
 
-	switch prod.UsageRepType {
-	case data.ProductUsageIncremental:
-		sess.UnitsUsed += args.Units
-	case data.ProductUsageTotal:
-		sess.UnitsUsed = args.Units
-	default:
-		panic("unsupported product usage: " + prod.UsageRepType)
+		switch prod.UsageRepType {
+		case data.ProductUsageIncremental:
+			sess.UnitsUsed += args.Units
+		case data.ProductUsageTotal:
+			sess.UnitsUsed = args.Units
+		default:
+			panic("unsupported product usage: " + prod.UsageRepType)
+		}
 	}
 
 	sess.LastUsageTime = time.Now()

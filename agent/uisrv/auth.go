@@ -49,11 +49,11 @@ type passwordPayload struct {
 }
 
 func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		s.handleSetPassword(w, r)
 		return
 	}
-	if r.Method == "PUT" {
+	if r.Method == http.MethodPut {
 		basicAuthMiddlewareFunc(s, s.handleUpdatePassword)(w, r)
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	cryptorand "crypto/rand"
 	"log"
+	"math/big"
 	"math/rand"
 	"testing"
 	"time"
@@ -64,7 +65,7 @@ func NewTestAccount() *Account {
 		Name:       util.NewUUID()[:30],
 		PTCBalance: 0,
 		PSCBalance: 0,
-		EthBalance: 0.1,
+		EthBalance: FromBytes(big.NewInt(1).Bytes()),
 	}
 }
 

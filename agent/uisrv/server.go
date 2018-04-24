@@ -3,6 +3,9 @@ package uisrv
 import (
 	"net/http"
 
+	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/eth/contract"
+
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/util"
@@ -27,17 +30,26 @@ type Config struct {
 
 // Server is agent api server.
 type Server struct {
-	conf   *Config
-	logger *util.Logger
-	db     *reform.DB
+	conf      *Config
+	logger    *util.Logger
+	db        *reform.DB
+	ethClient *eth.EthereumClient
+	ptc       *contract.PrivatixTokenContract
+	psc       *contract.PrivatixServiceContract
 }
 
 // NewServer creates a new agent server.
-func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
-	return &Server{conf, logger, db}
+func NewServer(conf *Config,
+	logger *util.Logger,
+	db *reform.DB,
+	ethClient *eth.EthereumClient,
+	ptc *contract.PrivatixTokenContract,
+	psc *contract.PrivatixServiceContract) *Server {
+	return &Server{conf, logger, db, ethClient, ptc, psc}
 }
 
 const (
+	accountsPath  = "/ui/accounts/"
 	authPath      = "/ui/auth"
 	channelsPath  = "/ui/channels/"
 	endpointsPath = "/ui/endpoints"
@@ -51,6 +63,7 @@ const (
 // ListenAndServe starts a server.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
+	mux.HandleFunc(accountsPath, basicAuthMiddlewareFunc(s, s.handleAccounts))
 	mux.HandleFunc(authPath, s.handleAuth)
 	mux.HandleFunc(channelsPath, basicAuthMiddlewareFunc(s, s.handleChannels))
 	mux.HandleFunc(endpointsPath, basicAuthMiddlewareFunc(s, s.handleGetEndpoints))

@@ -18,15 +18,13 @@
         }
     },
 
-    "EthereumLib": {
-        "geth": {
-            "host": "localhost",
-            "port": 8545
+    "Eth": {
+        "Contract" : {
+            "PTCAddr": "",
+            "PSCAddr": ""
         },
-        "truffle": {
-            "host": "localhost",
-            "port": 5000
-        }
+        "GethURL": "http://localhost:8545",
+        "TruffleAPIURL": "http://localhost:5000"
     },
 
     "Job": {

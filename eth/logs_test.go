@@ -1,23 +1,19 @@
 // +build !noethtest
 
-package lib
+package eth
 
 import (
+	"bytes"
 	"encoding/hex"
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"math/big"
-	"net/http"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"bytes"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/eth/lib/tests"
 )
 
 var (
@@ -34,58 +30,6 @@ var (
 	U192Zero, _ = NewUint192("0")
 )
 
-// fetchPSCAddress returns address of PSC is the currently active test chain.
-// is case of successfully retrieved address  - caches retrieved address and returns it on the next calls,
-// instead of doing redundant requests.
-func fetchPSCAddress() string {
-	if PSCAddress != "" {
-		return PSCAddress
-	}
-
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getPSC")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	PSCAddress = data["contract"].(map[string]interface{})["address"].(string)
-	return PSCAddress
-}
-
-// fetchTestPrivateKey returns first available private key, that is provided by the truffle.
-func fetchTestPrivateKey() string {
-	if PrivateKey != "" {
-		return PrivateKey
-	}
-
-	truffleAPI := tests.GethEthereumConfig().TruffleAPI
-	response, err := http.Get(truffleAPI.Interface() + "/getKeys")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch private key. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make([]interface{}, 0, 0)
-	json.Unmarshal(body, &data)
-
-	PrivateKey = data[0].(map[string]interface{})["privateKey"].(string)
-	return PrivateKey
-}
-
 func populateEvents() {
 	failOnErr := func(err error, args ...interface{}) {
 		if err != nil {
@@ -93,17 +37,16 @@ func populateEvents() {
 		}
 	}
 
-	geth := tests.GethEthereumConfig().Geth
-	conn, err := ethclient.Dial(geth.Interface())
+	conn, err := ethclient.Dial(testGethURL)
 	failOnErr(err, "Failed to connect to the EthereumConf client")
 
-	contractAddress, err := NewAddress(fetchPSCAddress())
+	contractAddress, err := NewAddress(testTruffleAPI.FetchPSCAddress())
 	failOnErr(err, "Failed to parse received contract address")
 
-	psc, err := contract.NewPrivatixServiceContract(contractAddress.Bytes(), conn)
+	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
 	failOnErr(err, "Failed to connect to the Ethereum client")
 
-	pKeyBytes, err := hex.DecodeString(fetchTestPrivateKey())
+	pKeyBytes, err := hex.DecodeString(testTruffleAPI.FetchTestPrivateKey())
 	failOnErr(err, "Failed to fetch test private key from the API")
 
 	key, err := crypto.ToECDSA(pKeyBytes)
@@ -145,8 +88,8 @@ func populateEvents() {
 
 func TestNormalLogsFetching(t *testing.T) {
 	populateEvents()
-	node := tests.GethEthereumConfig().Geth
-	client := NewEthereumClient(node.Host, node.Port)
+
+	client := getClient()
 
 	failOnErr := func(err error, args ...interface{}) {
 		if err != nil {
@@ -174,7 +117,7 @@ func TestNormalLogsFetching(t *testing.T) {
 
 	fetchEventData := func(eventDigest string) ([]string, string) {
 		response, err := client.GetLogs(
-			fetchPSCAddress(),
+			testTruffleAPI.FetchPSCAddress(),
 			[]string{"0x" + eventDigest}, "", "")
 
 		failOnErr(err, "Can't call API: ", err, " Event digest: ", eventDigest)

@@ -1,10 +1,24 @@
 {
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null
+    },
+
     "DB": {
         "Conn": {
             "user": "postgres",
             "dbname": "dappctrl",
             "sslmode": "disable"
         }
+    },
+
+    "Eth": {
+        "Contract" : {
+            "PTCAddr": "",
+            "PSCAddr": ""
+        },
+        "GethURL": "http://localhost:8545",
+        "TruffleAPIURL": "http://localhost:5000"
     },
 
     "Job": {

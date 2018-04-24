@@ -10,24 +10,24 @@ import (
 // handleOfferings calls appropriate handler by scanning incoming request.
 func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
 	if id := idFromStatusPath(offeringsPath, r.URL.Path); id != "" {
-		if r.Method == "PUT" {
+		if r.Method == http.MethodPut {
 			s.handlePutOfferingStatus(w, r, id)
 			return
 		}
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			s.handleGetOfferingStatus(w, r, id)
 			return
 		}
 	} else {
-		if r.Method == "POST" {
+		if r.Method == http.MethodPost {
 			s.handlePostOffering(w, r)
 			return
 		}
-		if r.Method == "PUT" {
+		if r.Method == http.MethodPut {
 			s.handlePutOffering(w, r)
 			return
 		}
-		if r.Method == "GET" {
+		if r.Method == http.MethodGet {
 			s.handleGetOfferings(w, r)
 			return
 		}

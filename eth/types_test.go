@@ -1,74 +1,8 @@
 // +build !noethtest
 
-package lib
+package eth
 
 import "testing"
-
-func TestAddressCreating(t *testing.T) {
-	checkValidHex := func(hex string) {
-		address, err := NewAddress(hex)
-		if err != nil {
-			t.Fatal("Address should be created well, but error catched: ", err)
-		}
-
-		if address.String() != hex {
-			t.Fatal("Address was encoded to different string representation")
-		}
-	}
-
-	checkInvalidHex := func(hex string) {
-		_, err := NewAddress(hex)
-		if err == nil {
-			t.Fatal("Error must be returned")
-		}
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using real world hex address representation.
-		checkValidHex("0xd1eddf50e1678dd1ea2e946fc21c8b50478126d6")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using real world zeroed address.
-		checkValidHex("0x0000000000000000000000000000000000000000")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using max available address.
-		checkValidHex("0xffffffffffffffffffffffffffffffffffffffff")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using broken address.
-		// Error must be returned.
-		checkInvalidHex("0xf")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using broken address (longer representation).
-		// Error must be returned.
-		checkInvalidHex("0xffffffffffffffffffffffffffffffffffffffffaaaa")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using broken address (shorter string repr, than is required).
-		// Error must be returned.
-		checkInvalidHex("0")
-	}
-
-	{
-		// Test purpose:
-		// To check address decoding, using broken address (zero length string).
-		// Error must be returned.
-		checkInvalidHex("")
-	}
-}
 
 func TestUint256Creating(t *testing.T) {
 	checkValidHex := func(hex string, comparableRepresentation string) {

@@ -47,9 +47,9 @@ func newTestPayload(amount uint64, ch *data.Channel,
 func sendTestRequest(pld *payload) *httptest.ResponseRecorder {
 	body := &bytes.Buffer{}
 	json.NewEncoder(body).Encode(pld)
-	r := httptest.NewRequest("POST", payPath, body)
+	r := httptest.NewRequest(http.MethodPost, payPath, body)
 	w := httptest.NewRecorder()
-	util.ValidateMethod(testServer.handlePay, "POST")(w, r)
+	util.ValidateMethod(testServer.handlePay, http.MethodPost)(w, r)
 	return w
 }
 

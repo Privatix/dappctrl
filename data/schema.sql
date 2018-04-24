@@ -113,8 +113,7 @@ CREATE TABLE accounts (
         CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
     psc_balance bigint NOT NULL -- PSC balance
         CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
-    eth_balance NUMERIC(23,18) -- ethereum balance up to 99999 ETH
-      CONSTRAINT positive_eth_balance CHECK (accounts.eth_balance > 0),
+    eth_balance char(32) NOT NULL, -- ethereum balance up to 99999 ETH in WEI. Ethereum's uint192 in base64 (RFC-4648).
     last_balance_check timestamp with time zone -- time when balance was checked
 );
 

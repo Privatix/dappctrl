@@ -12,11 +12,11 @@ import (
 
 // handleTempaltes calls appropriate handler by scanning incoming request.
 func (s *Server) handleTempaltes(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		s.handleTemplateCreate(w, r)
 		return
 	}
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		s.handleGetTemplates(w, r)
 		return
 	}

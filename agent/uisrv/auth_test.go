@@ -1,3 +1,5 @@
+// +build !noagentuisrvtest
+
 package uisrv
 
 import (
@@ -56,7 +58,7 @@ func TestSetPasswordOfWrongLen(t *testing.T) {
 
 func sendSetPasswordAndTestStatus(t *testing.T,
 	p *passwordPayload, status int) *http.Response {
-	return sendPayloadToAuthAndTestStatus(t, "POST", p, status)
+	return sendPayloadToAuthAndTestStatus(t, http.MethodPost, p, status)
 }
 
 func TestUpdatePassword(t *testing.T) {

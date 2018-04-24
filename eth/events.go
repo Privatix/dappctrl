@@ -1,17 +1,18 @@
-package lib
+package eth
 
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
+//
+// Contract events digests.
+// Please, see this article for the details:
+// https://codeburst.io/deep-dive-into-ethereum-logs-a8d2047c7371
+//
 const (
-	//
-	// Contract events digests.
-	// Please, see this article for the details:
-	// https://codeburst.io/deep-dive-into-ethereum-logs-a8d2047c7371
-	//
-
 	EthDigestChannelCreated      = "a6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c"
 	EthDigestChannelToppedUp     = "a3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce"
 	EthChannelCloseRequested     = "b40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e"
@@ -24,7 +25,7 @@ const (
 	EthUncooperativeChannelClose = "7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6"
 )
 
-// Base interface for all events, that are expected to be received from the ethereum block-chain.
+// Event received from the ethereum block-chain.
 type Event interface {
 	Digest() string
 }
@@ -32,9 +33,9 @@ type Event interface {
 // ChannelCreatedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelCreatedEvent struct {
-	Agent             *Address // Indexed.
-	Client            *Address // Indexed.
-	OfferingHash      *Uint256 // Indexed.
+	Agent             common.Address // Indexed.
+	Client            common.Address // Indexed.
+	OfferingHash      *Uint256       // Indexed.
 	Deposit           *Uint192
 	AuthenticatedHash *Uint256
 }
@@ -65,9 +66,9 @@ func (e *ChannelCreatedEvent) Digest() string {
 // ChannelToppedUpEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelToppedUpEvent struct {
-	Agent           *Address // Indexed.
-	Client          *Address // Indexed.
-	OfferingHash    *Uint256 // Indexed.
+	Agent           common.Address // Indexed.
+	Client          common.Address // Indexed.
+	OfferingHash    *Uint256       // Indexed.
 	OpenBlockNumber *Uint256
 	AddedDeposit    *Uint192
 }
@@ -98,9 +99,9 @@ func (e *ChannelToppedUpEvent) Digest() string {
 // ChannelCloseRequestedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type ChannelCloseRequestedEvent struct {
-	Client          *Address // Indexed.
-	Agent           *Address // Indexed.
-	OfferingHash    *Uint256 // Indexed.
+	Client          common.Address // Indexed.
+	Agent           common.Address // Indexed.
+	OfferingHash    *Uint256       // Indexed.
 	OpenBlockNumber *Uint256
 	Balance         *Uint192
 }
@@ -131,8 +132,8 @@ func (e *ChannelCloseRequestedEvent) Digest() string {
 // OfferingCreatedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingCreatedEvent struct {
-	Agent         *Address // Indexed.
-	OfferingHash  *Uint256 // Indexed.
+	Agent         common.Address // Indexed.
+	OfferingHash  *Uint256       // Indexed.
 	MinDeposit    *Uint192
 	CurrentSupply *Uint256
 }
@@ -162,8 +163,8 @@ func (e *OfferingCreatedEvent) Digest() string {
 // OfferingDeletedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingDeletedEvent struct {
-	Agent        *Address // Indexed.
-	OfferingHash *Uint256 // Indexed.
+	Agent        common.Address // Indexed.
+	OfferingHash *Uint256       // Indexed.
 }
 
 // NewOfferingDeletedEvent creates event of type OfferingDeletedEvent..
@@ -188,9 +189,9 @@ func (e *OfferingDeletedEvent) Digest() string {
 // OfferingEndpointEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingEndpointEvent struct {
-	Agent           *Address // Indexed.
-	Client          *Address // Indexed.
-	OfferingHash    *Uint256 // Indexed.
+	Agent           common.Address // Indexed.
+	Client          common.Address // Indexed.
+	OfferingHash    *Uint256       // Indexed.
 	OpenBlockNumber *Uint256
 	EndpointHash    *Uint256
 }
@@ -221,8 +222,8 @@ func (e *OfferingEndpointEvent) Digest() string {
 // OfferingSupplyChangedEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingSupplyChangedEvent struct {
-	Agent         *Address // Indexed.
-	OfferingHash  *Uint256 // Indexed.
+	Agent         common.Address // Indexed.
+	OfferingHash  *Uint256       // Indexed.
 	CurrentSupply *Uint192
 }
 
@@ -250,8 +251,8 @@ func (e *OfferingSupplyChangedEvent) Digest() string {
 // OfferingPoppedUpEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type OfferingPoppedUpEvent struct {
-	Agent        *Address // Indexed.
-	OfferingHash *Uint256 // Indexed.
+	Agent        common.Address // Indexed.
+	OfferingHash *Uint256       // Indexed.
 }
 
 // NewOfferingPoppedUpEvent creates event of type OfferingPoppedUpEvent.
@@ -276,9 +277,9 @@ func (e *OfferingPoppedUpEvent) Digest() string {
 // CooperativeChannelCloseEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type CooperativeChannelCloseEvent struct {
-	Agent           *Address // Indexed.
-	Client          *Address // Indexed.
-	OfferingHash    *Uint256 // Indexed.
+	Agent           common.Address // Indexed.
+	Client          common.Address // Indexed.
+	OfferingHash    *Uint256       // Indexed.
 	OpenBlockNumber *Uint256
 	Balance         *Uint192
 }
@@ -309,9 +310,9 @@ func (e *CooperativeChannelCloseEvent) Digest() string {
 // UncooperativeChannelCloseEvent implements wrapper for contract event.
 // Please see contract implementation for the details.
 type UncooperativeChannelCloseEvent struct {
-	Agent           *Address // Indexed.
-	Client          *Address // Indexed.
-	OfferingHash    *Uint256 // Indexed.
+	Agent           common.Address // Indexed.
+	Client          common.Address // Indexed.
+	OfferingHash    *Uint256       // Indexed.
 	OpenBlockNumber *Uint256
 	Balance         *Uint192
 }
@@ -370,9 +371,10 @@ func checkEventDigest(topic string, expectedDigest string, err error) error {
 	return nil
 }
 
-func parseAddress(topic string, err error) (*Address, error) {
-	if err != nil {
-		return nil, err
+func parseAddress(topic string, inErr error) (addr common.Address, err error) {
+	if inErr != nil {
+		err = inErr
+		return
 	}
 
 	return NewAddress(toAddressHex(topicToHex(topic)))

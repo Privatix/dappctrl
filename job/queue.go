@@ -208,11 +208,13 @@ func (q *Queue) processMain() error {
 		started := time.Now()
 
 		rows, err := q.db.Query(`
-			SELECT DISTINCT ON (related_id) id, related_id
-			FROM jobs
-			WHERE status = $1 AND not_before <= $2
-			ORDER BY related_id, created_at
-			LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
+			SELECT id, related_id FROM (
+			  SELECT DISTINCT ON (related_id) *
+			    FROM jobs
+			   WHERE status = $1
+			   ORDER BY related_id, created_at) AS ordered
+			 WHERE not_before <= $2
+			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err
 		}
@@ -261,13 +263,25 @@ func (q *Queue) processWorker(w workerIO) {
 		// If job was cancelled while running a handler make sure it
 		// won't be retried.
 		if job.Status == data.JobActive {
-			var tmp data.Job
-			err = q.db.FindByPrimaryKeyTo(&tmp, job.ID)
+			tx, err := q.db.Begin()
 			if err != nil {
 				break
 			}
+
+			var tmp data.Job
+			err = tx.SelectOneTo(&tmp,
+				"WHERE id = $1 FOR UPDATE", job.ID)
+			if err != nil {
+				tx.Rollback()
+				break
+			}
+
 			if tmp.Status == data.JobCanceled {
 				job.Status = data.JobCanceled
+			}
+
+			if err := tx.Commit(); err != nil {
+				break
 			}
 		}
 

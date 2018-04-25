@@ -1,23 +1,30 @@
 {
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null
+    },
+
+    "AgentServerTest": {
+        "ServerStartupDelay": 10
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
             "sslmode": "disable",
             "user": "postgres",
-            "host": "10.16.194.21",
+            "host": "localhost",
             "port": "5432"
         }
     },
 
-    "EthereumLib": {
-        "geth": {
-            "host": "localhost",
-            "port": 8545
+    "Eth": {
+        "Contract" : {
+            "PTCAddr": "",
+            "PSCAddr": ""
         },
-        "truffle": {
-            "host": "localhost",
-            "port": 5000
-        }
+        "GethURL": "http://localhost:8545",
+        "TruffleAPIURL": "http://localhost:5000"
     },
 
     "Job": {
@@ -43,9 +50,18 @@
         "Level": "info"
     },
 
-    "PaymentServer": {
+    "PayServer": {
         "Addr": "localhost:9000",
         "TLS": null
+    },
+
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+
+    "SessionServerTest": {
+        "ServerStartupDelay": 10
     },
 
     "SOMC": {

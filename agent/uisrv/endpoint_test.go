@@ -3,37 +3,35 @@
 package uisrv
 
 import (
-	"net/http/httptest"
+	"net/http"
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
 
-func getEndpoints(ch, id string) *httptest.ResponseRecorder {
-	return getResources(endpointsPath,
-		map[string]string{"ch_id": ch, "id": id},
-		testServer.handleGetEndpoints)
+func getEndpoints(t *testing.T, ch, id string) *http.Response {
+	return getResources(t, endpointsPath,
+		map[string]string{"ch_id": ch, "id": id})
 }
 
 func testGetEndpoint(t *testing.T, exp int, ch, id string) {
-	res := getEndpoints(ch, id)
+	res := getEndpoints(t, ch, id)
 	testGetResources(t, res, exp)
 }
 
 func TestGetEndpoints(t *testing.T) {
+	defer cleanDB(t)
 	// Get empty list.
 	testGetEndpoint(t, 0, "", "")
 
 	// Get all endpoints.
 
 	// Prepare test data.
-	ch, deleteChan := createTestChannel()
-	defer deleteChan()
+	ch := createTestChannel(t)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
 	endpoint := data.NewTestEndpoint(ch.ID, tplAccess.ID)
-	deleteItems := insertItems(tplAccess, endpoint)
-	defer deleteItems()
+	insertItems(t, tplAccess, endpoint)
 
 	testGetEndpoint(t, 1, "", "")
 

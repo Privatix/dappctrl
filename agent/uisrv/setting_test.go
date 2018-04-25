@@ -4,26 +4,23 @@ package uisrv
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
 )
 
-func getSettings() *httptest.ResponseRecorder {
-	r := httptest.NewRequest("GET", settingsPath, nil)
-	w := httptest.NewRecorder()
-	testServer.handleSettings(w, r)
-	return w
+func getSettings(t *testing.T) *http.Response {
+	return getResources(t, settingsPath, nil)
 }
 
 func testGetSettings(t *testing.T, exp int) {
-	res := getSettings()
+	res := getSettings(t)
 	testGetResources(t, res, exp)
 }
 
 func TestGetSettings(t *testing.T) {
+	defer cleanDB(t)
 	// get empty list.
 	testGetSettings(t, 0)
 	// get settings.
@@ -32,36 +29,38 @@ func TestGetSettings(t *testing.T) {
 		Value:       "bar",
 		Description: nil,
 	}
-	delete := insertItems(setting)
-	defer delete()
+	insertItems(t, setting)
 	testGetSettings(t, 1)
 }
 
-func putSetting(pld settingPayload) *httptest.ResponseRecorder {
-	return sendPayload("PUT", settingsPath, pld, testServer.handleSettings)
+func putSetting(t *testing.T, pld settingPayload) *http.Response {
+	return sendPayload(t, "PUT", settingsPath, pld)
 }
 
 func TestUpdateSettingsSuccess(t *testing.T) {
+	defer cleanDB(t)
+
 	settings := []data.Setting{
 		{
 			Key:         "name1",
 			Value:       "value1",
 			Description: nil,
+			Name:        "Name 1",
 		},
 		{
 			Key:         "name2",
 			Value:       "value2",
 			Description: nil,
+			Name:        "Name 2",
 		},
 	}
-	deleteSettings := insertItems(&settings[0], &settings[1])
-	defer deleteSettings()
+	insertItems(t, &settings[0], &settings[1])
 
 	settings[0].Value = "changed"
 	settings[1].Value = "changed"
-	res := putSetting(settingPayload(settings))
-	if res.Code != http.StatusOK {
-		t.Fatal("failed to put setting: ", res.Code)
+	res := putSetting(t, settingPayload(settings))
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("failed to put setting: ", res.StatusCode)
 	}
 	updatedSettings, err := testServer.db.SelectAllFrom(
 		data.SettingTable,

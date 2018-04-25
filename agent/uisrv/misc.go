@@ -1,16 +1,11 @@
 package uisrv
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
 
-	"gopkg.in/reform.v1"
-
 	validator "gopkg.in/go-playground/validator.v9"
-
-	"github.com/privatix/dappctrl/data"
 )
 
 var (
@@ -25,67 +20,17 @@ type serverError struct {
 	Message string `json:"message"`
 }
 
-// idFromStatusPath returns id from path of format prefix/id/status.
+// idFromStatusPath returns id from path of format {prefix}{id}/status.
 func idFromStatusPath(prefix, path string) string {
 	parts := strings.Split(path, prefix)
 	if len(parts) != 2 {
 		return ""
 	}
 	parts = strings.Split(parts[1], "/")
-	if len(parts) != 3 || parts[2] != "status" {
+	if len(parts) != 2 || parts[1] != "status" {
 		return ""
 	}
-	return parts[1]
-}
-
-func invalidUnitType(v string) bool {
-	return v != data.UnitScalar && v != data.UnitSeconds
-}
-
-func invalidBillingType(v string) bool {
-	return v != data.BillingPrepaid && v != data.BillingPostpaid
-}
-
-func (s *Server) parseOfferingPayload(w http.ResponseWriter,
-	r *http.Request, offering *data.Offering) bool {
-	if !s.parsePayload(w, r, offering) ||
-		validate.Struct(offering) != nil ||
-		invalidUnitType(offering.UnitType) ||
-		invalidBillingType(offering.BillingType) {
-		s.replyInvalidPayload(w)
-		return false
-	}
-	return true
-}
-
-func (s *Server) parseProductPayload(w http.ResponseWriter,
-	r *http.Request, product *data.Product) bool {
-	if !s.parsePayload(w, r, product) ||
-		validate.Struct(product) != nil ||
-		product.OfferTplID == nil ||
-		product.OfferAccessID == nil ||
-		(product.UsageRepType != data.ProductUsageIncremental &&
-			product.UsageRepType != data.ProductUsageTotal) {
-		s.replyInvalidPayload(w)
-		return false
-	}
-	return true
-}
-
-func invalidTemplateKind(v string) bool {
-	return v != data.TemplateOffer && v != data.TemplateAccess
-}
-
-func (s *Server) parseTemplatePayload(w http.ResponseWriter,
-	r *http.Request, tpl *data.Template) bool {
-	v := make(map[string]interface{})
-	if !s.parsePayload(w, r, tpl) ||
-		invalidTemplateKind(tpl.Kind) ||
-		json.Unmarshal(tpl.Raw, &v) != nil {
-		s.replyInvalidPayload(w)
-		return false
-	}
-	return true
+	return parts[0]
 }
 
 func (s *Server) parsePayload(w http.ResponseWriter,
@@ -98,26 +43,13 @@ func (s *Server) parsePayload(w http.ResponseWriter,
 	return true
 }
 
-func (s *Server) findByID(w http.ResponseWriter, v reform.Record, id string) bool {
-	if err := s.db.FindByPrimaryKeyTo(v, id); err != nil {
-		if err == sql.ErrNoRows {
-			s.replyNotFound(w)
-			return false
-		}
-		s.replyUnexpectedErr(w)
-		return false
-	}
-	return true
-}
-
-func (s *Server) replyErr(w http.ResponseWriter, reply *serverError) {
-	w.WriteHeader(reply.Code)
+func (s *Server) replyErr(w http.ResponseWriter, status int, reply *serverError) {
+	w.WriteHeader(status)
 	s.reply(w, reply)
 }
 
 func (s *Server) replyNotFound(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusNotFound,
+	s.replyErr(w, http.StatusNotFound, &serverError{
 		Message: "requested resources was not found",
 	})
 }
@@ -131,15 +63,13 @@ func (s *Server) replyOK(w http.ResponseWriter, msg string) {
 }
 
 func (s *Server) replyUnexpectedErr(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusInternalServerError,
+	s.replyErr(w, http.StatusInternalServerError, &serverError{
 		Message: "An unexpected error occurred",
 	})
 }
 
 func (s *Server) replyInvalidPayload(w http.ResponseWriter) {
-	s.replyErr(w, &serverError{
-		Code:    http.StatusBadRequest,
+	s.replyErr(w, http.StatusBadRequest, &serverError{
 		Message: "",
 	})
 }
@@ -163,7 +93,7 @@ type statusReply struct {
 }
 
 func (s *Server) replyStatus(w http.ResponseWriter, status string) {
-	s.reply(w, &statusReply{Code: http.StatusOK, Status: status})
+	s.reply(w, &statusReply{Status: status})
 }
 
 func (s *Server) reply(w http.ResponseWriter, v interface{}) {

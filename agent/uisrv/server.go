@@ -3,10 +3,18 @@ package uisrv
 import (
 	"net/http"
 
+	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/eth/contract"
+
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/util"
 )
+
+// ActionPayload is a body format for action requests.
+type ActionPayload struct {
+	Action string `json:"action"`
+}
 
 // TLSConfig is a tls configuration.
 type TLSConfig struct {
@@ -22,20 +30,30 @@ type Config struct {
 
 // Server is agent api server.
 type Server struct {
-	conf   *Config
-	logger *util.Logger
-	db     *reform.DB
+	conf      *Config
+	logger    *util.Logger
+	db        *reform.DB
+	ethClient *eth.EthereumClient
+	ptc       *contract.PrivatixTokenContract
+	psc       *contract.PrivatixServiceContract
 }
 
 // NewServer creates a new agent server.
-func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
-	return &Server{conf, logger, db}
+func NewServer(conf *Config,
+	logger *util.Logger,
+	db *reform.DB,
+	ethClient *eth.EthereumClient,
+	ptc *contract.PrivatixTokenContract,
+	psc *contract.PrivatixServiceContract) *Server {
+	return &Server{conf, logger, db, ethClient, ptc, psc}
 }
 
 const (
-	channelsPath  = "/ui/channels"
+	accountsPath  = "/ui/accounts/"
+	authPath      = "/ui/auth"
+	channelsPath  = "/ui/channels/"
 	endpointsPath = "/ui/endpoints"
-	offeringsPath = "/ui/offerings"
+	offeringsPath = "/ui/offerings/"
 	productsPath  = "/ui/products"
 	sessionsPath  = "/ui/sessions"
 	settingsPath  = "/ui/settings"
@@ -45,13 +63,16 @@ const (
 // ListenAndServe starts a server.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(channelsPath, s.handleChannels)
-	mux.HandleFunc(endpointsPath, s.handleGetEndpoints)
-	mux.HandleFunc(offeringsPath, s.handleOfferings)
-	mux.HandleFunc(productsPath, s.handleProducts)
-	mux.HandleFunc(sessionsPath, s.handleSessions)
-	mux.HandleFunc(settingsPath, s.handleSettings)
-	mux.HandleFunc(templatePath, s.handleTempaltes)
+	mux.HandleFunc(accountsPath, basicAuthMiddlewareFunc(s, s.handleAccounts))
+	mux.HandleFunc(authPath, s.handleAuth)
+	mux.HandleFunc(channelsPath, basicAuthMiddlewareFunc(s, s.handleChannels))
+	mux.HandleFunc(endpointsPath, basicAuthMiddlewareFunc(s, s.handleGetEndpoints))
+	mux.HandleFunc(offeringsPath, basicAuthMiddlewareFunc(s, s.handleOfferings))
+	mux.HandleFunc(productsPath, basicAuthMiddlewareFunc(s, s.handleProducts))
+	mux.HandleFunc(sessionsPath, basicAuthMiddlewareFunc(s, s.handleGetSessions))
+	mux.HandleFunc(settingsPath, basicAuthMiddlewareFunc(s, s.handleSettings))
+	mux.HandleFunc(templatePath, basicAuthMiddlewareFunc(s, s.handleTempaltes))
+	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {
 		return http.ListenAndServeTLS(

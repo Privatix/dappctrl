@@ -25,7 +25,7 @@
 		"outputs": [
 			{
 				"name": "",
-				"type": "uint256"
+				"type": "uint192"
 			}
 		],
 		"payable": false,
@@ -186,12 +186,12 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_client",
+				"name": "_agent",
 				"type": "address"
 			},
 			{
 				"indexed": true,
-				"name": "_agent",
+				"name": "_client",
 				"type": "address"
 			},
 			{
@@ -218,23 +218,23 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_client",
-				"type": "address"
-			},
-			{
-				"indexed": true,
 				"name": "_agent",
 				"type": "address"
 			},
 			{
 				"indexed": true,
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_client",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "_offering_hash",
+				"type": "bytes32"
 			},
 			{
 				"indexed": false,
-				"name": "_offering_hash",
-				"type": "bytes32"
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"indexed": false,
@@ -250,23 +250,23 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_client",
-				"type": "address"
-			},
-			{
-				"indexed": true,
 				"name": "_agent",
 				"type": "address"
 			},
 			{
 				"indexed": true,
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_client",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "_offering_hash",
+				"type": "bytes32"
 			},
 			{
 				"indexed": false,
-				"name": "_offering_hash",
-				"type": "bytes32"
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"indexed": false,
@@ -282,7 +282,7 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_agent_address",
+				"name": "_agent",
 				"type": "address"
 			},
 			{
@@ -291,7 +291,7 @@
 				"type": "bytes32"
 			},
 			{
-				"indexed": false,
+				"indexed": true,
 				"name": "_min_deposit",
 				"type": "uint256"
 			},
@@ -301,7 +301,7 @@
 				"type": "uint16"
 			}
 		],
-		"name": "LogServiceOfferingCreated",
+		"name": "LogOfferingCreated",
 		"type": "event"
 	},
 	{
@@ -309,16 +309,26 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"name": "_agent",
+				"type": "address"
+			},
+			{
+				"indexed": true,
 				"name": "_offering_hash",
 				"type": "bytes32"
 			}
 		],
-		"name": "LogServiceOfferingDeleted",
+		"name": "LogOfferingDeleted",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
+			{
+				"indexed": true,
+				"name": "_agent",
+				"type": "address"
+			},
 			{
 				"indexed": true,
 				"name": "_client",
@@ -330,7 +340,7 @@
 				"type": "bytes32"
 			},
 			{
-				"indexed": true,
+				"indexed": false,
 				"name": "_open_block_number",
 				"type": "uint32"
 			},
@@ -340,12 +350,17 @@
 				"type": "bytes32"
 			}
 		],
-		"name": "LogServiceOfferingEndpoint",
+		"name": "LogOfferingEndpoint",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
+			{
+				"indexed": true,
+				"name": "_agent",
+				"type": "address"
+			},
 			{
 				"indexed": true,
 				"name": "_offering_hash",
@@ -357,29 +372,12 @@
 				"type": "uint16"
 			}
 		],
-		"name": "LogServiceOfferingSupplyChanged",
+		"name": "LogOfferingSupplyChanged",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
-			{
-				"indexed": true,
-				"name": "_offering_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "LogServiceOfferingPopedUp",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "_client",
-				"type": "address"
-			},
 			{
 				"indexed": true,
 				"name": "_agent",
@@ -387,13 +385,35 @@
 			},
 			{
 				"indexed": true,
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_offering_hash",
+				"type": "bytes32"
+			}
+		],
+		"name": "LogOfferingPopedUp",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "_agent",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "_client",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "_offering_hash",
+				"type": "bytes32"
 			},
 			{
 				"indexed": false,
-				"name": "_offering_hash",
-				"type": "bytes32"
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"indexed": false,
@@ -409,23 +429,23 @@
 		"inputs": [
 			{
 				"indexed": true,
-				"name": "_client",
-				"type": "address"
-			},
-			{
-				"indexed": true,
 				"name": "_agent",
 				"type": "address"
 			},
 			{
 				"indexed": true,
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_client",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"name": "_offering_hash",
+				"type": "bytes32"
 			},
 			{
 				"indexed": false,
-				"name": "_offering_hash",
-				"type": "bytes32"
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"indexed": false,
@@ -479,6 +499,25 @@
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -721,7 +760,7 @@
 			},
 			{
 				"name": "_min_deposit",
-				"type": "uint256"
+				"type": "uint192"
 			},
 			{
 				"name": "_max_supply",
@@ -781,7 +820,7 @@
 		"constant": true,
 		"inputs": [
 			{
-				"name": "_agent_address",
+				"name": "_address",
 				"type": "address"
 			},
 			{
@@ -797,46 +836,15 @@
 				"type": "uint192"
 			},
 			{
-				"name": "_balance_msg_sig",
+				"name": "_msg_sig",
 				"type": "bytes"
+			},
+			{
+				"name": "_type",
+				"type": "bool"
 			}
 		],
-		"name": "extractBalanceProofSignature",
-		"outputs": [
-			{
-				"name": "",
-				"type": "address"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
-		"inputs": [
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_balance",
-				"type": "uint192"
-			},
-			{
-				"name": "_closing_sig",
-				"type": "bytes"
-			}
-		],
-		"name": "extractClosingSignature",
+		"name": "extractSignature",
 		"outputs": [
 			{
 				"name": "",
@@ -882,11 +890,11 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "_client_address",
+				"name": "_agent_address",
 				"type": "address"
 			},
 			{
-				"name": "_agent_address",
+				"name": "_client_address",
 				"type": "address"
 			},
 			{
@@ -912,20 +920,20 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
 				"name": "_agent_address",
 				"type": "address"
 			},
 			{
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_client_address",
+				"type": "address"
 			},
 			{
 				"name": "_offering_hash",
 				"type": "bytes32"
+			},
+			{
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"name": "_added_deposit",
@@ -933,6 +941,36 @@
 			}
 		],
 		"name": "throwEventLogChannelToppedUp",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_agent_address",
+				"type": "address"
+			},
+			{
+				"name": "_client_address",
+				"type": "address"
+			},
+			{
+				"name": "_offering_hash",
+				"type": "bytes32"
+			},
+			{
+				"name": "_open_block_number",
+				"type": "uint32"
+			},
+			{
+				"name": "_balance",
+				"type": "uint192"
+			}
+		],
+		"name": "throwEventLogChannelCloseRequested",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -958,7 +996,7 @@
 				"type": "uint16"
 			}
 		],
-		"name": "throwEventLogServiceOfferingCreated",
+		"name": "throwEventLogOfferingCreated",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -968,11 +1006,15 @@
 		"constant": false,
 		"inputs": [
 			{
+				"name": "_agent_address",
+				"type": "address"
+			},
+			{
 				"name": "_offering_hash",
 				"type": "bytes32"
 			}
 		],
-		"name": "throwEventLogServiceOfferingDeleted",
+		"name": "throwEventLogOfferingDeleted",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -981,6 +1023,10 @@
 	{
 		"constant": false,
 		"inputs": [
+			{
+				"name": "_agent_address",
+				"type": "address"
+			},
 			{
 				"name": "_client_address",
 				"type": "address"
@@ -998,7 +1044,7 @@
 				"type": "bytes32"
 			}
 		],
-		"name": "throwEventLogServiceOfferingEndpoint",
+		"name": "throwEventLogOfferingEndpoint",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -1007,6 +1053,10 @@
 	{
 		"constant": false,
 		"inputs": [
+			{
+				"name": "_agent_address",
+				"type": "address"
+			},
 			{
 				"name": "_offering_hash",
 				"type": "bytes32"
@@ -1016,7 +1066,7 @@
 				"type": "uint16"
 			}
 		],
-		"name": "throwEventLogServiceOfferingSupplyChanged",
+		"name": "throwEventLogOfferingSupplyChanged",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
@@ -1025,35 +1075,39 @@
 	{
 		"constant": false,
 		"inputs": [
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "throwEventLogServiceOfferingPopedUp",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
 			{
 				"name": "_agent_address",
 				"type": "address"
 			},
 			{
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_offering_hash",
+				"type": "bytes32"
+			}
+		],
+		"name": "throwEventLogOfferingPopedUp",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_agent_address",
+				"type": "address"
+			},
+			{
+				"name": "_client_address",
+				"type": "address"
 			},
 			{
 				"name": "_offering_hash",
 				"type": "bytes32"
+			},
+			{
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"name": "_balance",
@@ -1070,20 +1124,20 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
 				"name": "_agent_address",
 				"type": "address"
 			},
 			{
-				"name": "_open_block_number",
-				"type": "uint32"
+				"name": "_client_address",
+				"type": "address"
 			},
 			{
 				"name": "_offering_hash",
 				"type": "bytes32"
+			},
+			{
+				"name": "_open_block_number",
+				"type": "uint32"
 			},
 			{
 				"name": "_balance",

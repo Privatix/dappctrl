@@ -61,7 +61,7 @@ func NewConfig() *Config {
 }
 
 type workerIO struct {
-	job    chan *data.Job
+	job    chan string
 	result chan error
 }
 
@@ -152,7 +152,7 @@ func (q *Queue) Process() error {
 	q.workers = nil
 	for i := 0; i < num; i++ {
 		w := workerIO{
-			make(chan *data.Job, q.conf.WorkerBufLen),
+			make(chan string, q.conf.WorkerBufLen),
 			make(chan error, 1),
 		}
 		q.workers = append(q.workers, w)
@@ -207,21 +207,27 @@ func (q *Queue) processMain() error {
 
 		started := time.Now()
 
-		jobs, err := q.db.SelectAllFrom(data.JobTable, `
-			WHERE status = $1 AND not_before <= $2
-			ORDER BY not_before LIMIT $3`,
-			data.JobActive, started, q.conf.CollectJobs)
+		rows, err := q.db.Query(`
+			SELECT id, related_id FROM (
+			  SELECT DISTINCT ON (related_id) *
+			    FROM jobs
+			   WHERE status = $1
+			   ORDER BY related_id, created_at) AS ordered
+			 WHERE not_before <= $2
+			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err
 		}
 
-		for _, v := range jobs {
-			if q.checkExit() {
-				return ErrQueueClosed
+		for rows.Next() {
+			var job, related string
+			if err = rows.Scan(&job, &related); err != nil {
+				return err
 			}
-
-			job := v.(*data.Job)
-			q.uuidWorker(job.RelatedID).job <- job
+			q.uuidWorker(related).job <- job
+		}
+		if err := rows.Err(); err != nil {
+			return err
 		}
 
 		time.Sleep(period - time.Now().Sub(started))
@@ -231,15 +237,15 @@ func (q *Queue) processMain() error {
 func (q *Queue) processWorker(w workerIO) {
 	var err error
 	for err == nil {
-		job, ok := <-w.job
+		id, ok := <-w.job
 		if !ok {
 			break
 		}
 
 		// Job was collected active, but delivered here with some delay,
 		// so make sure it's still relevant.
-		err = q.db.FindByPrimaryKeyTo(job, job.ID)
-		if err != nil {
+		var job data.Job
+		if err = q.db.FindByPrimaryKeyTo(&job, id); err != nil {
 			break
 		}
 		if job.Status != data.JobActive {
@@ -252,9 +258,34 @@ func (q *Queue) processWorker(w workerIO) {
 			break
 		}
 
-		q.processJob(job, handler)
+		q.processJob(&job, handler)
 
-		err = q.db.Save(job)
+		// If job was cancelled while running a handler make sure it
+		// won't be retried.
+		if job.Status == data.JobActive {
+			tx, err := q.db.Begin()
+			if err != nil {
+				break
+			}
+
+			var tmp data.Job
+			err = tx.SelectOneTo(&tmp,
+				"WHERE id = $1 FOR UPDATE", job.ID)
+			if err != nil {
+				tx.Rollback()
+				break
+			}
+
+			if tmp.Status == data.JobCanceled {
+				job.Status = data.JobCanceled
+			}
+
+			if err := tx.Commit(); err != nil {
+				break
+			}
+		}
+
+		err = q.db.Save(&job)
 	}
 
 	if err != nil {

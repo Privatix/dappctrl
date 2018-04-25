@@ -15,6 +15,8 @@ CREATE TYPE unit_type AS ENUM ('units','seconds');
 -- Contract types.
 CREATE TYPE contract_type AS ENUM ('ptc','psc');
 
+-- Client identification types.
+CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
@@ -82,18 +84,18 @@ CREATE TYPE job_status AS ENUM (
 );
 
 -- Job related object types.
-DROP TYPE IF EXISTS related_type CASCADE;
 CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
     'endpoint' -- service endpoint
 );
 
-DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
-    description text
+    description text, -- extended description
+    name varchar(30) NOT NULL -- display name
+      CONSTRAINT unique_setting_name UNIQUE
 );
 
 -- Accounts are ethereum accounts.
@@ -104,7 +106,15 @@ CREATE TABLE accounts (
     public_key text NOT NULL,
     private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
-    in_use boolean NOT NULL DEFAULT TRUE -- this account is in use or not
+    in_use boolean NOT NULL DEFAULT TRUE, -- this account is in use or not
+    name varchar(30) NOT NULL -- display name
+        CONSTRAINT unique_account_name UNIQUE,
+    ptc_balance bigint NOT NULL -- PTC balance
+        CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
+    psc_balance bigint NOT NULL -- PSC balance
+        CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
+    eth_balance char(32) NOT NULL, -- ethereum balance up to 99999 ETH in WEI. Ethereum's uint192 in base64 (RFC-4648).
+    last_balance_check timestamp with time zone -- time when balance was checked
 );
 
 -- Users are external party in distributed trade.
@@ -131,7 +141,10 @@ CREATE TABLE products (
     -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
     usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
-    is_server boolean NOT NULL -- product is defined as server (Agent) or client (Client)
+    is_server boolean NOT NULL, -- product is defined as server (Agent) or client (Client)
+    salt bigint NOT NULL, -- password salt
+    password sha3_256 NOT NULL,
+    client_ident client_ident_type NOT NULL
 );
 
 -- Service offerings.
@@ -177,7 +190,6 @@ CREATE TABLE offerings (
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
-    nonce uuid NOT NULL, -- random number to get different hash, with same parameters
     additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
 
@@ -218,10 +230,6 @@ CREATE TABLE sessions (
         CONSTRAINT positive_seconds_consumed CHECK (sessions.seconds_consumed >= 0),
 
     last_usage_time timestamp with time zone NOT NULL, -- time of last usage reported
-    server_ip inet,
-    server_port int
-        CONSTRAINT server_port_ct CHECK (sessions.server_port > 0 AND sessions.server_port <= 65535),
-
     client_ip inet,
     client_port int
         CONSTRAINT client_port_ct CHECK (sessions.client_port > 0 AND sessions.client_port <= 65535)
@@ -245,8 +253,7 @@ CREATE TABLE endpoints (
     status msg_status NOT NULL, -- message status
     signature text NOT NULL, -- agent's signature
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
-    dns varchar(100),
-    ip_addr inet,
+    service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
     username varchar(100),
     password varchar(48),
     additional_params json -- all additional parameters stored as JSON

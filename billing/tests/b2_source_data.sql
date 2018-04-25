@@ -14,14 +14,15 @@ VALUES
     );
 INSERT INTO products (
     id, name, offer_tpl_id, offer_access_id,
-    usage_rep_type, is_server
+    usage_rep_type, is_server, salt, password, client_ident
 )
 VALUES
     (
         '00000000-0000-0000-0000-000000000000',
         'product', '00000000-0000-0000-0000-000000000000',
         '00000000-0000-0000-0000-000000000000',
-        'total', TRUE
+        'total', TRUE, 0, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=',
+        'by_channel_id'
     );
 INSERT INTO offerings (
     id, is_local, tpl, product, hash, status,
@@ -32,7 +33,7 @@ INSERT INTO offerings (
     min_units, max_unit, billing_interval,
     max_billing_unit_lag, max_suspended_time,
     max_inactive_time_sec, free_units,
-    nonce, additional_params
+    additional_params
 )
 VALUES
     (
@@ -45,7 +46,7 @@ VALUES
         '0000000000000000000000000001',
         'test service', 'test description',
         'UA', 10, '1', 'units', 'postpaid',
-        100, 1, 10, 900, 10, 10, 10, 10, 0, '00000000-0000-0000-0000-000000000000',
+        100, 1, 10, 900, 10, 10, 10, 10, 0,
         '{}'
     );
 TRUNCATE TABLE channels CASCADE;
@@ -78,38 +79,32 @@ VALUES
 INSERT INTO sessions (
     id, channel, started, stopped, units_used,
     seconds_consumed, last_usage_time,
-    server_ip, server_port, client_ip,
-    client_port
+    client_ip, client_port
 )
 VALUES
     (
         '00000000-0000-0000-0000-000000000001',
         '00000000-0000-0000-0000-000000000001',
-        now(), now(), 300, 300, now(), '0.0.0.0',
-        '3000', '0.0.0.0', '3000'
+        now(), now(), 300, 300, now(), '0.0.0.0', '3000'
     ),
     (
         '00000000-0000-0000-0000-000000000002',
         '00000000-0000-0000-0000-000000000001',
-        now(), now(), 300, 300, now(), '0.0.0.0',
-        '3000', '0.0.0.0', '3000'
+        now(), now(), 300, 300, now(), '0.0.0.0', '3000'
     ),
     (
         '00000000-0000-0000-0000-000000000003',
         '00000000-0000-0000-0000-000000000001',
-        now(), now(), 300, 300, now(), '0.0.0.0',
-        '3000', '0.0.0.0', '3000'
+        now(), now(), 300, 300, now(), '0.0.0.0', '3000'
     ),
     (
         '00000000-0000-0000-0000-000000000004',
         '00000000-0000-0000-0000-000000000002',
-        now(), now(), 300, 300, now(), '0.0.0.0',
-        '3000', '0.0.0.0', '3000'
+        now(), now(), 300, 300, now(), '0.0.0.0', '3000'
     ),
     (
         '00000000-0000-0000-0000-000000000005',
         '00000000-0000-0000-0000-000000000002',
-        now(), now(), 300, 300, now(), '0.0.0.0',
-        '3000', '0.0.0.0', '3000'
+        now(), now(), 300, 300, now(), '0.0.0.0', '3000'
     );
 END transaction;

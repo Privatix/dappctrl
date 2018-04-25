@@ -1,4 +1,4 @@
-package lib
+package eth
 
 // This module provides low-level methods for accessing ethereum logs.
 // For detailed API description, please refer to:
@@ -35,7 +35,6 @@ type LogsAPIResponse struct {
 //
 // Tests: logs_test/TestNormalLogsFetching
 // Tests: logs_test/TestNegativeLogsFetching
-// Tests: logs_test/TestLogsFetchingWithBrokenNetwork
 func (e *EthereumClient) GetLogs(contractAddress string, topics []string, fromBlock, toBlock string) (*LogsAPIResponse, error) {
 	if contractAddress == "" {
 		return nil, errors.New("contract address is required")
@@ -46,14 +45,14 @@ func (e *EthereumClient) GetLogs(contractAddress string, topics []string, fromBl
 	}
 
 	if toBlock == "" {
-		toBlock = "latest"
+		toBlock = BlockLatest
 	}
 
 	// Note: topics are not checked for emptiness,
 	// because empty topics are allowed by the geth-API:
 	// in this case all events of the contract would be returned.
 	for _, topic := range topics {
-		const kTopicLength = 2 + 64  // "0x" + 64 symbols (256 bits in hex).
+		const kTopicLength = 2 + 64 // "0x" + 64 symbols (256 bits in hex).
 		if len(topic) != kTopicLength {
 			return nil, errors.New("invalid topic occurred: " + topic)
 		}

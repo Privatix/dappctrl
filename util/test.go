@@ -32,8 +32,11 @@ func NewTestLogger(conf *LogConfig) *Logger {
 
 // ExpectResult compares two errors and fails a test if they don't match.
 func ExpectResult(t *testing.T, op string, expected, actual error) {
-	if expected != actual {
-		t.Fatalf("unexpected '%s' result: expected %v, returned %v",
-			op, expected, actual)
+	sameContent := expected != nil && actual != nil &&
+		expected.Error() == actual.Error()
+
+	if expected != actual && !sameContent {
+		t.Fatalf("unexpected '%s' result: expected '%v', returned "+
+			"'%v' (%s)", op, expected, actual, Caller())
 	}
 }

@@ -5,44 +5,39 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
 )
 
 func validProductPayload(tplOffer, tplAccess string) data.Product {
-	return data.Product{
-		Name:          "test-product",
-		OfferTplID:    &tplOffer,
-		OfferAccessID: &tplOffer,
-		UsageRepType:  data.ProductUsageIncremental,
-	}
+	prod := data.NewTestProduct()
+	prod.OfferTplID = &tplOffer
+	prod.OfferAccessID = &tplOffer
+	return *prod
 }
 
-func sendProductPayload(m string, pld *data.Product) *httptest.ResponseRecorder {
-	return sendPayload(m, productsPath, pld, testServer.handleProducts)
+func sendProductPayload(t *testing.T, m string, pld *data.Product) *http.Response {
+	return sendPayload(t, m, productsPath, pld)
 }
 
-func postProduct(payload *data.Product) *httptest.ResponseRecorder {
-	return sendProductPayload("POST", payload)
+func postProduct(t *testing.T, payload *data.Product) *http.Response {
+	return sendProductPayload(t, http.MethodPost, payload)
 }
 
-func putProduct(payload *data.Product) *httptest.ResponseRecorder {
-	return sendProductPayload("PUT", payload)
+func putProduct(t *testing.T, payload *data.Product) *http.Response {
+	return sendProductPayload(t, http.MethodPut, payload)
 }
 
 func TestPostProductSuccess(t *testing.T) {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	deleteItems := insertItems(tplOffer, tplAccess)
-	defer deleteItems()
+	insertItems(t, tplOffer, tplAccess)
 	payload := validProductPayload(tplOffer.ID, tplAccess.ID)
-	res := postProduct(&payload)
-	if res.Code != http.StatusCreated {
-		t.Fatalf("failed to post product: %d", res.Code)
+	res := postProduct(t, &payload)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("failed to post product: %d", res.StatusCode)
 	}
 	reply := &replyEntity{}
 	json.NewDecoder(res.Body).Decode(reply)
@@ -50,14 +45,12 @@ func TestPostProductSuccess(t *testing.T) {
 	if err := testServer.db.FindByPrimaryKeyTo(product, reply.ID); err != nil {
 		t.Fatal("failed to get product: ", err)
 	}
-	testServer.db.Delete(product)
 }
 
 func TestPostProductValidation(t *testing.T) {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	deleteItems := insertItems(tplOffer, tplAccess)
-	defer deleteItems()
+	insertItems(t, tplOffer, tplAccess)
 	validPld := validProductPayload(tplOffer.ID, tplAccess.ID)
 
 	noOfferingTemplate := validPld
@@ -78,9 +71,9 @@ func TestPostProductValidation(t *testing.T) {
 		noUsageRepType,
 		invalidUsageRepType,
 	} {
-		res := postProduct(&payload)
-		if res.Code != http.StatusBadRequest {
-			t.Error("failed validation: ", res.Code)
+		res := postProduct(t, &payload)
+		if res.StatusCode != http.StatusBadRequest {
+			t.Error("failed validation: ", res.StatusCode)
 		}
 	}
 }
@@ -91,28 +84,24 @@ type productTestData struct {
 	Product   *data.Product
 }
 
-func createProductTestData() (*productTestData, func()) {
+func createProductTestData(t *testing.T) *productTestData {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
-	product := &data.Product{
-		ID:            util.NewUUID(),
-		Name:          "foo",
-		OfferTplID:    &tplOffer.ID,
-		OfferAccessID: &tplAccess.ID,
-		UsageRepType:  data.ProductUsageTotal,
-	}
-	deleteItems := insertItems(tplOffer, tplAccess, product)
-	return &productTestData{tplOffer, tplAccess, product}, deleteItems
+	prod := data.NewTestProduct()
+	prod.OfferTplID = &tplOffer.ID
+	prod.OfferAccessID = &tplAccess.ID
+	insertItems(t, tplOffer, tplAccess, prod)
+	return &productTestData{tplOffer, tplAccess, prod}
 }
 
 func TestPutProduct(t *testing.T) {
-	testData, deleteItems := createProductTestData()
-	defer deleteItems()
+	defer cleanDB(t)
+	testData := createProductTestData(t)
 	payload := validProductPayload(testData.TplOffer.ID, testData.TplAccess.ID)
 	payload.ID = testData.Product.ID
-	res := putProduct(&payload)
-	if res.Code != http.StatusOK {
-		t.Fatalf("failed to put product: %d", res.Code)
+	res := putProduct(t, &payload)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("failed to put product: %d", res.StatusCode)
 	}
 	reply := &replyEntity{}
 	json.NewDecoder(res.Body).Decode(reply)
@@ -124,21 +113,20 @@ func TestPutProduct(t *testing.T) {
 	}
 }
 
-func getProducts() *httptest.ResponseRecorder {
-	return getResources(productsPath, nil, testServer.handleProducts)
+func getProducts(t *testing.T) *http.Response {
+	return getResources(t, productsPath, nil)
 }
 
 func testGetProducts(t *testing.T, exp int) {
-	res := getProducts()
+	res := getProducts(t)
 	testGetResources(t, res, exp)
 }
 
 func TestGetProducts(t *testing.T) {
-	testServer.db.DeleteFrom(data.ProductTable, "")
+	defer cleanDB(t)
 	// Get empty list.
 	testGetProducts(t, 0)
 	// Get all products.
-	_, deleteItems := createProductTestData()
-	defer deleteItems()
+	createProductTestData(t)
 	testGetProducts(t, 1)
 }

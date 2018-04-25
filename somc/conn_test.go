@@ -20,12 +20,12 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type somcTestConfig struct {
+type testConfig struct {
 	ServerStartupDelay uint // In milliseconds.
 }
 
-func newSOMCTestConfig() *somcTestConfig {
-	return &somcTestConfig{
+func newTestConfig() *testConfig {
+	return &testConfig{
 		ServerStartupDelay: 10,
 	}
 }
@@ -33,7 +33,7 @@ func newSOMCTestConfig() *somcTestConfig {
 var conf struct {
 	Log      *util.LogConfig
 	SOMC     *Config
-	SOMCTest *somcTestConfig
+	SOMCTest *testConfig
 }
 
 var logger *util.Logger
@@ -302,7 +302,7 @@ func TestWaitForEndpoint(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.Log = util.NewLogConfig()
 	conf.SOMC = NewConfig()
-	conf.SOMCTest = newSOMCTestConfig()
+	conf.SOMCTest = newTestConfig()
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)

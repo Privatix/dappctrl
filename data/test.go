@@ -6,7 +6,9 @@ import (
 	"crypto/ecdsa"
 	cryptorand "crypto/rand"
 	"log"
+	"math/big"
 	"math/rand"
+	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -60,8 +62,19 @@ func NewTestAccount() *Account {
 		PrivateKey: FromBytes(b),
 		IsDefault:  true,
 		InUse:      true,
+		Name:       util.NewUUID()[:30],
+		PTCBalance: 0,
+		PSCBalance: 0,
+		EthBalance: FromBytes(big.NewInt(1).Bytes()),
 	}
 }
+
+// Test authentication constants.
+const (
+	TestPassword     = "secret"
+	TestPasswordHash = "7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg="
+	TestSalt         = 6012867121110302348
+)
 
 // NewTestProduct returns new product.
 func NewTestProduct() *Product {
@@ -69,6 +82,9 @@ func NewTestProduct() *Product {
 		ID:           util.NewUUID(),
 		Name:         "Test product",
 		UsageRepType: ProductUsageTotal,
+		Salt:         TestSalt,
+		Password:     TestPasswordHash,
+		ClientIdent:  ClientIdentByChannelID,
 	}
 }
 
@@ -95,7 +111,6 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		UnitType:           UnitSeconds,
 		BillingType:        BillingPostpaid,
 		BillingInterval:    100,
-		Nonce:              util.NewUUID(),
 		AdditionalParams:   []byte("{}"),
 		SetupPrice:         11,
 		UnitPrice:          22,
@@ -115,6 +130,8 @@ func NewTestChannel(agent, client, offering string,
 		ServiceStatus:  ServiceActive,
 		TotalDeposit:   deposit,
 		ReceiptBalance: balance,
+		Salt:           TestSalt,
+		Password:       TestPasswordHash,
 	}
 }
 
@@ -136,4 +153,74 @@ func NewTestSession(chanID string) *Session {
 		Channel: chanID,
 		Started: time.Now(),
 	}
+}
+
+// BeginTestTX begins a test transaction.
+func BeginTestTX(t *testing.T, db *reform.DB) *reform.TX {
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("failed to begin transaction: %s", err)
+	}
+	return tx
+}
+
+// CommitTestTX commits a test transaction.
+func CommitTestTX(t *testing.T, tx *reform.TX) {
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("failed to commit transaction: %s", err)
+	}
+}
+
+// RollbackTestTX rollbacks a test transaction.
+func RollbackTestTX(t *testing.T, tx *reform.TX) {
+	if err := tx.Rollback(); err != nil {
+		t.Fatalf("failed to rollback transaction: %s", err)
+	}
+}
+
+// InsertToTestDB inserts rows to test DB.
+func InsertToTestDB(t *testing.T, db *reform.DB, rows ...reform.Struct) {
+	tx := BeginTestTX(t, db)
+	for _, v := range rows {
+		if err := tx.Insert(v); err != nil {
+			RollbackTestTX(t, tx)
+			t.Fatalf("failed to insert %T: %s", v, err)
+		}
+	}
+	CommitTestTX(t, tx)
+}
+
+// SaveToTestDB saves records to test DB.
+func SaveToTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	tx := BeginTestTX(t, db)
+	for _, v := range recs {
+		if err := tx.Save(v); err != nil {
+			RollbackTestTX(t, tx)
+			t.Fatalf("failed to save %T: %s", v, err)
+		}
+	}
+	CommitTestTX(t, tx)
+}
+
+// ReloadFromTestDB reloads records from test DB.
+func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	for _, v := range recs {
+		if err := db.Reload(v); err != nil {
+			t.Fatalf("failed to reload %T: %s", v, err)
+		}
+	}
+}
+
+// CleanTestDB deletes all records from all test DB tables.
+func CleanTestDB(t *testing.T, db *reform.DB) {
+	tx := BeginTestTX(t, db)
+	for _, v := range []reform.View{JobTable, EndpointTable, SessionTable,
+		ChannelTable, OfferingTable, UserTable, AccountTable,
+		ProductTable, TemplateTable, ContractTable, SettingTable} {
+		if _, err := tx.DeleteFrom(v, ""); err != nil {
+			RollbackTestTX(t, tx)
+			t.Fatalf("failed to clean DB: %s", err)
+		}
+	}
+	CommitTestTX(t, tx)
 }

@@ -14,14 +14,16 @@ VALUES
     );
 INSERT INTO products (
     id, name, offer_tpl_id, offer_access_id,
-    usage_rep_type, is_server
+    usage_rep_type, is_server, salt, password,
+    client_ident
 )
 VALUES
     (
         '00000000-0000-0000-0000-000000000000',
         'product', '00000000-0000-0000-0000-000000000000',
         '00000000-0000-0000-0000-000000000000',
-        'total', TRUE
+        'total', TRUE, 0, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=',
+        'by_channel_id'
     );
 INSERT INTO offerings (
     id, is_local, tpl, product, hash, status,
@@ -32,7 +34,7 @@ INSERT INTO offerings (
     min_units, max_unit, billing_interval,
     max_billing_unit_lag, max_suspended_time,
     max_inactive_time_sec, free_units,
-    nonce, additional_params
+    additional_params
 )
 VALUES
     (
@@ -45,7 +47,7 @@ VALUES
         '0000000000000000000000000001',
         'test service', 'test description',
         'UA', 10, '1', 'units', 'postpaid',
-        100, 1, 10, 900, 10, 100, 90, 10, 0, '00000000-0000-0000-0000-000000000000',
+        100, 1, 10, 900, 10, 100, 90, 10, 0,
         '{}'
     );
 TRUNCATE TABLE channels CASCADE;

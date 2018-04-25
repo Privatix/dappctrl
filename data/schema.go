@@ -1,18 +1,25 @@
 package data
 
-import "time"
+import (
+	"time"
+)
 
 //go:generate reform
 
 // Account is an ethereum account.
 //reform:accounts
 type Account struct {
-	ID         string `json:"id" reform:"id,pk"`
-	EthAddr    string `json:"ethAddr" reform:"eth_addr"`
-	PublicKey  string `json:"publicKey" reform:"public_key"`
-	PrivateKey string `json:"privateKey" reform:"private_key"`
-	IsDefault  bool   `json:"isDefault" reform:"is_default"`
-	InUse      bool   `json:"inUse" reform:"in_use"`
+	ID               string     `json:"id" reform:"id,pk"`
+	EthAddr          string     `json:"ethAddr" reform:"eth_addr"`
+	PublicKey        string     `json:"publicKey" reform:"public_key"`
+	PrivateKey       string     `json:"-" reform:"private_key"`
+	IsDefault        bool       `json:"isDefault" reform:"is_default"`
+	InUse            bool       `json:"inUse" reform:"in_use"`
+	Name             string     `json:"name" reform:"name"`
+	PTCBalance       uint64     `json:"ptcBalance" reform:"ptc_balance"`
+	PSCBalance       uint64     `json:"psc_balance" reform:"psc_balance"`
+	EthBalance       string     `json:"ethBalance" reform:"eth_balance"`
+	LastBalanceCheck *time.Time `json:"lastBalanceCheck" reform:"last_balance_check"`
 }
 
 // User is party in distributed trade.
@@ -46,6 +53,11 @@ const (
 	ProductUsageTotal       = "total"
 )
 
+// Product authentication types.
+const (
+	ClientIdentByChannelID = "by_channel_id"
+)
+
 // Product stores billing and action related settings.
 //reform:products
 type Product struct {
@@ -55,6 +67,9 @@ type Product struct {
 	OfferAccessID *string `json:"offerAccessID" reform:"offer_access_id"`
 	UsageRepType  string  `json:"usageRepType" reform:"usage_rep_type"`
 	IsServer      bool    `json:"isServer" reform:"is_server"`
+	Salt          uint64  `json:"-" reform:"salt"`
+	Password      string  `json:"-" reform:"password"`
+	ClientIdent   string  `json:"clientIdent" reform:"client_ident"`
 }
 
 // Unit used for billing calculation.
@@ -113,7 +128,6 @@ type Offering struct {
 	MaxSuspendTime     uint    `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
 	MaxInactiveTimeSec *uint64 `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
 	FreeUnits          uint8   `json:"freeUnits" reform:"free_units"`
-	Nonce              string  `json:"nonce" reform:"nonce"`
 	AdditionalParams   []byte  `json:"additionalParams" reform:"additional_params" validate:"required"`
 }
 
@@ -167,10 +181,8 @@ type Session struct {
 	UnitsUsed       uint64     `json:"unitsUsed" reform:"units_used"`
 	SecondsConsumed uint64     `json:"secondsConsumed" reform:"seconds_consumed"`
 	LastUsageTime   time.Time  `json:"lastUsageTime" reform:"last_usage_time"`
-	ServerIP        *string    `json:"serverIP" reform:"server_ip"`
-	ServerPort      *int16     `json:"serverPort" reform:"server_port"`
 	ClientIP        *string    `json:"clientIP" reform:"client_ip"`
-	ClientPort      *int16     `json:"clientPort" reform:"client_port"`
+	ClientPort      *uint16    `json:"clientPort" reform:"client_port"`
 }
 
 // Contract types.
@@ -195,6 +207,7 @@ type Setting struct {
 	Key         string  `json:"key" reform:"key,pk"`
 	Value       string  `json:"value" reform:"value"`
 	Description *string `json:"description" reform:"description"`
+	Name        string  `json:"name" reform:"name"`
 }
 
 // Endpoint messages is info about service access.
@@ -207,8 +220,7 @@ type Endpoint struct {
 	Status                 string  `json:"status" reform:"status"`
 	Signature              string  `json:"signature" reform:"signature"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
-	DNS                    *string `json:"dns" reform:"dns"`
-	IPAddress              *string `json:"ipAddress" reform:"ip_addr"`
+	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 	Username               *string `json:"-" reform:"username"`
 	Password               *string `json:"-" reform:"password"`
 	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`

@@ -2,7 +2,11 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/maintainability)](https://codeclimate.com/github/Privatix/dappctrl/maintainability)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_shield)
 
+[develop](https://github.com/Privatix/dappctrl/tree/develop):
+<img align="center" src="https://ci.privatix.net/plugins/servlet/wittified/build-status/PC-ICT0">
+
 # Privatix Controller.
+
 Privatix Controller is a core of Agent and Client functionality.
 
 # Getting Started
@@ -11,10 +15,13 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Prerequisites
 
-Install prerequisite software:
-* Install Golang if it's not installed. Make sure that `$HOME/go/bin` is added
-to `$PATH`.
-* Install [PostgreSQL](https://www.postgresql.org/download/) if it's not installed.
+Install prerequisite software if it's not installed.
+
+* Install [Golang](https://golang.org/doc/install). Make sure that `$HOME/go/bin` (default `GOPATH`) is added to system path `$PATH`.
+
+* Install [PostgreSQL](https://www.postgresql.org/download/).
+
+* Install [gcc](https://gcc.gnu.org/install/).
 
 ## Installation steps
 
@@ -48,53 +55,71 @@ psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
 Make a copy of `dappctrl.config.json`:
+
 ```bash
 cp dappctrl.config.json dappctrl.config.local.json
 ```
+
 Modify `dappctrl.config.local.json` if you need non-default configuration and run:
 
 ```bash
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build OpenVPN session trigger:
+Build `OpenVPN` session trigger:
 
 ```bash
 go install $DAPPCTRL/tool/dapptrig
 ```
 
 ## Using docker
-We have prepared two images and a compose file to make it easier to run app and its dependencies.
-There are 3 services in compose file:
-  1. db — uses public postgres image
-  2. vpn — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
-  3. dappctrl — image `privatix/dappctrl` is a main controller app
 
-If you want to develop dappctrl then it is convenient to run its dependencies using docker, but controller itself at your host machine:
+We have prepared two images and a compose file to make it easier to run app and its dependencies.
+
+There are 3 services in compose file:
+
+1. `db` — uses public `postgres` image
+1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
+1. `dappctrl` — image `privatix/dappctrl` is a main controller app
+
+If you want to develop `dappctrl` then it is convenient to run its dependencies using `docker`, but controller itself at your host machine:
+
 ```
 docker-compose up vpn db
 ```
-If your app is using dappctrl or you are not planning to develop controller run
+
+If your app is using `dappctrl` or you are not planning to develop controller run
+
 ```
 docker-compose up
 ```
 
 # Tests
 
-## Preparing the tests environment
+## Preparing the test environment
 
-Make a copy of `dappctrl-test.config.json` file:
+1. Set variables for your test environment, e.g.:
 
-```bash
-cp dappctrl-test.config.json  dappctrl-test.config.local.json
-```
+    ```bash
+    CONF_FILE=$DAPPCTRL_DIR/dappctrl-test.config.json
+    LOCAL_CONF_FILE=$HOME/dappctrl-test.config.json
+    DB_IP=10.16.194.21
+    STRESS_JOBS=1000
+    ```
 
-Modify `dappctrl-test.config.local.json` if you need non-default configuration.
+2. Generate locally a configuration file using these variables, e.g.:
+
+    ```bash
+    jq ".DB.Conn.host=\"$DB_IP\" | .JobTest.StressJobs=$STRESS_JOBS" $CONF_FILE > $LOCAL_CONF_FILE
+    ```
+
+    **Note**: See `jq` [manual](https://stedolan.github.io/jq/manual) for
+    syntax details.
 
 ## Running the tests
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.local.json
+go test $DAPPCTRL/... -p=1 -config=$LOCAL_CONF_FILE
 ```
 
 ## Excluding specific tests from test run
@@ -108,7 +133,7 @@ VPN monitor tests.
 Example of a test run with the tags above:
 
 ```bash
-go test $DAPPCTRL/... -config=$DAPPCTRL_DIR/dappctrl-test.config.json -tags=noethtest,novpnmontest
+go test $DAPPCTRL/... -p=1 -tags="noethtest nojobtest" -config=$LOCAL_CONF_FILE
 ```
 
 # Contributing
@@ -117,7 +142,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/Privatix/dapp-somc/tags).
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/Privatix/dappctrl/tags).
 
 ## Authors
 
@@ -125,7 +150,7 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 * [HaySayCheese](https://github.com/HaySayCheese)
 * [furkhat](https://github.com/furkhat)
 
-See also the list of [contributors](https://github.com/Privatix/dapp-somc/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/Privatix/dappctrl/contributors) who participated in this project.
 
 # License
 

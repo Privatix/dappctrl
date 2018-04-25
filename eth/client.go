@@ -1,4 +1,4 @@
-package lib
+package eth
 
 // Implements client for ethereum network.
 //
@@ -6,7 +6,7 @@ package lib
 // https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
 //
 // Note:
-// "abigen" is available in contract/tools, no need for building it itself.
+// "abigen_linux" is available in contract/tools, no need for building it itself.
 //
 // For details about events (logs in EthereumConf terminology) fetching:
 // https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html
@@ -21,11 +21,10 @@ import (
 	"time"
 )
 
-// Implementation of client logic for the ethereum geth node.
+// EthereumClient implementation of client logic for the ethereum geth node.
 // Uses JSON RPC API of geth for communication with remote node.
 type EthereumClient struct {
-	Host string
-	Port uint16
+	GethURL string
 
 	client    http.Client
 	requestID uint64
@@ -33,10 +32,9 @@ type EthereumClient struct {
 
 // NewEthereumClient creates and returns instance of client for remote ethereum node,
 // that is available via specified host and port.
-func NewEthereumClient(host string, port uint16) *EthereumClient {
+func NewEthereumClient(gethURL string) *EthereumClient {
 	return &EthereumClient{
-		Host: host,
-		Port: port,
+		GethURL: gethURL,
 
 		// By default, standard http-client does not uses any timeout for its operations.
 		// But, there is non zero probability, that remote geth-node would hang for a long time.
@@ -47,10 +45,10 @@ func NewEthereumClient(host string, port uint16) *EthereumClient {
 	}
 }
 
-// Base geth API response.
+// apiResponse is a base geth API response.
 type apiResponse struct {
 	ID      uint64 `json:"id"`
-	JsonRPC string `json:"jsonrpc"`
+	JSONRPC string `json:"jsonrpc"`
 
 	// All responses also contain "result" field,
 	// but from method to method it might have various different types,
@@ -67,7 +65,7 @@ type apiResponse struct {
 // for example, GetBlockNumber(), or GetLogs().
 func (e *EthereumClient) fetch(method, params string, result interface{}) error {
 	body := fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[%s]}`, method, params)
-	httpResponse, err := e.client.Post(e.providerURL(), "application/json", strings.NewReader(body))
+	httpResponse, err := e.client.Post(e.GethURL, "application/json", strings.NewReader(body))
 	if err != nil {
 		return errors.New("can't do API call: " + err.Error())
 	}
@@ -90,10 +88,4 @@ func (e *EthereumClient) fetch(method, params string, result interface{}) error 
 	}
 
 	return nil
-}
-
-// providerURL concatenates client host and port into http url,
-// that might be used for connecting to the remote node via JSON RPC.
-func (e *EthereumClient) providerURL() string {
-	return "http://" + e.Host + ":" + fmt.Sprint(e.Port)
 }

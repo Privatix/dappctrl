@@ -15,7 +15,6 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 		}
 		if r.Method == "PUT" {
 			s.handlePutChannelStatus(w, r, id)
-			return
 		}
 	} else {
 		if r.Method == "GET" {
@@ -37,12 +36,17 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 // handleGetChannelStatus replies with channels status by id.
 func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
 	channel := &data.Channel{}
-	if !s.findByID(w, channel, id) {
+	if !s.findTo(w, channel, id) {
 		return
 	}
 	s.replyStatus(w, channel.ChannelStatus)
 }
 
 func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+	payload := &ActionPayload{}
+	if !s.parsePayload(w, r, payload) {
+		return
+	}
+	s.logger.Info("action ( %v )  request for channel with id: %v recieved.", payload.Action, id)
 	// TODO once job queue implemented.
 }

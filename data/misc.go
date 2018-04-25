@@ -2,10 +2,12 @@ package data
 
 import (
 	"encoding/base64"
+	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/sha3"
 )
 
 // ToBytes returns the bytes represented by the base64 string s.
@@ -16,6 +18,12 @@ func ToBytes(s string) ([]byte, error) {
 // FromBytes returns the base64 encoding of src.
 func FromBytes(src []byte) string {
 	return base64.URLEncoding.EncodeToString(src)
+}
+
+// EncryptPrivateKey is a stub for key encryption.
+func EncryptPrivateKey(pk, passphrase []byte) []byte {
+	// TODO: implement this.
+	return pk
 }
 
 // DecryptPrivateKey is a stub for key decryption.
@@ -48,6 +56,7 @@ func OfferingHash(offering *Offering) []byte {
 		maxUnit = *offering.MaxUnit
 	}
 	return crypto.Keccak256(
+		[]byte(offering.ID),
 		offering.AdditionalParams,
 		[]byte(offering.Agent),
 		big.NewInt(int64(offering.BillingInterval)).Bytes(),
@@ -59,7 +68,6 @@ func OfferingHash(offering *Offering) []byte {
 		big.NewInt(int64(offering.MaxSuspendTime)).Bytes(),
 		big.NewInt(int64(maxUnit)).Bytes(),
 		big.NewInt(int64(offering.MinUnits)).Bytes(),
-		[]byte(offering.Nonce),
 		[]byte(offering.Product),
 		[]byte(offering.ServiceName),
 		big.NewInt(int64(offering.SetupPrice)).Bytes(),
@@ -68,4 +76,10 @@ func OfferingHash(offering *Offering) []byte {
 		[]byte(offering.UnitName),
 		big.NewInt(int64(offering.UnitPrice)).Bytes(),
 	)
+}
+
+// ValidatePassword checks if a given password, hash and salt are matching.
+func ValidatePassword(password, hash string, salt uint64) bool {
+	h := sha3.Sum256([]byte(password + fmt.Sprint(salt)))
+	return base64.URLEncoding.EncodeToString(h[:]) == hash
 }

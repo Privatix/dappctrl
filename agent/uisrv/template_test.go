@@ -5,23 +5,18 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
 
-func deleteAllTemplates() {
-	testServer.db.DeleteFrom(data.TemplateTable, "")
-}
-
-func postTemplate(t *data.Template) *httptest.ResponseRecorder {
-	return sendPayload("POST", templatePath, t, testServer.handleTempaltes)
+func postTemplate(t *testing.T, tpl *data.Template) *http.Response {
+	return sendPayload(t, http.MethodPost, templatePath, tpl)
 }
 
 func TestPostTemplateValidation(t *testing.T) {
-	defer deleteAllTemplates()
+	defer cleanDB(t)
 	for _, testcase := range []struct {
 		Payload *data.Template
 		Code    int
@@ -48,16 +43,16 @@ func TestPostTemplateValidation(t *testing.T) {
 			Code: http.StatusBadRequest,
 		},
 	} {
-		res := postTemplate(testcase.Payload)
-		if testcase.Code != res.Code {
-			t.Errorf("unexpected reply code: %d", res.Code)
+		res := postTemplate(t, testcase.Payload)
+		if testcase.Code != res.StatusCode {
+			t.Errorf("unexpected reply code: %d", res.StatusCode)
 			t.Logf("%+v", *testcase.Payload)
 		}
 	}
 }
 
 func TestPostTemplateSuccess(t *testing.T) {
-	defer deleteAllTemplates()
+	defer cleanDB(t)
 	for _, payload := range []data.Template{
 		{
 			Kind: data.TemplateOffer,
@@ -68,9 +63,9 @@ func TestPostTemplateSuccess(t *testing.T) {
 			Raw:  []byte("{}"),
 		},
 	} {
-		res := postTemplate(&payload)
-		if res.Code != http.StatusCreated {
-			t.Errorf("failed to create, response: %d", res.Code)
+		res := postTemplate(t, &payload)
+		if res.StatusCode != http.StatusCreated {
+			t.Errorf("failed to create, response: %d", res.StatusCode)
 		}
 		reply := &replyEntity{}
 		json.NewDecoder(res.Body).Decode(reply)
@@ -81,18 +76,19 @@ func TestPostTemplateSuccess(t *testing.T) {
 	}
 }
 
-func getTemplates(tplType, id string) *httptest.ResponseRecorder {
-	return getResources(templatePath,
-		map[string]string{"type": tplType, "id": id},
-		testServer.handleTempaltes)
+func getTemplates(t *testing.T, tplType, id string) *http.Response {
+	return getResources(t, templatePath,
+		map[string]string{"type": tplType, "id": id})
 }
 
 func testGetTemplates(t *testing.T, tplType, id string, exp int) {
-	res := getTemplates(tplType, id)
+	res := getTemplates(t, tplType, id)
 	testGetResources(t, res, exp)
 }
 
 func TestGetTemplate(t *testing.T) {
+	defer cleanDB(t)
+
 	// Get zerro templates.
 	testGetTemplates(t, "", "", 0)
 
@@ -114,8 +110,7 @@ func TestGetTemplate(t *testing.T) {
 			Raw:  []byte("{}"),
 		},
 	}
-	insertItems(records[0], records[1], records[2])
-	defer deleteAllTemplates()
+	insertItems(t, records[0], records[1], records[2])
 
 	// Get all templates.
 	testGetTemplates(t, "", "", len(records))

@@ -191,13 +191,12 @@ func TestPutOfferingSuccess(t *testing.T) {
 	testOfferingReply(t, offering)
 }
 
-func getOfferings(t *testing.T, id string) *http.Response {
-	return getResources(t, offeringsPath,
-		map[string]string{"id": id})
-}
-
-func testGetOfferings(t *testing.T, id string, exp int) {
-	res := getOfferings(t, id)
+func testGetOfferings(t *testing.T, id, product, status string, exp int) {
+	res := getResources(t, offeringsPath,
+		map[string]string{
+			"id":          id,
+			"product":     product,
+			"offerStatus": status})
 	testGetResources(t, res, exp)
 }
 
@@ -206,18 +205,27 @@ func TestGetOffering(t *testing.T) {
 
 	createOfferingFixtures(t)
 	// Get empty list.
-	testGetOfferings(t, "", 0)
+	testGetOfferings(t, "", "", "", 0)
+
+	// Insert test offerings.
+	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1.OfferStatus = data.OfferRegister
+	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off2.OfferStatus = data.OfferEmpty
+
+	insertItems(t, off1, off2)
 
 	// Get all offerings.
-	testOfferings := []*data.Offering{
-		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
-		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
-	}
-	insertItems(t, testOfferings[0], testOfferings[1])
-	testGetOfferings(t, "", 2)
+	testGetOfferings(t, "", "", "", 2)
 
-	// Get offering by id.
-	testGetOfferings(t, testOfferings[0].ID, 1)
+	// Get offerings by id.
+	testGetOfferings(t, off1.ID, "", "", 1)
+
+	// Get offerings by product.
+	testGetOfferings(t, "", testProd.ID, "", 2)
+
+	// Get offerings by status.
+	testGetOfferings(t, "", "", data.OfferEmpty, 1)
 }
 
 func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {

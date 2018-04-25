@@ -125,13 +125,13 @@ func main() {
 
 	ethClient := eth.NewEthereumClient(conf.Eth.GethURL)
 
-	ptcAddr := common.StringToAddress(conf.Eth.Contract.PTCAddr)
+	ptcAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PTCAddr))
 	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
 	if err != nil {
 		logger.Fatal("failed to create ptc instance: %v", err)
 	}
 
-	pscAddr := common.StringToAddress(conf.Eth.Contract.PSCAddr)
+	pscAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PSCAddr))
 
 	psc, err := contract.NewPrivatixServiceContract(pscAddr, gethConn)
 	if err != nil {

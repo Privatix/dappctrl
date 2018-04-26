@@ -5,7 +5,7 @@
 [develop](https://github.com/Privatix/dappctrl/tree/develop):
 <img align="center" src="https://ci.privatix.net/plugins/servlet/wittified/build-status/PC-ICT0">
 
-# Privatix Controller.
+# Privatix Controller
 
 Privatix Controller is a core of Agent and Client functionality.
 
@@ -147,7 +147,6 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 ## Authors
 
 * [ababo](https://github.com/ababo)
-* [HaySayCheese](https://github.com/HaySayCheese)
 * [furkhat](https://github.com/furkhat)
 
 See also the list of [contributors](https://github.com/Privatix/dappctrl/contributors) who participated in this project.

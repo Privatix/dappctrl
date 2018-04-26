@@ -60,31 +60,36 @@ func TestMain(m *testing.M) {
 	db := data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(db)
 
-	testEthereumClient = eth.NewEthereumClient(conf.Eth.GethURL)
+	var ptc *contract.PrivatixTokenContract
+	var psc *contract.PrivatixServiceContract
 
-	conn, err := ethclient.Dial(conf.Eth.GethURL)
-	if err != nil {
-		panic(err)
-	}
+	if conf.Eth.TruffleAPIURL != "" {
+		testEthereumClient = eth.NewEthereumClient(conf.Eth.GethURL)
 
-	testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
+		conn, err := ethclient.Dial(conf.Eth.GethURL)
+		if err != nil {
+			panic(err)
+		}
 
-	contractAddress, err := eth.NewAddress(testTruffleAPI.FetchPTCAddress())
-	if err != nil {
-		panic(err)
-	}
-	ptc, err := contract.NewPrivatixTokenContract(contractAddress, conn)
-	if err != nil {
-		panic(err)
-	}
+		testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
 
-	contractAddress, err = eth.NewAddress(testTruffleAPI.FetchPSCAddress())
-	if err != nil {
-		panic(err)
-	}
-	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
-	if err != nil {
-		panic(err)
+		contractAddress, err := eth.NewAddress(testTruffleAPI.FetchPTCAddress())
+		if err != nil {
+			panic(err)
+		}
+		ptc, err = contract.NewPrivatixTokenContract(contractAddress, conn)
+		if err != nil {
+			panic(err)
+		}
+
+		contractAddress, err = eth.NewAddress(testTruffleAPI.FetchPSCAddress())
+		if err != nil {
+			panic(err)
+		}
+		psc, err = contract.NewPrivatixServiceContract(contractAddress, conn)
+		if err != nil {
+			panic(err)
+		}
 	}
 	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc)
 	go testServer.ListenAndServe()

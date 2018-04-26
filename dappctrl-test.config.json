@@ -24,7 +24,7 @@
             "PSCAddr": ""
         },
         "GethURL": "http://localhost:8545",
-        "TruffleAPIURL": "http://localhost:5000"
+        "TruffleAPIURL": ""
     },
 
     "Job": {

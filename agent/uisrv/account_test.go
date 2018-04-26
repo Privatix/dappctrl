@@ -1,4 +1,4 @@
-// +build !noagentuisrvtest,!noethtest
+// +build !noethtest
 
 package uisrv
 

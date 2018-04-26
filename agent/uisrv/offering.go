@@ -120,8 +120,12 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 // handleGetOfferings replies with all offerings or an offering by id.
 func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: []queryParam{{Name: "id", Field: "id"}, {Name: "product", Field: "product"}},
-		View:   data.OfferingTable,
+		Params: []queryParam{
+			{Name: "id", Field: "id"},
+			{Name: "product", Field: "product"},
+			{Name: "offerStatus", Field: "offer_status"},
+		},
+		View: data.OfferingTable,
 	})
 }
 

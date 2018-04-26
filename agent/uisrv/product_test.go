@@ -31,6 +31,9 @@ func putProduct(t *testing.T, payload *data.Product) *http.Response {
 }
 
 func TestPostProductSuccess(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
 	insertItems(t, tplOffer, tplAccess)
@@ -48,6 +51,9 @@ func TestPostProductSuccess(t *testing.T) {
 }
 
 func TestPostProductValidation(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
 	insertItems(t, tplOffer, tplAccess)
@@ -96,6 +102,8 @@ func createProductTestData(t *testing.T) *productTestData {
 
 func TestPutProduct(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	testData := createProductTestData(t)
 	payload := validProductPayload(testData.TplOffer.ID, testData.TplAccess.ID)
 	payload.ID = testData.Product.ID
@@ -124,6 +132,8 @@ func testGetProducts(t *testing.T, exp int) {
 
 func TestGetProducts(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	// Get empty list.
 	testGetProducts(t, 0)
 	// Get all products.

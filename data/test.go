@@ -51,13 +51,15 @@ func NewTestUser() *User {
 // NewTestAccount returns new account.
 func NewTestAccount() *Account {
 	priv, _ := ecdsa.GenerateKey(crypto.S256(), cryptorand.Reader)
+	// TODO: encrypt b.
 	b := crypto.FromECDSA(priv)
 	priv, _ = crypto.ToECDSA(b)
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
+	addr := FromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
 	return &Account{
 		ID:         util.NewUUID(),
-		EthAddr:    util.NewUUID()[:28],
+		EthAddr:    addr,
 		PublicKey:  pub,
 		PrivateKey: FromBytes(b),
 		IsDefault:  true,

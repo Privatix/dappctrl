@@ -51,7 +51,27 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc := &data.Account{}
 	acc.ID = util.NewUUID()
 	acc.EthAddr = payload.EthAddr
-	acc.PrivateKey = payload.PrivateKey
+	pkBytes, err := data.ToBytes(payload.PrivateKey)
+	if err != nil {
+		s.logger.Warn("could not decode private key: %v", err)
+		s.replyInvalidPayload(w)
+		return
+	}
+	privKey, err := crypto.ToECDSA(pkBytes)
+	if err != nil {
+		s.logger.Warn("could not make ecdsa priv key: %v", err)
+		s.replyInvalidPayload(w)
+		return
+	}
+	acc.PrivateKey, err = data.EncryptedKey(privKey, s.pwdStorage.Get())
+	if err != nil {
+		s.logger.Warn("could not encrypt priv key: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&privKey.PublicKey))
+
 	acc.IsDefault = payload.IsDefault
 	acc.InUse = payload.InUse
 	acc.Name = payload.Name
@@ -98,22 +118,6 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	acc.PTCBalance = ptcBalance.Uint64()
-
-	pkb, err := data.ToBytes(payload.PrivateKey)
-	if err != nil {
-		s.logger.Warn("could not decode private key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	pk, err := crypto.ToECDSA(pkb)
-	if err != nil {
-		s.logger.Warn("could not make ecdsa priv key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&pk.PublicKey))
 
 	if err := s.db.Insert(acc); err != nil {
 		s.logger.Warn("could not insert account: %v", err)

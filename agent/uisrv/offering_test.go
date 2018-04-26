@@ -81,6 +81,7 @@ func putOffering(t *testing.T, v *data.Offering) *http.Response {
 
 func TestPostOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 
@@ -99,6 +100,8 @@ func TestPostOfferingSuccess(t *testing.T) {
 
 func TestPostOfferingValidation(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	// Prepare test data.
 	createOfferingFixtures(t)
 	validPld := validOfferingPayload()
@@ -172,6 +175,7 @@ func TestPostOfferingValidation(t *testing.T) {
 
 func TestPutOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
@@ -202,6 +206,7 @@ func testGetOfferings(t *testing.T, id, product, status string, exp int) {
 
 func TestGetOffering(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	// Get empty list.
@@ -229,7 +234,7 @@ func TestGetOffering(t *testing.T) {
 }
 
 func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {
-	url := fmt.Sprintf("http://%s%s%s/status",
+	url := fmt.Sprintf("http://:%s@%s%s%s/status", testPassword,
 		testServer.conf.Addr, offeringsPath, id)
 	if action != "" {
 		url += "?action=" + action
@@ -260,6 +265,7 @@ func TestPutOfferingStatus(t *testing.T) {
 
 func TestGetOfferingStatus(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	offer := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)

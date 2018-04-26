@@ -20,6 +20,7 @@ import (
 
 func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	acc := data.NewTestAccount()
 	insertItems(t, acc)
@@ -106,7 +107,7 @@ func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	payload.EthAddr = data.FromBytes(addr.Bytes())
 
 	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
-	payload.PrivateKey = data.FromBytes(data.EncryptPrivateKey(pkB, nil))
+	payload.PrivateKey = data.FromBytes(pkB)
 
 	payload.IsDefault = true
 	payload.InUse = true
@@ -136,7 +137,12 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	if created.PrivateKey != payload.PrivateKey {
+	createdPK, err := data.ToPrivateKey(created.PrivateKey, testPassword)
+	if err != nil {
+		t.Fatal("failed to decrypt created account's private key: ", err)
+	}
+
+	if data.FromBytes(crypto.FromECDSA(createdPK)) != payload.PrivateKey {
 		t.Fatal("wrong private key stored")
 	}
 
@@ -194,6 +200,7 @@ func testAccountFields(
 
 func TestCreateAccount(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	testAcc := testTruffleAPI.GetTestAccounts()[0]
 	payload := getTestAccountPayload(&testAcc)
@@ -218,6 +225,7 @@ func TestCreateAccount(t *testing.T) {
 
 func TestGetAccounts(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	// Test returns empty all accounts in the system.
 

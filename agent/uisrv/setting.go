@@ -3,6 +3,8 @@ package uisrv
 import (
 	"net/http"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/data"
 )
 
@@ -24,6 +26,13 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: nil,
 		View:   data.SettingTable,
+		Transform: func(rec reform.Struct) reform.Struct {
+			setting, ok := rec.(*data.Setting)
+			if !ok || setting.Key == passwordKey || setting.Key == saltKey {
+				return nil
+			}
+			return setting
+		},
 	})
 }
 

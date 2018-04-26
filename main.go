@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/truffle"
+	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/sesssrv"
@@ -43,10 +44,11 @@ type config struct {
 
 func newConfig() *config {
 	return &config{
-		DB:   data.NewDBConfig(),
-		Job:  job.NewConfig(),
-		Log:  util.NewLogConfig(),
-		SOMC: somc.NewConfig(),
+		DB:            data.NewDBConfig(),
+		Job:           job.NewConfig(),
+		Log:           util.NewLogConfig(),
+		SessionServer: sesssrv.NewConfig(),
+		SOMC:          somc.NewConfig(),
 	}
 }
 
@@ -152,6 +154,13 @@ func main() {
 	go func() {
 		logger.Fatal("failed to start session server: %s",
 			sess.ListenAndServe())
+	}()
+
+	// TODO: Remove when not needed anymore.
+	exec := execsrv.NewServer(logger)
+	go func() {
+		logger.Fatal("failed to start exec server: %s",
+			exec.ListenAndServe())
 	}()
 
 	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)

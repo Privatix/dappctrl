@@ -50,6 +50,11 @@
         "TLS": null
     },
 
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"

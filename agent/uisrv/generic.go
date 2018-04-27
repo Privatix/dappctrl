@@ -18,7 +18,7 @@ type queryParam struct {
 type getConf struct {
 	Params    []queryParam
 	View      reform.View
-	Transform func(reform.Struct) reform.Struct
+	Transform func(reform.Struct) interface{}
 }
 
 // handleGetResources select and returns records.
@@ -56,7 +56,7 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 	}
 
 	if conf.Transform != nil {
-		transformed := []reform.Struct{}
+		transformed := []interface{}{}
 		for _, rec := range records {
 			item := conf.Transform(rec)
 			if item != nil {

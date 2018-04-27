@@ -26,7 +26,7 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: nil,
 		View:   data.SettingTable,
-		Transform: func(rec reform.Struct) reform.Struct {
+		Transform: func(rec reform.Struct) interface{} {
 			setting, ok := rec.(*data.Setting)
 			if !ok || setting.Key == passwordKey || setting.Key == saltKey {
 				return nil

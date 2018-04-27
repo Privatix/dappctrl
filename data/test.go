@@ -67,7 +67,7 @@ func NewTestAccount() *Account {
 		Name:       util.NewUUID()[:30],
 		PTCBalance: 0,
 		PSCBalance: 0,
-		EthBalance: FromBytes(big.NewInt(1).Bytes()),
+		EthBalance: B64BigInt(FromBytes(big.NewInt(1).Bytes())),
 	}
 }
 

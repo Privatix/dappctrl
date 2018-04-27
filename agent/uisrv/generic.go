@@ -16,9 +16,9 @@ type queryParam struct {
 
 // getConf is a config for generic get handler.
 type getConf struct {
-	Params    []queryParam
-	View      reform.View
-	Transform func(reform.Struct) interface{}
+	Params       []queryParam
+	View         reform.View
+	FilteringSQL string
 }
 
 // handleGetResources select and returns records.
@@ -44,6 +44,15 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		tail = "WHERE " + strings.Join(eqs, " AND ")
 	}
 
+	if conf.FilteringSQL != "" {
+		if tail == "" {
+			tail += "WHERE "
+		} else {
+			tail += " AND "
+		}
+		tail += conf.FilteringSQL
+	}
+
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)
 	if err != nil {
 		s.logger.Warn("failed to select: %v", err)
@@ -53,17 +62,6 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 
 	if records == nil {
 		records = []reform.Struct{}
-	}
-
-	if conf.Transform != nil {
-		transformed := []interface{}{}
-		for _, rec := range records {
-			item := conf.Transform(rec)
-			if item != nil {
-				transformed = append(transformed, item)
-			}
-		}
-		s.reply(w, transformed)
 	}
 
 	s.reply(w, records)

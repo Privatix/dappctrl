@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"log"
-	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -50,42 +47,6 @@ func newConfig() *config {
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 	}
-}
-
-func fetchPSCAddress(truffleAPI string) string {
-	response, err := http.Get(truffleAPI + "/getPSC")
-	if err != nil || response.StatusCode != http.StatusOK {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	return data["contract"].(map[string]interface{})["address"].(string)
-}
-
-func fetchPTCAddress(truffleAPI string) string {
-	response, err := http.Get(truffleAPI + "/getPrix")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	return data["contract"].(map[string]interface{})["address"].(string)
 }
 
 func readConfig(conf *config) {
@@ -138,7 +99,10 @@ func main() {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, ethClient, ptc, psc)
+	pwdStorage := new(data.PWDStorage)
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, ethClient, ptc, psc, pwdStorage)
+
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())

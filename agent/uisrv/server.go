@@ -3,6 +3,8 @@ package uisrv
 import (
 	"net/http"
 
+	"github.com/privatix/dappctrl/data"
+
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 
@@ -30,12 +32,13 @@ type Config struct {
 
 // Server is agent api server.
 type Server struct {
-	conf      *Config
-	logger    *util.Logger
-	db        *reform.DB
-	ethClient *eth.EthereumClient
-	ptc       *contract.PrivatixTokenContract
-	psc       *contract.PrivatixServiceContract
+	conf       *Config
+	logger     *util.Logger
+	db         *reform.DB
+	ethClient  *eth.EthereumClient
+	ptc        *contract.PrivatixTokenContract
+	psc        *contract.PrivatixServiceContract
+	pwdStorage data.PWDGetSetter
 }
 
 // NewServer creates a new agent server.
@@ -44,8 +47,9 @@ func NewServer(conf *Config,
 	db *reform.DB,
 	ethClient *eth.EthereumClient,
 	ptc *contract.PrivatixTokenContract,
-	psc *contract.PrivatixServiceContract) *Server {
-	return &Server{conf, logger, db, ethClient, ptc, psc}
+	psc *contract.PrivatixServiceContract,
+	pwdStorage data.PWDGetSetter) *Server {
+	return &Server{conf, logger, db, ethClient, ptc, psc, pwdStorage}
 }
 
 const (
@@ -63,15 +67,15 @@ const (
 // ListenAndServe starts a server.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(accountsPath, basicAuthMiddlewareFunc(s, s.handleAccounts))
+	mux.HandleFunc(accountsPath, basicAuthMiddleware(s, s.handleAccounts))
 	mux.HandleFunc(authPath, s.handleAuth)
-	mux.HandleFunc(channelsPath, basicAuthMiddlewareFunc(s, s.handleChannels))
-	mux.HandleFunc(endpointsPath, basicAuthMiddlewareFunc(s, s.handleGetEndpoints))
-	mux.HandleFunc(offeringsPath, basicAuthMiddlewareFunc(s, s.handleOfferings))
-	mux.HandleFunc(productsPath, basicAuthMiddlewareFunc(s, s.handleProducts))
-	mux.HandleFunc(sessionsPath, basicAuthMiddlewareFunc(s, s.handleGetSessions))
-	mux.HandleFunc(settingsPath, basicAuthMiddlewareFunc(s, s.handleSettings))
-	mux.HandleFunc(templatePath, basicAuthMiddlewareFunc(s, s.handleTempaltes))
+	mux.HandleFunc(channelsPath, basicAuthMiddleware(s, s.handleChannels))
+	mux.HandleFunc(endpointsPath, basicAuthMiddleware(s, s.handleGetEndpoints))
+	mux.HandleFunc(offeringsPath, basicAuthMiddleware(s, s.handleOfferings))
+	mux.HandleFunc(productsPath, basicAuthMiddleware(s, s.handleProducts))
+	mux.HandleFunc(sessionsPath, basicAuthMiddleware(s, s.handleGetSessions))
+	mux.HandleFunc(settingsPath, basicAuthMiddleware(s, s.handleSettings))
+	mux.HandleFunc(templatePath, basicAuthMiddleware(s, s.handleTempaltes))
 	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {

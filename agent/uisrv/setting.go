@@ -22,8 +22,9 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 // handleGetSettings replies with all settings.
 func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: nil,
-		View:   data.SettingTable,
+		Params:       nil,
+		View:         data.SettingTable,
+		FilteringSQL: "key NOT LIKE 'system%'",
 	})
 }
 

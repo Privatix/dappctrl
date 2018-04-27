@@ -38,7 +38,7 @@ func TestSetPasswordRepeat(t *testing.T) {
 func TestSetPasswordAccountsExist(t *testing.T) {
 	defer cleanDB(t)
 
-	insertItems(t, data.NewTestAccount())
+	insertItems(t, data.NewTestAccount(testPassword))
 
 	res := sendSetPasswordAndTestStatus(t,
 		&passwordPayload{"test-password"}, http.StatusUnauthorized)

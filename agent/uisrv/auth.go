@@ -20,9 +20,6 @@ const (
 	passwordMaxLen = 24
 )
 
-// Store pointer in order to disable middleware in tests.
-var basicAuthMiddlewareFunc = basicAuthMiddleware
-
 // basicAuthMiddleware implements HTTP Basic Authentication check.
 // If no password stored replies with 401 and serverError.Code=1.
 // On wrong password replies with 401.
@@ -40,6 +37,9 @@ func basicAuthMiddleware(s *Server, h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		// Make password available through storage.
+		s.pwdStorage.Set(givenPassword)
+
 		h(w, r)
 	}
 }
@@ -54,7 +54,7 @@ func (s *Server) handleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodPut {
-		basicAuthMiddlewareFunc(s, s.handleUpdatePassword)(w, r)
+		basicAuthMiddleware(s, s.handleUpdatePassword)(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)

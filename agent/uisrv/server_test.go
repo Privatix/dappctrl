@@ -28,6 +28,8 @@ var (
 	testServer         *Server
 	testTruffleAPI     truffle.API
 	testEthereumClient *eth.EthereumClient
+
+	testPassword = "test-password"
 )
 
 type testConfig struct {
@@ -35,13 +37,6 @@ type testConfig struct {
 }
 
 func TestMain(m *testing.M) {
-	// Disable middleware during tests.
-	basicAuthMiddlewareFunc = func(_ *Server, h http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			h(w, r)
-		}
-	}
-
 	var conf struct {
 		AgentServer     *Config
 		AgentServerTest *testConfig
@@ -91,7 +86,8 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
-	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc)
+	pwdStorage := new(data.PWDStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc, pwdStorage)
 	go testServer.ListenAndServe()
 
 	time.Sleep(time.Duration(conf.AgentServerTest.ServerStartupDelay) *
@@ -144,6 +140,7 @@ func sendPayload(t *testing.T,
 	if err != nil {
 		t.Fatal("failed to create a request: ", err)
 	}
+	req.SetBasicAuth("", testPassword)
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
@@ -162,7 +159,8 @@ func getResources(t *testing.T,
 			values = append(values, fmt.Sprintf("%s=%s", k, v))
 		}
 	}
-	url := fmt.Sprintf("http://%s/%s?%s", testServer.conf.Addr, path, strings.Join(values, "&"))
+	url := fmt.Sprintf("http://:%s@%s/%s?%s", testPassword,
+		testServer.conf.Addr, path, strings.Join(values, "&"))
 	res, err := http.Get(url)
 	if err != nil {
 		t.Fatal("failed to get: ", err)
@@ -179,4 +177,20 @@ func testGetResources(t *testing.T, res *http.Response, exp int) {
 	if exp != len(resData) {
 		t.Fatalf("expected %d items, got: %d", exp, len(resData))
 	}
+}
+
+func setTestUserCredentials(t *testing.T) {
+	hash, err := hashPassword("test-salt", testPassword)
+	if err != nil {
+		t.Fatal("failed to hash password: ", err)
+	}
+	insertItems(t, &data.Setting{
+		Key:   passwordKey,
+		Value: string(hash),
+		Name:  "password",
+	}, &data.Setting{
+		Key:   saltKey,
+		Value: "test-salt",
+		Name:  "salt",
+	})
 }

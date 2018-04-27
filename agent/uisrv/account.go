@@ -5,21 +5,12 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 
 	"github.com/privatix/dappctrl/util"
 )
-
-type accountCreatePayload struct {
-	EthAddr    string `json:"ethAddr"`
-	PrivateKey string `json:"privateKey"`
-	IsDefault  bool   `json:"isDefault"`
-	InUse      bool   `json:"inUse"`
-	Name       string `json:"name"`
-}
 
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
@@ -45,25 +36,47 @@ func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type accountCreatePayload struct {
+	PrivateKey string `json:"privateKey"`
+	IsDefault  bool   `json:"isDefault"`
+	InUse      bool   `json:"inUse"`
+	Name       string `json:"name"`
+}
+
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	payload := &accountCreatePayload{}
 	s.parsePayload(w, r, payload)
 	acc := &data.Account{}
 	acc.ID = util.NewUUID()
-	acc.EthAddr = payload.EthAddr
-	acc.PrivateKey = payload.PrivateKey
-	acc.IsDefault = payload.IsDefault
-	acc.InUse = payload.InUse
-	acc.Name = payload.Name
-
-	ethAddrB, err := data.ToBytes(payload.EthAddr)
+	pkBytes, err := data.ToBytes(payload.PrivateKey)
 	if err != nil {
-		s.logger.Warn("could not decode eth addr: %v", err)
+		s.logger.Warn("could not decode private key: %v", err)
+		s.replyInvalidPayload(w)
+		return
+	}
+	privKey, err := crypto.ToECDSA(pkBytes)
+	if err != nil {
+		s.logger.Warn("could not make ecdsa priv key: %v", err)
+		s.replyInvalidPayload(w)
+		return
+	}
+	acc.PrivateKey, err = data.EncryptedKey(privKey, s.pwdStorage.Get())
+	if err != nil {
+		s.logger.Warn("could not encrypt priv key: %v", err)
 		s.replyUnexpectedErr(w)
 		return
 	}
 
-	ethAddrHex := hex.EncodeToString(ethAddrB)
+	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&privKey.PublicKey))
+
+	ethAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+	acc.EthAddr = data.FromBytes(ethAddr.Bytes())
+
+	acc.IsDefault = payload.IsDefault
+	acc.InUse = payload.InUse
+	acc.Name = payload.Name
+
+	ethAddrHex := hex.EncodeToString(ethAddr.Bytes())
 
 	gResponse, err := s.ethClient.GetBalance("0x"+ethAddrHex, eth.BlockLatest)
 	if err != nil {
@@ -79,9 +92,9 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	acc.EthBalance = data.FromBytes(amount.ToBigInt().Bytes())
+	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.ToBigInt().Bytes()))
 
-	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, common.BytesToAddress(ethAddrB))
+	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, ethAddr)
 	if err != nil {
 		s.logger.Warn("could not get psc balance: %v", err)
 		s.replyUnexpectedErr(w)
@@ -90,7 +103,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	acc.PSCBalance = pscBalance.Uint64()
 
-	ptcBalance, err := s.ptc.BalanceOf(&bind.CallOpts{}, common.BytesToAddress(ethAddrB))
+	ptcBalance, err := s.ptc.BalanceOf(&bind.CallOpts{}, ethAddr)
 	if err != nil {
 		s.logger.Warn("could not get ptc balance: %v", err)
 		s.replyUnexpectedErr(w)
@@ -98,22 +111,6 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	acc.PTCBalance = ptcBalance.Uint64()
-
-	pkb, err := data.ToBytes(payload.PrivateKey)
-	if err != nil {
-		s.logger.Warn("could not decode private key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	pk, err := crypto.ToECDSA(pkb)
-	if err != nil {
-		s.logger.Warn("could not make ecdsa priv key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&pk.PublicKey))
 
 	if err := s.db.Insert(acc); err != nil {
 		s.logger.Warn("could not insert account: %v", err)

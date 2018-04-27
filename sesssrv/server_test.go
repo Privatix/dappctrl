@@ -49,7 +49,7 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	prod := data.NewTestProduct()
-	acc := data.NewTestAccount()
+	acc := data.NewTestAccount("")
 	tmpl := data.NewTestTemplate(data.TemplateOffer)
 	off := data.NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
 	ch := data.NewTestChannel(

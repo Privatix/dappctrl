@@ -23,7 +23,7 @@ var (
 func createOfferingFixtures(t *testing.T) {
 	testTpl = data.NewTestTemplate(data.TemplateAccess)
 	testProd = data.NewTestProduct()
-	testAgent = data.NewTestAccount()
+	testAgent = data.NewTestAccount(testPassword)
 	insertItems(t, testTpl, testProd, testAgent)
 }
 

@@ -11,7 +11,6 @@ import (
 
 // EncryptedKey returns encrypted keystore.Key in base64.
 func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
-	// TODO: implement this.
 	key := keystore.NewKeyForDirectICAP(rand.Reader)
 	key.Address = crypto.PubkeyToAddress(pkey.PublicKey)
 	key.PrivateKey = pkey
@@ -38,16 +37,10 @@ func ToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
 }
 
 // Sign signs a data.
-func (a *Account) Sign(data []byte) ([]byte, error) {
-	// TODO: decrypt.
-	prvBytes, err := ToBytes(a.PrivateKey)
-	// prvBytes = DecryptPrivateKey(prvBytes)
+func (a *Account) Sign(data []byte, auth string) ([]byte, error) {
+	prvKey, err := ToPrivateKey(a.PrivateKey, auth)
 	if err != nil {
 		return nil, err
 	}
-	prv, err := crypto.ToECDSA(prvBytes)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.Sign(data, prv)
+	return crypto.Sign(data, prvKey)
 }

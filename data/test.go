@@ -49,19 +49,17 @@ func NewTestUser() *User {
 }
 
 // NewTestAccount returns new account.
-func NewTestAccount() *Account {
+func NewTestAccount(auth string) *Account {
 	priv, _ := ecdsa.GenerateKey(crypto.S256(), cryptorand.Reader)
-	// TODO: encrypt b.
-	b := crypto.FromECDSA(priv)
-	priv, _ = crypto.ToECDSA(b)
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
 	addr := FromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
+	pkEncrypted, _ := EncryptedKey(priv, auth)
 	return &Account{
 		ID:         util.NewUUID(),
 		EthAddr:    addr,
 		PublicKey:  pub,
-		PrivateKey: FromBytes(b),
+		PrivateKey: pkEncrypted,
 		IsDefault:  true,
 		InUse:      true,
 		Name:       util.NewUUID()[:30],
@@ -101,7 +99,7 @@ func NewTestTemplate(kind string) *Template {
 
 // NewTestOffering returns new offering.
 func NewTestOffering(agent, product, tpl string) *Offering {
-	return &Offering{
+	offering := &Offering{
 		ID:                 util.NewUUID(),
 		OfferStatus:        OfferRegister,
 		BlockNumberUpdated: 1,
@@ -117,6 +115,8 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		SetupPrice:         11,
 		UnitPrice:          22,
 	}
+	offering.Hash = FromBytes(OfferingHash(offering))
+	return offering
 }
 
 // NewTestChannel returns new channel.

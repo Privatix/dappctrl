@@ -38,13 +38,20 @@ var (
 	}
 )
 
-func (s *Server) findChannelByBlock(w http.ResponseWriter,
-	b uint) (*data.Channel, bool) {
+func (s *Server) findChannel(w http.ResponseWriter,
+	offeringHash string,
+	agentAddr string,
+	block uint) (*data.Channel, bool) {
+
 	ch := &data.Channel{}
-	if err := s.db.FindOneTo(ch, "block", b); err != nil {
+
+	tail := "INNER JOIN offerings ON offerings.hash=$1 WHERE channels.agent=$2 AND channels.block=$3"
+	err := s.db.SelectOneTo(ch, tail, offeringHash, agentAddr, block)
+	if err != nil {
 		s.replyErr(w, http.StatusUnauthorized, errNoChannel)
 		return nil, false
 	}
+
 	return ch, true
 }
 

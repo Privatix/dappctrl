@@ -22,7 +22,7 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
-	acc := data.NewTestAccount()
+	acc := data.NewTestAccount(testPassword)
 	insertItems(t, acc)
 
 	testCases := []struct {
@@ -228,8 +228,8 @@ func TestGetAccounts(t *testing.T) {
 	res := getResources(t, accountsPath, nil)
 	testGetResources(t, res, 0)
 
-	acc1 := data.NewTestAccount()
-	acc2 := data.NewTestAccount()
+	acc1 := data.NewTestAccount(testPassword)
+	acc2 := data.NewTestAccount(testPassword)
 	insertItems(t, acc1, acc2)
 
 	res = getResources(t, accountsPath, nil)

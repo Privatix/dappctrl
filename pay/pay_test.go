@@ -19,24 +19,54 @@ import (
 var (
 	testServer *Server
 	testDB     *reform.DB
-	testData   struct {
-		client   *data.Account
-		agent    *data.User
-		offering *data.Offering
-		channel  *data.Channel
-	}
 )
 
-func newTestPayload(amount uint64, ch *data.Channel,
-	client *data.Account) *payload {
+const testPassword = "test-password"
+
+type testFixture struct {
+	clientAcc *data.Account
+	client    *data.User
+	agent     *data.Account
+	offering  *data.Offering
+	channel   *data.Channel
+}
+
+func newFixture(t *testing.T) *testFixture {
+	clientAcc := data.NewTestAccount(testPassword)
+
+	client := data.NewTestUser()
+	client.PublicKey = clientAcc.PublicKey
+	client.EthAddr = clientAcc.EthAddr
+
+	agent := data.NewTestAccount(testPassword)
+
+	product := data.NewTestProduct()
+
+	template := data.NewTestTemplate(data.TemplateOffer)
+
+	offering := data.NewTestOffering(agent.EthAddr,
+		product.ID, template.ID)
+
+	channel := data.NewTestChannel(agent.EthAddr,
+		client.EthAddr, offering.ID, 0, 100,
+		data.ChannelActive)
+
+	data.InsertToTestDB(t, testDB, client, agent, product, template,
+		offering, channel)
+
+	return &testFixture{clientAcc, client, agent, offering, channel}
+}
+
+func newTestPayload(amount uint64, channel *data.Channel,
+	offering *data.Offering, clientAcc *data.Account) *payload {
 	pld := &payload{
-		AgentAddress:    "<agent address>",
-		OpenBlockNumber: ch.Block,
-		OfferingHash:    "<offering hash>",
+		AgentAddress:    channel.Agent,
+		OpenBlockNumber: channel.Block,
+		OfferingHash:    offering.Hash,
 		Balance:         amount,
 		ContractAddress: "<contract address>",
 	}
-	sig, err := client.Sign(hash(pld))
+	sig, err := clientAcc.Sign(hash(pld), testPassword)
 	if err != nil {
 		panic(err)
 	}
@@ -54,27 +84,37 @@ func sendTestRequest(pld *payload) *httptest.ResponseRecorder {
 }
 
 func TestValidPayment(t *testing.T) {
+	defer data.CleanTestDB(t, testDB)
+	fixture := newFixture(t)
+
 	// 100 is a test payment amount
-	pld := newTestPayload(100, testData.channel, testData.client)
-	w := sendTestRequest(pld)
+	payload := newTestPayload(100, fixture.channel, fixture.offering, fixture.clientAcc)
+	w := sendTestRequest(payload)
 	if w.Code != http.StatusOK {
 		t.Errorf("expect response ok, got: %d", w.Code)
 		t.Log(w.Body)
 	}
+
 	updated := &data.Channel{}
-	if err := testDB.FindOneTo(updated, "block", pld.OpenBlockNumber); err != nil {
+	err := testDB.FindOneTo(updated, "block", payload.OpenBlockNumber)
+	if err != nil {
 		panic(err)
 	}
-	if updated.ReceiptSignature != pld.BalanceMsgSig {
+
+	if updated.ReceiptSignature != payload.BalanceMsgSig {
 		t.Error("receipt signature is not updated")
 	}
-	if updated.ReceiptBalance != pld.Balance {
+
+	if updated.ReceiptBalance != payload.Balance {
 		t.Error("receipt balance is not updated")
 	}
 }
 
 func TestInvalidPayments(t *testing.T) {
-	validPayload := newTestPayload(1, testData.channel, testData.client)
+	defer data.CleanTestDB(t, testDB)
+	fixture := newFixture(t)
+
+	validPayload := newTestPayload(1, fixture.channel, fixture.offering, fixture.clientAcc)
 	wrongBlock := &payload{
 		AgentAddress:    validPayload.AgentAddress,
 		OpenBlockNumber: validPayload.OpenBlockNumber + 1,
@@ -84,23 +124,24 @@ func TestInvalidPayments(t *testing.T) {
 		ContractAddress: validPayload.ContractAddress,
 	}
 
-	closedChannel := data.NewTestChannel(testData.agent.ID, testData.client.ID,
-		testData.offering.ID, 0, 100, data.ChannelClosedCoop)
-	testDB.Insert(closedChannel)
-	defer func() { testDB.Delete(closedChannel) }()
-	closedState := newTestPayload(1,
-		closedChannel,
-		testData.client)
+	closedChannel := data.NewTestChannel(fixture.agent.EthAddr,
+		fixture.client.EthAddr, fixture.offering.ID, 0, 100,
+		data.ChannelClosedCoop)
 
-	validCh := data.NewTestChannel(testData.agent.ID, testData.client.ID,
-		testData.offering.ID, 10, 100, data.ChannelActive)
-	testDB.Insert(validCh)
-	defer func() { testDB.Delete(validCh) }()
-	lessBalance := newTestPayload(9, validCh, testData.client)
+	validCh := data.NewTestChannel(fixture.agent.EthAddr,
+		fixture.client.EthAddr, fixture.offering.ID, 10, 100,
+		data.ChannelActive)
 
-	overcharging := newTestPayload(100+1, validCh, testData.client)
+	data.InsertToTestDB(t, testDB, closedChannel, validCh)
 
-	otherUsersSignature := newTestPayload(100, validCh, data.NewTestAccount())
+	closedState := newTestPayload(1, closedChannel, fixture.offering, fixture.clientAcc)
+
+	lessBalance := newTestPayload(9, validCh, fixture.offering, fixture.clientAcc)
+
+	overcharging := newTestPayload(100+1, validCh, fixture.offering, fixture.clientAcc)
+
+	otherUser := data.NewTestAccount(testPassword)
+	otherUsersSignature := newTestPayload(100, validCh, fixture.offering, otherUser)
 
 	for _, pld := range []*payload{
 		// wrong block number
@@ -115,10 +156,10 @@ func TestInvalidPayments(t *testing.T) {
 		otherUsersSignature,
 	} {
 		w := sendTestRequest(pld)
-		if w.Code != http.StatusUnauthorized {
-			t.Errorf("expected server to reply with %d, got: %d",
-				http.StatusUnauthorized, w.Code)
-			t.Logf("response: %s", w.Body)
+		if w.Code == http.StatusOK {
+			t.Logf("response: %d, %s", w.Code, w.Body)
+			t.Logf("payload: %+v\n", pld)
+			t.Errorf("expected server to fail, got: %d", w.Code)
 		}
 	}
 }
@@ -136,54 +177,5 @@ func TestMain(m *testing.M) {
 	defer data.CloseDB(testDB)
 	testServer = NewServer(nil, logger, testDB)
 
-	// prepare test data
-	testData.client = data.NewTestAccount()
-	err := testDB.Insert(testData.client)
-	if err != nil {
-		panic(err)
-	}
-	err = testDB.Insert(&data.User{
-		ID:        util.NewUUID(),
-		EthAddr:   testData.client.EthAddr,
-		PublicKey: testData.client.PublicKey,
-	})
-	if err != nil {
-		panic(err)
-	}
-	testData.agent = data.NewTestUser()
-	err = testDB.Insert(testData.agent)
-	if err != nil {
-		panic(err)
-	}
-	prt := data.NewTestProduct()
-	err = testDB.Insert(prt)
-	if err != nil {
-		panic(err)
-	}
-	tpl := data.NewTestTemplate(data.TemplateOffer)
-	err = testDB.Insert(tpl)
-	if err != nil {
-		panic(err)
-	}
-	testData.offering = data.NewTestOffering(testData.agent.EthAddr, prt.ID, tpl.ID)
-	err = testDB.Insert(testData.offering)
-	if err != nil {
-		panic(err)
-	}
-	testData.channel = data.NewTestChannel(testData.agent.EthAddr, testData.client.EthAddr,
-		testData.offering.ID, 0, 100, data.ChannelActive)
-	err = testDB.Insert(testData.channel)
-	if err != nil {
-		panic(err)
-	}
-
-	exitcode := m.Run()
-
-	// clean up
-	testDB.Delete(testData.channel)
-	testDB.Delete(testData.offering)
-	testDB.Delete(testData.client)
-	testDB.Delete(testData.agent)
-
-	os.Exit(exitcode)
+	os.Exit(m.Run())
 }

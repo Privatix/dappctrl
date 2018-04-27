@@ -20,7 +20,8 @@ func (s *Server) handlePay(w http.ResponseWriter, r *http.Request) {
 	if !s.parsePayload(w, r, pld) {
 		return
 	}
-	ch, ok := s.findChannelByBlock(w, pld.OpenBlockNumber)
+	ch, ok := s.findChannel(w, pld.OfferingHash, pld.AgentAddress,
+		pld.OpenBlockNumber)
 	if !ok || !s.validateChannelForPayment(w, ch, pld) ||
 		!s.updateChannelWithPayment(w, ch, pld) {
 		return

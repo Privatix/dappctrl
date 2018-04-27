@@ -234,9 +234,9 @@ func (m *Monitor) processEachChannel(query string, processor func(string) error)
 		rows.Scan(&channelUUID)
 		processor(channelUUID)
 
-		if m.testsSelectedChannelsIDs != nil {
-			m.testsSelectedChannelsIDs = append(m.testsSelectedChannelsIDs, channelUUID)
-		}
+		//if m.testsSelectedChannelsIDs != nil {
+		m.testsSelectedChannelsIDs = append(m.testsSelectedChannelsIDs, channelUUID)
+		//}
 	}
 
 	return nil

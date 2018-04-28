@@ -16,12 +16,13 @@ var (
 	testDB  *reform.DB
 	testMon *Monitor
 
-	offerSmallMaxUnit  uint64 = 900
-	offerUnitPrice     uint64 = 1
-	offerBigLag        uint   = 10000
-	offerSmallLag      uint   = 1
-	sesUnitsUsed       uint64 = 300
-	sesSecondsConsumed uint64 = 300
+	offerMaxUnit            uint64 = 900
+	offerMaxInactiveTimeSec uint64 = 10
+	offerUnitPrice          uint64 = 1
+	offerBigLag             uint   = 10000
+	offerSmallLag           uint   = 1
+	sesUnitsUsed            uint64 = 300
+	sesSecondsConsumed      uint64 = 300
 )
 
 const testPassword = "test-password"
@@ -58,15 +59,15 @@ func sesFabric(chanID string, secondsConsumed,
 		return sessions
 	}
 
-	var curTime time.Time
-
-	if adjustTime != 0 {
-		curTime = time.Now().Add(time.Second * time.Duration(adjustTime))
-	} else {
-		curTime = time.Now()
-	}
-
 	for i := 0; i <= num; i++ {
+		var curTime time.Time
+
+		if adjustTime != 0 {
+			curTime = time.Now().Add(time.Second * time.Duration(adjustTime))
+		} else {
+			curTime = time.Now()
+		}
+
 		sessions = append(sessions, &data.Session{
 			ID:              util.NewUUID(),
 			Channel:         chanID,
@@ -91,12 +92,18 @@ func TestMain(m *testing.M) {
 	logger := util.NewTestLogger(conf.Log)
 	testDB = data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(testDB)
+
+	if _, err := NewMonitor(time.Second, nil, logger); err == nil {
+		panic("Monitor object with empty database is created")
+	}
+
 	mon, err := NewMonitor(time.Second, testDB, logger)
 	if err != nil {
 		panic(err)
 	}
+
 	if mon == nil {
-		panic("Monitor object not created")
+		panic("Monitor object is not created")
 	}
 	testMon = mon
 	os.Exit(m.Run())
@@ -157,7 +164,7 @@ func TestMonitor_VerifySecondsBasedChannels_MaxUnit(t *testing.T) {
 
 	offering := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
-	offering.MaxUnit = &offerSmallMaxUnit
+	offering.MaxUnit = &offerMaxUnit
 	offering.UnitPrice = offerUnitPrice
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
@@ -242,7 +249,7 @@ func TestMonitor_VerifyUnitsBasedChannels_MaxUnit(t *testing.T) {
 
 	offering := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
-	offering.MaxUnit = &offerSmallMaxUnit
+	offering.MaxUnit = &offerMaxUnit
 	offering.UnitPrice = 1
 	offering.UnitType = data.UnitScalar
 
@@ -379,16 +386,17 @@ func TestMonitor_VerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
 // Expected result:
 // Channel 1 is selected for suspending.
 // Channel 2 is not affected.
-/*func TestMonitor_VerifyChannelsForInactivity(t *testing.T) {
-	//defer data.CleanTestDB(t, testDB)
+func TestMonitor_VerifyChannelsForInactivity(t *testing.T) {
+	defer data.CleanTestDB(t, testDB)
 	fixture := newFixture(t)
 
 	offering1 := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
-	offering1.MaxUnit = &offerBigMaxUnit
+	offering1.MaxInactiveTimeSec = &offerMaxInactiveTimeSec
+
 	offering2 := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
-	offering2.MaxUnit = &offerBigMaxUnit
+	offering2.MaxInactiveTimeSec = &offerMaxInactiveTimeSec
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
 		fixture.client.EthAddr, offering1.ID, 0, 10000,
@@ -400,6 +408,7 @@ func TestMonitor_VerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
 
 	sesChannel1 := sesFabric(channel1.ID, sesUnitsUsed,
 		sesUnitsUsed, -100, 2)
+
 	sesChannel2 := sesFabric(channel2.ID, sesUnitsUsed,
 		sesUnitsUsed, 0, 2)
 
@@ -411,68 +420,42 @@ func TestMonitor_VerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
 		t.Fatalf("Failed to read channel information" +
 			" from the database")
 	}
-	t.Log(testMon.testsSelectedChannelsIDs)
 	if len(testMon.testsSelectedChannelsIDs) != 1 ||
 		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
-}*/
-
-/*
-
-
-func TestD1(t *testing.T) {
-	// Source conditions:
-	// There are 2 active channels, that are related to 2 different offerings.
-	// First offering has several obsolete session records and is inactive.
-	// Seconds one has no one obsolete session record (but has fresh sessions records as well).
-	//
-	// Expected result:
-	// Channel 1 is selected for suspending.
-	// Channel 2 is not affected.
-
-	populateDataAndCallValidation(t, "d1_source_data.sql", monitor.VerifyChannelsForInactivity)
-	if len(monitor.testsSelectedChannelsIDs) != 1 ||
-		monitor.testsSelectedChannelsIDs[0] != "00000000-0000-0000-0000-000000000001" {
-		t.Fatal("Billing ignored channel, that must be unsuspended")
-	}
 }
 
-func TestE1(t *testing.T) {
-	// Source conditions:
-	// There is one suspended channel, that was suspended much earlier,
-	// than service offering allows, before terminating.
-	//
-	// Expected result:
-	// Channel 1 is selected for terminating.
+// Source conditions:
+// There is one suspended channel, that was suspended much earlier,
+// than service offering allows, before terminating.
+//
+// Expected result:
+// Channel 1 is selected for terminating.
+func TestMonitor_VerifySuspendedChannelsAndTryToTerminate(t *testing.T) {
+	defer data.CleanTestDB(t, testDB)
+	pastTime := time.Now().Add(time.Second * (-100))
+	fixture := newFixture(t)
 
-	populateDataAndCallValidation(t, "e1_source_data.sql", monitor.VerifySuspendedChannelsAndTryToTerminate)
-	if len(monitor.testsSelectedChannelsIDs) != 1 ||
-		monitor.testsSelectedChannelsIDs[0] != "00000000-0000-0000-0000-000000000001" {
-		t.Fatal("Billing ignored channel, that must be unsuspended")
+	offering := data.NewTestOffering(fixture.agent.EthAddr,
+		fixture.product.ID, fixture.template.ID)
+
+	channel := data.NewTestChannel(fixture.agent.EthAddr,
+		fixture.client.EthAddr, offering.ID, 0, 10000,
+		data.ChannelActive)
+	channel.ServiceStatus = data.ServiceSuspended
+	channel.ServiceChangedTime = &pastTime
+
+	data.InsertToTestDB(t, testDB, offering, channel)
+
+	if err := testMon.VerifySuspendedChannelsAndTryToTerminate(); err != nil {
+		t.Fatalf("Failed to read channel information" +
+			" from the database")
+	}
+	if len(testMon.testsSelectedChannelsIDs) != 1 ||
+		testMon.testsSelectedChannelsIDs[0] != channel.ID {
+		t.Fatal("Billing ignored channel," +
+			" that must be suspended")
 	}
 }
-
-func populateDataAndCallValidation(t *testing.T, dataSetFilename string, callback func() error) {
-	err := executeSQLFile(path.Join(util.RootPath(), "billing", "tests", dataSetFilename))
-	if err != nil {
-		t.Fatal("Can't populate source test data. Details: ", err)
-	}
-
-	err = callback()
-	if err != nil {
-		t.Fatal("Can't populate source test data. Details: ", err)
-	}
-}
-
-func executeSQLFile(filename string) error {
-	query, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(string(query))
-	return err
-}
-*/

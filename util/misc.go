@@ -54,7 +54,7 @@ func ParseLinesFromFile(filePath string, keys map[string]bool,
 	results := make(map[string]string)
 	for scanner.Scan() {
 		if key, value, add := parse(keys, scanner.Text()); add {
-			if key != "" && value != "" {
+			if key != "" {
 				results[key] = value
 			}
 		}

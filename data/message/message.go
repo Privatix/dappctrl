@@ -47,6 +47,7 @@ func NewEndpointMessageTemplate(
 	}, nil
 }
 
+// ParsParamsFromConfig function returns map[key]value from the filePath
 func (msg *EndpointMessageTemplate) ParsParamsFromConfig(filePath string) (map[string]string, error) {
 	return util.ParseLinesFromFile(filePath, openVpn, msg.parse)
 }

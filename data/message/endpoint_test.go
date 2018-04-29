@@ -2,6 +2,7 @@ package message
 
 import (
 	"github.com/privatix/dappctrl/data/message/templates"
+	"github.com/privatix/dappctrl/util"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,8 +11,11 @@ import (
 )
 
 var (
-	env *testEnv
+	env  *testEnv
+	conf = &config{}
 )
+
+type config struct{}
 
 type testEnv struct {
 	testDir  string
@@ -24,6 +28,10 @@ type testData struct {
 	contentCert string
 	configExist bool
 	certExist   bool
+}
+
+func TestMain(m *testing.M) {
+	util.ReadTestConfig(&conf)
 }
 
 func newMessage() *EndpointMessageTemplate {

@@ -180,7 +180,8 @@ func TestMonitor_VerifySecondsBasedChannels(t *testing.T) {
 			conf.BillingTest.Channel.MidDeposit,
 			data.ChannelActive)
 
-		fixture.addTestObjects([]reform.Record{offering, channel1, channel2})
+		fixture.addTestObjects([]reform.Record{
+			offering, channel1, channel2})
 
 		if err := testMon.VerifySecondsBasedChannels(); err != nil {
 			t.Fatalf("Failed to read channel information" +
@@ -233,7 +234,8 @@ func TestMonitor_VerifySecondsBasedChannels(t *testing.T) {
 			conf.BillingTest.Session.EmptyUnitsUsed,
 			0, 2)
 
-		fixture.addTestObjects([]reform.Record{offering, channel1, channel2,
+		fixture.addTestObjects([]reform.Record{
+			offering, channel1, channel2,
 			sesChannel1[0], sesChannel1[1], sesChannel1[2],
 			sesChannel2[0], sesChannel2[1]},
 		)
@@ -283,7 +285,8 @@ func TestMonitor_VerifyUnitsBasedChannels(t *testing.T) {
 			conf.BillingTest.Channel.MidDeposit,
 			data.ChannelActive)
 
-		fixture.addTestObjects([]reform.Record{offering, channel1, channel2})
+		fixture.addTestObjects([]reform.Record{
+			offering, channel1, channel2})
 
 		if err := testMon.VerifyUnitsBasedChannels(); err != nil {
 			t.Fatalf("Failed to read channel information" +
@@ -339,7 +342,8 @@ func TestMonitor_VerifyUnitsBasedChannels(t *testing.T) {
 			conf.BillingTest.Session.UnitsUsed,
 			0, 2)
 
-		fixture.addTestObjects([]reform.Record{offering, channel1, channel2,
+		fixture.addTestObjects([]reform.Record{
+			offering, channel1, channel2,
 			sesChannel1[0], sesChannel1[1], sesChannel1[2],
 			sesChannel2[0], sesChannel2[1]},
 		)

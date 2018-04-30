@@ -71,5 +71,27 @@
 
     "SOMCTest": {
         "ServerStartupDelay": 10
+    },
+
+    "BillingTest": {
+        "Offer": {
+            "MaxUnit": 900,
+            "MaxInactiveTimeSec": 10,
+            "UnitPrice": 1,
+            "BigLag": 10000,
+            "SmallLag": 1
+        },
+        "Session": {
+            "UnitsUsed": 300,
+            "EmptyUnitsUsed":0,
+            "SecondsConsumed": 300,
+            "EmptySecondsConsumed":0
+        },
+        "Channel": {
+            "SmallDeposit":1,
+            "MidDeposit":100,
+            "BigDeposit":1000,
+            "EmptyBalance":0
+        }
     }
 }

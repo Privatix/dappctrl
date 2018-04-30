@@ -38,44 +38,6 @@ var (
 	server *Server
 )
 
-type fixture struct {
-	t        *testing.T
-	product  *data.Product
-	account  *data.Account
-	template *data.Template
-	offering *data.Offering
-	channel  *data.Channel
-}
-
-func newFixture(t *testing.T) *fixture {
-	prod := data.NewTestProduct()
-	acc := data.NewTestAccount("")
-	tmpl := data.NewTestTemplate(data.TemplateOffer)
-	off := data.NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
-	ch := data.NewTestChannel(
-		acc.EthAddr, acc.EthAddr, off.ID, 0, 0, data.ChannelActive)
-
-	data.InsertToTestDB(t, db, prod, acc, tmpl, off, ch)
-
-	return &fixture{
-		t:        t,
-		product:  prod,
-		account:  acc,
-		template: tmpl,
-		offering: off,
-		channel:  ch,
-	}
-}
-
-func (f *fixture) close() {
-	for _, v := range []reform.Record{
-		f.channel, f.offering, f.template, f.account, f.product} {
-		if err := db.Delete(v); err != nil {
-			f.t.Fatalf("failed to delete %T: %s", v, err)
-		}
-	}
-}
-
 func TestBadMethod(t *testing.T) {
 	client := &http.Client{}
 	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
@@ -99,118 +61,118 @@ func TestBadMethod(t *testing.T) {
 }
 
 func TestBadProductAuth(t *testing.T) {
-	fix := newFixture(t)
-	defer fix.close()
+	fix := data.NewTestFixture(t, db)
+	defer fix.Close()
 
 	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
 		err := Post(conf.SessionServer.Config,
 			"bad-product", "bad-password", v, nil, nil)
-		util.ExpectResult(t, "Post", srv.ErrAccessDenied, err)
+		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
 
 		err = Post(conf.SessionServer.Config,
-			fix.product.ID, "bad-password", v, nil, nil)
-		util.ExpectResult(t, "Post", srv.ErrAccessDenied, err)
+			fix.Product.ID, "bad-password", v, nil, nil)
+		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
 	}
 }
 
 func TestBadClientIdent(t *testing.T) {
-	fix := newFixture(t)
-	defer fix.close()
+	fix := data.NewTestFixture(t, db)
+	defer fix.Close()
 
 	var args AuthArgs
 	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
 		args.ClientID = "bad-channel"
-		fix.channel.ServiceStatus = data.ServiceActive
-		data.SaveToTestDB(t, db, fix.channel)
+		fix.Channel.ServiceStatus = data.ServiceActive
+		data.SaveToTestDB(t, db, fix.Channel)
 
 		err := Post(conf.SessionServer.Config,
-			fix.product.ID, data.TestPassword, v, args, nil)
-		util.ExpectResult(t, "Post", ErrChannelNotFound, err)
+			fix.Product.ID, data.TestPassword, v, args, nil)
+		util.TestExpectResult(t, "Post", ErrChannelNotFound, err)
 
-		args.ClientID = fix.channel.ID
-		fix.channel.ServiceStatus = data.ServicePending
-		data.SaveToTestDB(t, db, fix.channel)
+		args.ClientID = fix.Channel.ID
+		fix.Channel.ServiceStatus = data.ServicePending
+		data.SaveToTestDB(t, db, fix.Channel)
 
 		err = Post(conf.SessionServer.Config,
-			fix.product.ID, data.TestPassword, PathAuth, args, nil)
-		util.ExpectResult(t, "Post", ErrNonActiveChannel, err)
+			fix.Product.ID, data.TestPassword, PathAuth, args, nil)
+		util.TestExpectResult(t, "Post", ErrNonActiveChannel, err)
 	}
 }
 
 func TestBadAuth(t *testing.T) {
-	fix := newFixture(t)
-	defer fix.close()
+	fix := data.NewTestFixture(t, db)
+	defer fix.Close()
 
-	args := AuthArgs{ClientID: fix.channel.ID, Password: "bad-password"}
+	args := AuthArgs{ClientID: fix.Channel.ID, Password: "bad-password"}
 
-	args.ClientID = fix.channel.ID
+	args.ClientID = fix.Channel.ID
 	err := Post(conf.SessionServer.Config,
-		fix.product.ID, data.TestPassword, PathAuth, args, nil)
-	util.ExpectResult(t, "Post", ErrBadAuthPassword, err)
+		fix.Product.ID, data.TestPassword, PathAuth, args, nil)
+	util.TestExpectResult(t, "Post", ErrBadAuthPassword, err)
 }
 
 func TestBadUpdate(t *testing.T) {
-	fix := newFixture(t)
-	defer fix.close()
+	fix := data.NewTestFixture(t, db)
+	defer fix.Close()
 
-	args := UpdateArgs{ClientID: fix.channel.ID}
+	args := UpdateArgs{ClientID: fix.Channel.ID}
 	err := Post(conf.SessionServer.Config,
-		fix.product.ID, data.TestPassword, PathUpdate, args, nil)
-	util.ExpectResult(t, "Post", ErrSessionNotFound, err)
+		fix.Product.ID, data.TestPassword, PathUpdate, args, nil)
+	util.TestExpectResult(t, "Post", ErrSessionNotFound, err)
 }
 
-func testAuthNormalFlow(fix *fixture) {
-	args := AuthArgs{ClientID: fix.channel.ID, Password: data.TestPassword}
+func testAuthNormalFlow(fix *data.TestFixture) {
+	args := AuthArgs{ClientID: fix.Channel.ID, Password: data.TestPassword}
 	err := Post(conf.SessionServer.Config,
-		fix.product.ID, data.TestPassword, PathAuth, args, nil)
-	util.ExpectResult(fix.t, "Post", nil, err)
+		fix.Product.ID, data.TestPassword, PathAuth, args, nil)
+	util.TestExpectResult(fix.T, "Post", nil, err)
 }
 
-func testStartNormalFlow(fix *fixture) *data.Session {
+func testStartNormalFlow(fix *data.TestFixture) *data.Session {
 	const clientIP, clientPort = "1.2.3.4", 12345
 	args2 := StartArgs{
-		ClientID:   fix.channel.ID,
+		ClientID:   fix.Channel.ID,
 		ClientIP:   clientIP,
 		ClientPort: clientPort,
 	}
 
 	before := time.Now()
 	err := Post(conf.SessionServer.Config,
-		fix.product.ID, data.TestPassword, PathStart, args2, nil)
-	util.ExpectResult(fix.t, "Post", nil, err)
+		fix.Product.ID, data.TestPassword, PathStart, args2, nil)
+	util.TestExpectResult(fix.T, "Post", nil, err)
 	after := time.Now()
 
 	var sess data.Session
-	if err := db.FindOneTo(&sess, "channel", fix.channel.ID); err != nil {
-		fix.t.Fatalf("cannot find new session: %s", err)
+	if err := db.FindOneTo(&sess, "channel", fix.Channel.ID); err != nil {
+		fix.T.Fatalf("cannot find new session: %s", err)
 	}
 
 	if sess.Started.Before(before) || sess.Started.After(after) {
 		db.Delete(&sess)
-		fix.t.Fatalf("wrong session started time")
+		fix.T.Fatalf("wrong session started time")
 	}
 
 	if sess.LastUsageTime.Before(before) ||
 		sess.LastUsageTime.After(after) ||
 		sess.Started != sess.LastUsageTime {
 		db.Delete(&sess)
-		fix.t.Fatalf("wrong session last usage time")
+		fix.T.Fatalf("wrong session last usage time")
 	}
 
 	if sess.ClientIP == nil || *sess.ClientIP != clientIP {
 		db.Delete(&sess)
-		fix.t.Fatalf("wrong session client IP")
+		fix.T.Fatalf("wrong session client IP")
 	}
 
 	if sess.ClientPort == nil || *sess.ClientPort != clientPort {
 		db.Delete(&sess)
-		fix.t.Fatalf("wrong session client port")
+		fix.T.Fatalf("wrong session client port")
 	}
 
 	return &sess
 }
 
-func testUpdateStopNormalFlow(fix *fixture, sess *data.Session, stop bool) {
+func testUpdateStopNormalFlow(fix *data.TestFixture, sess *data.Session, stop bool) {
 	const units = 12345
 
 	path := PathUpdate
@@ -219,48 +181,48 @@ func testUpdateStopNormalFlow(fix *fixture, sess *data.Session, stop bool) {
 	}
 
 	sess.UnitsUsed = units
-	data.SaveToTestDB(fix.t, db, sess)
+	data.SaveToTestDB(fix.T, db, sess)
 
 	for i, v := range []string{
 		data.ProductUsageTotal, data.ProductUsageIncremental} {
-		fix.product.UsageRepType = v
-		data.SaveToTestDB(fix.t, db, fix.product)
+		fix.Product.UsageRepType = v
+		data.SaveToTestDB(fix.T, db, fix.Product)
 
 		before := time.Now()
-		args := UpdateArgs{ClientID: fix.channel.ID, Units: units}
-		err := Post(conf.SessionServer.Config, fix.product.ID,
+		args := UpdateArgs{ClientID: fix.Channel.ID, Units: units}
+		err := Post(conf.SessionServer.Config, fix.Product.ID,
 			data.TestPassword, path, args, nil)
-		util.ExpectResult(fix.t, "Post", nil, err)
+		util.TestExpectResult(fix.T, "Post", nil, err)
 
 		after := time.Now()
-		data.ReloadFromTestDB(fix.t, db, sess)
+		data.ReloadFromTestDB(fix.T, db, sess)
 
 		if sess.LastUsageTime.Before(before) ||
 			sess.LastUsageTime.After(after) ||
 			sess.UnitsUsed != uint64((i+1)*units) {
-			fix.t.Fatalf("wrong session data after update")
+			fix.T.Fatalf("wrong session data after update")
 		}
 
 		if stop {
 			if sess.Stopped == nil ||
 				sess.Stopped.Before(before) ||
 				sess.Stopped.After(after) {
-				fix.t.Fatalf("wrong session stopped time")
+				fix.T.Fatalf("wrong session stopped time")
 			}
 		} else {
 			if sess.Stopped != nil {
-				fix.t.Fatalf("non-nil session stopped time")
+				fix.T.Fatalf("non-nil session stopped time")
 			}
 		}
 
 		sess.Stopped = nil
-		data.SaveToTestDB(fix.t, db, sess)
+		data.SaveToTestDB(fix.T, db, sess)
 	}
 }
 
 func TestNormalFlow(t *testing.T) {
-	fix := newFixture(t)
-	defer fix.close()
+	fix := data.NewTestFixture(t, db)
+	defer fix.Close()
 
 	testAuthNormalFlow(fix)
 

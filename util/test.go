@@ -30,8 +30,8 @@ func NewTestLogger(conf *LogConfig) *Logger {
 	return logger
 }
 
-// ExpectResult compares two errors and fails a test if they don't match.
-func ExpectResult(t *testing.T, op string, expected, actual error) {
+// TestExpectResult compares two errors and fails a test if they don't match.
+func TestExpectResult(t *testing.T, op string, expected, actual error) {
 	sameContent := expected != nil && actual != nil &&
 		expected.Error() == actual.Error()
 

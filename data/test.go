@@ -204,6 +204,18 @@ func SaveToTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 	CommitTestTX(t, tx)
 }
 
+// DeleteFromTestDB deletes records from test DB.
+func DeleteFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	tx := BeginTestTX(t, db)
+	for _, v := range recs {
+		if err := tx.Delete(v); err != nil {
+			RollbackTestTX(t, tx)
+			t.Fatalf("failed to delete %T: %s", v, err)
+		}
+	}
+	CommitTestTX(t, tx)
+}
+
 // ReloadFromTestDB reloads records from test DB.
 func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 	for _, v := range recs {
@@ -225,4 +237,44 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 		}
 	}
 	CommitTestTX(t, tx)
+}
+
+type TestFixture struct {
+	T        *testing.T
+	DB       *reform.DB
+	Product  *Product
+	Account  *Account
+	Template *Template
+	Offering *Offering
+	Channel  *Channel
+}
+
+func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
+	prod := NewTestProduct()
+	acc := NewTestAccount(TestPassword)
+	tmpl := NewTestTemplate(TemplateOffer)
+	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
+	ch := NewTestChannel(
+		acc.EthAddr, acc.EthAddr, off.ID, 0, 0, ChannelActive)
+
+	InsertToTestDB(t, db, prod, acc, tmpl, off, ch)
+
+	return &TestFixture{
+		T:        t,
+		DB:       db,
+		Product:  prod,
+		Account:  acc,
+		Template: tmpl,
+		Offering: off,
+		Channel:  ch,
+	}
+}
+
+func (f *TestFixture) Close() {
+	for _, v := range []reform.Record{
+		f.Channel, f.Offering, f.Template, f.Account, f.Product} {
+		if err := f.DB.Delete(v); err != nil {
+			f.T.Fatalf("failed to delete %T: %s", v, err)
+		}
+	}
 }

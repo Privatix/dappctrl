@@ -265,8 +265,8 @@ func TestMonitor_VerifyUnitsBasedChannels(t *testing.T) {
 	//
 	// Description: this test checks first rule in HAVING block.
 	t.Run("LowTotalDeposit", func(t *testing.T) {
-		defer data.CleanTestDB(t, testDB)
 		fixture := newFixture(t)
+		defer fixture.clean()
 
 		offering := data.NewTestOffering(fixture.agent.EthAddr,
 			fixture.product.ID, fixture.template.ID)

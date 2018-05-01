@@ -42,7 +42,7 @@ func add(t *testing.T, queue *Queue, job *data.Job, expected error) {
 		if err == nil {
 			queue.db.Delete(job)
 		}
-		util.ExpectResult(t, "Add", expected, err)
+		util.TestExpectResult(t, "Add", expected, err)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestHandlerNotFound(t *testing.T) {
 	add(t, queue, job, nil)
 	defer db.Delete(job)
 
-	util.ExpectResult(t, "Process", ErrHandlerNotFound, queue.Process())
+	util.TestExpectResult(t, "Process", ErrHandlerNotFound, queue.Process())
 }
 
 func waitForJob(queue *Queue, job *data.Job, ch chan<- error) {
@@ -125,8 +125,8 @@ func TestFailure(t *testing.T) {
 
 	ch := make(chan error)
 	go waitForJob(queue, job, ch)
-	util.ExpectResult(t, "Process", ErrQueueClosed, queue.Process())
-	util.ExpectResult(t, "waitForJob", nil, <-ch)
+	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobDone {
 		t.Fatalf("job status is not done: %s", job.Status)
 	}
@@ -135,11 +135,11 @@ func TestFailure(t *testing.T) {
 	job.Status = data.JobActive
 	handlerMap[data.JobClientPreChannelCreate] =
 		makeHandler(conf.Job.TryLimit + 1)
-	util.ExpectResult(t, "Save", nil, db.Save(job))
+	util.TestExpectResult(t, "Save", nil, db.Save(job))
 
 	go waitForJob(queue, job, ch)
-	util.ExpectResult(t, "Process", ErrQueueClosed, queue.Process())
-	util.ExpectResult(t, "waitForJob", nil, <-ch)
+	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobFailed {
 		t.Fatalf("job status is not failed: %s", job.Status)
 	}
@@ -186,7 +186,7 @@ func TestStress(t *testing.T) {
 	}
 
 	queue.Close()
-	util.ExpectResult(t, "Process", ErrQueueClosed, <-ch2)
+	util.TestExpectResult(t, "Process", ErrQueueClosed, <-ch2)
 }
 
 func TestMain(m *testing.M) {

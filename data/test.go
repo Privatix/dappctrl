@@ -5,9 +5,11 @@ package data
 import (
 	"crypto/ecdsa"
 	cryptorand "crypto/rand"
+	"fmt"
 	"log"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +18,26 @@ import (
 
 	"github.com/privatix/dappctrl/util"
 )
+
+// TestEncryptedKey is a key encryption simplified for tests performance.
+func TestEncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
+	return FromBytes(crypto.FromECDSA(pkey)) + "AUTH:" + auth, nil
+}
+
+// TestToPrivateKey is a key decryption simplified for tests performance.
+func TestToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
+	split := strings.Split(keyB64, "AUTH:")
+	keyB64 = split[0]
+	authStored := split[1]
+	if auth != authStored {
+		return nil, fmt.Errorf("passphrase didn't match")
+	}
+	keyBytes, err := ToBytes(keyB64)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.ToECDSA(keyBytes)
+}
 
 // TestData is a container for testing data items.
 type TestData struct {
@@ -54,12 +76,12 @@ func NewTestAccount(auth string) *Account {
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
 	addr := FromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
-	pkEncrypted, _ := EncryptedKey(priv, auth)
+	pkEcnrypted, _ := TestEncryptedKey(priv, auth)
 	return &Account{
 		ID:         util.NewUUID(),
 		EthAddr:    addr,
 		PublicKey:  pub,
-		PrivateKey: pkEncrypted,
+		PrivateKey: pkEcnrypted,
 		IsDefault:  true,
 		InUse:      true,
 		Name:       util.NewUUID()[:30],

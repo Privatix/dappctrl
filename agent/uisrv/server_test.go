@@ -88,6 +88,8 @@ func TestMain(m *testing.M) {
 	}
 	pwdStorage := new(data.PWDStorage)
 	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc, pwdStorage)
+	testServer.encryptKeyFunc = data.TestEncryptedKey
+	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()
 
 	time.Sleep(time.Duration(conf.AgentServerTest.ServerStartupDelay) *

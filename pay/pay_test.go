@@ -66,7 +66,7 @@ func newTestPayload(amount uint64, channel *data.Channel,
 		Balance:         amount,
 		ContractAddress: "<contract address>",
 	}
-	sig, err := clientAcc.Sign(hash(pld), testPassword)
+	sig, err := clientAcc.Sign(hash(pld), data.TestToPrivateKey, testPassword)
 	if err != nil {
 		panic(err)
 	}

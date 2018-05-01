@@ -131,7 +131,7 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	createdPK, err := data.ToPrivateKey(created.PrivateKey, testPassword)
+	createdPK, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
 	if err != nil {
 		t.Fatal("failed to decrypt created account's private key: ", err)
 	}

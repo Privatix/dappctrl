@@ -60,7 +60,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		s.replyInvalidPayload(w)
 		return
 	}
-	acc.PrivateKey, err = data.EncryptedKey(privKey, s.pwdStorage.Get())
+	acc.PrivateKey, err = s.encryptKeyFunc(privKey, s.pwdStorage.Get())
 	if err != nil {
 		s.logger.Warn("could not encrypt priv key: %v", err)
 		s.replyUnexpectedErr(w)

@@ -9,9 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"bufio"
 	"github.com/ethereum/go-ethereum/common/number"
-	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -24,45 +22,6 @@ func ReadJSONFile(name string, data interface{}) error {
 	defer file.Close()
 
 	return json.NewDecoder(file).Decode(data)
-}
-
-// ParseLinesFromFile reads and parses a custom file.
-// You need to pass the full path to the file and
-// function for processing lines of a file.
-// If function 'parse' found value  corresponding to one of the keys
-// then it must return the key, value and true. Value must be "".
-// If function 'parse' not found the value corresponding to one of the keys
-// then it must return "","", false
-func ParseLinesFromFile(filePath string, keys map[string]bool,
-	parse func(keys map[string]bool, input string) (string, string, bool),
-) (map[string]string, error) {
-	if keys == nil {
-		return nil, errors.New("keys input variable is null")
-	}
-
-	if parse == nil {
-		return nil, errors.New("parse input function is null")
-	}
-
-	inputFile, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer inputFile.Close()
-
-	scanner := bufio.NewScanner(inputFile)
-	results := make(map[string]string)
-	for scanner.Scan() {
-		if key, value, add := parse(keys, scanner.Text()); add {
-			if key != "" {
-				results[key] = value
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return results, nil
 }
 
 // NewUUID generates a new UUID.

@@ -22,6 +22,10 @@ type Monitor struct {
 	// By default, in production builds is set to nil.
 	// If not nil - collects IDs of channels, that was selected for further processing.
 	testsSelectedChannelsIDs []string
+
+	// if testMode is true the query results will be written
+	// in the testsSelectedChannelsIDs slice
+	testMode bool
 }
 
 // NewMonitor creates new instance of billing monitor.
@@ -31,7 +35,7 @@ func NewMonitor(interval time.Duration, db *reform.DB, logger *util.Logger) (*Mo
 		return nil, errors.New("`db` is required")
 	}
 
-	return &Monitor{db, logger, interval, nil}, nil
+	return &Monitor{db, logger, interval, nil, false}, nil
 }
 
 // Run begins monitoring of channels.
@@ -225,8 +229,10 @@ func (m *Monitor) processEachChannel(query string, processor func(string) error)
 		return err
 	}
 
-	if m.testsSelectedChannelsIDs != nil {
-		m.testsSelectedChannelsIDs = make([]string, 0)
+	if m.testMode {
+		if m.testsSelectedChannelsIDs != nil {
+			m.testsSelectedChannelsIDs = make([]string, 0)
+		}
 	}
 
 	for rows.Next() {
@@ -234,9 +240,11 @@ func (m *Monitor) processEachChannel(query string, processor func(string) error)
 		rows.Scan(&channelUUID)
 		processor(channelUUID)
 
-		//if m.testsSelectedChannelsIDs != nil {
-		m.testsSelectedChannelsIDs = append(m.testsSelectedChannelsIDs, channelUUID)
-		//}
+		if m.testMode {
+			m.testsSelectedChannelsIDs =
+				append(m.testsSelectedChannelsIDs, channelUUID)
+		}
+
 	}
 
 	return nil

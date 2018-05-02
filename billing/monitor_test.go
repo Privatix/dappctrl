@@ -229,6 +229,8 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	mon.testMode = true
+
 	testMon = newTestMonitor(mon)
 
 	os.Exit(m.Run())

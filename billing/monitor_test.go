@@ -11,6 +11,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"sync"
 )
 
 var (
@@ -20,10 +21,17 @@ var (
 		BillingTest *billingTestConfig
 	}
 	testDB  *reform.DB
-	testMon *Monitor
+	testMon *atomicMonitor
 )
 
-const testPassword = "test-password"
+const (
+	testPassword = "test-password"
+)
+
+type atomicMonitor struct {
+	mu  sync.Mutex
+	mon *Monitor
+}
 
 type billingTestConfig struct {
 	Offer   offer
@@ -61,6 +69,55 @@ type testFixture struct {
 	product  *data.Product
 	template *data.Template
 	testObjs []reform.Record
+}
+
+func newTestMonitor(mon *Monitor) *atomicMonitor {
+	return &atomicMonitor{
+		mu:  sync.Mutex{},
+		mon: mon,
+	}
+}
+
+func (a *atomicMonitor) testsSelectedChannelsIDs() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.testsSelectedChannelsIDs
+}
+
+func (a *atomicMonitor) VerifySecondsBasedChannels() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifySecondsBasedChannels()
+}
+
+func (a *atomicMonitor) VerifyUnitsBasedChannels() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifyUnitsBasedChannels()
+}
+
+func (a *atomicMonitor) VerifyBillingLags() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifyBillingLags()
+}
+
+func (a *atomicMonitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifySuspendedChannelsAndTryToUnsuspend()
+}
+
+func (a *atomicMonitor) VerifyChannelsForInactivity() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifyChannelsForInactivity()
+}
+
+func (a *atomicMonitor) VerifySuspendedChannelsAndTryToTerminate() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.mon.VerifySuspendedChannelsAndTryToTerminate()
 }
 
 func newBillingTestConfig() *billingTestConfig {
@@ -172,7 +229,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	testMon = mon
+	testMon = newTestMonitor(mon)
 
 	os.Exit(m.Run())
 }
@@ -216,8 +273,8 @@ func TestVerifySecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -279,8 +336,8 @@ func TestVerifySecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -327,8 +384,8 @@ func TestVerifyUnitsBasedChannelsLowTotalDeposit(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -392,8 +449,8 @@ func TestVerifyUnitsBasedChannelsUnitLimitExceeded(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -452,8 +509,8 @@ func TestVerifyBillingLags(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel2.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel2.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -518,8 +575,8 @@ func TestVerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be unsuspended")
 	}
@@ -579,8 +636,8 @@ func TestVerifyChannelsForInactivity(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel1.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -618,8 +675,8 @@ func TestVerifySuspendedChannelsAndTryToTerminate(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs) != 1 ||
-		testMon.testsSelectedChannelsIDs[0] != channel.ID {
+	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
+		testMon.testsSelectedChannelsIDs()[0] != channel.ID {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}

@@ -2,10 +2,11 @@ package util
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"net"
 	"regexp"
 	"strconv"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Format defines a validation format.
@@ -51,6 +52,9 @@ var (
 	hostnameRegex = regexp.MustCompile(
 		`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
 
+	hostnameRegex2 = regexp.MustCompile(
+		`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
+
 	// Simple regular expression for IPv4 values,
 	// more rigorous checking is done via net.ParseIP
 	ipv4Regex = regexp.MustCompile(
@@ -69,6 +73,10 @@ func ValidateFormat(f Format, val string) error {
 	switch f {
 	case FormatHostname:
 		if !hostnameRegex.MatchString(val) {
+			err = fmt.Errorf(invalidHostname,
+				val, hostnameRegex.String())
+		}
+		if !hostnameRegex2.MatchString(val) {
 			err = fmt.Errorf(invalidHostname,
 				val, hostnameRegex.String())
 		}

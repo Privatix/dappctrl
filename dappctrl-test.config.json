@@ -74,6 +74,17 @@
     },
 
     "EptTest": {
-        "exportConfigKeys": [ "proto", "cipher", "ping-restart", "ping", "connect-retry", "ca", "comp-lzo", "keepalive" ]
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "ValidHash": [
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1",
+            "89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1"],
+        "InvalidHash": [
+            "",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b11",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38g1"],
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
+        "InvalidHost": ["privatix.io:44C", "priv#tix.io:443", "privatix.io%443"]
     }
 }

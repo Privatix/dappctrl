@@ -25,13 +25,28 @@ type EndpointMessageTemplate struct {
 	keys []string
 }
 
-type message struct {
-	templateHash           string
-	paymentReceiverAddress string
-	serviceEndpointAddress string
-	username               string
-	password               string
-	additionalParams       map[string]string
+// Endpoint Message structure
+//
+// TemplateHash - Hash of template that was used to fill this message
+//
+// PaymentReceiverAddress - Address ("hostname:port")
+// of payment receiver. Can be dns or IP.
+//
+// ServiceEndpointAddress - Address ("hostname:port")
+// of service endpoint. Can be dns or IP.
+//
+// Username - Optional fields for username.
+//
+// Password - Optional fields for password.
+//
+// AdditionalParams - all additional parameters stored as inner JSON
+type EndpointMessage struct {
+	TemplateHash           string
+	PaymentReceiverAddress string
+	ServiceEndpointAddress string
+	Username               string
+	Password               string
+	AdditionalParams       map[string]string
 }
 
 // NewEndpointMessageTemplate creates
@@ -44,7 +59,7 @@ func NewEndpointMessageTemplate(
 	}
 }
 
-// Message generates new Endpoint message into JSON format
+// EndpointMessage generates new Endpoint message into JSON format
 func (e *EndpointMessageTemplate) Message(
 	hash,
 	receiver,
@@ -58,7 +73,7 @@ func (e *EndpointMessageTemplate) Message(
 	}
 
 	if !e.validNetworkAddress(receiver) {
-		return nil, ErrEndpoint
+		return nil, ErrReceiver
 	}
 
 	if !e.validNetworkAddress(endpoint) {
@@ -69,13 +84,13 @@ func (e *EndpointMessageTemplate) Message(
 		return nil, ErrHash
 	}
 
-	return json.Marshal(&message{
-		templateHash:           hash,
-		paymentReceiverAddress: receiver,
-		serviceEndpointAddress: endpoint,
-		username:               username,
-		password:               password,
-		additionalParams:       additionalParams,
+	return json.Marshal(&EndpointMessage{
+		TemplateHash:           hash,
+		PaymentReceiverAddress: receiver,
+		ServiceEndpointAddress: endpoint,
+		Username:               username,
+		Password:               password,
+		AdditionalParams:       additionalParams,
 	})
 }
 
@@ -120,6 +135,7 @@ func (e *EndpointMessageTemplate) ParseCert(
 }
 
 func (e *EndpointMessageTemplate) validNetworkAddress(addr string) bool {
+
 	data := strings.Split(strings.TrimSpace(addr), ":")
 	// check data length
 	if len(data) != 2 {
@@ -135,8 +151,16 @@ func (e *EndpointMessageTemplate) validNetworkAddress(addr string) bool {
 	}
 
 	// check host format
-	if util.ValidateFormat(util.FormatIP, host) != nil &&
-		util.ValidateFormat(util.FormatHostname, data[0]) != nil {
+	checkHost := func(host string) bool {
+		if util.ValidateFormat(util.FormatIP, host) == nil ||
+			util.ValidateFormat(util.FormatIPv4, host) == nil ||
+			util.ValidateFormat(util.FormatIPv6, host) == nil ||
+			util.ValidateFormat(util.FormatHostname, host) == nil {
+			return true
+		}
+		return false
+	}
+	if !checkHost(host) {
 		return false
 	}
 
@@ -149,15 +173,16 @@ func (e *EndpointMessageTemplate) validNetworkAddress(addr string) bool {
 
 func (e *EndpointMessageTemplate) parseConfig(
 	filePath string, keys []string) (map[string]string, error) {
+	// check input
 	if keys == nil || filePath == "" {
 		return nil, ErrInput
 	}
+
 	// open config file
 	inputFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-
 	defer inputFile.Close()
 
 	// delete duplicates
@@ -169,6 +194,7 @@ func (e *EndpointMessageTemplate) parseConfig(
 	results := make(map[string]string)
 
 	scanner := bufio.NewScanner(inputFile)
+
 	for scanner.Scan() {
 		if key, value, add :=
 			e.parseLine(keyMap, scanner.Text()); add {
@@ -177,31 +203,57 @@ func (e *EndpointMessageTemplate) parseConfig(
 			}
 		}
 	}
+
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
+	// check ca key
 	ca := results[caNameFromConfig]
 	if ca == "" {
 		return nil, ErrCertNotExist
 	}
 
-	certPath := filepath.Dir(filePath) + string(os.PathSeparator) + ca
+	// A certificate can be located on an absolute and relative path.
+	// If the certificate is found in the file,
+	// will return the body of the certificate,
+	// the absolute path to the certificate, and true
+	pCert := func(paths []string) (string, string, bool) {
+		for _, filePath := range paths {
+			cert, err := e.ParseCert(filePath)
+			if err == nil {
+				return cert, filePath, true
+			}
+		}
 
-	cert, err := e.ParseCert(certPath)
-	if err != nil {
-		return nil, err
+		return "", "", false
 	}
+
+	// absolute path
+	absPath := filepath.Dir(filePath) + string(os.PathSeparator) + ca
+
+	cert, certPath, found := pCert([]string{ca, absPath})
+	if !found {
+		return nil, ErrCertNotFound
+	}
+
 	results[caData] = cert
 	results[caPathName] = certPath
+
 	return results, nil
 }
 
 func (e *EndpointMessageTemplate) parseLine(
 	keys map[string]bool, line string) (string, string, bool) {
 	str := strings.TrimSpace(line)
+
 	for key := range keys {
+		if !strings.HasPrefix(str, key) {
+			continue
+		}
+
 		index := strings.Index(str, "#")
+
 		if index == -1 {
 			words := strings.Split(str, " ")
 			if len(words) == 1 {
@@ -210,12 +262,17 @@ func (e *EndpointMessageTemplate) parseLine(
 			value := strings.Join(words[1:], " ")
 			return key, value, true
 		}
+
 		subStr := strings.TrimSpace(str[:index])
+
 		words := strings.Split(subStr, " ")
+
 		if len(words) == 1 {
 			return key, "", true
 		}
+
 		value := strings.Join(words[1:], " ")
+
 		return key, value, true
 	}
 	return "", "", false

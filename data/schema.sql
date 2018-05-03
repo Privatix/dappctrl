@@ -144,7 +144,8 @@ CREATE TABLE products (
     is_server boolean NOT NULL, -- product is defined as server (Agent) or client (Client)
     salt bigint NOT NULL, -- password salt
     password sha3_256 NOT NULL,
-    client_ident client_ident_type NOT NULL
+    client_ident client_ident_type NOT NULL,
+    additional_params json -- all additional parameters stored as JSON --
 );
 
 -- Service offerings.

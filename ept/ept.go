@@ -60,14 +60,8 @@ func NewEndpointMessageTemplate(
 }
 
 // Message generates new Endpoint message into JSON format
-func (e *EndpointMessageTemplate) Message(
-	hash,
-	receiver,
-	endpoint,
-	username,
-	password string,
-	additionalParams map[string]string,
-) ([]byte, error) {
+func (e *EndpointMessageTemplate) Message(hash, receiver, endpoint, username,
+	password string, additionalParams map[string]string) ([]byte, error) {
 	if hash == "" || receiver == "" || endpoint == "" {
 		return nil, ErrInput
 	}

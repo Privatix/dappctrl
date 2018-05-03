@@ -113,6 +113,24 @@ func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	return payload
 }
 
+func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreatePayload {
+	payload := &accountCreatePayload{}
+
+	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
+	payload.JsonKeyStorePassword = "helloworld"
+	privKey, _ := crypto.ToECDSA(pkB)
+
+	pkB64, _ := data.EncryptedKey(privKey, payload.JsonKeyStorePassword)
+	jsonBytes, _ := data.ToBytes(pkB64)
+	payload.JsonKeyStoreRaw = string(jsonBytes)
+
+	payload.IsDefault = true
+	payload.InUse = true
+	payload.Name = "Test account"
+
+	return payload
+}
+
 func testAccountFields(
 	t *testing.T,
 	testAcc *truffle.TestAccount,
@@ -200,6 +218,31 @@ func TestCreateAccount(t *testing.T) {
 
 	testAcc := testTruffleAPI.GetTestAccounts()[0]
 	payload := getTestAccountPayload(&testAcc)
+
+	res := sendPayload(t, http.MethodPost, accountsPath, payload)
+
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusCreated)
+	}
+
+	reply := &replyEntity{}
+	json.NewDecoder(res.Body).Decode(reply)
+	defer res.Body.Close()
+
+	created := &data.Account{}
+	if err := testServer.db.FindByPrimaryKeyTo(created, reply.ID); err != nil {
+		t.Fatal("failed to retrieve created account: ", err)
+	}
+
+	testAccountFields(t, &testAcc, payload, created)
+}
+
+func TestCreateAccountKeyStore(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	testAcc := testTruffleAPI.GetTestAccounts()[0]
+	payload := getTestAccountKeyStorePayload(&testAcc)
 
 	res := sendPayload(t, http.MethodPost, accountsPath, payload)
 

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"regexp"
@@ -128,29 +129,16 @@ func hasHexPrefix(str string) bool {
 		(str[1] == 'x' || str[1] == 'X')
 }
 
-func isHexCharacter(c byte) bool {
-	return ('0' <= c && c <= '9') ||
-		('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
-}
-
 func isHex(str string) bool {
-	if len(str)%2 != 0 {
+	if _, err := hex.DecodeString(str); err != nil {
 		return false
-	}
-	for _, c := range []byte(str) {
-		if !isHexCharacter(c) {
-			return false
-		}
 	}
 	return true
 }
 
 func isPort(str string) bool {
-	port, err := strconv.Atoi(str)
-	if err != nil {
-		return false
-	}
-	if port < 0 || port > 65535 {
+	if _, err := strconv.ParseUint(
+		str, 10, 16); err != nil {
 		return false
 	}
 	return true

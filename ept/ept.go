@@ -25,7 +25,7 @@ type EndpointMessageTemplate struct {
 	keys []string
 }
 
-// Endpoint Message structure
+// EndpointMessage structure
 //
 // TemplateHash - Hash of template that was used to fill this message
 //
@@ -59,7 +59,7 @@ func NewEndpointMessageTemplate(
 	}
 }
 
-// EndpointMessage generates new Endpoint message into JSON format
+// Message generates new Endpoint message into JSON format
 func (e *EndpointMessageTemplate) Message(
 	hash,
 	receiver,

@@ -4,6 +4,7 @@ package billing
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
-	"sync"
 )
 
 var (

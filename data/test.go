@@ -101,13 +101,13 @@ const (
 // NewTestProduct returns new product.
 func NewTestProduct() *Product {
 	return &Product{
-		ID:               util.NewUUID(),
-		Name:             "Test product",
-		UsageRepType:     ProductUsageTotal,
-		Salt:             TestSalt,
-		Password:         TestPasswordHash,
-		ClientIdent:      ClientIdentByChannelID,
-		AdditionalParams: []byte("{}"),
+		ID:           util.NewUUID(),
+		Name:         "Test product",
+		UsageRepType: ProductUsageTotal,
+		Salt:         TestSalt,
+		Password:     TestPasswordHash,
+		ClientIdent:  ClientIdentByChannelID,
+		Config:       []byte("{}"),
 	}
 }
 

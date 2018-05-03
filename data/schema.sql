@@ -145,7 +145,7 @@ CREATE TABLE products (
     salt bigint NOT NULL, -- password salt
     password sha3_256 NOT NULL,
     client_ident client_ident_type NOT NULL,
-    additional_params json -- all additional parameters stored as JSON --
+    config json  -- Store configuration of product --
 );
 
 -- Service offerings.

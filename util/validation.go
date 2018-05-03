@@ -29,10 +29,10 @@ const (
 	// FormatEthHash defines Ethereum hash values
 	FormatEthHash = "ethHash"
 
-	// FormatEthHash defines Ethereum hash values
+	// FormatEthAddress defines Ethereum hash values
 	FormatEthAddress = "ethAddr"
 
-	// FormatPort defines network port values
+	// FormatNetworkPort defines network port values
 	FormatNetworkPort = "netPort"
 )
 

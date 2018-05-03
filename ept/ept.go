@@ -165,8 +165,8 @@ func (e *EndpointMessageTemplate) validNetworkAddress(addr string) bool {
 	return true
 }
 
-func (e *EndpointMessageTemplate) parseConfig(
-	filePath string, keys []string) (map[string]string, error) {
+func (e *EndpointMessageTemplate) parseConfig(filePath string,
+	keys []string) (map[string]string, error) {
 	// check input
 	if keys == nil || filePath == "" {
 		return nil, ErrInput
@@ -237,8 +237,8 @@ func (e *EndpointMessageTemplate) parseConfig(
 	return results, nil
 }
 
-func (e *EndpointMessageTemplate) parseLine(
-	keys map[string]bool, line string) (string, string, bool) {
+func (e *EndpointMessageTemplate) parseLine(keys map[string]bool,
+	line string) (string, string, bool) {
 	str := strings.TrimSpace(line)
 
 	for key := range keys {

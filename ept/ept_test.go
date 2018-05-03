@@ -2,9 +2,7 @@ package ept
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -20,81 +18,25 @@ var (
 )
 
 const (
-	confFileName = "server.conf"
-	certFileName = "ca.crt"
-
-	tempPrefix = "eptTest"
-
-	filePerm os.FileMode = 0666
-
-	// In the future, we can change the way files are generated
-	validConf   = openVpnConfServerFullExample
-	validCert   = certValidExample
-	invalidConf = openVpnConfServerFakeCertificate
-	invalidCert = certInvalidExample
-
 	errPars = "incorrect parsing test"
 	errGen  = "incorrect generate message test"
 )
 
 type eptTestConfig struct {
-	ExportConfigKeys []string
-	ValidHash        []string
-	InvalidHash      []string
-	ValidHost        []string
-	InvalidHost      []string
+	ExportConfigKeys    []string
+	ValidHash           []string
+	InvalidHash         []string
+	ValidHost           []string
+	InvalidHost         []string
+	ConfValidCaValid    string
+	ConfInvalid         string
+	ConfValidCaInvalid  string
+	ConfValidCaEmpty    string
+	ConfValidCaNotExist string
 }
 
 func newEptTestConfig() *eptTestConfig {
 	return &eptTestConfig{}
-}
-
-type testEnv struct {
-	testDir  string
-	testConf string
-	testCert string
-}
-
-type testData struct {
-	contentFile string
-	contentCert string
-	configExist bool
-	certExist   bool
-}
-
-func newTestEnv(td *testData, t *testing.T) *testEnv {
-	dir, err := ioutil.TempDir("", tempPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var certFile string
-	var confFile string
-
-	if td.configExist {
-		confFile = filepath.Join(dir, confFileName)
-		if err := ioutil.WriteFile(confFile,
-			[]byte(td.contentFile), filePerm); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if td.certExist {
-		certFile = filepath.Join(dir, certFileName)
-		if err := ioutil.WriteFile(certFile,
-			[]byte(td.contentCert), filePerm); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	return &testEnv{
-		testDir:  dir,
-		testConf: confFile,
-		testCert: certFile,
-	}
-}
-
-func (env *testEnv) clean() {
-	os.RemoveAll(env.testDir)
 }
 
 func validParams(in []string, out map[string]string) bool {
@@ -121,14 +63,7 @@ func validParams(in []string, out map[string]string) bool {
 }
 
 func TestParsingValidConfig(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		validCert,
-		true,
-		true}, t)
-	defer env.clean()
-
-	out, err := testEMT.ParseConfig(env.testConf)
+	out, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -139,140 +74,74 @@ func TestParsingValidConfig(t *testing.T) {
 }
 
 func TestParsingInvalidConfig(t *testing.T) {
-	env := newTestEnv(&testData{
-		invalidConf,
-		validCert,
-		true,
-		true}, t)
-	defer env.clean()
-
-	_, err := testEMT.ParseConfig(env.testConf)
+	_, err := testEMT.ParseConfig(conf.EptTest.ConfInvalid)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCannotReadCertificateFile(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		"",
-		true,
-		false}, t)
-	defer env.clean()
-
-	_, err := testEMT.ParseConfig(env.testConf)
+	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaNotExist)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCertificateIsEmpty(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		"",
-		true,
-		true}, t)
-	defer env.clean()
-
-	_, err := testEMT.ParseConfig(env.testConf)
+	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaEmpty)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInvalidCertificate(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		invalidCert,
-		true,
-		true}, t)
-	defer env.clean()
-
-	_, err := testEMT.ParseConfig(env.testConf)
+	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaInvalid)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInputFormat(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		validCert,
-		true,
-		true}, t)
-	defer env.clean()
-
-	addParams, err := testEMT.ParseConfig(env.testConf)
+	addParams, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(errPars)
 	}
 
 	for _, hash := range conf.EptTest.ValidHash {
-		_, err := testEMT.Message(
-			hash,
-			conf.EptTest.ValidHost[0],
-			conf.EptTest.ValidHost[1],
-			"",
-			"",
-			addParams,
-		)
-		if err != nil {
+		if _, err := testEMT.Message(hash, conf.EptTest.ValidHost[0],
+			conf.EptTest.ValidHost[1], "", "",
+			addParams); err != nil {
 			t.Fatal(errGen)
 		}
 	}
 
 	for _, hash := range conf.EptTest.InvalidHash {
-		_, err := testEMT.Message(
-			hash,
-			conf.EptTest.ValidHost[0],
-			conf.EptTest.ValidHost[1],
-			"",
-			"",
-			addParams,
-		)
-		if err == nil {
+		if _, err := testEMT.Message(hash, conf.EptTest.ValidHost[0],
+			conf.EptTest.ValidHost[1], "", "",
+			addParams); err == nil {
 			t.Fatal(errGen)
 		}
 	}
 
 	for _, host := range conf.EptTest.ValidHost {
-		_, err := testEMT.Message(
-			conf.EptTest.ValidHash[0],
-			host,
-			conf.EptTest.ValidHost[0],
-			"",
-			"",
-			addParams,
-		)
-		if err != nil {
+		if _, err := testEMT.Message(conf.EptTest.ValidHash[0], host,
+			conf.EptTest.ValidHost[0], "", "",
+			addParams); err != nil {
 			t.Fatal(errGen)
 		}
 	}
 
 	for _, host := range conf.EptTest.InvalidHost {
-		_, err := testEMT.Message(
-			conf.EptTest.ValidHash[0],
-			host,
-			conf.EptTest.ValidHost[0],
-			"",
-			"",
-			addParams,
-		)
-		if err == nil {
+		if _, err := testEMT.Message(conf.EptTest.ValidHash[0], host,
+			conf.EptTest.ValidHost[0], "", "",
+			addParams); err == nil {
 			t.Fatal(errGen)
 		}
 	}
 }
 
 func TestGenerateCorrectMessage(t *testing.T) {
-	env := newTestEnv(&testData{
-		validConf,
-		validCert,
-		true,
-		true}, t)
-	defer env.clean()
-
-	addParams, err := testEMT.ParseConfig(env.testConf)
+	addParams, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(errPars)
 	}
@@ -286,14 +155,9 @@ func TestGenerateCorrectMessage(t *testing.T) {
 
 	candidate := new(EndpointMessage)
 
-	msg, err := testEMT.Message(
-		pattern.TemplateHash,
-		pattern.PaymentReceiverAddress,
-		pattern.ServiceEndpointAddress,
-		"",
-		"",
-		addParams,
-	)
+	msg, err := testEMT.Message(pattern.TemplateHash,
+		pattern.PaymentReceiverAddress, pattern.ServiceEndpointAddress,
+		"", "", addParams)
 	if err != nil {
 		t.Fatal(errGen)
 	}

@@ -19,7 +19,6 @@ const (
 	EthOfferingCreated           = "32c1913dfde418197923027c2f2260f19903a2e86a93ed83c4689ac91a96bafd"
 	EthOfferingDeleted           = "c3013cd9dd5c33b95a9cc1bc076481c9a6a1970be6d7f1ed33adafad6e57d3d6"
 	EthOfferingEndpoint          = "450e7ab61f9e1c40dd7c79edcba274a7a96f025fab1733b3fa1087a1b5d1db7d"
-	EthOfferingSupplyChanged     = "5848091ba8411ca73c2b3bcfa5ffdcc4db482c6bf114dfa984f75c03dd878cf3"
 	EthOfferingPoppedUp          = "c37352067a3ca1eafcf2dc5ba537fc473509c4e4aaca729cb1dab7053ec1ffbf"
 	EthCooperativeChannelClose   = "b488ea0f49970f556cf18e57588e78dcc1d3fd45c71130aa5099a79e8b06c8e7"
 	EthUncooperativeChannelClose = "7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6"
@@ -217,35 +216,6 @@ func NewOfferingEndpointEvent(topics [4]string, hexData string) (*OfferingEndpoi
 // Digest returns keccak512 hash sum of the event signature.
 func (e *OfferingEndpointEvent) Digest() string {
 	return EthOfferingEndpoint
-}
-
-// OfferingSupplyChangedEvent implements wrapper for contract event.
-// Please see contract implementation for the details.
-type OfferingSupplyChangedEvent struct {
-	Agent         common.Address // Indexed.
-	OfferingHash  *Uint256       // Indexed.
-	CurrentSupply *Uint192
-}
-
-// NewOfferingSupplyChangedEvent creates event of type OfferingSupplyChangedEvent.
-// Please see contract implementation for the details.
-func NewOfferingSupplyChangedEvent(topics [3]string, hexData string) (*OfferingSupplyChangedEvent, error) {
-	var err error
-	e := &OfferingSupplyChangedEvent{}
-
-	err = validateTopics(topics[:])
-	err = checkEventDigest(topics[0], e.Digest(), err)
-
-	e.Agent, err = parseAddress(topics[1], err)
-	e.OfferingHash, err = parseTopicAsUint256(topics[2], err)
-
-	e.CurrentSupply, err = parseDataFieldAsUint192(hexData, 0, err)
-	return e, err
-}
-
-// Digest returns keccak512 hash sum of the event signature.
-func (e *OfferingSupplyChangedEvent) Digest() string {
-	return EthOfferingSupplyChanged
 }
 
 // OfferingPoppedUpEvent implements wrapper for contract event.

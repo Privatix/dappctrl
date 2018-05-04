@@ -365,28 +365,6 @@
 				"indexed": true,
 				"name": "_offering_hash",
 				"type": "bytes32"
-			},
-			{
-				"indexed": false,
-				"name": "_current_supply",
-				"type": "uint16"
-			}
-		],
-		"name": "LogOfferingSupplyChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "_agent",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "_offering_hash",
-				"type": "bytes32"
 			}
 		],
 		"name": "LogOfferingPopedUp",
@@ -726,6 +704,25 @@
 		"type": "function"
 	},
 	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "offering_hash",
+				"type": "bytes32"
+			}
+		],
+		"name": "getOfferingSupply",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint16"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"constant": false,
 		"inputs": [
 			{
@@ -1045,28 +1042,6 @@
 			}
 		],
 		"name": "throwEventLogOfferingEndpoint",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_current_supply",
-				"type": "uint16"
-			}
-		],
-		"name": "throwEventLogOfferingSupplyChanged",
 		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",

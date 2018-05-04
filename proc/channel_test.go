@@ -44,15 +44,15 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	_, err := channelAction(util.NewUUID(), data.JobUser)
 	util.TestExpectResult(t, funcName, reform.ErrNoRows, err)
 
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
-	fix.Channel.ServiceStatus = badServiceStatus
-	data.SaveToTestDB(t, db, fix.Channel)
-	_, err = channelAction(fix.Channel.ID, data.JobUser)
+	fxt.Channel.ServiceStatus = badServiceStatus
+	data.SaveToTestDB(t, db, fxt.Channel)
+	_, err = channelAction(fxt.Channel.ID, data.JobUser)
 	util.TestExpectResult(t, funcName, ErrBadServiceStatus, err)
 
-	job := newTestJob(fix.Channel.ID)
+	job := newTestJob(fxt.Channel.ID)
 
 	expected := ErrActiveJobsExist
 	if len(jobTypeToCheck) != 0 {
@@ -60,11 +60,11 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 		expected = ErrSameJobExists
 	}
 
-	fix.Channel.ServiceStatus = goodServiceStatus
-	data.SaveToTestDB(t, db, fix.Channel, job)
+	fxt.Channel.ServiceStatus = goodServiceStatus
+	data.SaveToTestDB(t, db, fxt.Channel, job)
 	defer data.DeleteFromTestDB(t, db, job)
 
-	_, err = channelAction(fix.Channel.ID, data.JobUser)
+	_, err = channelAction(fxt.Channel.ID, data.JobUser)
 	util.TestExpectResult(t, funcName, expected, err)
 
 	if len(jobTypeToCheck) != 0 {
@@ -75,7 +75,7 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	data.SaveToTestDB(t, db, job)
 
 	before := time.Now()
-	id, err := channelAction(fix.Channel.ID, data.JobBCMonitor)
+	id, err := channelAction(fxt.Channel.ID, data.JobBCMonitor)
 	after := time.Now()
 	util.TestExpectResult(t, funcName, nil, err)
 
@@ -90,7 +90,7 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	defer data.DeleteFromTestDB(t, db, job)
 
 	data.ReloadFromTestDB(t, db, job)
-	if job.Type != jobType || job.RelatedID != fix.Channel.ID ||
+	if job.Type != jobType || job.RelatedID != fxt.Channel.ID ||
 		job.RelatedType != data.JobChannel ||
 		job.CreatedAt.Before(before) || job.CreatedAt.After(after) ||
 		job.CreatedBy != data.JobBCMonitor {

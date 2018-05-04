@@ -61,8 +61,8 @@ func TestBadMethod(t *testing.T) {
 }
 
 func TestBadProductAuth(t *testing.T) {
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
 	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
 		err := Post(conf.SessionServer.Config,
@@ -70,109 +70,109 @@ func TestBadProductAuth(t *testing.T) {
 		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
 
 		err = Post(conf.SessionServer.Config,
-			fix.Product.ID, "bad-password", v, nil, nil)
+			fxt.Product.ID, "bad-password", v, nil, nil)
 		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
 	}
 }
 
 func TestBadClientIdent(t *testing.T) {
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
 	var args AuthArgs
 	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
 		args.ClientID = "bad-channel"
-		fix.Channel.ServiceStatus = data.ServiceActive
-		data.SaveToTestDB(t, db, fix.Channel)
+		fxt.Channel.ServiceStatus = data.ServiceActive
+		data.SaveToTestDB(t, db, fxt.Channel)
 
 		err := Post(conf.SessionServer.Config,
-			fix.Product.ID, data.TestPassword, v, args, nil)
+			fxt.Product.ID, data.TestPassword, v, args, nil)
 		util.TestExpectResult(t, "Post", ErrChannelNotFound, err)
 
-		args.ClientID = fix.Channel.ID
-		fix.Channel.ServiceStatus = data.ServicePending
-		data.SaveToTestDB(t, db, fix.Channel)
+		args.ClientID = fxt.Channel.ID
+		fxt.Channel.ServiceStatus = data.ServicePending
+		data.SaveToTestDB(t, db, fxt.Channel)
 
 		err = Post(conf.SessionServer.Config,
-			fix.Product.ID, data.TestPassword, PathAuth, args, nil)
+			fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 		util.TestExpectResult(t, "Post", ErrNonActiveChannel, err)
 	}
 }
 
 func TestBadAuth(t *testing.T) {
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
-	args := AuthArgs{ClientID: fix.Channel.ID, Password: "bad-password"}
+	args := AuthArgs{ClientID: fxt.Channel.ID, Password: "bad-password"}
 
-	args.ClientID = fix.Channel.ID
+	args.ClientID = fxt.Channel.ID
 	err := Post(conf.SessionServer.Config,
-		fix.Product.ID, data.TestPassword, PathAuth, args, nil)
+		fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 	util.TestExpectResult(t, "Post", ErrBadAuthPassword, err)
 }
 
 func TestBadUpdate(t *testing.T) {
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
-	args := UpdateArgs{ClientID: fix.Channel.ID}
+	args := UpdateArgs{ClientID: fxt.Channel.ID}
 	err := Post(conf.SessionServer.Config,
-		fix.Product.ID, data.TestPassword, PathUpdate, args, nil)
+		fxt.Product.ID, data.TestPassword, PathUpdate, args, nil)
 	util.TestExpectResult(t, "Post", ErrSessionNotFound, err)
 }
 
-func testAuthNormalFlow(fix *data.TestFixture) {
-	args := AuthArgs{ClientID: fix.Channel.ID, Password: data.TestPassword}
+func testAuthNormalFlow(fxt *data.TestFixture) {
+	args := AuthArgs{ClientID: fxt.Channel.ID, Password: data.TestPassword}
 	err := Post(conf.SessionServer.Config,
-		fix.Product.ID, data.TestPassword, PathAuth, args, nil)
-	util.TestExpectResult(fix.T, "Post", nil, err)
+		fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
+	util.TestExpectResult(fxt.T, "Post", nil, err)
 }
 
-func testStartNormalFlow(fix *data.TestFixture) *data.Session {
+func testStartNormalFlow(fxt *data.TestFixture) *data.Session {
 	const clientIP, clientPort = "1.2.3.4", 12345
 	args2 := StartArgs{
-		ClientID:   fix.Channel.ID,
+		ClientID:   fxt.Channel.ID,
 		ClientIP:   clientIP,
 		ClientPort: clientPort,
 	}
 
 	before := time.Now()
 	err := Post(conf.SessionServer.Config,
-		fix.Product.ID, data.TestPassword, PathStart, args2, nil)
-	util.TestExpectResult(fix.T, "Post", nil, err)
+		fxt.Product.ID, data.TestPassword, PathStart, args2, nil)
+	util.TestExpectResult(fxt.T, "Post", nil, err)
 	after := time.Now()
 
 	var sess data.Session
-	if err := db.FindOneTo(&sess, "channel", fix.Channel.ID); err != nil {
-		fix.T.Fatalf("cannot find new session: %s", err)
+	if err := db.FindOneTo(&sess, "channel", fxt.Channel.ID); err != nil {
+		fxt.T.Fatalf("cannot find new session: %s", err)
 	}
 
 	if sess.Started.Before(before) || sess.Started.After(after) {
 		db.Delete(&sess)
-		fix.T.Fatalf("wrong session started time")
+		fxt.T.Fatalf("wrong session started time")
 	}
 
 	if sess.LastUsageTime.Before(before) ||
 		sess.LastUsageTime.After(after) ||
 		sess.Started != sess.LastUsageTime {
 		db.Delete(&sess)
-		fix.T.Fatalf("wrong session last usage time")
+		fxt.T.Fatalf("wrong session last usage time")
 	}
 
 	if sess.ClientIP == nil || *sess.ClientIP != clientIP {
 		db.Delete(&sess)
-		fix.T.Fatalf("wrong session client IP")
+		fxt.T.Fatalf("wrong session client IP")
 	}
 
 	if sess.ClientPort == nil || *sess.ClientPort != clientPort {
 		db.Delete(&sess)
-		fix.T.Fatalf("wrong session client port")
+		fxt.T.Fatalf("wrong session client port")
 	}
 
 	return &sess
 }
 
-func testUpdateStopNormalFlow(fix *data.TestFixture, sess *data.Session, stop bool) {
+func testUpdateStopNormalFlow(fxt *data.TestFixture, sess *data.Session, stop bool) {
 	const units = 12345
 
 	path := PathUpdate
@@ -181,56 +181,56 @@ func testUpdateStopNormalFlow(fix *data.TestFixture, sess *data.Session, stop bo
 	}
 
 	sess.UnitsUsed = units
-	data.SaveToTestDB(fix.T, db, sess)
+	data.SaveToTestDB(fxt.T, db, sess)
 
 	for i, v := range []string{
 		data.ProductUsageTotal, data.ProductUsageIncremental} {
-		fix.Product.UsageRepType = v
-		data.SaveToTestDB(fix.T, db, fix.Product)
+		fxt.Product.UsageRepType = v
+		data.SaveToTestDB(fxt.T, db, fxt.Product)
 
 		before := time.Now()
-		args := UpdateArgs{ClientID: fix.Channel.ID, Units: units}
-		err := Post(conf.SessionServer.Config, fix.Product.ID,
+		args := UpdateArgs{ClientID: fxt.Channel.ID, Units: units}
+		err := Post(conf.SessionServer.Config, fxt.Product.ID,
 			data.TestPassword, path, args, nil)
-		util.TestExpectResult(fix.T, "Post", nil, err)
+		util.TestExpectResult(fxt.T, "Post", nil, err)
 
 		after := time.Now()
-		data.ReloadFromTestDB(fix.T, db, sess)
+		data.ReloadFromTestDB(fxt.T, db, sess)
 
 		if sess.LastUsageTime.Before(before) ||
 			sess.LastUsageTime.After(after) ||
 			sess.UnitsUsed != uint64((i+1)*units) {
-			fix.T.Fatalf("wrong session data after update")
+			fxt.T.Fatalf("wrong session data after update")
 		}
 
 		if stop {
 			if sess.Stopped == nil ||
 				sess.Stopped.Before(before) ||
 				sess.Stopped.After(after) {
-				fix.T.Fatalf("wrong session stopped time")
+				fxt.T.Fatalf("wrong session stopped time")
 			}
 		} else {
 			if sess.Stopped != nil {
-				fix.T.Fatalf("non-nil session stopped time")
+				fxt.T.Fatalf("non-nil session stopped time")
 			}
 		}
 
 		sess.Stopped = nil
-		data.SaveToTestDB(fix.T, db, sess)
+		data.SaveToTestDB(fxt.T, db, sess)
 	}
 }
 
 func TestNormalFlow(t *testing.T) {
-	fix := data.NewTestFixture(t, db)
-	defer fix.Close()
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
-	testAuthNormalFlow(fix)
+	testAuthNormalFlow(fxt)
 
-	sess := testStartNormalFlow(fix)
+	sess := testStartNormalFlow(fxt)
 	defer db.Delete(sess)
 
-	testUpdateStopNormalFlow(fix, sess, false)
-	testUpdateStopNormalFlow(fix, sess, true)
+	testUpdateStopNormalFlow(fxt, sess, false)
+	testUpdateStopNormalFlow(fxt, sess, true)
 }
 
 func TestMain(m *testing.M) {

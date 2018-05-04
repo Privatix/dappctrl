@@ -16,7 +16,7 @@ import (
 )
 
 // PrivatixServiceContractABI is the input ABI used to generate the binding from.
-const PrivatixServiceContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"challenge_period\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"internal_balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"channel_deposit_bugbounty_limit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"network_fee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"closing_requests\",\"outputs\":[{\"name\":\"closing_balance\",\"type\":\"uint192\"},{\"name\":\"settle_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"channels\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint192\"},{\"name\":\"open_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"meta_version\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_token_address\",\"type\":\"address\"},{\"name\":\"_network_fee_address\",\"type\":\"address\"},{\"name\":\"_challenge_period\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_deposit\",\"type\":\"uint192\"},{\"indexed\":false,\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"LogChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"LogChannelToppedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogChannelCloseRequested\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogOfferingCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingEndpoint\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogOfferingSupplyChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingPopedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogUnCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"addBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"returnBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee_address\",\"type\":\"address\"}],\"name\":\"setNetworkFeeAddress\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee\",\"type\":\"uint32\"}],\"name\":\"setNetworkFee\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"topUpChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_balance_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_closing_sig\",\"type\":\"bytes\"}],\"name\":\"cooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"uncooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"settle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getChannelInfo\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"uint192\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"publishServiceOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint192\"},{\"name\":\"_max_supply\",\"type\":\"uint16\"}],\"name\":\"registerServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"removeServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"popupServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_type\",\"type\":\"bool\"}],\"name\":\"extractSignature\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getKey\",\"outputs\":[{\"name\":\"data\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogChannelCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelToppedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelCloseRequested\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogOfferingCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingDeleted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogOfferingSupplyChanged\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingPopedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogUnCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const PrivatixServiceContractABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"challenge_period\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"internal_balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"channel_deposit_bugbounty_limit\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"network_fee\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"closing_requests\",\"outputs\":[{\"name\":\"closing_balance\",\"type\":\"uint192\"},{\"name\":\"settle_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"channels\",\"outputs\":[{\"name\":\"deposit\",\"type\":\"uint192\"},{\"name\":\"open_block_number\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"meta_version\",\"outputs\":[{\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"_token_address\",\"type\":\"address\"},{\"name\":\"_network_fee_address\",\"type\":\"address\"},{\"name\":\"_challenge_period\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_deposit\",\"type\":\"uint192\"},{\"indexed\":false,\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"LogChannelCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"LogChannelToppedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogChannelCloseRequested\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":true,\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"LogOfferingCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingEndpoint\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"LogOfferingPopedUp\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"_agent\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_client\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"indexed\":false,\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"LogUnCooperativeChannelClose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"addBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_value\",\"type\":\"uint192\"}],\"name\":\"returnBalanceERC20\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee_address\",\"type\":\"address\"}],\"name\":\"setNetworkFeeAddress\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_network_fee\",\"type\":\"uint32\"}],\"name\":\"setNetworkFee\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"createChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"topUpChannel\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_balance_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_closing_sig\",\"type\":\"bytes\"}],\"name\":\"cooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"uncooperativeClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"settle\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getChannelInfo\",\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\"},{\"name\":\"\",\"type\":\"uint192\"},{\"name\":\"\",\"type\":\"uint32\"},{\"name\":\"\",\"type\":\"uint192\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getOfferingSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint16\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"publishServiceOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint192\"},{\"name\":\"_max_supply\",\"type\":\"uint16\"}],\"name\":\"registerServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"removeServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"popupServiceOffering\",\"outputs\":[{\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_balance\",\"type\":\"uint192\"},{\"name\":\"_msg_sig\",\"type\":\"bytes\"},{\"name\":\"_type\",\"type\":\"bool\"}],\"name\":\"extractSignature\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"getKey\",\"outputs\":[{\"name\":\"data\",\"type\":\"bytes32\"}],\"payable\":false,\"stateMutability\":\"pure\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_deposit\",\"type\":\"uint192\"},{\"name\":\"_authentication_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogChannelCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_added_deposit\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelToppedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogChannelCloseRequested\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_min_deposit\",\"type\":\"uint256\"},{\"name\":\"_current_supply\",\"type\":\"uint16\"}],\"name\":\"throwEventLogOfferingCreated\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingDeleted\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_endpoint_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingEndpoint\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"}],\"name\":\"throwEventLogOfferingPopedUp\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"_agent_address\",\"type\":\"address\"},{\"name\":\"_client_address\",\"type\":\"address\"},{\"name\":\"_offering_hash\",\"type\":\"bytes32\"},{\"name\":\"_open_block_number\",\"type\":\"uint32\"},{\"name\":\"_balance\",\"type\":\"uint192\"}],\"name\":\"throwEventLogUnCooperativeChannelClose\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // PrivatixServiceContract is an auto generated Go binding around an Ethereum contract.
 type PrivatixServiceContract struct {
@@ -186,10 +186,10 @@ func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) BalanceOf(
 	return _PrivatixServiceContract.Contract.BalanceOf(&_PrivatixServiceContract.CallOpts, _address)
 }
 
-// Challenge_period is a free data retrieval call binding the contract method 0x0a00840c.
+// ChallengePeriod is a free data retrieval call binding the contract method 0x0a00840c.
 //
 // Solidity: function challenge_period() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Challenge_period(opts *bind.CallOpts) (uint32, error) {
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) ChallengePeriod(opts *bind.CallOpts) (uint32, error) {
 	var (
 		ret0 = new(uint32)
 	)
@@ -198,24 +198,24 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Challenge_period(
 	return *ret0, err
 }
 
-// Challenge_period is a free data retrieval call binding the contract method 0x0a00840c.
+// ChallengePeriod is a free data retrieval call binding the contract method 0x0a00840c.
 //
 // Solidity: function challenge_period() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Challenge_period() (uint32, error) {
-	return _PrivatixServiceContract.Contract.Challenge_period(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ChallengePeriod() (uint32, error) {
+	return _PrivatixServiceContract.Contract.ChallengePeriod(&_PrivatixServiceContract.CallOpts)
 }
 
-// Challenge_period is a free data retrieval call binding the contract method 0x0a00840c.
+// ChallengePeriod is a free data retrieval call binding the contract method 0x0a00840c.
 //
 // Solidity: function challenge_period() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Challenge_period() (uint32, error) {
-	return _PrivatixServiceContract.Contract.Challenge_period(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ChallengePeriod() (uint32, error) {
+	return _PrivatixServiceContract.Contract.ChallengePeriod(&_PrivatixServiceContract.CallOpts)
 }
 
-// Channel_deposit_bugbounty_limit is a free data retrieval call binding the contract method 0x6108b5ff.
+// ChannelDepositBugbountyLimit is a free data retrieval call binding the contract method 0x6108b5ff.
 //
 // Solidity: function channel_deposit_bugbounty_limit() constant returns(uint256)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Channel_deposit_bugbounty_limit(opts *bind.CallOpts) (*big.Int, error) {
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) ChannelDepositBugbountyLimit(opts *bind.CallOpts) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -224,30 +224,30 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Channel_deposit_b
 	return *ret0, err
 }
 
-// Channel_deposit_bugbounty_limit is a free data retrieval call binding the contract method 0x6108b5ff.
+// ChannelDepositBugbountyLimit is a free data retrieval call binding the contract method 0x6108b5ff.
 //
 // Solidity: function channel_deposit_bugbounty_limit() constant returns(uint256)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Channel_deposit_bugbounty_limit() (*big.Int, error) {
-	return _PrivatixServiceContract.Contract.Channel_deposit_bugbounty_limit(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ChannelDepositBugbountyLimit() (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.ChannelDepositBugbountyLimit(&_PrivatixServiceContract.CallOpts)
 }
 
-// Channel_deposit_bugbounty_limit is a free data retrieval call binding the contract method 0x6108b5ff.
+// ChannelDepositBugbountyLimit is a free data retrieval call binding the contract method 0x6108b5ff.
 //
 // Solidity: function channel_deposit_bugbounty_limit() constant returns(uint256)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Channel_deposit_bugbounty_limit() (*big.Int, error) {
-	return _PrivatixServiceContract.Contract.Channel_deposit_bugbounty_limit(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ChannelDepositBugbountyLimit() (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.ChannelDepositBugbountyLimit(&_PrivatixServiceContract.CallOpts)
 }
 
 // Channels is a free data retrieval call binding the contract method 0x7a7ebd7b.
 //
 // Solidity: function channels( bytes32) constant returns(deposit uint192, open_block_number uint32)
 func (_PrivatixServiceContract *PrivatixServiceContractCaller) Channels(opts *bind.CallOpts, arg0 [32]byte) (struct {
-	Deposit           *big.Int
-	Open_block_number uint32
+	Deposit         *big.Int
+	OpenBlockNumber uint32
 }, error) {
 	ret := new(struct {
-		Deposit           *big.Int
-		Open_block_number uint32
+		Deposit         *big.Int
+		OpenBlockNumber uint32
 	})
 	out := ret
 	err := _PrivatixServiceContract.contract.Call(opts, out, "channels", arg0)
@@ -258,8 +258,8 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Channels(opts *bi
 //
 // Solidity: function channels( bytes32) constant returns(deposit uint192, open_block_number uint32)
 func (_PrivatixServiceContract *PrivatixServiceContractSession) Channels(arg0 [32]byte) (struct {
-	Deposit           *big.Int
-	Open_block_number uint32
+	Deposit         *big.Int
+	OpenBlockNumber uint32
 }, error) {
 	return _PrivatixServiceContract.Contract.Channels(&_PrivatixServiceContract.CallOpts, arg0)
 }
@@ -268,46 +268,46 @@ func (_PrivatixServiceContract *PrivatixServiceContractSession) Channels(arg0 [3
 //
 // Solidity: function channels( bytes32) constant returns(deposit uint192, open_block_number uint32)
 func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Channels(arg0 [32]byte) (struct {
-	Deposit           *big.Int
-	Open_block_number uint32
+	Deposit         *big.Int
+	OpenBlockNumber uint32
 }, error) {
 	return _PrivatixServiceContract.Contract.Channels(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
-// Closing_requests is a free data retrieval call binding the contract method 0x77c13323.
+// ClosingRequests is a free data retrieval call binding the contract method 0x77c13323.
 //
 // Solidity: function closing_requests( bytes32) constant returns(closing_balance uint192, settle_block_number uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Closing_requests(opts *bind.CallOpts, arg0 [32]byte) (struct {
-	Closing_balance     *big.Int
-	Settle_block_number uint32
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) ClosingRequests(opts *bind.CallOpts, arg0 [32]byte) (struct {
+	ClosingBalance    *big.Int
+	SettleBlockNumber uint32
 }, error) {
 	ret := new(struct {
-		Closing_balance     *big.Int
-		Settle_block_number uint32
+		ClosingBalance    *big.Int
+		SettleBlockNumber uint32
 	})
 	out := ret
 	err := _PrivatixServiceContract.contract.Call(opts, out, "closing_requests", arg0)
 	return *ret, err
 }
 
-// Closing_requests is a free data retrieval call binding the contract method 0x77c13323.
+// ClosingRequests is a free data retrieval call binding the contract method 0x77c13323.
 //
 // Solidity: function closing_requests( bytes32) constant returns(closing_balance uint192, settle_block_number uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Closing_requests(arg0 [32]byte) (struct {
-	Closing_balance     *big.Int
-	Settle_block_number uint32
+func (_PrivatixServiceContract *PrivatixServiceContractSession) ClosingRequests(arg0 [32]byte) (struct {
+	ClosingBalance    *big.Int
+	SettleBlockNumber uint32
 }, error) {
-	return _PrivatixServiceContract.Contract.Closing_requests(&_PrivatixServiceContract.CallOpts, arg0)
+	return _PrivatixServiceContract.Contract.ClosingRequests(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
-// Closing_requests is a free data retrieval call binding the contract method 0x77c13323.
+// ClosingRequests is a free data retrieval call binding the contract method 0x77c13323.
 //
 // Solidity: function closing_requests( bytes32) constant returns(closing_balance uint192, settle_block_number uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Closing_requests(arg0 [32]byte) (struct {
-	Closing_balance     *big.Int
-	Settle_block_number uint32
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) ClosingRequests(arg0 [32]byte) (struct {
+	ClosingBalance    *big.Int
+	SettleBlockNumber uint32
 }, error) {
-	return _PrivatixServiceContract.Contract.Closing_requests(&_PrivatixServiceContract.CallOpts, arg0)
+	return _PrivatixServiceContract.Contract.ClosingRequests(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
 // ExtractSignature is a free data retrieval call binding the contract method 0x4c4b3c41.
@@ -396,10 +396,36 @@ func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) GetKey(_cl
 	return _PrivatixServiceContract.Contract.GetKey(&_PrivatixServiceContract.CallOpts, _client_address, _agent_address, _open_block_number, _offering_hash)
 }
 
-// Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
+// GetOfferingSupply is a free data retrieval call binding the contract method 0x562e6066.
+//
+// Solidity: function getOfferingSupply(offering_hash bytes32) constant returns(uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) GetOfferingSupply(opts *bind.CallOpts, offering_hash [32]byte) (uint16, error) {
+	var (
+		ret0 = new(uint16)
+	)
+	out := ret0
+	err := _PrivatixServiceContract.contract.Call(opts, out, "getOfferingSupply", offering_hash)
+	return *ret0, err
+}
+
+// GetOfferingSupply is a free data retrieval call binding the contract method 0x562e6066.
+//
+// Solidity: function getOfferingSupply(offering_hash bytes32) constant returns(uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) GetOfferingSupply(offering_hash [32]byte) (uint16, error) {
+	return _PrivatixServiceContract.Contract.GetOfferingSupply(&_PrivatixServiceContract.CallOpts, offering_hash)
+}
+
+// GetOfferingSupply is a free data retrieval call binding the contract method 0x562e6066.
+//
+// Solidity: function getOfferingSupply(offering_hash bytes32) constant returns(uint16)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) GetOfferingSupply(offering_hash [32]byte) (uint16, error) {
+	return _PrivatixServiceContract.Contract.GetOfferingSupply(&_PrivatixServiceContract.CallOpts, offering_hash)
+}
+
+// InternalBalances is a free data retrieval call binding the contract method 0x3884a42d.
 //
 // Solidity: function internal_balances( address) constant returns(uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Internal_balances(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) InternalBalances(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
 	)
@@ -408,24 +434,24 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Internal_balances
 	return *ret0, err
 }
 
-// Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
+// InternalBalances is a free data retrieval call binding the contract method 0x3884a42d.
 //
 // Solidity: function internal_balances( address) constant returns(uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Internal_balances(arg0 common.Address) (*big.Int, error) {
-	return _PrivatixServiceContract.Contract.Internal_balances(&_PrivatixServiceContract.CallOpts, arg0)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) InternalBalances(arg0 common.Address) (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.InternalBalances(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
-// Internal_balances is a free data retrieval call binding the contract method 0x3884a42d.
+// InternalBalances is a free data retrieval call binding the contract method 0x3884a42d.
 //
 // Solidity: function internal_balances( address) constant returns(uint192)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Internal_balances(arg0 common.Address) (*big.Int, error) {
-	return _PrivatixServiceContract.Contract.Internal_balances(&_PrivatixServiceContract.CallOpts, arg0)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) InternalBalances(arg0 common.Address) (*big.Int, error) {
+	return _PrivatixServiceContract.Contract.InternalBalances(&_PrivatixServiceContract.CallOpts, arg0)
 }
 
-// Meta_version is a free data retrieval call binding the contract method 0xf1c23a76.
+// MetaVersion is a free data retrieval call binding the contract method 0xf1c23a76.
 //
 // Solidity: function meta_version() constant returns(string)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Meta_version(opts *bind.CallOpts) (string, error) {
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) MetaVersion(opts *bind.CallOpts) (string, error) {
 	var (
 		ret0 = new(string)
 	)
@@ -434,24 +460,24 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Meta_version(opts
 	return *ret0, err
 }
 
-// Meta_version is a free data retrieval call binding the contract method 0xf1c23a76.
+// MetaVersion is a free data retrieval call binding the contract method 0xf1c23a76.
 //
 // Solidity: function meta_version() constant returns(string)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Meta_version() (string, error) {
-	return _PrivatixServiceContract.Contract.Meta_version(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) MetaVersion() (string, error) {
+	return _PrivatixServiceContract.Contract.MetaVersion(&_PrivatixServiceContract.CallOpts)
 }
 
-// Meta_version is a free data retrieval call binding the contract method 0xf1c23a76.
+// MetaVersion is a free data retrieval call binding the contract method 0xf1c23a76.
 //
 // Solidity: function meta_version() constant returns(string)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Meta_version() (string, error) {
-	return _PrivatixServiceContract.Contract.Meta_version(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) MetaVersion() (string, error) {
+	return _PrivatixServiceContract.Contract.MetaVersion(&_PrivatixServiceContract.CallOpts)
 }
 
-// Network_fee is a free data retrieval call binding the contract method 0x66d4b643.
+// NetworkFee is a free data retrieval call binding the contract method 0x66d4b643.
 //
 // Solidity: function network_fee() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCaller) Network_fee(opts *bind.CallOpts) (uint32, error) {
+func (_PrivatixServiceContract *PrivatixServiceContractCaller) NetworkFee(opts *bind.CallOpts) (uint32, error) {
 	var (
 		ret0 = new(uint32)
 	)
@@ -460,18 +486,18 @@ func (_PrivatixServiceContract *PrivatixServiceContractCaller) Network_fee(opts 
 	return *ret0, err
 }
 
-// Network_fee is a free data retrieval call binding the contract method 0x66d4b643.
+// NetworkFee is a free data retrieval call binding the contract method 0x66d4b643.
 //
 // Solidity: function network_fee() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractSession) Network_fee() (uint32, error) {
-	return _PrivatixServiceContract.Contract.Network_fee(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractSession) NetworkFee() (uint32, error) {
+	return _PrivatixServiceContract.Contract.NetworkFee(&_PrivatixServiceContract.CallOpts)
 }
 
-// Network_fee is a free data retrieval call binding the contract method 0x66d4b643.
+// NetworkFee is a free data retrieval call binding the contract method 0x66d4b643.
 //
 // Solidity: function network_fee() constant returns(uint32)
-func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) Network_fee() (uint32, error) {
-	return _PrivatixServiceContract.Contract.Network_fee(&_PrivatixServiceContract.CallOpts)
+func (_PrivatixServiceContract *PrivatixServiceContractCallerSession) NetworkFee() (uint32, error) {
+	return _PrivatixServiceContract.Contract.NetworkFee(&_PrivatixServiceContract.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -925,27 +951,6 @@ func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowE
 	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingPopedUp(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash)
 }
 
-// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
-//
-// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactor) ThrowEventLogOfferingSupplyChanged(opts *bind.TransactOpts, _agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.contract.Transact(opts, "throwEventLogOfferingSupplyChanged", _agent_address, _offering_hash, _current_supply)
-}
-
-// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
-//
-// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractSession) ThrowEventLogOfferingSupplyChanged(_agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _current_supply)
-}
-
-// ThrowEventLogOfferingSupplyChanged is a paid mutator transaction binding the contract method 0x8e1321cd.
-//
-// Solidity: function throwEventLogOfferingSupplyChanged(_agent_address address, _offering_hash bytes32, _current_supply uint16) returns()
-func (_PrivatixServiceContract *PrivatixServiceContractTransactorSession) ThrowEventLogOfferingSupplyChanged(_agent_address common.Address, _offering_hash [32]byte, _current_supply uint16) (*types.Transaction, error) {
-	return _PrivatixServiceContract.Contract.ThrowEventLogOfferingSupplyChanged(&_PrivatixServiceContract.TransactOpts, _agent_address, _offering_hash, _current_supply)
-}
-
 // ThrowEventLogUnCooperativeChannelClose is a paid mutator transaction binding the contract method 0x3045e326.
 //
 // Solidity: function throwEventLogUnCooperativeChannelClose(_agent_address address, _client_address address, _offering_hash bytes32, _open_block_number uint32, _balance uint192) returns()
@@ -1099,12 +1104,12 @@ func (it *PrivatixServiceContractLogChannelCloseRequestedIterator) Close() error
 
 // PrivatixServiceContractLogChannelCloseRequested represents a LogChannelCloseRequested event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelCloseRequested struct {
-	Agent             common.Address
-	Client            common.Address
-	Offering_hash     [32]byte
-	Open_block_number uint32
-	Balance           *big.Int
-	Raw               types.Log // Blockchain specific contextual infos
+	Agent           common.Address
+	Client          common.Address
+	OfferingHash    [32]byte
+	OpenBlockNumber uint32
+	Balance         *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogChannelCloseRequested is a free log retrieval operation binding the contract event 0xb40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e.
@@ -1251,12 +1256,12 @@ func (it *PrivatixServiceContractLogChannelCreatedIterator) Close() error {
 
 // PrivatixServiceContractLogChannelCreated represents a LogChannelCreated event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelCreated struct {
-	Agent               common.Address
-	Client              common.Address
-	Offering_hash       [32]byte
-	Deposit             *big.Int
-	Authentication_hash [32]byte
-	Raw                 types.Log // Blockchain specific contextual infos
+	Agent              common.Address
+	Client             common.Address
+	OfferingHash       [32]byte
+	Deposit            *big.Int
+	AuthenticationHash [32]byte
+	Raw                types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogChannelCreated is a free log retrieval operation binding the contract event 0xa6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c.
@@ -1403,12 +1408,12 @@ func (it *PrivatixServiceContractLogChannelToppedUpIterator) Close() error {
 
 // PrivatixServiceContractLogChannelToppedUp represents a LogChannelToppedUp event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogChannelToppedUp struct {
-	Agent             common.Address
-	Client            common.Address
-	Offering_hash     [32]byte
-	Open_block_number uint32
-	Added_deposit     *big.Int
-	Raw               types.Log // Blockchain specific contextual infos
+	Agent           common.Address
+	Client          common.Address
+	OfferingHash    [32]byte
+	OpenBlockNumber uint32
+	AddedDeposit    *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogChannelToppedUp is a free log retrieval operation binding the contract event 0xa3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce.
@@ -1555,12 +1560,12 @@ func (it *PrivatixServiceContractLogCooperativeChannelCloseIterator) Close() err
 
 // PrivatixServiceContractLogCooperativeChannelClose represents a LogCooperativeChannelClose event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogCooperativeChannelClose struct {
-	Agent             common.Address
-	Client            common.Address
-	Offering_hash     [32]byte
-	Open_block_number uint32
-	Balance           *big.Int
-	Raw               types.Log // Blockchain specific contextual infos
+	Agent           common.Address
+	Client          common.Address
+	OfferingHash    [32]byte
+	OpenBlockNumber uint32
+	Balance         *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogCooperativeChannelClose is a free log retrieval operation binding the contract event 0xb488ea0f49970f556cf18e57588e78dcc1d3fd45c71130aa5099a79e8b06c8e7.
@@ -1707,11 +1712,11 @@ func (it *PrivatixServiceContractLogOfferingCreatedIterator) Close() error {
 
 // PrivatixServiceContractLogOfferingCreated represents a LogOfferingCreated event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogOfferingCreated struct {
-	Agent          common.Address
-	Offering_hash  [32]byte
-	Min_deposit    *big.Int
-	Current_supply uint16
-	Raw            types.Log // Blockchain specific contextual infos
+	Agent         common.Address
+	OfferingHash  [32]byte
+	MinDeposit    *big.Int
+	CurrentSupply uint16
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogOfferingCreated is a free log retrieval operation binding the contract event 0x32c1913dfde418197923027c2f2260f19903a2e86a93ed83c4689ac91a96bafd.
@@ -1858,9 +1863,9 @@ func (it *PrivatixServiceContractLogOfferingDeletedIterator) Close() error {
 
 // PrivatixServiceContractLogOfferingDeleted represents a LogOfferingDeleted event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogOfferingDeleted struct {
-	Agent         common.Address
-	Offering_hash [32]byte
-	Raw           types.Log // Blockchain specific contextual infos
+	Agent        common.Address
+	OfferingHash [32]byte
+	Raw          types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogOfferingDeleted is a free log retrieval operation binding the contract event 0xc3013cd9dd5c33b95a9cc1bc076481c9a6a1970be6d7f1ed33adafad6e57d3d6.
@@ -1999,12 +2004,12 @@ func (it *PrivatixServiceContractLogOfferingEndpointIterator) Close() error {
 
 // PrivatixServiceContractLogOfferingEndpoint represents a LogOfferingEndpoint event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogOfferingEndpoint struct {
-	Agent             common.Address
-	Client            common.Address
-	Offering_hash     [32]byte
-	Open_block_number uint32
-	Endpoint_hash     [32]byte
-	Raw               types.Log // Blockchain specific contextual infos
+	Agent           common.Address
+	Client          common.Address
+	OfferingHash    [32]byte
+	OpenBlockNumber uint32
+	EndpointHash    [32]byte
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogOfferingEndpoint is a free log retrieval operation binding the contract event 0x450e7ab61f9e1c40dd7c79edcba274a7a96f025fab1733b3fa1087a1b5d1db7d.
@@ -2151,9 +2156,9 @@ func (it *PrivatixServiceContractLogOfferingPopedUpIterator) Close() error {
 
 // PrivatixServiceContractLogOfferingPopedUp represents a LogOfferingPopedUp event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogOfferingPopedUp struct {
-	Agent         common.Address
-	Offering_hash [32]byte
-	Raw           types.Log // Blockchain specific contextual infos
+	Agent        common.Address
+	OfferingHash [32]byte
+	Raw          types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogOfferingPopedUp is a free log retrieval operation binding the contract event 0xc37352067a3ca1eafcf2dc5ba537fc473509c4e4aaca729cb1dab7053ec1ffbf.
@@ -2203,148 +2208,6 @@ func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferin
 				// New log arrived, parse the event and forward to the user
 				event := new(PrivatixServiceContractLogOfferingPopedUp)
 				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingPopedUp", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// PrivatixServiceContractLogOfferingSupplyChangedIterator is returned from FilterLogOfferingSupplyChanged and is used to iterate over the raw logs and unpacked data for LogOfferingSupplyChanged events raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogOfferingSupplyChangedIterator struct {
-	Event *PrivatixServiceContractLogOfferingSupplyChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(PrivatixServiceContractLogOfferingSupplyChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(PrivatixServiceContractLogOfferingSupplyChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *PrivatixServiceContractLogOfferingSupplyChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// PrivatixServiceContractLogOfferingSupplyChanged represents a LogOfferingSupplyChanged event raised by the PrivatixServiceContract contract.
-type PrivatixServiceContractLogOfferingSupplyChanged struct {
-	Agent          common.Address
-	Offering_hash  [32]byte
-	Current_supply uint16
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterLogOfferingSupplyChanged is a free log retrieval operation binding the contract event 0x5848091ba8411ca73c2b3bcfa5ffdcc4db482c6bf114dfa984f75c03dd878cf3.
-//
-// Solidity: event LogOfferingSupplyChanged(_agent indexed address, _offering_hash indexed bytes32, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) FilterLogOfferingSupplyChanged(opts *bind.FilterOpts, _agent []common.Address, _offering_hash [][32]byte) (*PrivatixServiceContractLogOfferingSupplyChangedIterator, error) {
-
-	var _agentRule []interface{}
-	for _, _agentItem := range _agent {
-		_agentRule = append(_agentRule, _agentItem)
-	}
-	var _offering_hashRule []interface{}
-	for _, _offering_hashItem := range _offering_hash {
-		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
-	}
-
-	logs, sub, err := _PrivatixServiceContract.contract.FilterLogs(opts, "LogOfferingSupplyChanged", _agentRule, _offering_hashRule)
-	if err != nil {
-		return nil, err
-	}
-	return &PrivatixServiceContractLogOfferingSupplyChangedIterator{contract: _PrivatixServiceContract.contract, event: "LogOfferingSupplyChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchLogOfferingSupplyChanged is a free log subscription operation binding the contract event 0x5848091ba8411ca73c2b3bcfa5ffdcc4db482c6bf114dfa984f75c03dd878cf3.
-//
-// Solidity: event LogOfferingSupplyChanged(_agent indexed address, _offering_hash indexed bytes32, _current_supply uint16)
-func (_PrivatixServiceContract *PrivatixServiceContractFilterer) WatchLogOfferingSupplyChanged(opts *bind.WatchOpts, sink chan<- *PrivatixServiceContractLogOfferingSupplyChanged, _agent []common.Address, _offering_hash [][32]byte) (event.Subscription, error) {
-
-	var _agentRule []interface{}
-	for _, _agentItem := range _agent {
-		_agentRule = append(_agentRule, _agentItem)
-	}
-	var _offering_hashRule []interface{}
-	for _, _offering_hashItem := range _offering_hash {
-		_offering_hashRule = append(_offering_hashRule, _offering_hashItem)
-	}
-
-	logs, sub, err := _PrivatixServiceContract.contract.WatchLogs(opts, "LogOfferingSupplyChanged", _agentRule, _offering_hashRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(PrivatixServiceContractLogOfferingSupplyChanged)
-				if err := _PrivatixServiceContract.contract.UnpackLog(event, "LogOfferingSupplyChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2434,12 +2297,12 @@ func (it *PrivatixServiceContractLogUnCooperativeChannelCloseIterator) Close() e
 
 // PrivatixServiceContractLogUnCooperativeChannelClose represents a LogUnCooperativeChannelClose event raised by the PrivatixServiceContract contract.
 type PrivatixServiceContractLogUnCooperativeChannelClose struct {
-	Agent             common.Address
-	Client            common.Address
-	Offering_hash     [32]byte
-	Open_block_number uint32
-	Balance           *big.Int
-	Raw               types.Log // Blockchain specific contextual infos
+	Agent           common.Address
+	Client          common.Address
+	OfferingHash    [32]byte
+	OpenBlockNumber uint32
+	Balance         *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
 }
 
 // FilterLogUnCooperativeChannelClose is a free log retrieval operation binding the contract event 0x7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6.

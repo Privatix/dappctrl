@@ -70,6 +70,7 @@ type Product struct {
 	Salt          uint64  `json:"-" reform:"salt"`
 	Password      string  `json:"-" reform:"password"`
 	ClientIdent   string  `json:"clientIdent" reform:"client_ident"`
+	Config        []byte  `json:"config" reform:"config"`
 }
 
 // Unit used for billing calculation.

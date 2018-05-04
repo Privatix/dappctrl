@@ -107,6 +107,7 @@ func NewTestProduct() *Product {
 		Salt:         TestSalt,
 		Password:     TestPasswordHash,
 		ClientIdent:  ClientIdentByChannelID,
+		Config:       []byte("{}"),
 	}
 }
 

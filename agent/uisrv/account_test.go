@@ -3,9 +3,11 @@
 package uisrv
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -279,6 +281,27 @@ func TestCreateAccountKeyStore(t *testing.T) {
 	}
 
 	testAccountFields(t, &testAcc, payload, created)
+}
+
+func TestExportAccountPrivateKey(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	acc := data.NewTestAccount(testPassword)
+	expectedBytes := []byte(`{"hello": "world"}`)
+	acc.PrivateKey = data.FromBytes(expectedBytes)
+	insertItems(t, acc)
+
+	res := sendPayload(t, http.MethodGet, accountsPath + acc.ID + "/pkey", nil)
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusOK)
+	}
+
+	body, _ := ioutil.ReadAll(res.Body)
+	if !bytes.Equal(body, expectedBytes) {
+		t.Fatalf("wrong pkey exported: expected %x got %x", expectedBytes, body)
+	}
 }
 
 func TestGetAccounts(t *testing.T) {

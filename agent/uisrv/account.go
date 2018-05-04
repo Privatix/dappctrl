@@ -4,6 +4,9 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"net/http"
+	"strings"
+
+	"gopkg.in/reform.v1"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -16,6 +19,14 @@ import (
 
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		if c := strings.Split(r.URL.Path, "/"); len(c) > 1 {
+			id, format := c[len(c) - 2], c[len(c) - 1]
+			if format == "pkey" {
+				s.handleExportAccount(w, r, id)
+				return
+			}
+		}
+
 		s.handleGetAccounts(w, r)
 		return
 	}
@@ -29,6 +40,33 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id string) {
+	if !util.IsUUID(id) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var acc data.Account
+	if err := s.db.FindByPrimaryKeyTo(&acc, id); err != nil {
+		if err == reform.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		return
+	}
+
+	privKeyJsonBytes, err := data.ToBytes(acc.PrivateKey)
+	if err != nil {
+		s.replyUnexpectedErr(w)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if _, err := w.Write(privKeyJsonBytes); err != nil {
+		s.logger.Warn("failed to reply with the private key: %v", err)
+	}
 }
 
 func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {

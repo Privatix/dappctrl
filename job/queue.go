@@ -88,6 +88,16 @@ func NewQueue(conf *Config, logger *util.Logger, db *reform.DB,
 	}
 }
 
+// Logger is an associated util.Logger instance.
+func (q *Queue) Logger() *util.Logger {
+	return q.logger
+}
+
+// DB is an associated reform.DB instance.
+func (q *Queue) DB() *reform.DB {
+	return q.db
+}
+
 func (q *Queue) checkDuplicated(j *data.Job) error {
 	_, err := q.db.SelectOneFrom(data.JobTable,
 		"WHERE related_id = $1 AND type = $2", j.RelatedID, j.Type)

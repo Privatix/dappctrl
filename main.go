@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
@@ -28,6 +29,7 @@ type ethConfig struct {
 	GethURL       string
 	TruffleAPIURL string
 }
+
 type config struct {
 	AgentServer   *uisrv.Config
 	Eth           *ethConfig
@@ -35,6 +37,7 @@ type config struct {
 	Job           *job.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
+	Proc          *proc.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 }
@@ -44,6 +47,7 @@ func newConfig() *config {
 		DB:            data.NewDBConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
+		Proc:          proc.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 	}

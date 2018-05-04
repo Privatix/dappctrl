@@ -32,13 +32,15 @@ type Config struct {
 
 // Server is agent api server.
 type Server struct {
-	conf       *Config
-	logger     *util.Logger
-	db         *reform.DB
-	ethClient  *eth.EthereumClient
-	ptc        *contract.PrivatixTokenContract
-	psc        *contract.PrivatixServiceContract
-	pwdStorage data.PWDGetSetter
+	conf           *Config
+	logger         *util.Logger
+	db             *reform.DB
+	ethClient      *eth.EthereumClient
+	ptc            *contract.PrivatixTokenContract
+	psc            *contract.PrivatixServiceContract
+	pwdStorage     data.PWDGetSetter
+	encryptKeyFunc data.EncryptedKeyFunc
+	decryptKeyFunc data.ToPrivateKeyFunc
 }
 
 // NewServer creates a new agent server.
@@ -49,7 +51,8 @@ func NewServer(conf *Config,
 	ptc *contract.PrivatixTokenContract,
 	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {
-	return &Server{conf, logger, db, ethClient, ptc, psc, pwdStorage}
+	return &Server{conf, logger, db, ethClient, ptc, psc, pwdStorage,
+		data.EncryptedKey, data.ToPrivateKey}
 }
 
 const (

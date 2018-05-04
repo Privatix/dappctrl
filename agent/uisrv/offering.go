@@ -109,7 +109,7 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	hash := data.OfferingHash(offering)
 	offering.Hash = data.FromBytes(hash)
 
-	sig, err := agent.Sign(hash, s.pwdStorage.Get())
+	sig, err := agent.Sign(hash, s.decryptKeyFunc, s.pwdStorage.Get())
 	if err != nil {
 		return err
 	}

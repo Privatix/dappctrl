@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -68,13 +69,13 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if payload.JsonKeyStoreRaw != "" {
-		keyB64 := data.FromBytes([]byte(payload.JsonKeyStoreRaw))
-		privKey, err = s.decryptKeyFunc(keyB64, payload.JsonKeyStorePassword)
+		key, err := keystore.DecryptKey([]byte(payload.JsonKeyStoreRaw), payload.JsonKeyStorePassword)
 		if err != nil {
 			s.logger.Warn("could not decrypt keystore: %v", err)
 			s.replyInvalidPayload(w)
 			return
 		}
+		privKey = key.PrivateKey
 	} else {
 		s.logger.Warn("neither private key nor raw keystore json provided")
 		s.replyInvalidPayload(w)

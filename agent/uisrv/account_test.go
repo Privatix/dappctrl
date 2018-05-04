@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
@@ -149,13 +150,31 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	createdPK, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
-	if err != nil {
-		t.Fatal("failed to decrypt created account's private key: ", err)
-	}
+	if payload.PrivateKey != "" {
+		createdPK, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
+		if err != nil {
+			t.Fatal("failed to decrypt created account's private key: ", err)
+		}
 
-	if data.FromBytes(crypto.FromECDSA(createdPK)) != payload.PrivateKey {
-		t.Fatal("wrong private key stored")
+		if data.FromBytes(crypto.FromECDSA(createdPK)) != payload.PrivateKey {
+			t.Fatalf("wrong private key stored %v != %v",
+				data.FromBytes(crypto.FromECDSA(createdPK)), payload.PrivateKey)
+		}
+	} else {
+		key, err := keystore.DecryptKey([]byte(payload.JsonKeyStoreRaw), payload.JsonKeyStorePassword)
+		if err != nil {
+			t.Fatal("failed to decrypt payload: ", err)
+		}
+		payloadKey := key.PrivateKey
+
+		createdKey, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
+		if err != nil {
+			t.Fatal("failed to decrypt created account's private key: ", err)
+		}
+
+		if payloadKey.D.Cmp(createdKey.D) != 0 {
+			t.Fatal("wrong private key stored")
+		}
 	}
 
 	pkB, err := hex.DecodeString(testAcc.PrivateKey)

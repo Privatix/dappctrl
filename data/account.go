@@ -9,6 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// EncryptedKeyFunc is a func that returns encrypted keystore.Key in base64.
+type EncryptedKeyFunc func(*ecdsa.PrivateKey, string) (string, error)
+
 // EncryptedKey returns encrypted keystore.Key in base64.
 func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
 	key := keystore.NewKeyForDirectICAP(rand.Reader)
@@ -22,6 +25,9 @@ func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
 	}
 	return FromBytes(encryptedBytes), nil
 }
+
+// ToPrivateKeyFunc is a func that returns decrypted *ecdsa.PrivateKey from base64 of encrypted keystore.Key.
+type ToPrivateKeyFunc func(string, string) (*ecdsa.PrivateKey, error)
 
 // ToPrivateKey returns decrypted *ecdsa.PrivateKey from base64 of encrypted keystore.Key.
 func ToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
@@ -37,8 +43,8 @@ func ToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
 }
 
 // Sign signs a data.
-func (a *Account) Sign(data []byte, auth string) ([]byte, error) {
-	prvKey, err := ToPrivateKey(a.PrivateKey, auth)
+func (a *Account) Sign(data []byte, toPrvFunc ToPrivateKeyFunc, auth string) ([]byte, error) {
+	prvKey, err := toPrvFunc(a.PrivateKey, auth)
 	if err != nil {
 		return nil, err
 	}

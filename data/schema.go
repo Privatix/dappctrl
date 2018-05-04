@@ -275,6 +275,8 @@ const (
 	JobClientAfterCooperativeClose          = "clientAfterCooperativeClose"
 	JobAgentAfterCooperativeClose           = "agentAfterCooperativeClose"
 	JobAgentPreServiceCreate                = "agentPreServiceCreate"
+	JobAgentPreServiceSuspend               = "agentPreServiceSuspend"
+	JobAgentPreServiceUnsuspend             = "agentPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
 	JobAgentPreServiceTerminate             = "agentPreServiceTerminate"
 	JobClientAfterServiceTerminate          = "clientAfterServiceTerminate"

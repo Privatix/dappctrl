@@ -18,11 +18,18 @@ import (
 
 type testConfig struct {
 	ServerStartupDelay uint // In milliseconds.
+	Product            *testProduct
+}
+
+type testProduct struct {
+	ValidFormatConfig map[string]string
+	EmptyConfig       string
 }
 
 func newTestConfig() *testConfig {
 	return &testConfig{
 		ServerStartupDelay: 10,
+		Product:            &testProduct{},
 	}
 }
 
@@ -34,13 +41,15 @@ var (
 		SessionServerTest *testConfig
 	}
 
-	db     *reform.DB
-	server *Server
+	db         *reform.DB
+	server     *Server
+	allMethods = []string{PathAuth, PathStart, PathStop, PathUpdate,
+		PathProductConfig}
 )
 
 func TestBadMethod(t *testing.T) {
 	client := &http.Client{}
-	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
+	for _, v := range allMethods {
 		req, err := srv.NewHTTPRequest(conf.SessionServer.Config,
 			http.MethodPut, v, &srv.Request{Args: nil})
 		if err != nil {
@@ -64,7 +73,7 @@ func TestBadProductAuth(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	for _, v := range []string{PathAuth, PathStart, PathStop, PathUpdate} {
+	for _, v := range allMethods {
 		err := Post(conf.SessionServer.Config,
 			"bad-product", "bad-password", v, nil, nil)
 		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
@@ -99,6 +108,30 @@ func TestBadClientIdent(t *testing.T) {
 	}
 }
 
+func TestBadProductConfig(t *testing.T) {
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
+
+	args := ProductArgs{}
+
+	err := Post(conf.SessionServer.Config,
+		fxt.Product.ID, data.TestPassword, PathProductConfig,
+		args, nil)
+	util.TestExpectResult(t, "Post", ErrProductConfNotValid, err)
+}
+
+func TestProductConfigAlreadyUploaded(t *testing.T) {
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
+
+	args := productConfigNormalFlow(fxt)
+
+	err := Post(conf.SessionServer.Config,
+		fxt.Product.ID, data.TestPassword, PathProductConfig,
+		args, nil)
+	util.TestExpectResult(t, "Post", ErrProductConfAlreadyUploaded, err)
+}
+
 func TestBadAuth(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
@@ -126,6 +159,16 @@ func testAuthNormalFlow(fxt *data.TestFixture) {
 	err := Post(conf.SessionServer.Config,
 		fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 	util.TestExpectResult(fxt.T, "Post", nil, err)
+}
+
+func productConfigNormalFlow(fxt *data.TestFixture) ProductArgs {
+	args := ProductArgs{
+		Config: conf.SessionServerTest.Product.ValidFormatConfig}
+	err := Post(conf.SessionServer.Config,
+		fxt.Product.ID, data.TestPassword, PathProductConfig,
+		args, nil)
+	util.TestExpectResult(fxt.T, "Post", nil, err)
+	return args
 }
 
 func testStartNormalFlow(fxt *data.TestFixture) *data.Session {
@@ -225,6 +268,8 @@ func TestNormalFlow(t *testing.T) {
 	defer fxt.Close()
 
 	testAuthNormalFlow(fxt)
+
+	productConfigNormalFlow(fxt)
 
 	sess := testStartNormalFlow(fxt)
 	defer db.Delete(sess)

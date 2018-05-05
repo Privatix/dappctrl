@@ -20,7 +20,7 @@ import (
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		if c := strings.Split(r.URL.Path, "/"); len(c) > 1 {
-			id, format := c[len(c) - 2], c[len(c) - 1]
+			id, format := c[len(c)-2], c[len(c)-1]
 			if format == "pkey" {
 				s.handleExportAccount(w, r, id)
 				return

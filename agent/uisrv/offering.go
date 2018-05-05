@@ -131,7 +131,7 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 			{Name: "maxUnitPrice", Field: "unit_price", Op: "<="},
 			{Name: "country", Field: "country", Op: "in"},
 		},
-		View: data.OfferingTable,
+		View:         data.OfferingTable,
 		FilteringSQL: "offer_status = 'register' and status = 'msg_channel_published' and not is_local",
 	})
 }

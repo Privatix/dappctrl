@@ -292,7 +292,7 @@ func TestExportAccountPrivateKey(t *testing.T) {
 	acc.PrivateKey = data.FromBytes(expectedBytes)
 	insertItems(t, acc)
 
-	res := sendPayload(t, http.MethodGet, accountsPath + acc.ID + "/pkey", nil)
+	res := sendPayload(t, http.MethodGet, accountsPath+acc.ID+"/pkey", nil)
 
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusOK)

@@ -239,7 +239,7 @@ func testGetClientOfferings(t *testing.T, minp, maxp, country string, exp int) {
 		map[string]string{
 			"minUnitPrice": minp,
 			"maxUnitPrice": maxp,
-			"country": country})
+			"country":      country})
 	testGetResources(t, res, exp)
 }
 
@@ -276,18 +276,18 @@ func TestGetClientOffering(t *testing.T) {
 	// all non-local offerings
 	testGetClientOfferings(t, "", "", "", 2)
 
-	lowPrice := strconv.FormatUint(off1.UnitPrice - 10, 10)
+	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
 	price := strconv.FormatUint(off1.UnitPrice, 10)
-	highPrice := strconv.FormatUint(off1.UnitPrice + 10, 10)
+	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
 
 	// price range
-	testGetClientOfferings(t,  lowPrice,        "", "", 2) // inside range
-	testGetClientOfferings(t,        "", highPrice, "", 2) // inside range
-	testGetClientOfferings(t,        "",  lowPrice, "", 0) // above range
-	testGetClientOfferings(t, highPrice,        "", "", 0) // below range
-	testGetClientOfferings(t,  lowPrice,     price, "", 2) // on edge
-	testGetClientOfferings(t,     price, highPrice, "", 2) // on edge
-	testGetClientOfferings(t,     price,     price, "", 2) // on edge
+	testGetClientOfferings(t, lowPrice, "", "", 2)     // inside range
+	testGetClientOfferings(t, "", highPrice, "", 2)    // inside range
+	testGetClientOfferings(t, "", lowPrice, "", 0)     // above range
+	testGetClientOfferings(t, highPrice, "", "", 0)    // below range
+	testGetClientOfferings(t, lowPrice, price, "", 2)  // on edge
+	testGetClientOfferings(t, price, highPrice, "", 2) // on edge
+	testGetClientOfferings(t, price, price, "", 2)     // on edge
 
 	// country filter
 	testGetClientOfferings(t, "", "", "US", 1)

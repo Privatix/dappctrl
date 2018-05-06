@@ -1,7 +1,9 @@
 package util
 
 import (
+	"crypto/tls"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"regexp"
@@ -34,7 +36,12 @@ const (
 
 	// FormatNetworkPort defines network port values
 	FormatNetworkPort = "netPort"
+
+	// FormatTLSCertificate defines  RFC 1421 TLS certificates values
+	FormatTLSCertificate = "tlsCert"
 )
+
+const certificate = "CERTIFICATE"
 
 var (
 	unknownFormat   = "unknown format %#v"
@@ -46,6 +53,7 @@ var (
 	invalidEthAddr  = "\"%s\" is an invalid Ethereum address value"
 	invalidEthHash  = "\"%s\" is an invalid Ethereum hash value"
 	invalidNetPort  = "\"%s\" is an invalid network port value"
+	invalidTLSCert  = "it is an invalid TLS certificate value"
 )
 
 var (
@@ -69,6 +77,7 @@ var (
 //     - "ethHash" - Ethereum hash values
 //     - "ethAddr" - Ethereum address values
 //     - "netPort" - network port values
+//     - "tlsCert" - TLS certificate values
 func ValidateFormat(f Format, val string) error {
 	var err error
 	switch f {
@@ -108,6 +117,10 @@ func ValidateFormat(f Format, val string) error {
 		if !isPort(val) {
 			err = fmt.Errorf(invalidNetPort, val)
 		}
+	case FormatTLSCertificate:
+		if !isTLSCert(val) {
+			err = fmt.Errorf(invalidTLSCert, val)
+		}
 	default:
 		return fmt.Errorf(unknownFormat, f)
 	}
@@ -141,5 +154,31 @@ func isPort(str string) bool {
 		str, 10, 16); err != nil {
 		return false
 	}
+	return true
+}
+
+// if block is one or more TLS certificates then function returns true
+func isTLSCert(block string) bool {
+	var cert tls.Certificate
+
+	pemBlock := []byte(block)
+
+	for {
+		var derBlock *pem.Block
+		derBlock, pemBlock = pem.Decode(pemBlock)
+		if derBlock == nil {
+			break
+		}
+
+		if derBlock.Type == certificate {
+			cert.Certificate =
+				append(cert.Certificate, derBlock.Bytes)
+		}
+	}
+
+	if len(cert.Certificate) == 0 {
+		return false
+	}
+
 	return true
 }

@@ -12,5 +12,4 @@ var (
 	ErrCertNotExist    = errors.New("certificate not exist in the config file")
 	ErrCertCanNotRead  = errors.New("cannot read certificate file")
 	ErrCertNotFound    = errors.New("certificate can not be found in the specified path")
-	ErrCertIsNull      = errors.New("the certificate file does not contain CERTIFICATE")
 )

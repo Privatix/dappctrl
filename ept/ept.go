@@ -2,10 +2,7 @@ package ept
 
 import (
 	"bufio"
-	"crypto/tls"
 	"encoding/json"
-	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,9 +11,8 @@ import (
 )
 
 const (
-	certificate      = "CERTIFICATE"
 	caNameFromConfig = "ca"
-	caPathName       = "caCertPath"
+	caPathName       = "caPathName"
 	caData           = "caData"
 )
 
@@ -66,11 +62,11 @@ func (e *EndpointMessageTemplate) Message(hash, receiver, endpoint, username,
 		return nil, ErrInput
 	}
 
-	if !e.validNetworkAddress(receiver) {
+	if !ValidNetworkAddress(receiver) {
 		return nil, ErrReceiver
 	}
 
-	if !e.validNetworkAddress(endpoint) {
+	if !ValidNetworkAddress(endpoint) {
 		return nil, ErrEndpoint
 	}
 
@@ -89,80 +85,13 @@ func (e *EndpointMessageTemplate) Message(hash, receiver, endpoint, username,
 }
 
 // ParseConfig parsing OpenVpn config file and parsing
-// CA certificate from file.
+// certificate from file.
 func (e *EndpointMessageTemplate) ParseConfig(
 	filePath string) (map[string]string, error) {
 	if filePath == "" {
 		return nil, ErrFilePathIsEmpty
 	}
 	return e.parseConfig(filePath, e.keys)
-}
-
-// ParseCert CA certificate from file
-func (e *EndpointMessageTemplate) ParseCert(
-	caCertPath string) (string, error) {
-	mainCertPEMBlock, err := ioutil.ReadFile(caCertPath)
-	if err != nil {
-		return "", ErrCertCanNotRead
-	}
-
-	var cert tls.Certificate
-
-	certPEMBlock := mainCertPEMBlock
-
-	for {
-		var certDERBlock *pem.Block
-		certDERBlock, certPEMBlock = pem.Decode(certPEMBlock)
-		if certDERBlock == nil {
-			break
-		}
-		if certDERBlock.Type == certificate {
-			cert.Certificate =
-				append(cert.Certificate, certDERBlock.Bytes)
-		}
-	}
-
-	if len(cert.Certificate) == 0 {
-		return "", ErrCertIsNull
-	}
-	return string(mainCertPEMBlock), nil
-}
-
-func (e *EndpointMessageTemplate) validNetworkAddress(addr string) bool {
-
-	data := strings.Split(strings.TrimSpace(addr), ":")
-	// check data length
-	if len(data) != 2 {
-		return false
-	}
-
-	host := strings.TrimSpace(data[0])
-	port := strings.TrimSpace(data[1])
-
-	// check host and address length
-	if len(host) == 0 || len(port) == 0 {
-		return false
-	}
-
-	// check host format
-	checkHost := func(host string) bool {
-		if util.ValidateFormat(util.FormatIP, host) == nil ||
-			util.ValidateFormat(util.FormatIPv4, host) == nil ||
-			util.ValidateFormat(util.FormatIPv6, host) == nil ||
-			util.ValidateFormat(util.FormatHostname, host) == nil {
-			return true
-		}
-		return false
-	}
-	if !checkHost(host) {
-		return false
-	}
-
-	// check port format
-	if util.ValidateFormat(util.FormatNetworkPort, port) != nil {
-		return false
-	}
-	return true
 }
 
 func (e *EndpointMessageTemplate) parseConfig(filePath string,
@@ -214,7 +143,7 @@ func (e *EndpointMessageTemplate) parseConfig(filePath string,
 	// the absolute path to the certificate, and true
 	pCert := func(paths []string) (string, string, bool) {
 		for _, filePath := range paths {
-			cert, err := e.ParseCert(filePath)
+			cert, err := ParseCertFromFile(filePath)
 			if err == nil {
 				return cert, filePath, true
 			}

@@ -1,15 +1,15 @@
 package ovpn
 
 const ClientConfig = `# tunX | tapX | null TUN/TAP virtual network device
-( X can be omitted for a dynamic device.)
+# ( X can be omitted for a dynamic device.)
 dev tun
 
 # Use protocol tcp for communicating
 # with remote host
-proto {{.Proto}} 
+proto {{if .Proto}}{{.Proto}}{{else}}tcp{{autogen}}{{end}}
 
 # Encrypt packets with AES-256-CBC algorithm
-cipher {{.Cipher}}
+cipher {{if .Cipher}}{{.Cipher}}{{else}}AES-256-CBC{{autogen}}{{end}}
 
 # Enable TLS and assume client role
 # during TLS handshake.
@@ -20,7 +20,7 @@ client
 # Remote host name or IP address
 # with port number and protocol tcp
 # for communicating
-remote {{.ServerAddress}} {{.Port}} {{.Proto}} 
+{{if .ServerAddress}}{{if .Port}}remote {{.ServerAddress}} {{.Port}} {{.Proto}}{{end}}{{end}}
 
 # If hostname resolve fails for --remote,
 # retry resolve for n seconds before failing.
@@ -52,22 +52,12 @@ persist-key
 # Trigger a SIGUSR1 restart after n seconds
 # pass without reception of a ping
 # or other packet from remote.
-ping-restart {{.PingRestart}}
+ping-restart {{if .PingRestart}}{{.PingRestart}}{{else}}10{{autogen}}{{end}}
 
 # Ping remote over the TCP/UDP control
 # channel if no packets have been sent for
 # at least n seconds
-ping {{.Ping}} 
-
-
-# The keepalive directive causes ping-like
-# messages to be sent back and forth over
-# the link so that each side knows when
-# the other side has gone down.
-# Ping every 10 seconds, assume that remote
-# peer is down if no ping received during
-# a 120 second time period.
-keepalive 10 120
+ping {{if .Ping}}{{.Ping}}{{else}}10{{autogen}}{{end}}
 
 # Authenticate with server using
 # username/password in interactive mode
@@ -96,7 +86,7 @@ daemon
 
 # take n as the number of seconds
 # to wait between connection retries
-connect-retry {{.ConnectRetry}} 
+connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end}} 
 
 # uncomment this section
 # if you want use ca.crt file
@@ -111,7 +101,7 @@ connect-retry {{.ConnectRetry}}
 # enabled in the server config file.
 # Use fast LZO compression -- may add up
 # to 1 byte per packet for incompressible data.
-{{.CompLZO}} 
+{{if .CompLZO}}{{.CompLZO}}{{else}};comp-lzo{{end}}
 
 # Set log file verbosity.
 verb 3

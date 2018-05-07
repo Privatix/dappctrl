@@ -18,8 +18,9 @@ var (
 )
 
 const (
-	errPars = "incorrect parsing test"
-	errGen  = "incorrect generate message test"
+	errPars     = "incorrect parsing test"
+	errGen      = "incorrect generate message test"
+	samplesPath = "samples" + string(os.PathSeparator)
 )
 
 type eptTestConfig struct {
@@ -63,7 +64,8 @@ func validParams(in []string, out map[string]string) bool {
 }
 
 func TestParsingValidConfig(t *testing.T) {
-	out, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
+	out, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -74,35 +76,40 @@ func TestParsingValidConfig(t *testing.T) {
 }
 
 func TestParsingInvalidConfig(t *testing.T) {
-	_, err := testEMT.ParseConfig(conf.EptTest.ConfInvalid)
+	_, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfInvalid)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCannotReadCertificateFile(t *testing.T) {
-	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaNotExist)
+	_, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaNotExist)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCertificateIsEmpty(t *testing.T) {
-	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaEmpty)
+	_, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaEmpty)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInvalidCertificate(t *testing.T) {
-	_, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaInvalid)
+	_, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaInvalid)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInputFormat(t *testing.T) {
-	addParams, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
+	addParams, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(errPars)
 	}
@@ -141,7 +148,8 @@ func TestInputFormat(t *testing.T) {
 }
 
 func TestGenerateCorrectMessage(t *testing.T) {
-	addParams, err := testEMT.ParseConfig(conf.EptTest.ConfValidCaValid)
+	addParams, err := testEMT.ParseConfig(samplesPath +
+		conf.EptTest.ConfValidCaValid)
 	if err != nil {
 		t.Fatal(errPars)
 	}

@@ -1,5 +1,6 @@
 package ovpn
 
+// ClientConfig template for OpenVpn client configuration file
 const ClientConfig = `# tunX | tapX | null TUN/TAP virtual network device
 # ( X can be omitted for a dynamic device.)
 dev tun

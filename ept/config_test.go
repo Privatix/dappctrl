@@ -13,8 +13,8 @@ const (
 )
 
 func TestGetText(t *testing.T) {
-	out, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaValid)
+	out, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaValid, true)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

@@ -64,8 +64,8 @@ func validParams(in []string, out map[string]string) bool {
 }
 
 func TestParsingValidConfig(t *testing.T) {
-	out, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaValid)
+	out, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaValid, true)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -76,40 +76,40 @@ func TestParsingValidConfig(t *testing.T) {
 }
 
 func TestParsingInvalidConfig(t *testing.T) {
-	_, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfInvalid)
+	_, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfInvalid, true)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCannotReadCertificateFile(t *testing.T) {
-	_, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaNotExist)
+	_, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaNotExist, true)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestCertificateIsEmpty(t *testing.T) {
-	_, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaEmpty)
+	_, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaEmpty, true)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInvalidCertificate(t *testing.T) {
-	_, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaInvalid)
+	_, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaInvalid, true)
 	if err == nil {
 		t.Fatal(errPars)
 	}
 }
 
 func TestInputFormat(t *testing.T) {
-	addParams, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaValid)
+	addParams, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaValid, true)
 	if err != nil {
 		t.Fatal(errPars)
 	}
@@ -148,8 +148,8 @@ func TestInputFormat(t *testing.T) {
 }
 
 func TestGenerateCorrectMessage(t *testing.T) {
-	addParams, err := testEMT.ParseConfig(samplesPath +
-		conf.EptTest.ConfValidCaValid)
+	addParams, err := testEMT.ParseConfig(samplesPath+
+		conf.EptTest.ConfValidCaValid, true)
 	if err != nil {
 		t.Fatal(errPars)
 	}

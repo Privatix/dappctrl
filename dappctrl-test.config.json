@@ -8,6 +8,28 @@
         "ServerStartupDelay": 10
     },
 
+    "BillingTest": {
+        "Offer": {
+            "MaxUnit": 900,
+            "MaxInactiveTimeSec": 10,
+            "UnitPrice": 1,
+            "BigLag": 10000,
+            "SmallLag": 1
+        },
+        "Session": {
+            "UnitsUsed": 300,
+            "EmptyUnitsUsed":0,
+            "SecondsConsumed": 300,
+            "EmptySecondsConsumed":0
+        },
+        "Channel": {
+            "SmallDeposit":1,
+            "MidDeposit":100,
+            "BigDeposit":1000,
+            "EmptyBalance":0
+        }
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
@@ -16,6 +38,26 @@
             "host": "localhost",
             "port": "5432"
         }
+    },
+
+    "EptTest": {
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "ValidHash": [
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1",
+            "89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1"],
+        "InvalidHash": [
+            "",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b11",
+            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38g1"],
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
+        "InvalidHost": ["privatix.io:44C", "priv#tix.io:443", "privatix.io%443"],
+        "ConfValidCaValid": "conf.valid.ca.valid",
+        "ConfInvalid": "conf.invalid",
+        "ConfValidCaInvalid": "conf.valid.ca.invalid",
+        "ConfValidCaEmpty": "conf.valid.ca.empty",
+        "ConfValidCaNotExist": "conf.valid.ca.notexist"
     },
 
     "Eth": {
@@ -73,45 +115,12 @@
         "ServerStartupDelay": 10
     },
 
-    "BillingTest": {
-        "Offer": {
-            "MaxUnit": 900,
-            "MaxInactiveTimeSec": 10,
-            "UnitPrice": 1,
-            "BigLag": 10000,
-            "SmallLag": 1
-        },
-        "Session": {
-            "UnitsUsed": 300,
-            "EmptyUnitsUsed":0,
-            "SecondsConsumed": 300,
-            "EmptySecondsConsumed":0
-        },
-        "Channel": {
-            "SmallDeposit":1,
-            "MidDeposit":100,
-            "BigDeposit":1000,
-            "EmptyBalance":0
-        }
+    "VPNMonitor": {
+        "Addr": "localhost:7505",
+        "ByteCountPeriod": 5
     },
 
-    "EptTest": {
-        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
-            "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "ValidHash": [
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1",
-            "89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1"],
-        "InvalidHash": [
-            "",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b11",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38g1"],
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
-        "InvalidHost": ["privatix.io:44C", "priv#tix.io:443", "privatix.io%443"],
-        "ConfValidCaValid": "conf.valid.ca.valid",
-        "ConfInvalid": "conf.invalid",
-        "ConfValidCaInvalid": "conf.valid.ca.invalid",
-        "ConfValidCaEmpty": "conf.valid.ca.empty",
-        "ConfValidCaNotExist": "conf.valid.ca.notexist"
+    "VPNMonitorTest": {
+        "ServerStartupDelay": 10
     }
 }

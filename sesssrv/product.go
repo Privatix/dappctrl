@@ -3,7 +3,6 @@ package sesssrv
 import (
 	"encoding/json"
 	"net/http"
-	"reflect"
 
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -30,11 +29,6 @@ func (s *Server) handleProductConfig(
 		return
 	}
 
-	if !prodConfigEmpty(prod.Config) {
-		s.RespondError(w, ErrProductConfAlreadyUploaded)
-		return
-	}
-
 	prodConf, err := json.Marshal(args.Config)
 	if err != nil {
 		s.RespondError(w, srv.ErrInternalServerError)
@@ -49,8 +43,4 @@ func (s *Server) handleProductConfig(
 	}
 
 	s.RespondResult(w, nil)
-}
-
-func prodConfigEmpty(data []byte) bool {
-	return reflect.DeepEqual([]byte(`{}`), data)
 }

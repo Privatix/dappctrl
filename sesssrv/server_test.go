@@ -41,15 +41,16 @@ var (
 		SessionServerTest *testConfig
 	}
 
-	db         *reform.DB
-	server     *Server
-	allMethods = []string{PathAuth, PathStart, PathStop, PathUpdate,
+	db     *reform.DB
+	server *Server
+
+	allPaths = []string{PathAuth, PathStart, PathStop, PathUpdate,
 		PathProductConfig}
 )
 
 func TestBadMethod(t *testing.T) {
 	client := &http.Client{}
-	for _, v := range allMethods {
+	for _, v := range allPaths {
 		req, err := srv.NewHTTPRequest(conf.SessionServer.Config,
 			http.MethodPut, v, &srv.Request{Args: nil})
 		if err != nil {
@@ -73,7 +74,7 @@ func TestBadProductAuth(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	for _, v := range allMethods {
+	for _, v := range allPaths {
 		err := Post(conf.SessionServer.Config,
 			"bad-product", "bad-password", v, nil, nil)
 		util.TestExpectResult(t, "Post", srv.ErrAccessDenied, err)
@@ -118,18 +119,6 @@ func TestBadProductConfig(t *testing.T) {
 		fxt.Product.ID, data.TestPassword, PathProductConfig,
 		args, nil)
 	util.TestExpectResult(t, "Post", ErrProductConfNotValid, err)
-}
-
-func TestProductConfigAlreadyUploaded(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
-	defer fxt.Close()
-
-	args := productConfigNormalFlow(fxt)
-
-	err := Post(conf.SessionServer.Config,
-		fxt.Product.ID, data.TestPassword, PathProductConfig,
-		args, nil)
-	util.TestExpectResult(t, "Post", ErrProductConfAlreadyUploaded, err)
 }
 
 func TestBadAuth(t *testing.T) {

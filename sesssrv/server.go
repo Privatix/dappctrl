@@ -34,7 +34,7 @@ const (
 	PathStart         = "/session/start"
 	PathStop          = "/session/stop"
 	PathUpdate        = "/session/update"
-	PathProductConfig = "/session/product/config"
+	PathProductConfig = "/product/config"
 )
 
 // NewServer creates a new session server.

@@ -27,15 +27,59 @@ type LogsAPIResponse struct {
 	Result []LogsAPIRecord `json:"result"`
 }
 
+type TopicFilter map[int][]string
+
+func (f TopicFilter) MarshalJSON() ([]byte, error) {
+	maxIndex := 0
+	for k := range f {
+		if k > maxIndex {
+			maxIndex = k
+		}
+	}
+
+	var buf bytes.Buffer
+	if _, err := buf.WriteRune('['); err != nil {
+		return nil, err
+	}
+
+	for i := 0; i <= maxIndex; i++ {
+		if i > 0 {
+			if _, err := buf.WriteRune(','); err != nil {
+				return nil, err
+			}
+		}
+
+		if b, err := json.Marshal((f)[i]); err == nil {
+			if _, err := buf.Write(b); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	if _, err := buf.WriteRune(']'); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (f *TopicFilter) ExpectAt(index int, values ...string) {
+	if *f == nil {
+		*f = make(TopicFilter)
+	}
+	(*f)[index] = values
+}
+
 // GetLog fetches logs form remote geth node.
 //
-// "topics" contains topics, that must be used for filtering.
+// "topics" contains a topic filter (or nil as a wildcard).
 // "fromBlock" - specifies first block number **from** which lookup must be performed.
 // "toBlock" - specifies last block number **to** which lookup must be performed.
 //
 // Tests: logs_test/TestNormalLogsFetching
 // Tests: logs_test/TestNegativeLogsFetching
-func (e *EthereumClient) GetLogs(contractAddress string, topics []string, fromBlock, toBlock string) (*LogsAPIResponse, error) {
+func (e *EthereumClient) GetLogs(contractAddress string, topics TopicFilter, fromBlock, toBlock string) (*LogsAPIResponse, error) {
 	if contractAddress == "" {
 		return nil, errors.New("contract address is required")
 	}
@@ -48,23 +92,9 @@ func (e *EthereumClient) GetLogs(contractAddress string, topics []string, fromBl
 		toBlock = BlockLatest
 	}
 
-	// Note: topics are not checked for emptiness,
-	// because empty topics are allowed by the geth-API:
-	// in this case all events of the contract would be returned.
-	for _, topic := range topics {
-		const kTopicLength = 2 + 64 // "0x" + 64 symbols (256 bits in hex).
-		if len(topic) != kTopicLength {
-			return nil, errors.New("invalid topic occurred: " + topic)
-		}
-
-		if topic[:2] != "0x" {
-			return nil, errors.New("invalid topic occurred: " + topic)
-		}
-	}
-
 	topicsJson, err := json.Marshal(topics)
 	if err != nil {
-		return nil, errors.New("can't marshall topics: " + err.Error())
+		return nil, errors.New("can't marshall topic filter: " + err.Error())
 	}
 
 	params := fmt.Sprintf(`{"topics":%s,"address":"%s","fromBlock":"%s","toBlock":"%s"}`,

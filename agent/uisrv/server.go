@@ -3,9 +3,9 @@ package uisrv
 import (
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/privatix/dappctrl/data"
 
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 
 	reform "gopkg.in/reform.v1"
@@ -35,7 +35,7 @@ type Server struct {
 	conf           *Config
 	logger         *util.Logger
 	db             *reform.DB
-	ethClient      *eth.EthereumClient
+	ethClient      *ethclient.Client
 	ptc            *contract.PrivatixTokenContract
 	psc            *contract.PrivatixServiceContract
 	pwdStorage     data.PWDGetSetter
@@ -47,7 +47,7 @@ type Server struct {
 func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
-	ethClient *eth.EthereumClient,
+	ethClient *ethclient.Client,
 	ptc *contract.PrivatixTokenContract,
 	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {

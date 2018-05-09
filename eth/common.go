@@ -1,5 +1,9 @@
 package eth
 
+const (
+	BlockLatest = "latest"
+)
+
 // BlockNumberAPIResponse implements wrapper for ethereum JSON RPC API response.
 // Please see corresponding web3.js method for the details.
 type BlockNumberAPIResponse struct {

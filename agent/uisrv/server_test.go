@@ -27,7 +27,7 @@ import (
 var (
 	testServer         *Server
 	testTruffleAPI     truffle.API
-	testEthereumClient *eth.EthereumClient
+	testEthereumClient *ethclient.Client
 
 	testPassword = "test-password"
 )
@@ -59,12 +59,11 @@ func TestMain(m *testing.M) {
 	var psc *contract.PrivatixServiceContract
 
 	if conf.Eth.TruffleAPIURL != "" {
-		testEthereumClient = eth.NewEthereumClient(conf.Eth.GethURL)
-
 		conn, err := ethclient.Dial(conf.Eth.GethURL)
 		if err != nil {
 			panic(err)
 		}
+		testEthereumClient = conn
 
 		testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
 

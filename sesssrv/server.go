@@ -30,10 +30,11 @@ type Server struct {
 
 // Service API paths.
 const (
-	PathAuth          = "/session/auth"
-	PathStart         = "/session/start"
-	PathStop          = "/session/stop"
-	PathUpdate        = "/session/update"
+	PathAuth   = "/session/auth"
+	PathStart  = "/session/start"
+	PathStop   = "/session/stop"
+	PathUpdate = "/session/update"
+
 	PathProductConfig = "/product/config"
 )
 

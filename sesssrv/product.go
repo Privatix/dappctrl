@@ -20,7 +20,7 @@ func (s *Server) handleProductConfig(
 	}
 
 	if len(args.Config) == 0 {
-		s.RespondError(w, ErrProductConfNotValid)
+		s.RespondError(w, ErrInvalidProductConf)
 		return
 	}
 

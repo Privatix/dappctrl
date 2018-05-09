@@ -6,11 +6,11 @@ import (
 
 // Common error codes for session server.
 const (
-	ErrCodeChannelNotFound     = srv.ErrCodeMax + 1
-	ErrCodeBadAuthPassword     = iota
-	ErrCodeNonActiveChannel    = iota
-	ErrCodeSessionNotFound     = iota
-	ErrCodeProductConfNotValid = iota
+	ErrCodeChannelNotFound    = srv.ErrCodeMax + 1
+	ErrCodeBadAuthPassword    = iota
+	ErrCodeNonActiveChannel   = iota
+	ErrCodeSessionNotFound    = iota
+	ErrCodeInvalidProductConf = iota
 )
 
 // Common session server errors.
@@ -31,8 +31,8 @@ var (
 		Code:    ErrCodeSessionNotFound,
 		Message: "session not found",
 	}
-	ErrProductConfNotValid = &srv.Error{
-		Code:    ErrCodeProductConfNotValid,
-		Message: "product configuration not valid",
+	ErrInvalidProductConf = &srv.Error{
+		Code:    ErrCodeInvalidProductConf,
+		Message: "invalid product configuration",
 	}
 )

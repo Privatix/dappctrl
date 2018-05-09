@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/util"

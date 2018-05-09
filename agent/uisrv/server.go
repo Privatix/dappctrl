@@ -4,12 +4,10 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/privatix/dappctrl/data"
-
-	"github.com/privatix/dappctrl/eth/contract"
-
 	reform "gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
 

@@ -61,6 +61,7 @@ func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id 
 	privKeyJsonBytes, err := data.ToBytes(acc.PrivateKey)
 	if err != nil {
 		s.replyUnexpectedErr(w)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

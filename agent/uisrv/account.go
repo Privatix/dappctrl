@@ -59,14 +59,14 @@ func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	privKeyJsonBytes, err := data.ToBytes(acc.PrivateKey)
+	privKeyJSONBytes, err := data.ToBytes(acc.PrivateKey)
 	if err != nil {
 		s.replyUnexpectedErr(w)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if _, err := w.Write(privKeyJsonBytes); err != nil {
+	if _, err := w.Write(privKeyJSONBytes); err != nil {
 		s.logger.Warn("failed to reply with the private key: %v", err)
 	}
 }
@@ -80,8 +80,8 @@ func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 
 type accountCreatePayload struct {
 	PrivateKey           string `json:"privateKey"`
-	JsonKeyStoreRaw      string `json:"jsonKeyStoreRaw"`
-	JsonKeyStorePassword string `json:"jsonKeyStorePassword"`
+	JSONKeyStoreRaw      string `json:"jsonKeyStoreRaw"`
+	JSONKeyStorePassword string `json:"jsonKeyStorePassword"`
 	IsDefault            bool   `json:"isDefault"`
 	InUse                bool   `json:"inUse"`
 	Name                 string `json:"name"`
@@ -100,7 +100,7 @@ func (p *accountCreatePayload) fromPrivateKeyToECDSA() (*ecdsa.PrivateKey, error
 }
 
 func (p *accountCreatePayload) fromJSONKeyStoreRawToECDSA() (*ecdsa.PrivateKey, error) {
-	key, err := keystore.DecryptKey([]byte(p.JsonKeyStoreRaw), p.JsonKeyStorePassword)
+	key, err := keystore.DecryptKey([]byte(p.JSONKeyStoreRaw), p.JSONKeyStorePassword)
 	if err != nil {
 		return nil, fmt.Errorf("could not decrypt keystore: %v", err)
 	}
@@ -110,7 +110,7 @@ func (p *accountCreatePayload) fromJSONKeyStoreRawToECDSA() (*ecdsa.PrivateKey, 
 func (p *accountCreatePayload) toECDSA() (*ecdsa.PrivateKey, error) {
 	if p.PrivateKey != "" {
 		return p.fromPrivateKeyToECDSA()
-	} else if p.JsonKeyStoreRaw != "" {
+	} else if p.JSONKeyStoreRaw != "" {
 		return p.fromJSONKeyStoreRawToECDSA()
 	}
 

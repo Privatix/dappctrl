@@ -120,12 +120,12 @@ func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreateP
 	payload := &accountCreatePayload{}
 
 	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
-	payload.JsonKeyStorePassword = "helloworld"
+	payload.JSONKeyStorePassword = "helloworld"
 	privKey, _ := crypto.ToECDSA(pkB)
 
-	pkB64, _ := data.EncryptedKey(privKey, payload.JsonKeyStorePassword)
+	pkB64, _ := data.EncryptedKey(privKey, payload.JSONKeyStorePassword)
 	jsonBytes, _ := data.ToBytes(pkB64)
-	payload.JsonKeyStoreRaw = string(jsonBytes)
+	payload.JSONKeyStoreRaw = string(jsonBytes)
 
 	payload.IsDefault = true
 	payload.InUse = true

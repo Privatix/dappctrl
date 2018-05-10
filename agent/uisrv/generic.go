@@ -59,17 +59,16 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 			for _, subval := range subvals {
 				args = append(args, subval)
 			}
-			eqs = append(eqs,
-				fmt.Sprintf("%s %s (%s)",
-					param.Field,
-					op,
-					strings.Join(manyPlaceHolders(len(subvals)), ",")))
+			eq := fmt.Sprintf(
+				"%s %s (%s)",
+				param.Field,
+				op,
+				strings.Join(manyPlaceHolders(len(subvals)), ","),
+			)
+			eqs = append(eqs, eq)
 		} else {
-			eqs = append(eqs,
-				fmt.Sprintf("%s %s %s",
-					param.Field,
-					op,
-					nextPlaceHolder()))
+			eq := fmt.Sprintf("%s %s %s", param.Field, op, nextPlaceHolder())
+			eqs = append(eqs, eq)
 			args = append(args, val)
 		}
 	}

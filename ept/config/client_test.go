@@ -2,12 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/rakyll/statik/fs"
-	"io/ioutil"
-	"path/filepath"
 
 	_ "github.com/privatix/dappctrl/ept/config/statik"
 )

@@ -35,3 +35,16 @@ VALUES ('ae5deac9-44c3-4840-bdff-ca9de58c89f4', true, '', '',
     6012867121110302348, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=', 1, 1);
 
 END TRANSACTION;
+BEGIN TRANSACTION;
+
+CREATE TABLE endpoint_message_template (
+    id uuid PRIMARY KEY,
+    template_hash uuid NOT NULL, -- DB.products.offer_access_id
+    username uuid, -- DB.channels.id
+    password sha3_256, -- DB.channels.password
+    payment_receiver_address text NOT NULL,
+    service_endpoint_address text NOT NULL,
+    additional_params json NOT NULL -- DB.products.config
+);
+
+END TRANSACTION;

@@ -1,7 +1,4 @@
-package ovpn
-
-// ClientConfig template for OpenVpn client configuration file
-const ClientConfig = `# tunX | tapX | null TUN/TAP virtual network device
+# tunX | tapX | null TUN/TAP virtual network device
 # ( X can be omitted for a dynamic device.)
 dev tun
 
@@ -26,7 +23,7 @@ client
 # If hostname resolve fails for --remote,
 # retry resolve for n seconds before failing.
 # Set n to "infinite" to retry indefinitely.
-resolv-retry infinite 
+resolv-retry infinite
 
 # Do not bind to local address and port.
 # The IP stack will allocate a dynamic
@@ -36,7 +33,7 @@ resolv-retry infinite
 # this option is only suitable for peers
 # which will be initiating connections
 # by using the --remote option.
-nobind 
+nobind
 
 # Don't close and reopen TUN/TAP device
 # or run up/down scripts across SIGUSR1
@@ -44,11 +41,11 @@ nobind
 # SIGUSR1 is a restart signal similar
 # to SIGHUP, but which offers
 # finer-grained control over reset options.
-persist-tun 
+persist-tun
 
 # Don't re-read key files across
 # SIGUSR1 or --ping-restart.
-persist-key 
+persist-key
 
 # Trigger a SIGUSR1 restart after n seconds
 # pass without reception of a ping
@@ -83,11 +80,11 @@ auth-retry nointeract
 # functions are completed. This option will
 # cause all message and error output
 # to be sent to the log file
-daemon 
+daemon
 
 # take n as the number of seconds
 # to wait between connection retries
-connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end}} 
+connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end}}
 
 # uncomment this section
 # if you want use ca.crt file
@@ -107,4 +104,3 @@ connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end
 # Set log file verbosity.
 verb 3
 log-append /var/log/openvpn/openvpn-tcp.log
-`

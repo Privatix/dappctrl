@@ -1,4 +1,6 @@
-package ept
+//go:generate statik -src=./templates
+
+package config
 
 import (
 	"bytes"
@@ -6,13 +8,17 @@ import (
 	"io/ioutil"
 	"text/template"
 
-	"github.com/privatix/dappctrl/ept/templates/ovpn"
+	"github.com/rakyll/statik/fs"
+
+	_ "github.com/privatix/dappctrl/ept/config/statik"
 	"github.com/privatix/dappctrl/util"
 )
 
 const (
-	filePerm = 0644
-	autogen  = "autogen"
+	filePerm    = 0644
+	autogen     = "autogen"
+	autogenTest = " # autogenerate option"
+	clientTpl   = "/ovpn/client-config.tpl"
 )
 
 const (
@@ -35,7 +41,7 @@ const (
 	defaultConnectRetry  = "2 120"
 )
 
-var defaultConfig = &Config{
+var defaultConfig = &CConf{
 	Proto:         defaultProto,
 	Cipher:        defaultCipher,
 	ServerAddress: defaultServerAddress,
@@ -45,8 +51,8 @@ var defaultConfig = &Config{
 	ConnectRetry:  defaultConnectRetry,
 }
 
-// Config OpenVpn client model config
-type Config struct {
+// CConf OpenVpn client model config
+type CConf struct {
 	Proto         string
 	Cipher        string
 	ServerAddress string
@@ -58,8 +64,8 @@ type Config struct {
 	CompLZO       string
 }
 
-// New returns config object
-func New(srvAddr, srvPort string, additionalParams []byte) (*Config, error) {
+// ClientConfig returns config object
+func ClientConfig(srvAddr, srvPort string, additionalParams []byte) (*CConf, error) {
 	if !isHost(srvAddr) {
 		return nil, ErrInput
 	}
@@ -75,7 +81,7 @@ func New(srvAddr, srvPort string, additionalParams []byte) (*Config, error) {
 		return nil, err
 	}
 
-	config := new(Config)
+	config := defaultConfig
 
 	config.ServerAddress = srvAddr
 	config.Port = srvPort
@@ -99,15 +105,13 @@ func New(srvAddr, srvPort string, additionalParams []byte) (*Config, error) {
 		}
 	}
 
-	//config.normalize()
-
 	return config, nil
 
 }
 
-// GetText injects config values into custom template
-func (c *Config) GetText(tpl string) (string, error) {
-	t := template.New("config")
+// Generate injects config values into custom template
+func (c *CConf) Generate(tpl string) (string, error) {
+	t := template.New(clientTpl)
 
 	t, err := t.Funcs(
 		template.FuncMap{autogen: autogenFu}).Parse(tpl)
@@ -123,10 +127,26 @@ func (c *Config) GetText(tpl string) (string, error) {
 	return buf.String(), nil
 }
 
-// SaveToFile reads ClientConfig teamplate
+// SaveToFile reads ClientConfig template
 // and writes result to destination file
-func (c *Config) SaveToFile(destPath string) error {
-	str, err := c.GetText(ovpn.ClientConfig)
+func (c *CConf) SaveToFile(destPath string) error {
+	statikFS, err := fs.New()
+	if err != nil {
+		return err
+	}
+
+	tpl, err := statikFS.Open(clientTpl)
+	if err != nil {
+		return err
+	}
+	defer tpl.Close()
+
+	data, err := ioutil.ReadAll(tpl)
+	if err != nil {
+		return err
+	}
+
+	str, err := c.Generate(string(data))
 	if err != nil {
 		return err
 	}
@@ -134,36 +154,6 @@ func (c *Config) SaveToFile(destPath string) error {
 	return ioutil.WriteFile(destPath, []byte(str), filePerm)
 }
 
-func (c *Config) normalize() {
-	if c.Proto == "" {
-		c.Proto = defaultConfig.Proto
-	}
-
-	if c.Cipher == "" {
-		c.Cipher = defaultConfig.Cipher
-	}
-
-	if c.ServerAddress == "" {
-		c.ServerAddress = defaultConfig.ServerAddress
-	}
-
-	if c.Port == "" {
-		c.Port = defaultConfig.Port
-	}
-
-	if c.PingRestart == "" {
-		c.PingRestart = defaultConfig.PingRestart
-	}
-
-	if c.Ping == "" {
-		c.Ping = defaultConfig.Ping
-	}
-
-	if c.ConnectRetry == "" {
-		c.ConnectRetry = defaultConfig.ConnectRetry
-	}
-}
-
 func autogenFu() string {
-	return " # autogenerate option"
+	return autogenTest
 }

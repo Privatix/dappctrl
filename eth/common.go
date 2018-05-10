@@ -1,5 +1,6 @@
 package eth
 
+// block labels.
 const (
 	BlockLatest = "latest"
 )

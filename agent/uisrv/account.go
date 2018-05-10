@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -144,7 +145,10 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc.InUse = payload.InUse
 	acc.Name = payload.Name
 
-	amount, err := s.ethClient.BalanceAt(context.Background(), ethAddr, nil)
+	timeout := time.Duration(s.conf.EthCallTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	amount, err := s.ethClient.BalanceAt(ctx, ethAddr, nil)
 	if err != nil {
 		s.logger.Warn("could not get eth balance")
 		s.replyUnexpectedErr(w)

@@ -24,8 +24,16 @@ type TLSConfig struct {
 
 // Config is a configuration for a agent server.
 type Config struct {
-	Addr string
-	TLS  *TLSConfig
+	Addr           string
+	TLS            *TLSConfig
+	EthCallTimeout uint // In seconds.
+}
+
+// NewConfig creates a default server configuration.
+func NewConfig() *Config {
+	return &Config{
+		EthCallTimeout: 5,
+	}
 }
 
 // Server is agent api server.
@@ -49,8 +57,16 @@ func NewServer(conf *Config,
 	ptc *contract.PrivatixTokenContract,
 	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {
-	return &Server{conf, logger, db, ethClient, ptc, psc, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey}
+	return &Server{
+		conf,
+		logger,
+		db,
+		ethClient,
+		ptc,
+		psc,
+		pwdStorage,
+		data.EncryptedKey,
+		data.ToPrivateKey}
 }
 
 const (

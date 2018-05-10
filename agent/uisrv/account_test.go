@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -195,7 +196,10 @@ func testAccountFields(
 	}
 
 	testAccAddr := common.HexToAddress(testAcc.Account)
-	balance, err := testEthereumClient.BalanceAt(context.Background(), testAccAddr, nil)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(testServer.conf.EthCallTimeout)*time.Second)
+	defer cancel()
+	balance, err := testEthereumClient.BalanceAt(ctx, testAccAddr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

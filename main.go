@@ -45,6 +45,7 @@ type config struct {
 func newConfig() *config {
 	return &config{
 		DB:            data.NewDBConfig(),
+		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),

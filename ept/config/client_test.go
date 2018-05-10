@@ -9,7 +9,7 @@ import (
 
 	"github.com/rakyll/statik/fs"
 
-	_ "github.com/privatix/dappctrl/ept/config/statik"
+	_ "github.com/privatix/dappctrl/statik"
 )
 
 const (

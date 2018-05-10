@@ -8,7 +8,7 @@ import (
 
 	"github.com/rakyll/statik/fs"
 
-	_ "github.com/privatix/dappctrl/ept/config/statik"
+	_ "github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -16,7 +16,7 @@ const (
 	filePerm    = 0644
 	autogen     = "autogen"
 	autogenTest = " # autogenerate option"
-	clientTpl   = "/ovpn/client-config.tpl"
+	clientTpl   = "/ovpn/templates/client-config.tpl"
 )
 
 const (

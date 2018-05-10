@@ -3,6 +3,7 @@ package uisrv
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 

@@ -4,6 +4,7 @@ package uisrv
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
@@ -134,6 +134,12 @@ func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreateP
 	return payload
 }
 
+func equalECDSA(a, b *ecdsa.PrivateKey) bool {
+	abytes := crypto.FromECDSA(a)
+	bbytes := crypto.FromECDSA(b)
+	return bytes.Compare(abytes, bbytes) == 0
+}
+
 func testAccountFields(
 	t *testing.T,
 	testAcc *truffle.TestAccount,
@@ -152,31 +158,18 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	if payload.PrivateKey != "" {
-		createdPK, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
-		if err != nil {
-			t.Fatal("failed to decrypt created account's private key: ", err)
-		}
+	payloadKey, err := payload.toECDSA()
+	if err != nil {
+		t.Fatalf("could not extract private key from payload: %v", err)
+	}
 
-		if data.FromBytes(crypto.FromECDSA(createdPK)) != payload.PrivateKey {
-			t.Fatalf("wrong private key stored %v != %v",
-				data.FromBytes(crypto.FromECDSA(createdPK)), payload.PrivateKey)
-		}
-	} else {
-		key, err := keystore.DecryptKey([]byte(payload.JsonKeyStoreRaw), payload.JsonKeyStorePassword)
-		if err != nil {
-			t.Fatal("failed to decrypt payload: ", err)
-		}
-		payloadKey := key.PrivateKey
+	createdKey, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
+	if err != nil {
+		t.Fatal("failed to decrypt created account's private key: ", err)
+	}
 
-		createdKey, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
-		if err != nil {
-			t.Fatal("failed to decrypt created account's private key: ", err)
-		}
-
-		if payloadKey.D.Cmp(createdKey.D) != 0 {
-			t.Fatal("wrong private key stored")
-		}
+	if !equalECDSA(payloadKey, createdKey) {
+		t.Fatal("wrong private key stored")
 	}
 
 	pkB, err := hex.DecodeString(testAcc.PrivateKey)

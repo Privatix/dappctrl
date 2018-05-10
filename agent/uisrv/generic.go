@@ -22,26 +22,8 @@ type getConf struct {
 	FilteringSQL string
 }
 
-// handleGetResources select and returns records.
-func (s *Server) handleGetResources(w http.ResponseWriter,
-	r *http.Request, conf *getConf) {
-	var tail string
-	var eqs []string
-	var args []interface{}
-
+func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []string, args []interface{}) {
 	placei := 1
-
-	nextPlaceHolder := func() string {
-		ph := s.db.Placeholder(placei)
-		placei++
-		return ph
-	}
-
-	manyPlaceHolders := func(n int) []string {
-		phs := s.db.Placeholders(placei, n)
-		placei += n
-		return phs
-	}
 
 	for _, param := range conf.Params {
 		op := "="
@@ -54,36 +36,42 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 			continue
 		}
 
+		var ph string
 		if op == "in" {
 			subvals := strings.Split(val, ",")
 			for _, subval := range subvals {
 				args = append(args, subval)
 			}
-			eq := fmt.Sprintf(
-				"%s %s (%s)",
-				param.Field,
-				op,
-				strings.Join(manyPlaceHolders(len(subvals)), ","),
-			)
-			eqs = append(eqs, eq)
+
+			phs := s.db.Placeholders(placei, len(subvals))
+			placei += len(subvals)
+			ph = "(" + strings.Join(phs, ",") + ")"
 		} else {
-			eq := fmt.Sprintf("%s %s %s", param.Field, op, nextPlaceHolder())
-			eqs = append(eqs, eq)
 			args = append(args, val)
+			ph = s.db.Placeholder(placei)
+			placei++
 		}
+
+		cond := fmt.Sprintf("%s %s %s", param.Field, op, ph)
+		conds = append(conds, cond)
 	}
 
-	if len(args) > 0 {
-		tail = "WHERE " + strings.Join(eqs, " AND ")
-	}
+	return conds, args
 
+}
+
+// handleGetResources select and returns records.
+func (s *Server) handleGetResources(w http.ResponseWriter,
+	r *http.Request, conf *getConf) {
+
+	conds, args := s.formatConditions(r, conf)
 	if conf.FilteringSQL != "" {
-		if tail == "" {
-			tail += "WHERE "
-		} else {
-			tail += " AND "
-		}
-		tail += conf.FilteringSQL
+		conds = append(conds, conf.FilteringSQL)
+	}
+
+	var tail string
+	if len(conds) > 0 {
+		tail = "WHERE " + strings.Join(conds, " AND ")
 	}
 
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)

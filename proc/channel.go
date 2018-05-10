@@ -34,7 +34,6 @@ func checkJobExists(tx *reform.TX, rel, ty string) error {
 		if err == nil {
 			return ErrSameJobExists
 		}
-
 	} else {
 		_, err = tx.SelectOneFrom(data.JobTable,
 			"WHERE status = $1 AND related_id = $2",

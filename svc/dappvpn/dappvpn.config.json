@@ -1,0 +1,20 @@
+{
+    "ChannelDir": ".",
+
+    "Log": {
+        "Level": "info"
+    },
+
+    "Monitor": {
+        "Addr": "localhost:7505",
+        "ByteCountPeriod": 5
+    },
+
+    "Password": "secret",
+    "Product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
+
+    "Server": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    }
+}

@@ -51,7 +51,6 @@ Prepare a `dappctrl` database instance:
 ```bash
 psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
-psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
 Make a copy of `dappctrl.config.json`:
@@ -66,10 +65,10 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build `OpenVPN` session trigger:
+Build `OpenVPN` service adapter:
 
 ```bash
-go install $DAPPCTRL/tool/dapptrig
+go install $DAPPCTRL/svc/dappvpn
 ```
 
 ## Using docker
@@ -79,7 +78,8 @@ We have prepared two images and a compose file to make it easier to run app and 
 There are 3 services in compose file:
 
 1. `db` — uses public `postgres` image
-1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
+1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn with attached
+`dappvpn`.
 1. `dappctrl` — image `privatix/dappctrl` is a main controller app
 
 If you want to develop `dappctrl` then it is convenient to run its dependencies using `docker`, but controller itself at your host machine:

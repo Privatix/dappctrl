@@ -335,3 +335,16 @@ type EthLog struct {
 	Data        string `reform:"data"`
 	Topics      []byte `reform:"topics"`
 }
+
+// LogEntry is an ethereum log entry.
+//reform:eth_logs
+type LogEntry struct {
+	ID          string    `reform:"id,pk"`
+	TxHash      string    `reform:"tx_hash"`
+	TxStatus    string    `reform:"tx_status"`
+	JobID       string    `reform:"job"`
+	BlockNumber uint64    `reform:"block_number"`
+	Addr        string    `reform:"addr"`
+	Data        string    `reform:"data"`
+	Topics      LogTopics `reform:"topics"`
+}

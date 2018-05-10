@@ -1,6 +1,8 @@
 package data
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"math/big"
 )
@@ -17,4 +19,27 @@ func (i B64BigInt) MarshalJSON() ([]byte, error) {
 	v := big.NewInt(0)
 	v.SetBytes(buf)
 	return []byte(v.String()), nil
+}
+
+// LogTopics is a database/sql compatible type for ethereum log topics.
+type LogTopics [][]string
+
+// Value serializes the log topics.
+func (t LogTopics) Value() (driver.Value, error) {
+	return json.Marshal(t)
+}
+
+// Scan deserializes the log topics.
+func (t *LogTopics) Scan(src interface{}) error {
+	source, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("type assertion .([]byte) failed")
+	}
+
+	err := json.Unmarshal(source, &t)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

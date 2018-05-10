@@ -5,6 +5,7 @@ package eth
 // https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,9 @@ type LogsAPIResponse struct {
 	Result []LogsAPIRecord `json:"result"`
 }
 
+// TopicFilter is a convenience type that abstracts away
+// the structure of the topic filter in Ethereum JSON RPC.
+// The zero value is an empty filter ready to use.
 type TopicFilter map[int][]string
 
 func (f TopicFilter) MarshalJSON() ([]byte, error) {
@@ -64,6 +68,8 @@ func (f TopicFilter) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// ExpectAt modifies the topic filter by adding a condition on topic[index].
+// The condition will check that topic[index] is one of the provided values.
 func (f *TopicFilter) ExpectAt(index int, values ...string) {
 	if *f == nil {
 		*f = make(TopicFilter)

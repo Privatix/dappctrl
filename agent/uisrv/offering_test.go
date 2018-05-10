@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -231,6 +232,67 @@ func TestGetOffering(t *testing.T) {
 
 	// Get offerings by status.
 	testGetOfferings(t, "", "", data.OfferEmpty, 1)
+}
+
+func testGetClientOfferings(t *testing.T, minp, maxp, country string, exp int) {
+	res := getResources(t, clientOfferingsPath,
+		map[string]string{
+			"minUnitPrice": minp,
+			"maxUnitPrice": maxp,
+			"country":      country})
+	testGetResources(t, res, exp)
+}
+
+func TestGetClientOffering(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	createOfferingFixtures(t)
+	// Get empty list.
+	testGetClientOfferings(t, "", "", "", 0)
+
+	// Insert test offerings.
+	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1.OfferStatus = data.OfferRegister
+	off1.IsLocal = false
+	off1.Country = "US"
+
+	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off2.OfferStatus = data.OfferRegister
+	off2.IsLocal = false
+	off2.Country = "SU"
+
+	off3 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off3.OfferStatus = data.OfferEmpty
+	off3.IsLocal = false
+	off3.Country = "SU"
+
+	off4 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off4.OfferStatus = data.OfferEmpty
+	off4.IsLocal = true
+
+	insertItems(t, off1, off2, off3)
+
+	// all non-local offerings
+	testGetClientOfferings(t, "", "", "", 2)
+
+	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
+	price := strconv.FormatUint(off1.UnitPrice, 10)
+	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
+
+	// price range
+	testGetClientOfferings(t, lowPrice, "", "", 2)     // inside range
+	testGetClientOfferings(t, "", highPrice, "", 2)    // inside range
+	testGetClientOfferings(t, "", lowPrice, "", 0)     // above range
+	testGetClientOfferings(t, highPrice, "", "", 0)    // below range
+	testGetClientOfferings(t, lowPrice, price, "", 2)  // on edge
+	testGetClientOfferings(t, price, highPrice, "", 2) // on edge
+	testGetClientOfferings(t, price, price, "", 2)     // on edge
+
+	// country filter
+	testGetClientOfferings(t, "", "", "US", 1)
+	testGetClientOfferings(t, "", "", "SU", 1)
+	testGetClientOfferings(t, "", "", "US,SU", 2)
 }
 
 func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {

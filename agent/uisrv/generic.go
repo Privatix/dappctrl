@@ -12,6 +12,7 @@ import (
 type queryParam struct {
 	Name  string // in request.
 	Field string // column name in db.
+	Op    string // comparison operator ({Field} {Op} {Value}, default "=")
 }
 
 // getConf is a config for generic get handler.
@@ -21,36 +22,56 @@ type getConf struct {
 	FilteringSQL string
 }
 
-// handleGetResources select and returns records.
-func (s *Server) handleGetResources(w http.ResponseWriter,
-	r *http.Request, conf *getConf) {
-	var tail string
-	var eqs []string
-	var args []interface{}
+func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []string, args []interface{}) {
+	placei := 1
 
 	for _, param := range conf.Params {
+		op := "="
+		if param.Op != "" {
+			op = param.Op
+		}
+
 		val := r.FormValue(param.Name)
 		if val == "" {
 			continue
 		}
-		eqs = append(eqs,
-			fmt.Sprintf("%s=%s",
-				param.Field,
-				s.db.Placeholder(len(eqs)+1)))
-		args = append(args, val)
-	}
 
-	if len(args) > 0 {
-		tail = "WHERE " + strings.Join(eqs, " AND ")
-	}
+		var ph string
+		if op == "in" {
+			subvals := strings.Split(val, ",")
+			for _, subval := range subvals {
+				args = append(args, subval)
+			}
 
-	if conf.FilteringSQL != "" {
-		if tail == "" {
-			tail += "WHERE "
+			phs := s.db.Placeholders(placei, len(subvals))
+			placei += len(subvals)
+			ph = "(" + strings.Join(phs, ",") + ")"
 		} else {
-			tail += " AND "
+			args = append(args, val)
+			ph = s.db.Placeholder(placei)
+			placei++
 		}
-		tail += conf.FilteringSQL
+
+		cond := fmt.Sprintf("%s %s %s", param.Field, op, ph)
+		conds = append(conds, cond)
+	}
+
+	return conds, args
+
+}
+
+// handleGetResources select and returns records.
+func (s *Server) handleGetResources(w http.ResponseWriter,
+	r *http.Request, conf *getConf) {
+
+	conds, args := s.formatConditions(r, conf)
+	if conf.FilteringSQL != "" {
+		conds = append(conds, conf.FilteringSQL)
+	}
+
+	var tail string
+	if len(conds) > 0 {
+		tail = "WHERE " + strings.Join(conds, " AND ")
 	}
 
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)

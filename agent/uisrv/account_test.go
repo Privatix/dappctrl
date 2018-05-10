@@ -3,9 +3,12 @@
 package uisrv
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -113,6 +116,30 @@ func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	return payload
 }
 
+func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreatePayload {
+	payload := &accountCreatePayload{}
+
+	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
+	payload.JSONKeyStorePassword = "helloworld"
+	privKey, _ := crypto.ToECDSA(pkB)
+
+	pkB64, _ := data.EncryptedKey(privKey, payload.JSONKeyStorePassword)
+	jsonBytes, _ := data.ToBytes(pkB64)
+	payload.JSONKeyStoreRaw = string(jsonBytes)
+
+	payload.IsDefault = true
+	payload.InUse = true
+	payload.Name = "Test account"
+
+	return payload
+}
+
+func equalECDSA(a, b *ecdsa.PrivateKey) bool {
+	abytes := crypto.FromECDSA(a)
+	bbytes := crypto.FromECDSA(b)
+	return bytes.Compare(abytes, bbytes) == 0
+}
+
 func testAccountFields(
 	t *testing.T,
 	testAcc *truffle.TestAccount,
@@ -131,12 +158,17 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	createdPK, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
+	payloadKey, err := payload.toECDSA()
+	if err != nil {
+		t.Fatalf("could not extract private key from payload: %v", err)
+	}
+
+	createdKey, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
 	if err != nil {
 		t.Fatal("failed to decrypt created account's private key: ", err)
 	}
 
-	if data.FromBytes(crypto.FromECDSA(createdPK)) != payload.PrivateKey {
+	if !equalECDSA(payloadKey, createdKey) {
 		t.Fatal("wrong private key stored")
 	}
 
@@ -194,12 +226,17 @@ func testAccountFields(
 	}
 }
 
-func TestCreateAccount(t *testing.T) {
+func testCreateAccount(t *testing.T, useRawJSONPayload bool) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
 	testAcc := testTruffleAPI.GetTestAccounts()[0]
-	payload := getTestAccountPayload(&testAcc)
+	var payload *accountCreatePayload
+	if useRawJSONPayload {
+		payload = getTestAccountKeyStorePayload(&testAcc)
+	} else {
+		payload = getTestAccountPayload(&testAcc)
+	}
 
 	res := sendPayload(t, http.MethodPost, accountsPath, payload)
 
@@ -217,6 +254,32 @@ func TestCreateAccount(t *testing.T) {
 	}
 
 	testAccountFields(t, &testAcc, payload, created)
+}
+
+func TestCreateAccount(t *testing.T) {
+	testCreateAccount(t, false)
+	testCreateAccount(t, true)
+}
+
+func TestExportAccountPrivateKey(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	acc := data.NewTestAccount(testPassword)
+	expectedBytes := []byte(`{"hello": "world"}`)
+	acc.PrivateKey = data.FromBytes(expectedBytes)
+	insertItems(t, acc)
+
+	res := sendPayload(t, http.MethodGet, accountsPath+acc.ID+"/pkey", nil)
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusOK)
+	}
+
+	body, _ := ioutil.ReadAll(res.Body)
+	if !bytes.Equal(body, expectedBytes) {
+		t.Fatalf("wrong pkey exported: expected %x got %x", expectedBytes, body)
+	}
 }
 
 func TestGetAccounts(t *testing.T) {

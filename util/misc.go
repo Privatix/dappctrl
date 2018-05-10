@@ -29,6 +29,12 @@ func NewUUID() string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
+// IsUUID checks if a given string is a UUID.
+func IsUUID(s string) bool {
+	_, err := uuid.FromString(s)
+	return err == nil
+}
+
 // ExeDirJoin composes a file name relative to a running executable.
 func ExeDirJoin(elem ...string) string {
 	exe, err := os.Executable()

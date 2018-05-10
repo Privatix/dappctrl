@@ -34,6 +34,8 @@ const (
 	PathStart  = "/session/start"
 	PathStop   = "/session/stop"
 	PathUpdate = "/session/update"
+
+	PathProductConfig = "/product/config"
 )
 
 // NewServer creates a new session server.
@@ -54,6 +56,7 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 	s.HandleFunc(PathStart, modifyHandler(s.handleStart))
 	s.HandleFunc(PathStop, modifyHandler(s.handleStop))
 	s.HandleFunc(PathUpdate, modifyHandler(s.handleUpdate))
+	s.HandleFunc(PathProductConfig, modifyHandler(s.handleProductConfig))
 
 	return s
 }

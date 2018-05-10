@@ -103,7 +103,11 @@
     },
 
     "SessionServerTest": {
-        "ServerStartupDelay": 10
+        "ServerStartupDelay": 10,
+        "Product": {
+            "ValidFormatConfig": {"A": "A", "B" :"B", "C": "C"}
+        }
+
     },
 
     "SOMC": {

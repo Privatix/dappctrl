@@ -86,37 +86,37 @@ type accountCreatePayload struct {
 	Name                 string `json:"name"`
 }
 
+func (p *accountCreatePayload) toECDSA() (*ecdsa.PrivateKey, error) {
+	if p.PrivateKey != "" {
+		pkBytes, err := data.ToBytes(p.PrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode private key: %v", err)
+		}
+		privKey, err := crypto.ToECDSA(pkBytes)
+		if err != nil {
+			return nil, fmt.Errorf("could not make ecdsa priv key: %v", err)
+		}
+		return privKey, nil
+	} else if p.JsonKeyStoreRaw != "" {
+		key, err := keystore.DecryptKey([]byte(p.JsonKeyStoreRaw), p.JsonKeyStorePassword)
+		if err != nil {
+			return nil, fmt.Errorf("could not decrypt keystore: %v", err)
+		}
+		return key.PrivateKey, nil
+	}
+
+	return nil, fmt.Errorf("neither private key nor raw keystore json provided")
+}
+
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
-	var err error
 	payload := &accountCreatePayload{}
 	s.parsePayload(w, r, payload)
 	acc := &data.Account{}
 	acc.ID = util.NewUUID()
 
-	var privKey *ecdsa.PrivateKey
-	if payload.PrivateKey != "" {
-		pkBytes, err := data.ToBytes(payload.PrivateKey)
-		if err != nil {
-			s.logger.Warn("could not decode private key: %v", err)
-			s.replyInvalidPayload(w)
-			return
-		}
-		privKey, err = crypto.ToECDSA(pkBytes)
-		if err != nil {
-			s.logger.Warn("could not make ecdsa priv key: %v", err)
-			s.replyInvalidPayload(w)
-			return
-		}
-	} else if payload.JsonKeyStoreRaw != "" {
-		key, err := keystore.DecryptKey([]byte(payload.JsonKeyStoreRaw), payload.JsonKeyStorePassword)
-		if err != nil {
-			s.logger.Warn("could not decrypt keystore: %v", err)
-			s.replyInvalidPayload(w)
-			return
-		}
-		privKey = key.PrivateKey
-	} else {
-		s.logger.Warn("neither private key nor raw keystore json provided")
+	privKey, err := payload.toECDSA()
+	if err != nil {
+		s.logger.Warn("could not extract priv key: %v", err)
 		s.replyInvalidPayload(w)
 		return
 	}

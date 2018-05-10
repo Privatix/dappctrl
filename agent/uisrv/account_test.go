@@ -226,12 +226,17 @@ func testAccountFields(
 	}
 }
 
-func TestCreateAccount(t *testing.T) {
+func testCreateAccount(t *testing.T, useRawJSONPayload bool) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
 	testAcc := testTruffleAPI.GetTestAccounts()[0]
-	payload := getTestAccountPayload(&testAcc)
+	var payload *accountCreatePayload
+	if useRawJSONPayload {
+		payload = getTestAccountKeyStorePayload(&testAcc)
+	} else {
+		payload = getTestAccountPayload(&testAcc)
+	}
 
 	res := sendPayload(t, http.MethodPost, accountsPath, payload)
 
@@ -251,29 +256,9 @@ func TestCreateAccount(t *testing.T) {
 	testAccountFields(t, &testAcc, payload, created)
 }
 
-func TestCreateAccountKeyStore(t *testing.T) {
-	defer cleanDB(t)
-	setTestUserCredentials(t)
-
-	testAcc := testTruffleAPI.GetTestAccounts()[0]
-	payload := getTestAccountKeyStorePayload(&testAcc)
-
-	res := sendPayload(t, http.MethodPost, accountsPath, payload)
-
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusCreated)
-	}
-
-	reply := &replyEntity{}
-	json.NewDecoder(res.Body).Decode(reply)
-	defer res.Body.Close()
-
-	created := &data.Account{}
-	if err := testServer.db.FindByPrimaryKeyTo(created, reply.ID); err != nil {
-		t.Fatal("failed to retrieve created account: ", err)
-	}
-
-	testAccountFields(t, &testAcc, payload, created)
+func TestCreateAccount(t *testing.T) {
+	testCreateAccount(t, false)
+	testCreateAccount(t, true)
 }
 
 func TestExportAccountPrivateKey(t *testing.T) {

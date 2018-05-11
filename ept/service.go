@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/pay"
-	"github.com/privatix/dappctrl/util"
 )
 
 type result struct {
-	tplID string
-	err   error
+	msg *Message
+	err error
 }
 
 type req struct {
@@ -22,27 +22,36 @@ type req struct {
 	callback  chan *result
 }
 
-// Service for generation Endpoint Message Template
+// Message structure for Endpoint Message
+type Message struct {
+	TemplateHash           string            `json:"templateHash"`
+	Username               string            `json:"username"`
+	Password               string            `json:"password"`
+	PaymentReceiverAddress string            `json:"paymentReceiverAddress"`
+	ServiceEndpointAddress string            `json:"serviceEndpointAddress"`
+	AdditionalParams       map[string]string `json:"additionalParams"`
+}
+
+// Service for generation Endpoint Message
 type Service struct {
 	db      *reform.DB
 	msgChan chan *req
 	payAddr string
 }
 
-func newResult(tplID string, err error) *result {
-	return &result{tplID, err}
+func newResult(tpl *Message, err error) *result {
+	return &result{tpl, err}
 }
 
 // New function for initialize the service for generating
-// the Endpoint Message Template
+// the Endpoint Message
 func New(db *reform.DB, payConfig *pay.Config) *Service {
 	return &Service{db, make(chan *req), payConfig.Addr}
 }
 
-// EndpointMessageTemplate creates a new endpoint message template
-// in the database, returns the template ID
-func (s *Service) EndpointMessageTemplate(channelID string,
-	timeout time.Duration) (string, error) {
+// EndpointMessage returns the endpoint message object
+func (s *Service) EndpointMessage(channelID string,
+	timeout time.Duration) (*Message, error) {
 	c := make(chan *result)
 	done := make(chan bool)
 
@@ -52,15 +61,14 @@ func (s *Service) EndpointMessageTemplate(channelID string,
 
 	select {
 	case result := <-c:
-		return result.tplID, result.err
+		return result.msg, result.err
 	case <-time.After(timeout):
 		close(done)
-		return "", ErrTimeOut
+		return nil, ErrTimeOut
 	}
 }
 
 func (s *Service) processing(req *req) {
-
 	resp := make(chan *result)
 
 	go func() {
@@ -77,7 +85,7 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult("", err)
+				resp <- newResult(nil, err)
 				return
 			}
 		}
@@ -89,7 +97,7 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult("", err)
+				resp <- newResult(nil, err)
 				return
 			}
 		}
@@ -101,43 +109,57 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult("", err)
+				resp <- newResult(nil, err)
 				return
 			}
 		}
 
-		if prod.OfferAccessID == nil {
-			resp <- newResult("", ErrOfferAccessID)
-			return
+		var conf map[string]string
+
+		if err := json.Unmarshal(prod.Config, &conf); err != nil {
+			select {
+			case <-req.done:
+				return
+			case resp <- newResult(nil, err):
+				return
+			}
 		}
 
-		if !isValidJSON(prod.Config, &map[string]string{}) {
-			resp <- newResult("", ErrInvalidProdConf)
-			return
-		}
-
-		endMsgTemp := &data.EndpointMessageTemplate{
-			ID:                     util.NewUUID(),
+		msg := Message{
 			TemplateHash:           *prod.OfferAccessID,
-			Username:               &ch.ID,
-			Password:               &ch.Password,
+			Username:               ch.ID,
+			Password:               ch.Password,
 			PaymentReceiverAddress: s.payAddr,
 			ServiceEndpointAddress: "",
-			AdditionalParams:       prod.Config,
+			AdditionalParams:       conf,
 		}
 
-		go s.insert(req.done, errC, endMsgTemp)
+		var temp data.Template
+
+		go s.find(req.done, errC, &temp, *prod.OfferAccessID)
 
 		select {
 		case <-req.done:
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult("", err)
+				resp <- newResult(nil, err)
 				return
 			}
+		}
 
-			resp <- newResult(endMsgTemp.ID, nil)
+		if !valid(temp.Raw, msg) {
+			select {
+			case <-req.done:
+				return
+			case resp <- newResult(&msg, ErrInvalidEndpointMessage):
+			}
+		}
+
+		select {
+		case <-req.done:
+			return
+		case resp <- newResult(&msg, nil):
 		}
 	}()
 
@@ -148,8 +170,12 @@ func (s *Service) processing(req *req) {
 	}
 }
 
-func isValidJSON(data []byte, v interface{}) bool {
-	if json.Unmarshal(data, v) != nil {
+func valid(schema []byte, msg Message) bool {
+	sch := gojsonschema.NewBytesLoader(schema)
+	loader := gojsonschema.NewGoLoader(msg)
+
+	result, err := gojsonschema.Validate(sch, loader)
+	if err != nil || !result.Valid() || len(result.Errors()) != 0 {
 		return false
 	}
 	return true
@@ -158,17 +184,6 @@ func isValidJSON(data []byte, v interface{}) bool {
 func (s *Service) find(done chan bool, errC chan error,
 	record reform.Record, pk interface{}) {
 	err := s.db.FindByPrimaryKeyTo(record, pk)
-
-	select {
-	case <-done:
-		return
-	case errC <- err:
-	}
-}
-
-func (s *Service) insert(done chan bool, errC chan error,
-	record reform.Struct) {
-	err := s.db.Insert(record)
 
 	select {
 	case <-done:

@@ -12,14 +12,12 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-const errEqual = "The endpoint message template ID in the database" +
-	" is not equal to the value obtained"
-
 var (
 	conf struct {
 		DB        *data.DBConfig
 		Log       *util.LogConfig
 		PayServer *pay.Config
+		EptTest   *eptTestConfig
 	}
 
 	testDB *reform.DB
@@ -27,10 +25,29 @@ var (
 	timeout = time.Second * 30
 )
 
+type eptTestConfig struct {
+	Channel             string
+	ExportConfigKeys    []string
+	ValidHash           []string
+	InvalidHash         []string
+	ValidHost           []string
+	InvalidHost         []string
+	ConfValidCaValid    string
+	ConfInvalid         string
+	ConfValidCaInvalid  string
+	ConfValidCaEmpty    string
+	ConfValidCaNotExist string
+}
+
+func newEptTestConfig() *eptTestConfig {
+	return &eptTestConfig{}
+}
+
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
 	conf.PayServer = &pay.Config{}
+	conf.EptTest = newEptTestConfig()
 
 	util.ReadTestConfig(&conf)
 
@@ -44,40 +61,11 @@ func TestMain(m *testing.M) {
 
 }
 
-func TestNewEndpointMessageTemplate(t *testing.T) {
-	fxt := data.NewTestFixture(t, testDB)
-
-	defer fxt.Close()
-
-	uuid := fxt.Template.ID
-
-	fxt.Product.OfferAccessID = &uuid
-
-	if err := testDB.Save(fxt.Product); err != nil {
-		t.Fatal(err)
-	}
-
+func TestServiceEndpointMessage(t *testing.T) {
 	s := New(testDB, conf.PayServer)
 
-	p, err := s.EndpointMessageTemplate(fxt.Channel.ID, timeout)
+	_, err := s.EndpointMessage(conf.EptTest.Channel, timeout)
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	var template data.EndpointMessageTemplate
-
-	if err := s.db.FindByPrimaryKeyTo(&template, p); err != nil {
-		t.Fatal(err)
-	}
-
-	if template.ID != p {
-		t.Fatal(errEqual)
-	}
-
-	// necessary measure associated with the database schema
-	fxt.Product.OfferAccessID = nil
-
-	if err := testDB.Save(fxt.Product); err != nil {
 		t.Fatal(err)
 	}
 }

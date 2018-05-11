@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,6 +21,7 @@ const (
 )
 
 type eptTestConfig struct {
+	Template            string
 	ExportConfigKeys    []string
 	ValidHash           []string
 	InvalidHash         []string
@@ -66,6 +68,10 @@ func TestParsingValidConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+
+	r, _ := json.Marshal(out)
+
+	t.Log(string(r))
 
 	if !validParams(conf.EptTest.ExportConfigKeys, out) {
 		t.Fatal(errPars)

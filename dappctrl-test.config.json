@@ -42,6 +42,7 @@
     },
 
     "EptTest": {
+        "Channel": "902871e1-bb92-48d2-8932-350f88ce1e61",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
         "ValidHash": [

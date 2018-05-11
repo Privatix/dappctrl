@@ -305,15 +305,3 @@ type Job struct {
 	CreatedBy   string    `reform:"created_by"`
 	TryCount    uint8     `reform:"try_count"`
 }
-
-// EndpointMessageTemplate for a endpoint message check.
-//reform:endpoint_message_template
-type EndpointMessageTemplate struct {
-	ID                     string  `json:"id" reform:"id,pk"`
-	TemplateHash           string  `json:"templateHash" reform:"template_hash"`
-	Username               *string `json:"username" reform:"username"`
-	Password               *string `json:"password" reform:"password"`
-	PaymentReceiverAddress string  `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
-	ServiceEndpointAddress string  `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
-	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
-}

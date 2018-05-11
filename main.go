@@ -12,6 +12,7 @@ import (
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/proc/worker"
@@ -102,6 +103,12 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
+
+	mon := monitor.NewMonitor(logger, db, gethConn, pscAddr)
+	if err := mon.Start(); err != nil {
+		logger.Fatal("failed to start the blockchain monitor: %v", err)
+	}
+	defer mon.Stop()
 
 	pwdStorage := new(data.PWDStorage)
 

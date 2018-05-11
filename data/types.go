@@ -22,7 +22,7 @@ func (i B64BigInt) MarshalJSON() ([]byte, error) {
 }
 
 // LogTopics is a database/sql compatible type for ethereum log topics.
-type LogTopics [][]string
+type LogTopics []string
 
 // Value serializes the log topics.
 func (t LogTopics) Value() (driver.Value, error) {

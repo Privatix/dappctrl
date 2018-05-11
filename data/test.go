@@ -339,7 +339,8 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 	tx := BeginTestTX(t, db)
 	for _, v := range []reform.View{JobTable, EndpointTable, SessionTable,
 		ChannelTable, OfferingTable, UserTable, AccountTable,
-		ProductTable, TemplateTable, ContractTable, SettingTable} {
+		ProductTable, TemplateTable, ContractTable, SettingTable,
+		LogEntryTable} {
 		if _, err := tx.DeleteFrom(v, ""); err != nil {
 			RollbackTestTX(t, tx)
 			t.Fatalf("failed to clean DB: %s", err)

@@ -225,9 +225,13 @@ func (m *Monitor) blocksOfInterest(ctx context.Context) (from, to uint64) {
 func (m *Monitor) getLastProcessedBlockNumber() uint64 {
 	if m.lastProcessedBlock == 0 {
 		row := m.db.QueryRow("select max(block_number) from eth_logs")
-		err := row.Scan(&m.lastProcessedBlock)
+		var v *uint64
+		err := row.Scan(&v)
 		if err != nil && err != sql.ErrNoRows {
 			panic(err)
+		}
+		if v != nil {
+			m.lastProcessedBlock = *v
 		}
 	}
 

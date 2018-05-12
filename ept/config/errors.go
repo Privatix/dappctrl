@@ -9,4 +9,5 @@ var (
 	ErrCertNotExist    = errors.New("certificate not exist in the config file")
 	ErrCertCanNotRead  = errors.New("cannot read certificate file")
 	ErrCertNotFound    = errors.New("certificate can not be found in the specified path")
+	ErrCancel          = errors.New("canceled sending product config to session server")
 )

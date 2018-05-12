@@ -2,9 +2,14 @@ package config
 
 import (
 	"bufio"
+	"context"
+	"github.com/privatix/dappctrl/sesssrv"
+	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/srv"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -140,4 +145,65 @@ func parseLine(keys map[string]bool,
 		return key, value, true
 	}
 	return "", "", false
+}
+
+// PushConfig push OpenVpn config to Session Server
+// Hostname or ip address and port from Session Server
+// is taken from sessSrvConfig. Function can be canceled via context.
+// username and password needed for access the product in the database.
+// The confPath, caPath are absolute paths to OpenVpn config and Ca files,
+// In variable keys the list of keys for parsing.
+// The timeout in seconds between attempts to send data to the server must
+// be specified in variable retrySec
+func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
+	logger *util.Logger, username, password, confPath,
+	caPath string, keys []string, retrySec int64) error {
+	conf, err := ServerConfig(confPath, false, keys)
+	if err != nil {
+		return err
+	}
+
+	ca, err := ParseCertFromFile(caPath)
+	if err != nil {
+		return err
+	}
+
+	conf[caData] = ca
+
+	args := sesssrv.ProductArgs{
+		Config: conf,
+	}
+
+	errC := make(chan error)
+
+	push := func() {
+		err := sesssrv.Post(sessSrvConfig,
+			username, password, sesssrv.PathProductConfig,
+			args, nil)
+
+		select {
+		case <-ctx.Done():
+			return
+		case errC <- err:
+		}
+	}
+
+	for {
+		go push()
+		select {
+		case <-ctx.Done():
+			return ErrCancel
+		case err := <-errC:
+			if err != nil {
+				logger.Warn("Failed to push app config to"+
+					" dappctrl. Original error: %s", err)
+				time.Sleep(time.Second * time.Duration(retrySec))
+				continue
+			}
+			return nil
+		}
+
+	}
+
+	return nil
 }

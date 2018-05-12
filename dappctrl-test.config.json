@@ -59,6 +59,7 @@
         "ConfValidCaInvalid": "conf.valid.ca.invalid",
         "ConfValidCaEmpty": "conf.valid.ca.empty",
         "ConfValidCaNotExist": "conf.valid.ca.notexist",
+        "Ca": "crt.valid",
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"}
     },
 

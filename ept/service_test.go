@@ -18,6 +18,7 @@ import (
 
 const (
 	errValidateMsg = "incorrect validate message"
+	eptTempFile    = "/templates/ept.json"
 )
 
 var (
@@ -77,7 +78,7 @@ func newTemplate(t *testing.T) *data.Template {
 		t.Fatal(err)
 	}
 
-	tpl, err := statikFS.Open("/templates/ept.json")
+	tpl, err := statikFS.Open(eptTempFile)
 	if err != nil {
 		t.Fatal(err)
 	}

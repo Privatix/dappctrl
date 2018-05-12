@@ -125,6 +125,15 @@ func (s *Service) processing(req *req) {
 			}
 		}
 
+		if prod.OfferAccessID == nil {
+			select {
+			case <-req.done:
+				return
+			case resp <- newResult(nil, ErrInvalidFormat):
+				return
+			}
+		}
+
 		msg := Message{
 			TemplateHash:           *prod.OfferAccessID,
 			Username:               ch.ID,
@@ -152,7 +161,7 @@ func (s *Service) processing(req *req) {
 			select {
 			case <-req.done:
 				return
-			case resp <- newResult(&msg, ErrInvalidEndpointMessage):
+			case resp <- newResult(&msg, ErrInvalidFormat):
 			}
 		}
 

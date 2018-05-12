@@ -42,7 +42,6 @@
     },
 
     "EptTest": {
-        "Channel": "902871e1-bb92-48d2-8932-350f88ce1e61",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
         "ValidHash": [
@@ -59,7 +58,8 @@
         "ConfInvalid": "conf.invalid",
         "ConfValidCaInvalid": "conf.valid.ca.invalid",
         "ConfValidCaEmpty": "conf.valid.ca.empty",
-        "ConfValidCaNotExist": "conf.valid.ca.notexist"
+        "ConfValidCaNotExist": "conf.valid.ca.notexist",
+        "ServerConfig": {"A": "A", "B" :"B", "C": "C"}
     },
 
     "Eth": {

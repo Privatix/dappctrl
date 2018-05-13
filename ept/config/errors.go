@@ -2,7 +2,7 @@ package config
 
 import "github.com/pkg/errors"
 
-// Endpoint EndpointMessage Template errors
+// Config errors
 var (
 	ErrInput           = errors.New("one or more input parameters is wrong")
 	ErrFilePathIsEmpty = errors.New("filePath is empty")

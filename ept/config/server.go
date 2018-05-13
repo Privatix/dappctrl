@@ -206,7 +206,8 @@ func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 			if err != nil {
 				logger.Warn("Failed to push app config to"+
 					" dappctrl. Original error: %s", err)
-				time.Sleep(time.Second * time.Duration(retrySec))
+				time.Sleep(time.Second *
+					time.Duration(retrySec))
 				continue
 			}
 			return nil

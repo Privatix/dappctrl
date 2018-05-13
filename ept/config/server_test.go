@@ -72,8 +72,8 @@ func newTestSessSrv(timeout time.Duration) *testSessSrv {
 		}
 	}()
 
-	time.Sleep(time.Duration(conf.SessionServerTest.ServerStartupDelay) *
-		time.Millisecond)
+	time.Sleep(time.Duration(
+		conf.SessionServerTest.ServerStartupDelay) * time.Millisecond)
 
 	return &testSessSrv{srv}
 }
@@ -217,7 +217,8 @@ func TestPushConfigTimeout(t *testing.T) {
 		logger, fxt.Product.ID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
 		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, conf.EptTest.RetrySec[2]); err != nil {
+		conf.EptTest.ExportConfigKeys,
+		conf.EptTest.RetrySec[2]); err != nil {
 		t.Fatal(err)
 	}
 

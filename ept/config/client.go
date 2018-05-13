@@ -63,7 +63,8 @@ type CConf struct {
 }
 
 // ClientConfig returns config object
-func ClientConfig(srvAddr, srvPort string, additionalParams []byte) (*CConf, error) {
+func ClientConfig(srvAddr, srvPort string,
+	additionalParams []byte) (*CConf, error) {
 	if !isHost(srvAddr) {
 		return nil, ErrInput
 	}

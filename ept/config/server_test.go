@@ -19,6 +19,7 @@ import (
 
 const (
 	errPars     = "incorrect parsing test"
+	errPush     = "incorrect pushing test"
 	samplesPath = "samples"
 )
 
@@ -234,6 +235,43 @@ func TestPushConfigTimeout(t *testing.T) {
 	}
 
 	if !validParams(conf.EptTest.ExportConfigKeys, out) {
+		t.Fatal(errPars)
+	}
+}
+
+func TestPushConfigCancel(t *testing.T) {
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(time.Second * 2)
+		cancel()
+	}()
+
+	err := PushConfig(ctx, conf.SessionServer.Config,
+		logger, fxt.Product.ID, data.TestPassword,
+		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
+		joinFile(samplesPath, conf.EptTest.Ca),
+		conf.EptTest.ExportConfigKeys, 1)
+	if err == nil || err != ErrCancel {
+		t.Fatal(errPush)
+	}
+
+	var prod data.Product
+
+	if err := db.FindByPrimaryKeyTo(
+		&prod, fxt.Product.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	var out map[string]string
+
+	if err := json.Unmarshal(prod.Config, &out); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(out) != 0 {
 		t.Fatal(errPars)
 	}
 }

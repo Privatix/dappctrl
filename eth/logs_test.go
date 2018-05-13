@@ -46,7 +46,9 @@ func populateEvents() {
 	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
 	failOnErr(err, "Failed to connect to the Ethereum client")
 
-	pKeyBytes, err := hex.DecodeString(testTruffleAPI.FetchTestPrivateKey())
+	testAccounts := testTruffleAPI.GetTestAccounts()
+
+	pKeyBytes, err := hex.DecodeString(testAccounts[0].PrivateKey)
 	failOnErr(err, "Failed to fetch test private key from the API")
 
 	key, err := crypto.ToECDSA(pKeyBytes)

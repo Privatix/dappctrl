@@ -9,7 +9,6 @@ import (
 
 	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/execsrv"
@@ -89,8 +88,6 @@ func main() {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}
 
-	ethClient := eth.NewEthereumClient(conf.Eth.GethURL)
-
 	ptcAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PTCAddr))
 	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
 	if err != nil {
@@ -106,7 +103,7 @@ func main() {
 
 	pwdStorage := new(data.PWDStorage)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, ethClient, ptc, psc, pwdStorage)
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, ptc, psc, pwdStorage)
 
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",

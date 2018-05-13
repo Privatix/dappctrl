@@ -51,18 +51,16 @@ type testProduct struct {
 }
 
 type eptTestConfig struct {
-	Template            string
 	ExportConfigKeys    []string
-	ValidHash           []string
-	InvalidHash         []string
 	ValidHost           []string
-	InvalidHost         []string
 	ConfValidCaValid    string
 	ConfInvalid         string
 	ConfValidCaInvalid  string
 	ConfValidCaEmpty    string
 	ConfValidCaNotExist string
 	Ca                  string
+	RetrySec            []int64
+	SessSrvStartTimeout []int64
 }
 
 func newTestSessSrv(timeout time.Duration) *testSessSrv {
@@ -171,7 +169,7 @@ func TestPushConfig(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	s := newTestSessSrv(0)
+	s := newTestSessSrv(time.Duration(conf.EptTest.SessSrvStartTimeout[0]))
 	defer s.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -181,7 +179,8 @@ func TestPushConfig(t *testing.T) {
 		logger, fxt.Product.ID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
 		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, 100); err != nil {
+		conf.EptTest.ExportConfigKeys,
+		conf.EptTest.RetrySec[1]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -207,7 +206,8 @@ func TestPushConfigTimeout(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	s := newTestSessSrv(time.Second)
+	s := newTestSessSrv(time.Second *
+		time.Duration(conf.EptTest.SessSrvStartTimeout[1]))
 	defer s.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -217,7 +217,7 @@ func TestPushConfigTimeout(t *testing.T) {
 		logger, fxt.Product.ID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
 		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, 1); err != nil {
+		conf.EptTest.ExportConfigKeys, conf.EptTest.RetrySec[2]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -245,7 +245,8 @@ func TestPushConfigCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second *
+			time.Duration(conf.EptTest.SessSrvStartTimeout[2]))
 		cancel()
 	}()
 
@@ -253,7 +254,7 @@ func TestPushConfigCancel(t *testing.T) {
 		logger, fxt.Product.ID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
 		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, 1)
+		conf.EptTest.ExportConfigKeys, conf.EptTest.RetrySec[1])
 	if err == nil || err != ErrCancel {
 		t.Fatal(errPush)
 	}

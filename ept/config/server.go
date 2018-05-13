@@ -3,13 +3,14 @@ package config
 import (
 	"bufio"
 	"context"
-	"github.com/privatix/dappctrl/sesssrv"
-	"github.com/privatix/dappctrl/util"
-	"github.com/privatix/dappctrl/util/srv"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/privatix/dappctrl/sesssrv"
+	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/srv"
 )
 
 const (

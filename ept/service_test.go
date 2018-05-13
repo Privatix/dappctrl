@@ -43,17 +43,7 @@ type testFixture struct {
 }
 
 type eptTestConfig struct {
-	ExportConfigKeys    []string
-	ValidHash           []string
-	InvalidHash         []string
-	ValidHost           []string
-	InvalidHost         []string
-	ConfValidCaValid    string
-	ConfInvalid         string
-	ConfValidCaInvalid  string
-	ConfValidCaEmpty    string
-	ConfValidCaNotExist string
-	ServerConfig        map[string]string
+	ServerConfig map[string]string
 }
 
 func newFixture(t *testing.T) *testFixture {
@@ -168,7 +158,9 @@ func TestBadProductConfig(t *testing.T) {
 	defer fxt.clean()
 
 	fxt.product.Config = []byte(`{}`)
-	testDB.Update(fxt.product)
+	if err := testDB.Update(fxt.product); err != nil {
+		t.Fatal(err)
+	}
 
 	s := New(testDB, conf.PayServer)
 	_, err := s.EndpointMessage(fxt.ch.ID, timeout)
@@ -182,7 +174,9 @@ func TestBadProductOfferAccessID(t *testing.T) {
 	defer fxt.clean()
 
 	fxt.product.OfferAccessID = nil
-	testDB.Update(fxt.product)
+	if err := testDB.Update(fxt.product); err != nil {
+		t.Fatal(err)
+	}
 
 	s := New(testDB, conf.PayServer)
 	_, err := s.EndpointMessage(fxt.ch.ID, timeout)

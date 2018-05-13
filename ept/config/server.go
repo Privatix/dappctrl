@@ -162,6 +162,11 @@ func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	if retrySec <= 0 {
 		return ErrRetrySec
 	}
+
+	if logger == nil || sessSrvConfig == nil {
+		return ErrInput
+	}
+
 	conf, err := ServerConfig(confPath, false, keys)
 	if err != nil {
 		return err

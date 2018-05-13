@@ -142,7 +142,11 @@ func TestValidEndpointMessage(t *testing.T) {
 	fxt := newFixture(t)
 	defer fxt.clean()
 
-	s := New(testDB, conf.PayServer)
+	s, err := New(testDB, conf.PayServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	em, err := s.EndpointMessage(fxt.ch.ID, timeout)
 	if err != nil {
 		t.Fatal(err)
@@ -162,9 +166,12 @@ func TestBadProductConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := New(testDB, conf.PayServer)
-	_, err := s.EndpointMessage(fxt.ch.ID, timeout)
-	if err == nil {
+	s, err := New(testDB, conf.PayServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.EndpointMessage(fxt.ch.ID, timeout); err == nil {
 		t.Fatal(errValidateMsg)
 	}
 }
@@ -178,9 +185,12 @@ func TestBadProductOfferAccessID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := New(testDB, conf.PayServer)
-	_, err := s.EndpointMessage(fxt.ch.ID, timeout)
-	if err == nil {
+	s, err := New(testDB, conf.PayServer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.EndpointMessage(fxt.ch.ID, timeout); err == nil {
 		t.Fatal(errValidateMsg)
 	}
 }

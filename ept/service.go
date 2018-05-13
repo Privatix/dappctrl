@@ -11,6 +11,13 @@ import (
 	"github.com/privatix/dappctrl/pay"
 )
 
+const (
+	invalidChannel  = "invalid channel"
+	invalidOffering = "invalid offering"
+	invalidProduct  = "invalid product"
+	invalidTemplate = "invalid template"
+)
+
 type result struct {
 	msg *Message
 	err error
@@ -45,8 +52,12 @@ func newResult(tpl *Message, err error) *result {
 
 // New function for initialize the service for generating
 // the Endpoint Message
-func New(db *reform.DB, payConfig *pay.Config) *Service {
-	return &Service{db, make(chan *req), payConfig.Addr}
+func New(db *reform.DB, payConfig *pay.Config) (*Service, error) {
+	if db == nil || payConfig == nil {
+		return nil, ErrInput
+	}
+
+	return &Service{db, make(chan *req), payConfig.Addr}, nil
 }
 
 // EndpointMessage returns the endpoint message object
@@ -85,7 +96,8 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult(nil, err)
+				resp <- newResult(nil, errWrapper(err,
+					invalidChannel))
 				return
 			}
 		}
@@ -97,7 +109,8 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult(nil, err)
+				newResult(nil, errWrapper(err,
+					invalidOffering))
 				return
 			}
 		}
@@ -109,7 +122,8 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult(nil, err)
+				newResult(nil, errWrapper(err,
+					invalidProduct))
 				return
 			}
 		}
@@ -129,7 +143,7 @@ func (s *Service) processing(req *req) {
 			select {
 			case <-req.done:
 				return
-			case resp <- newResult(nil, ErrInvalidFormat):
+			case resp <- newResult(nil, ErrProdOfferAccessID):
 				return
 			}
 		}
@@ -152,7 +166,8 @@ func (s *Service) processing(req *req) {
 			return
 		case err := <-errC:
 			if err != nil {
-				resp <- newResult(nil, err)
+				newResult(nil, errWrapper(err,
+					invalidTemplate))
 				return
 			}
 		}

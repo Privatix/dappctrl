@@ -3,13 +3,11 @@ package uisrv
 import (
 	"net/http"
 
-	"github.com/privatix/dappctrl/data"
-
-	"github.com/privatix/dappctrl/eth"
-	"github.com/privatix/dappctrl/eth/contract"
-
+	"github.com/ethereum/go-ethereum/ethclient"
 	reform "gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -26,8 +24,16 @@ type TLSConfig struct {
 
 // Config is a configuration for a agent server.
 type Config struct {
-	Addr string
-	TLS  *TLSConfig
+	Addr           string
+	TLS            *TLSConfig
+	EthCallTimeout uint // In seconds.
+}
+
+// NewConfig creates a default server configuration.
+func NewConfig() *Config {
+	return &Config{
+		EthCallTimeout: 5,
+	}
 }
 
 // Server is agent api server.
@@ -35,7 +41,7 @@ type Server struct {
 	conf           *Config
 	logger         *util.Logger
 	db             *reform.DB
-	ethClient      *eth.EthereumClient
+	ethClient      *ethclient.Client
 	ptc            *contract.PrivatixTokenContract
 	psc            *contract.PrivatixServiceContract
 	pwdStorage     data.PWDGetSetter
@@ -47,12 +53,20 @@ type Server struct {
 func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
-	ethClient *eth.EthereumClient,
+	ethClient *ethclient.Client,
 	ptc *contract.PrivatixTokenContract,
 	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {
-	return &Server{conf, logger, db, ethClient, ptc, psc, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey}
+	return &Server{
+		conf,
+		logger,
+		db,
+		ethClient,
+		ptc,
+		psc,
+		pwdStorage,
+		data.EncryptedKey,
+		data.ToPrivateKey}
 }
 
 const (

@@ -1,7 +1,8 @@
 {
     "AgentServer": {
         "Addr": "localhost:3000",
-        "TLS": null
+        "TLS": null,
+        "EthCallTimeout": 5
     },
 
     "DB": {

@@ -4,6 +4,7 @@ package uisrv
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
@@ -12,12 +13,13 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/truffle"
 )
 
@@ -193,16 +195,16 @@ func testAccountFields(
 		t.Fatal("wrong eth addr stored")
 	}
 
-	response, err := testEthereumClient.GetBalance(testAcc.Account, eth.BlockLatest)
+	testAccAddr := common.HexToAddress(testAcc.Account)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(testServer.conf.EthCallTimeout)*time.Second)
+	defer cancel()
+	balance, err := testEthereumClient.BalanceAt(ctx, testAccAddr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	amount, err := eth.NewUint192(response.Result)
-	if err != nil {
-		t.Fatal(err, response.Result)
-	}
-	if strings.TrimSpace(string(created.EthBalance)) != data.FromBytes(amount.ToBigInt().Bytes()) {
+	if strings.TrimSpace(string(created.EthBalance)) != data.FromBytes(balance.Bytes()) {
 		t.Fatal("wrong eth balance stored")
 	}
 

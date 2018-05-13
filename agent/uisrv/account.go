@@ -1,20 +1,19 @@
 package uisrv
 
 import (
+	"context"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
-
-	"gopkg.in/reform.v1"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
+	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -146,23 +145,17 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc.InUse = payload.InUse
 	acc.Name = payload.Name
 
-	ethAddrHex := hex.EncodeToString(ethAddr.Bytes())
-
-	gResponse, err := s.ethClient.GetBalance("0x"+ethAddrHex, eth.BlockLatest)
+	timeout := time.Duration(s.conf.EthCallTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	amount, err := s.ethClient.BalanceAt(ctx, ethAddr, nil)
 	if err != nil {
 		s.logger.Warn("could not get eth balance")
 		s.replyUnexpectedErr(w)
 		return
 	}
 
-	amount, err := eth.NewUint192(gResponse.Result)
-	if err != nil {
-		s.logger.Warn("could not convert geth response to uint192: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.ToBigInt().Bytes()))
+	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
 	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, ethAddr)
 	if err != nil {

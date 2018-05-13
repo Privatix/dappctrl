@@ -159,6 +159,9 @@ func parseLine(keys map[string]bool,
 func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	logger *util.Logger, username, password, confPath,
 	caPath string, keys []string, retrySec int64) error {
+	if retrySec <= 0 {
+		return ErrRetrySec
+	}
 	conf, err := ServerConfig(confPath, false, keys)
 	if err != nil {
 		return err

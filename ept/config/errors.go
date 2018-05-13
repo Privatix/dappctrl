@@ -10,4 +10,5 @@ var (
 	ErrCertCanNotRead  = errors.New("cannot read certificate file")
 	ErrCertNotFound    = errors.New("certificate can not be found in the specified path")
 	ErrCancel          = errors.New("canceled sending product config to session server")
+	ErrRetrySec        = errors.New("retrySec must be greater than 0")
 )

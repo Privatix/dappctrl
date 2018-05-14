@@ -214,7 +214,7 @@ func (s *Service) processing(req *req) {
 
 		var temp data.Template
 
-		s.findTemp(req.done, errC, tempCh, *o.prod.OfferAccessID)
+		go s.findTemp(req.done, errC, tempCh, *o.prod.OfferAccessID)
 
 		select {
 		case <-req.done:

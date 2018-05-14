@@ -13,19 +13,15 @@ func ParseCertFromFile(caCertPath string) (string, error) {
 		return "", ErrCertCanNotRead
 	}
 
-	if err = util.ValidateFormat(util.FormatTLSCertificate,
-		string(mainCertPEMBlock)); err != nil {
-		return "", err
+	if !util.IsTLSCert(string(mainCertPEMBlock)) {
+		return "", ErrCertNotFound
 	}
 
 	return string(mainCertPEMBlock), nil
 }
 
 func isHost(host string) bool {
-	if util.ValidateFormat(util.FormatIP, host) == nil ||
-		util.ValidateFormat(util.FormatIPv4, host) == nil ||
-		util.ValidateFormat(util.FormatIPv6, host) == nil ||
-		util.ValidateFormat(util.FormatHostname, host) == nil {
+	if util.IsHostname(host) || util.IsIPv4(host) {
 		return true
 	}
 	return false

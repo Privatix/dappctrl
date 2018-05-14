@@ -42,18 +42,18 @@
     },
 
     "EptTest": {
+        "Ca": "crt.valid",
+        "ConfInvalid": "conf.invalid",
+        "ConfValidCaEmpty": "conf.valid.ca.empty",
+        "ConfValidCaInvalid": "conf.valid.ca.invalid",
+        "ConfValidCaNotExist": "conf.valid.ca.notexist",
+        "ConfValidCaValid": "conf.valid.ca.valid",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
-        "ConfValidCaValid": "conf.valid.ca.valid",
-        "ConfInvalid": "conf.invalid",
-        "ConfValidCaInvalid": "conf.valid.ca.invalid",
-        "ConfValidCaEmpty": "conf.valid.ca.empty",
-        "ConfValidCaNotExist": "conf.valid.ca.notexist",
-        "Ca": "crt.valid",
-        "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
         "RetrySec": [ 0, 1, 2 ],
-        "SessSrvStartTimeout": [0, 1, 2 ]
+        "SessSrvStartTimeout": [0, 1, 2 ],
+        "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
     },
 
     "Eth": {

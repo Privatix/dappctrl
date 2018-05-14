@@ -19,6 +19,13 @@ const (
 	caData           = "caData"
 )
 
+type pushReq struct {
+	sessSrvConfig *srv.Config
+	username      string
+	password      string
+	args          sesssrv.ProductArgs
+}
+
 // ServerConfig parsing OpenVpn config file and parsing
 // certificate from file.
 func ServerConfig(filePath string, withCa bool,
@@ -43,11 +50,7 @@ func parseConfig(filePath string,
 	}
 	defer inputFile.Close()
 
-	// delete duplicates
-	keyMap := make(map[string]bool)
-	for _, key := range keys {
-		keyMap[strings.TrimSpace(key)] = true
-	}
+	keyMap := delDup(keys)
 
 	results := make(map[string]string)
 
@@ -66,51 +69,54 @@ func parseConfig(filePath string,
 		return nil, err
 	}
 
-	// A certificate can be located on an absolute and relative path.
-	// If the certificate is found in the file,
-	// will return the body of the certificate,
-	// the absolute path to the certificate, and true
-	pCert := func(paths []string) (string, string, bool) {
-		for _, filePath := range paths {
-			cert, err := ParseCertFromFile(filePath)
-			if err == nil {
-				return cert, filePath, true
-			}
-		}
-
-		return "", "", false
-	}
-
-	// function is thread-safe, mutex is not required
-	findCa := func() error {
-		// check ca key
-		ca := results[caNameFromConfig]
-		if ca == "" {
-			return ErrCertNotExist
-		}
-
-		// absolute path
-		absPath := filepath.Dir(filePath) +
-			string(os.PathSeparator) + ca
-
-		cert, certPath, found := pCert([]string{ca, absPath})
-		if !found {
-			return ErrCertNotFound
-		}
-
-		results[caData] = cert
-		results[caPathName] = certPath
-
-		return nil
-	}
-
 	if withCa {
-		if err := findCa(); err != nil {
+		if err := fillCa(results, filePath); err != nil {
 			return nil, err
 		}
 	}
 
 	return results, nil
+}
+
+func delDup(keys []string) map[string]bool {
+	// delete duplicates
+	keyMap := make(map[string]bool)
+	for _, key := range keys {
+		keyMap[strings.TrimSpace(key)] = true
+	}
+	return keyMap
+}
+
+func searchCa(paths []string) (string, string, bool) {
+	for _, filePath := range paths {
+		cert, err := ParseCertFromFile(filePath)
+		if err == nil {
+			return cert, filePath, true
+		}
+	}
+
+	return "", "", false
+}
+
+func fillCa(results map[string]string, filePath string) error {
+	// check ca key
+	ca := results[caNameFromConfig]
+	if ca == "" {
+		return ErrCertNotExist
+	}
+
+	// absolute path
+	absPath := filepath.Join(filepath.Dir(filePath), ca)
+
+	cert, certPath, found := searchCa([]string{ca, absPath})
+	if !found {
+		return ErrCertNotFound
+	}
+
+	results[caData] = cert
+	results[caPathName] = certPath
+
+	return nil
 }
 
 func parseLine(keys map[string]bool,
@@ -159,46 +165,25 @@ func parseLine(keys map[string]bool,
 func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	logger *util.Logger, username, password, confPath,
 	caPath string, keys []string, retrySec int64) error {
-	if retrySec <= 0 {
-		return ErrRetrySec
-	}
-
-	if logger == nil || sessSrvConfig == nil {
+	if retrySec <= 0 || logger == nil || sessSrvConfig == nil {
 		return ErrInput
 	}
 
-	conf, err := ServerConfig(confPath, false, keys)
+	args, err := productArgs(confPath, caPath, keys)
 	if err != nil {
 		return err
 	}
 
-	ca, err := ParseCertFromFile(caPath)
-	if err != nil {
-		return err
-	}
-
-	conf[caData] = ca
-
-	args := sesssrv.ProductArgs{
-		Config: conf,
+	req := &pushReq{
+		sessSrvConfig: sessSrvConfig,
+		username:      username,
+		password:      password, args: args,
 	}
 
 	errC := make(chan error)
 
-	push := func() {
-		err := sesssrv.Post(sessSrvConfig,
-			username, password, sesssrv.PathProductConfig,
-			args, nil)
-
-		select {
-		case <-ctx.Done():
-			return
-		case errC <- err:
-		}
-	}
-
 	for {
-		go push()
+		go push(ctx, errC, req)
 		select {
 		case <-ctx.Done():
 			return ErrCancel
@@ -216,4 +201,37 @@ func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	}
 
 	return nil
+}
+
+func push(ctx context.Context, errC chan error, req *pushReq) {
+	err := sesssrv.Post(req.sessSrvConfig,
+		req.username, req.password, sesssrv.PathProductConfig,
+		req.args, nil)
+
+	select {
+	case <-ctx.Done():
+		return
+	case errC <- err:
+	}
+}
+
+func productArgs(confPath, caPath string,
+	keys []string) (sesssrv.ProductArgs, error) {
+	result := sesssrv.ProductArgs{}
+
+	conf, err := ServerConfig(confPath, false, keys)
+	if err != nil {
+		return result, err
+	}
+
+	ca, err := ParseCertFromFile(caPath)
+	if err != nil {
+		return result, err
+	}
+
+	conf[caData] = ca
+
+	result.Config = conf
+
+	return result, nil
 }

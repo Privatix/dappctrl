@@ -93,8 +93,8 @@ func newEptTestConfig() *eptTestConfig {
 	return &eptTestConfig{}
 }
 
-func validParams(in []string, out map[string]string) bool {
-	for _, key := range in {
+func validParams(out map[string]string) bool {
+	for _, key := range conf.EptTest.ExportConfigKeys {
 		delete(out, key)
 	}
 
@@ -116,6 +116,34 @@ func joinFile(path, file string) string {
 	return filepath.Join(path, file)
 }
 
+func testContext() (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.Background())
+}
+
+func config(t *testing.T, id string) map[string]string {
+	var prod data.Product
+
+	if err := db.FindByPrimaryKeyTo(
+		&prod, id); err != nil {
+		t.Fatal(err)
+	}
+
+	var out map[string]string
+
+	if err := json.Unmarshal(prod.Config, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func pushConfig(ctx context.Context, productID string, retrySec int64) error {
+	return PushConfig(ctx, conf.SessionServer.Config,
+		logger, productID, data.TestPassword,
+		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
+		joinFile(samplesPath, conf.EptTest.Ca),
+		conf.EptTest.ExportConfigKeys, retrySec)
+}
+
 func TestParsingValidConfig(t *testing.T) {
 	out, err := ServerConfig(joinFile(samplesPath,
 		conf.EptTest.ConfValidCaValid),
@@ -124,7 +152,7 @@ func TestParsingValidConfig(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	if !validParams(conf.EptTest.ExportConfigKeys, out) {
+	if !validParams(out) {
 		t.Fatal(errPars)
 	}
 }
@@ -172,32 +200,17 @@ func TestPushConfig(t *testing.T) {
 	s := newTestSessSrv(time.Duration(conf.EptTest.SessSrvStartTimeout[0]))
 	defer s.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testContext()
 	defer cancel()
 
-	if err := PushConfig(ctx, conf.SessionServer.Config,
-		logger, fxt.Product.ID, data.TestPassword,
-		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys,
+	if err := pushConfig(ctx, fxt.Product.ID,
 		conf.EptTest.RetrySec[1]); err != nil {
 		t.Fatal(err)
 	}
 
-	var prod data.Product
+	c := config(t, fxt.Product.ID)
 
-	if err := db.FindByPrimaryKeyTo(
-		&prod, fxt.Product.ID); err != nil {
-		t.Fatal(err)
-	}
-
-	var out map[string]string
-
-	if err := json.Unmarshal(prod.Config, &out); err != nil {
-		t.Fatal(err)
-	}
-
-	if !validParams(conf.EptTest.ExportConfigKeys, out) {
+	if !validParams(c) {
 		t.Fatal(errPars)
 	}
 }
@@ -210,32 +223,17 @@ func TestPushConfigTimeout(t *testing.T) {
 		time.Duration(conf.EptTest.SessSrvStartTimeout[1]))
 	defer s.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testContext()
 	defer cancel()
 
-	if err := PushConfig(ctx, conf.SessionServer.Config,
-		logger, fxt.Product.ID, data.TestPassword,
-		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys,
+	if err := pushConfig(ctx, fxt.Product.ID,
 		conf.EptTest.RetrySec[2]); err != nil {
 		t.Fatal(err)
 	}
 
-	var prod data.Product
+	c := config(t, fxt.Product.ID)
 
-	if err := db.FindByPrimaryKeyTo(
-		&prod, fxt.Product.ID); err != nil {
-		t.Fatal(err)
-	}
-
-	var out map[string]string
-
-	if err := json.Unmarshal(prod.Config, &out); err != nil {
-		t.Fatal(err)
-	}
-
-	if !validParams(conf.EptTest.ExportConfigKeys, out) {
+	if !validParams(c) {
 		t.Fatal(errPars)
 	}
 }
@@ -244,36 +242,21 @@ func TestPushConfigCancel(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := testContext()
 	go func() {
 		time.Sleep(time.Second *
 			time.Duration(conf.EptTest.SessSrvStartTimeout[2]))
 		cancel()
 	}()
 
-	err := PushConfig(ctx, conf.SessionServer.Config,
-		logger, fxt.Product.ID, data.TestPassword,
-		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, conf.EptTest.RetrySec[1])
+	err := pushConfig(ctx, fxt.Product.ID, conf.EptTest.RetrySec[1])
 	if err == nil || err != ErrCancel {
 		t.Fatal(errPush)
 	}
 
-	var prod data.Product
+	c := config(t, fxt.Product.ID)
 
-	if err := db.FindByPrimaryKeyTo(
-		&prod, fxt.Product.ID); err != nil {
-		t.Fatal(err)
-	}
-
-	var out map[string]string
-
-	if err := json.Unmarshal(prod.Config, &out); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(out) != 0 {
+	if len(c) != 0 {
 		t.Fatal(errPars)
 	}
 }

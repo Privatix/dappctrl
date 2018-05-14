@@ -2,6 +2,7 @@ package ept
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -27,6 +28,12 @@ type req struct {
 	done      chan bool
 	channelID string
 	callback  chan *result
+}
+
+type obj struct {
+	ch    data.Channel
+	offer data.Offering
+	prod  data.Product
 }
 
 // Message structure for Endpoint Message
@@ -79,17 +86,110 @@ func (s *Service) EndpointMessage(channelID string,
 	}
 }
 
+func (s *Service) objects(done chan bool, errC chan error,
+	objCh chan *obj, channelID string) {
+	defer close(objCh)
+
+	var ch data.Channel
+	var offer data.Offering
+	var prod data.Product
+
+	localErr := make(chan error)
+	terminate := make(chan bool)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		go s.find(done, localErr, &ch, channelID)
+
+		select {
+		case <-done:
+			terminate <- true
+			return
+		case err := <-localErr:
+			if err != nil {
+				errC <- errWrapper(err, invalidChannel)
+				terminate <- true
+				return
+			}
+		}
+
+		go s.find(done, localErr, &offer, ch.Offering)
+
+		select {
+		case <-done:
+			terminate <- true
+			return
+		case err := <-localErr:
+			if err != nil {
+				errC <- errWrapper(err, invalidOffering)
+				terminate <- true
+				return
+			}
+		}
+
+		go s.find(done, localErr, &prod, offer.Product)
+
+		select {
+		case <-done:
+			terminate <- true
+			return
+		case err := <-localErr:
+			if err != nil {
+				errC <- errWrapper(err, invalidProduct)
+				terminate <- true
+				return
+			}
+		}
+	}()
+	wg.Wait()
+
+	select {
+	case <-done:
+	case <-terminate:
+	case objCh <- &obj{prod: prod, offer: offer, ch: ch}:
+	}
+}
+
 func (s *Service) processing(req *req) {
 	resp := make(chan *result)
 
 	go func() {
-		var ch data.Channel
-		var offer data.Offering
-		var prod data.Product
+		var o *obj
+		var m *Message
 
 		errC := make(chan error)
+		objCh := make(chan *obj)
+		msgCh := make(chan *Message)
 
-		go s.find(req.done, errC, &ch, req.channelID)
+		go s.objects(req.done, errC, objCh, req.channelID)
+
+		select {
+		case <-req.done:
+			return
+		case err := <-errC:
+			resp <- newResult(nil, err)
+			return
+		case o = <-objCh:
+		}
+
+		go s.genMsg(req.done, errC, o, msgCh)
+
+		select {
+		case <-req.done:
+			return
+		case err := <-errC:
+			resp <- newResult(nil, err)
+			return
+		case m = <-msgCh:
+		}
+
+		var temp data.Template
+
+		go s.find(req.done, errC, &temp, *o.prod.OfferAccessID)
 
 		select {
 		case <-req.done:
@@ -97,93 +197,22 @@ func (s *Service) processing(req *req) {
 		case err := <-errC:
 			if err != nil {
 				resp <- newResult(nil, errWrapper(err,
-					invalidChannel))
-				return
-			}
-		}
-
-		go s.find(req.done, errC, &offer, ch.Offering)
-
-		select {
-		case <-req.done:
-			return
-		case err := <-errC:
-			if err != nil {
-				newResult(nil, errWrapper(err,
-					invalidOffering))
-				return
-			}
-		}
-
-		go s.find(req.done, errC, &prod, offer.Product)
-
-		select {
-		case <-req.done:
-			return
-		case err := <-errC:
-			if err != nil {
-				newResult(nil, errWrapper(err,
-					invalidProduct))
-				return
-			}
-		}
-
-		var conf map[string]string
-
-		if err := json.Unmarshal(prod.Config, &conf); err != nil {
-			select {
-			case <-req.done:
-				return
-			case resp <- newResult(nil, err):
-				return
-			}
-		}
-
-		if prod.OfferAccessID == nil {
-			select {
-			case <-req.done:
-				return
-			case resp <- newResult(nil, ErrProdOfferAccessID):
-				return
-			}
-		}
-
-		msg := Message{
-			TemplateHash:           *prod.OfferAccessID,
-			Username:               ch.ID,
-			Password:               ch.Password,
-			PaymentReceiverAddress: s.payAddr,
-			ServiceEndpointAddress: "",
-			AdditionalParams:       conf,
-		}
-
-		var temp data.Template
-
-		go s.find(req.done, errC, &temp, *prod.OfferAccessID)
-
-		select {
-		case <-req.done:
-			return
-		case err := <-errC:
-			if err != nil {
-				newResult(nil, errWrapper(err,
 					invalidTemplate))
 				return
 			}
 		}
 
-		if !valid(temp.Raw, msg) {
+		if !validMsg(temp.Raw, *m) {
 			select {
 			case <-req.done:
 				return
-			case resp <- newResult(&msg, ErrInvalidFormat):
+			case resp <- newResult(nil, ErrInvalidFormat):
 			}
 		}
 
 		select {
 		case <-req.done:
-			return
-		case resp <- newResult(&msg, nil):
+		case resp <- newResult(m, nil):
 		}
 	}()
 
@@ -194,15 +223,29 @@ func (s *Service) processing(req *req) {
 	}
 }
 
-func valid(schema []byte, msg Message) bool {
-	sch := gojsonschema.NewBytesLoader(schema)
-	loader := gojsonschema.NewGoLoader(msg)
-
-	result, err := gojsonschema.Validate(sch, loader)
-	if err != nil || !result.Valid() || len(result.Errors()) != 0 {
-		return false
+func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
+	msgCh chan *Message) {
+	conf, err := config(o.prod.Config)
+	if err != nil {
+		select {
+		case <-done:
+		case errC <- err:
+		}
+		return
 	}
-	return true
+
+	msg, err := fillMsg(o, s.payAddr, "", conf)
+	if err != nil {
+		select {
+		case <-done:
+		case errC <- errWrapper(err, invalidTemplate):
+		}
+		return
+	}
+	select {
+	case <-done:
+	case msgCh <- msg:
+	}
 }
 
 func (s *Service) find(done chan bool, errC chan error,
@@ -214,4 +257,42 @@ func (s *Service) find(done chan bool, errC chan error,
 		return
 	case errC <- err:
 	}
+}
+
+func validMsg(schema []byte, msg Message) bool {
+	sch := gojsonschema.NewBytesLoader(schema)
+	loader := gojsonschema.NewGoLoader(msg)
+
+	result, err := gojsonschema.Validate(sch, loader)
+	if err != nil || !result.Valid() || len(result.Errors()) != 0 {
+		return false
+	}
+	return true
+}
+
+func fillMsg(o *obj, paymentReceiverAddress, serviceEndpointAddress string,
+	conf map[string]string) (*Message, error) {
+
+	if o.prod.OfferAccessID == nil {
+		return nil, ErrProdOfferAccessID
+	}
+
+	return &Message{
+		TemplateHash:           *o.prod.OfferAccessID,
+		Username:               o.ch.ID,
+		Password:               o.ch.Password,
+		PaymentReceiverAddress: paymentReceiverAddress,
+		ServiceEndpointAddress: serviceEndpointAddress,
+		AdditionalParams:       conf,
+	}, nil
+}
+
+func config(confByte []byte) (map[string]string, error) {
+	var conf map[string]string
+
+	if err := json.Unmarshal(confByte, &conf); err != nil {
+		return nil, err
+	}
+
+	return conf, nil
 }

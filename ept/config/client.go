@@ -65,13 +65,8 @@ type CConf struct {
 // ClientConfig returns config object
 func ClientConfig(srvAddr, srvPort string,
 	additionalParams []byte) (*CConf, error) {
-	if !isHost(srvAddr) {
+	if !isHost(srvAddr) || !util.IsNetPort(srvPort) {
 		return nil, ErrInput
-	}
-
-	if err := util.ValidateFormat(util.FormatNetworkPort,
-		srvPort); err != nil {
-		return nil, err
 	}
 
 	var params map[string]string

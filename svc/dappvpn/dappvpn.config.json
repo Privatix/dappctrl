@@ -7,14 +7,14 @@
 
     "Monitor": {
         "Addr": "localhost:7505",
-        "ByteCountPeriod": 5
+        "ByteCountPeriod": 5,
+        "Channel": "ae5deac9-44c3-4840-bdff-ca9de58c89f4"
     },
-
-    "Password": "secret",
-    "Product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
 
     "Server": {
         "Addr": "localhost:8000",
-        "TLS": null
-    }
+        "Password": "secret",
+        "TLS": null,
+        "Username": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532"
+    },
 }

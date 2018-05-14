@@ -26,6 +26,26 @@ type pushReq struct {
 	args          sesssrv.ProductArgs
 }
 
+// PushConfigReq the parameters that are needed
+// to send the configuration to the server
+type PushConfigReq struct {
+	username string
+	password string
+	confPath string
+	caPath   string
+}
+
+// NewPushConfigReq fills the request structure
+func NewPushConfigReq(username, password, confPath,
+	caPath string) *PushConfigReq {
+	return &PushConfigReq{
+		username: username,
+		password: password,
+		confPath: confPath,
+		caPath:   caPath,
+	}
+}
+
 // ServerConfig parsing OpenVpn config file and parsing
 // certificate from file.
 func ServerConfig(filePath string, withCa bool,
@@ -163,26 +183,31 @@ func parseLine(keys map[string]bool,
 // The timeout in seconds between attempts to send data to the server must
 // be specified in variable retrySec
 func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
-	logger *util.Logger, username, password, confPath,
-	caPath string, keys []string, retrySec int64) error {
+	logger *util.Logger, in *PushConfigReq, keys []string,
+	retrySec int64) error {
 	if retrySec <= 0 || logger == nil || sessSrvConfig == nil {
 		return ErrInput
 	}
 
-	args, err := productArgs(confPath, caPath, keys)
+	args, err := productArgs(in.confPath, in.caPath, keys)
 	if err != nil {
 		return err
 	}
 
 	req := &pushReq{
 		sessSrvConfig: sessSrvConfig,
-		username:      username,
-		password:      password, args: args,
+		username:      in.username,
+		password:      in.password, args: args,
 	}
 
 	errC := make(chan error)
 
+	pushed := false
+
 	for {
+		if pushed {
+			break
+		}
 		go push(ctx, errC, req)
 		select {
 		case <-ctx.Done():
@@ -195,7 +220,7 @@ func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 					time.Duration(retrySec))
 				continue
 			}
-			return nil
+			pushed = true
 		}
 
 	}

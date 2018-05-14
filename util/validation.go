@@ -24,6 +24,7 @@ var (
 		`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 )
 
+// IsIPv4 checks if this is a valid IPv4
 func IsIPv4(s string) bool {
 	ip := net.ParseIP(s)
 	if ip == nil {
@@ -35,6 +36,7 @@ func IsIPv4(s string) bool {
 	return true
 }
 
+// IsHostname checks if this is a hostname
 func IsHostname(s string) bool {
 	if !hostnameRegex.MatchString(s) &&
 		!hostnameRegex2.MatchString(s) {
@@ -43,6 +45,7 @@ func IsHostname(s string) bool {
 	return true
 }
 
+// IsNetPort checks if this is a valid net port
 func IsNetPort(str string) bool {
 	if _, err := strconv.ParseUint(
 		str, 10, 16); err != nil {
@@ -51,7 +54,8 @@ func IsNetPort(str string) bool {
 	return true
 }
 
-// if block is one or more TLS certificates then function returns true
+// IsTLSCert if block is one or more
+// TLS certificates then function returns true
 func IsTLSCert(block string) bool {
 	var cert tls.Certificate
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/rakyll/statik/fs"
 
+	// it is necessary for work statik
 	_ "github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 )

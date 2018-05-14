@@ -103,18 +103,23 @@ func (s *Service) objects(done chan bool, errC chan error,
 	go func() {
 		defer wg.Done()
 
+		exit := false
+
 		go s.find(done, localErr, &ch, channelID)
 
 		select {
 		case <-done:
 			terminate <- true
-			return
+			exit = true
 		case err := <-localErr:
 			if err != nil {
 				errC <- errWrapper(err, invalidChannel)
 				terminate <- true
-				return
+				exit = true
 			}
+		}
+		if exit {
+			return
 		}
 
 		go s.find(done, localErr, &offer, ch.Offering)
@@ -122,13 +127,17 @@ func (s *Service) objects(done chan bool, errC chan error,
 		select {
 		case <-done:
 			terminate <- true
-			return
+			exit = true
 		case err := <-localErr:
 			if err != nil {
 				errC <- errWrapper(err, invalidOffering)
 				terminate <- true
-				return
+				exit = true
 			}
+		}
+
+		if exit {
+			return
 		}
 
 		go s.find(done, localErr, &prod, offer.Product)
@@ -136,13 +145,17 @@ func (s *Service) objects(done chan bool, errC chan error,
 		select {
 		case <-done:
 			terminate <- true
-			return
+			exit = true
 		case err := <-localErr:
 			if err != nil {
 				errC <- errWrapper(err, invalidProduct)
 				terminate <- true
-				return
+				exit = true
 			}
+		}
+
+		if exit {
+			return
 		}
 	}()
 	wg.Wait()
@@ -161,6 +174,8 @@ func (s *Service) processing(req *req) {
 		var o *obj
 		var m *Message
 
+		exit := false
+
 		errC := make(chan error)
 		objCh := make(chan *obj)
 		msgCh := make(chan *Message)
@@ -169,44 +184,60 @@ func (s *Service) processing(req *req) {
 
 		select {
 		case <-req.done:
-			return
+			exit = true
 		case err := <-errC:
 			resp <- newResult(nil, err)
-			return
+			exit = true
 		case o = <-objCh:
+		}
+
+		if exit {
+			return
 		}
 
 		go s.genMsg(req.done, errC, o, msgCh)
 
 		select {
 		case <-req.done:
-			return
+			exit = true
 		case err := <-errC:
 			resp <- newResult(nil, err)
-			return
+			exit = true
 		case m = <-msgCh:
 		}
 
+		if exit {
+			return
+		}
+
+		tempCh := make(chan data.Template)
+
 		var temp data.Template
 
-		go s.find(req.done, errC, &temp, *o.prod.OfferAccessID)
+		s.findTemp(req.done, errC, tempCh, *o.prod.OfferAccessID)
 
 		select {
 		case <-req.done:
-			return
+			exit = true
+		case temp = <-tempCh:
 		case err := <-errC:
-			if err != nil {
-				resp <- newResult(nil, errWrapper(err,
-					invalidTemplate))
-				return
-			}
+			resp <- newResult(nil, err)
+			exit = true
+		}
+
+		if exit {
+			return
 		}
 
 		if !validMsg(temp.Raw, *m) {
 			select {
 			case <-req.done:
-				return
+				exit = true
 			case resp <- newResult(nil, ErrInvalidFormat):
+				exit = true
+			}
+			if exit {
+				return
 			}
 		}
 
@@ -218,7 +249,6 @@ func (s *Service) processing(req *req) {
 
 	select {
 	case <-req.done:
-		return
 	case req.callback <- <-resp:
 	}
 }
@@ -246,6 +276,26 @@ func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
 	case <-done:
 	case msgCh <- msg:
 	}
+}
+
+func (s *Service) findTemp(done chan bool, errC chan error,
+	tempCh chan data.Template, id string) {
+	var temp data.Template
+
+	localErrC := make(chan error)
+
+	go s.find(done, localErrC, &temp, id)
+
+	select {
+	case <-done:
+		return
+	case err := <-localErrC:
+		if err != nil {
+			errC <- errWrapper(err, invalidTemplate)
+		}
+		tempCh <- temp
+	}
+
 }
 
 func (s *Service) find(done chan bool, errC chan error,

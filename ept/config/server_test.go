@@ -137,11 +137,12 @@ func config(t *testing.T, id string) map[string]string {
 }
 
 func pushConfig(ctx context.Context, productID string, retrySec int64) error {
-	return PushConfig(ctx, conf.SessionServer.Config,
-		logger, productID, data.TestPassword,
+	req := NewPushConfigReq(productID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca),
-		conf.EptTest.ExportConfigKeys, retrySec)
+		joinFile(samplesPath, conf.EptTest.Ca))
+
+	return PushConfig(ctx, conf.SessionServer.Config,
+		logger, req, conf.EptTest.ExportConfigKeys, retrySec)
 }
 
 func TestParsingValidConfig(t *testing.T) {

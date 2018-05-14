@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"strconv"
@@ -11,13 +12,17 @@ import (
 	"github.com/privatix/dappctrl/util/srv"
 )
 
+type serverConfig struct {
+	*srv.Config
+	Password string
+	Username string
+}
+
 type config struct {
 	ChannelDir string // Directory for common-name -> channel mappings.
 	Log        *util.LogConfig
 	Monitor    *mon.Config
-	Password   string // HTTP basic auth. password.
-	Product    string // HTTP basic auth. username.
-	Server     *srv.Config
+	Server     *serverConfig
 }
 
 func newConfig() *config {
@@ -25,7 +30,7 @@ func newConfig() *config {
 		ChannelDir: ".",
 		Log:        util.NewLogConfig(),
 		Monitor:    mon.NewConfig(),
-		Server:     srv.NewConfig(),
+		Server:     &serverConfig{Config: srv.NewConfig()},
 	}
 }
 
@@ -35,14 +40,16 @@ var (
 )
 
 func main() {
-	var err error
+	fconfig := flag.String(
+		"config", "dappvpn.config.json", "Configuration file")
+	flag.Parse()
 
 	conf = newConfig()
-	name := util.ExeDirJoin("dappvpn.config.json")
-	if err := util.ReadJSONFile(name, &conf); err != nil {
+	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s\n", err)
 	}
 
+	var err error
 	logger, err = util.NewLogger(conf.Log)
 	if err != nil {
 		log.Fatalf("failed to create logger: %s\n", err)
@@ -64,8 +71,8 @@ func handleAuth() {
 	user, pass := getCreds()
 	args := sesssrv.AuthArgs{ClientID: user, Password: pass}
 
-	err := sesssrv.Post(conf.Server,
-		conf.Product, conf.Password, sesssrv.PathAuth, args, nil)
+	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+		conf.Server.Password, sesssrv.PathAuth, args, nil)
 	if err != nil {
 		logger.Fatal("failed to auth: %s", err)
 	}
@@ -85,8 +92,8 @@ func handleConnect() {
 		ClientPort: uint16(port),
 	}
 
-	err = sesssrv.Post(conf.Server,
-		conf.Product, conf.Password, sesssrv.PathStart, args, nil)
+	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
 		logger.Fatal("failed to start session: %s", err)
 	}
@@ -108,8 +115,8 @@ func handleDisconnect() {
 		Units:    down + up,
 	}
 
-	err = sesssrv.Post(conf.Server,
-		conf.Product, conf.Password, sesssrv.PathStop, args, nil)
+	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
 		logger.Fatal("failed to stop session: %s", err)
 	}
@@ -122,11 +129,12 @@ func handleMonitor() {
 			Units:    down + up,
 		}
 
-		err := sesssrv.Post(conf.Server, conf.Product,
-			conf.Password, sesssrv.PathUpdate, args, nil)
+		err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+			conf.Server.Password, sesssrv.PathUpdate, args, nil)
 
 		if err != nil {
-			logger.Info("failed to update session %s: %s", ch, err)
+			msg := "failed to update session for channel %s: %s"
+			logger.Info(msg, ch, err)
 			return false
 		}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -43,11 +44,11 @@ func getCreds() (string, string) {
 		return user, pass
 	}
 
-	if len(os.Args) < 2 {
+	if flag.NArg() < 1 {
 		logger.Fatal("no filename passed to read credentials")
 	}
 
-	file, err := os.Open(os.Args[1])
+	file, err := os.Open(flag.Arg(0))
 	if err != nil {
 		logger.Fatal("failed to open file with credentials: %s", err)
 	}

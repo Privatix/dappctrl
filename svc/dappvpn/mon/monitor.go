@@ -15,7 +15,8 @@ import (
 // Config is a configuration for OpenVPN monitor.
 type Config struct {
 	Addr            string
-	ByteCountPeriod uint // In seconds.
+	ByteCountPeriod uint   // In seconds.
+	Channel         string // Client mode channel.
 }
 
 // NewConfig creates a default configuration for OpenVPN monitor.
@@ -124,6 +125,7 @@ const (
 	prefixClientListHeader  = "HEADER,CLIENT_LIST,"
 	prefixClientList        = "CLIENT_LIST,"
 	prefixByteCount         = ">BYTECOUNT_CLI:"
+	prefixByteCountClient   = ">BYTECOUNT:"
 	prefixClientEstablished = ">CLIENT:ESTABLISHED,"
 	prefixError             = "ERROR: "
 )
@@ -142,6 +144,10 @@ func (m *Monitor) processReply(s string) error {
 
 	if strings.HasPrefix(s, prefixByteCount) {
 		return m.processByteCount(s[len(prefixByteCount):])
+	}
+
+	if strings.HasPrefix(s, prefixByteCountClient) {
+		return m.processByteCountClient(s[len(prefixByteCountClient):])
 	}
 
 	if strings.HasPrefix(s, prefixClientEstablished) {
@@ -207,6 +213,28 @@ func (m *Monitor) processByteCount(s string) error {
 		if !m.handleByteCount(cl.channel, up, down) {
 			m.killSession(cl.commonName)
 		}
+	}()
+
+	return nil
+}
+
+func (m *Monitor) processByteCountClient(s string) error {
+	sp := split(s)
+
+	down, err := strconv.ParseUint(sp[0], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	up, err := strconv.ParseUint(sp[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	m.logger.Info("openvpn byte count: up %d, down %d", up, down)
+
+	go func() {
+		m.handleByteCount(m.conf.Channel, up, down)
 	}()
 
 	return nil

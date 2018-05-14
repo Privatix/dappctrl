@@ -148,6 +148,11 @@ func sendByteCount(t *testing.T, conn net.Conn) {
 	send(t, conn, fmt.Sprintf("%s%d,%d,%d", prefixByteCount, cid, down, up))
 }
 
+func sendByteCountClient(t *testing.T, conn net.Conn) {
+	msg := fmt.Sprintf("%s%d,%d", prefixByteCountClient, down, up)
+	send(t, conn, msg)
+}
+
 func TestByteCount(t *testing.T) {
 	type data struct {
 		ch       string
@@ -172,10 +177,18 @@ func TestByteCount(t *testing.T) {
 
 	data2 := <-out
 	if data2.ch != testChannel || data2.down != down || data2.up != up {
-		t.Fatalf("wrong handler arguments")
+		t.Fatalf("wrong handler arguments for agent mode")
 	}
 
 	assertNothingToReceive(t, conn, reader)
+
+	sendByteCountClient(t, conn)
+
+	data2 = <-out
+	if data2.ch != conf.VPNMonitor.Channel ||
+		data2.down != down || data2.up != up {
+		t.Fatalf("wrong handler arguments for client mode")
+	}
 
 	exit(t, conn, ch)
 }

@@ -24,12 +24,17 @@ const (
 	minConfirmationsKey = "eth.min.confirmations"
 )
 
+type Client interface {
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]ethtypes.Log, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
+}
+
 // Monitor implements blockchain monitor which fetches logs from the blockchain
 // and creates jobs accordingly.
 type Monitor struct {
 	logger  *util.Logger
 	db      *reform.DB
-	eth     *ethclient.Client
+	eth     Client
 	pscAddr common.Address
 
 	lastProcessedBlock uint64
@@ -41,7 +46,7 @@ type Monitor struct {
 func NewMonitor(
 	logger *util.Logger,
 	db *reform.DB,
-	eth *ethclient.Client,
+	eth Client,
 	pscAddr common.Address) *Monitor {
 	return &Monitor{
 		logger: logger,

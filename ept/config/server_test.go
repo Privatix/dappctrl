@@ -136,13 +136,13 @@ func config(t *testing.T, id string) map[string]string {
 	return out
 }
 
-func pushConfig(ctx context.Context, productID string, retrySec int64) error {
+func pushConfig(ctx context.Context, productID string, keys []string,
+	retrySec int64) error {
 	req := NewPushConfigReq(productID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca))
+		joinFile(samplesPath, conf.EptTest.Ca), keys, retrySec)
 
-	return PushConfig(ctx, conf.SessionServer.Config,
-		logger, req, conf.EptTest.ExportConfigKeys, retrySec)
+	return PushConfig(ctx, conf.SessionServer.Config, logger, req)
 }
 
 func TestParsingValidConfig(t *testing.T) {
@@ -205,6 +205,7 @@ func TestPushConfig(t *testing.T) {
 	defer cancel()
 
 	if err := pushConfig(ctx, fxt.Product.ID,
+		conf.EptTest.ExportConfigKeys,
 		conf.EptTest.RetrySec[1]); err != nil {
 		t.Fatal(err)
 	}
@@ -228,6 +229,7 @@ func TestPushConfigTimeout(t *testing.T) {
 	defer cancel()
 
 	if err := pushConfig(ctx, fxt.Product.ID,
+		conf.EptTest.ExportConfigKeys,
 		conf.EptTest.RetrySec[2]); err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +252,8 @@ func TestPushConfigCancel(t *testing.T) {
 		cancel()
 	}()
 
-	err := pushConfig(ctx, fxt.Product.ID, conf.EptTest.RetrySec[1])
+	err := pushConfig(ctx, fxt.Product.ID, conf.EptTest.ExportConfigKeys,
+		conf.EptTest.RetrySec[1])
 	if err == nil || err != ErrCancel {
 		t.Fatal(errPush)
 	}

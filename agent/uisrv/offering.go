@@ -109,7 +109,7 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	hash := data.OfferingHash(offering)
 	offering.Hash = data.FromBytes(hash)
 
-	sig, err := agent.Sign(hash)
+	sig, err := agent.Sign(hash, s.decryptKeyFunc, s.pwdStorage.Get())
 	if err != nil {
 		return err
 	}
@@ -117,11 +117,34 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	return nil
 }
 
+// handleGetClientOfferings replies with all active offerings available to the
+// client.
+func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.handleGetResources(w, r, &getConf{
+		Params: []queryParam{
+			{Name: "minUnitPrice", Field: "unit_price", Op: ">="},
+			{Name: "maxUnitPrice", Field: "unit_price", Op: "<="},
+			{Name: "country", Field: "country", Op: "in"},
+		},
+		View:         data.OfferingTable,
+		FilteringSQL: "offer_status = 'register' and status = 'msg_channel_published' and not is_local",
+	})
+}
+
 // handleGetOfferings replies with all offerings or an offering by id.
 func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: []queryParam{{Name: "id", Field: "id"}, {Name: "product", Field: "product"}},
-		View:   data.OfferingTable,
+		Params: []queryParam{
+			{Name: "id", Field: "id"},
+			{Name: "product", Field: "product"},
+			{Name: "offerStatus", Field: "offer_status"},
+		},
+		View: data.OfferingTable,
 	})
 }
 

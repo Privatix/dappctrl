@@ -1,27 +1,33 @@
-// +build !noagentuisrvtest,!noethtest
+// +build !noethtest
 
 package uisrv
 
 import (
+	"bytes"
+	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/truffle"
 )
 
 func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
-	acc := data.NewTestAccount()
+	acc := data.NewTestAccount(testPassword)
 	insertItems(t, acc)
 
 	testCases := []struct {
@@ -102,11 +108,8 @@ func sendAccountBalanceAction(t *testing.T,
 func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	payload := &accountCreatePayload{}
 
-	addr, _ := eth.NewAddress(testAcc.Account)
-	payload.EthAddr = data.FromBytes(addr.Bytes())
-
 	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
-	payload.PrivateKey = data.FromBytes(data.EncryptPrivateKey(pkB, nil))
+	payload.PrivateKey = data.FromBytes(pkB)
 
 	payload.IsDefault = true
 	payload.InUse = true
@@ -115,14 +118,35 @@ func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	return payload
 }
 
+func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreatePayload {
+	payload := &accountCreatePayload{}
+
+	pkB, _ := hex.DecodeString(testAcc.PrivateKey)
+	payload.JSONKeyStorePassword = "helloworld"
+	privKey, _ := crypto.ToECDSA(pkB)
+
+	pkB64, _ := data.EncryptedKey(privKey, payload.JSONKeyStorePassword)
+	jsonBytes, _ := data.ToBytes(pkB64)
+	payload.JSONKeyStoreRaw = string(jsonBytes)
+
+	payload.IsDefault = true
+	payload.InUse = true
+	payload.Name = "Test account"
+
+	return payload
+}
+
+func equalECDSA(a, b *ecdsa.PrivateKey) bool {
+	abytes := crypto.FromECDSA(a)
+	bbytes := crypto.FromECDSA(b)
+	return bytes.Compare(abytes, bbytes) == 0
+}
+
 func testAccountFields(
 	t *testing.T,
 	testAcc *truffle.TestAccount,
 	payload *accountCreatePayload,
 	created *data.Account) {
-	if created.EthAddr != payload.EthAddr {
-		t.Fatal("wrong eth addr stored")
-	}
 
 	if created.Name != payload.Name {
 		t.Fatal("wrong name stored")
@@ -136,7 +160,17 @@ func testAccountFields(
 		t.Fatal("wrong in use stored")
 	}
 
-	if created.PrivateKey != payload.PrivateKey {
+	payloadKey, err := payload.toECDSA()
+	if err != nil {
+		t.Fatalf("could not extract private key from payload: %v", err)
+	}
+
+	createdKey, err := data.TestToPrivateKey(created.PrivateKey, testPassword)
+	if err != nil {
+		t.Fatal("failed to decrypt created account's private key: ", err)
+	}
+
+	if !equalECDSA(payloadKey, createdKey) {
 		t.Fatal("wrong private key stored")
 	}
 
@@ -155,23 +189,25 @@ func testAccountFields(
 		t.Fatal("wrong public key stored")
 	}
 
-	response, err := testEthereumClient.GetBalance(testAcc.Account, eth.BlockLatest)
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+
+	if created.EthAddr != data.FromBytes(addr.Bytes()) {
+		t.Fatal("wrong eth addr stored")
+	}
+
+	testAccAddr := common.HexToAddress(testAcc.Account)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(testServer.conf.EthCallTimeout)*time.Second)
+	defer cancel()
+	balance, err := testEthereumClient.BalanceAt(ctx, testAccAddr, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	amount, err := eth.NewUint192(response.Result)
-	if err != nil {
-		t.Fatal(err, response.Result)
-	}
-	if strings.TrimSpace(created.EthBalance) != data.FromBytes(amount.ToBigInt().Bytes()) {
+	if strings.TrimSpace(string(created.EthBalance)) != data.FromBytes(balance.Bytes()) {
 		t.Fatal("wrong eth balance stored")
 	}
 
-	addr, err := eth.NewAddress(testAcc.Account)
-	if err != nil {
-		t.Fatal("failed to make address: ", err)
-	}
 	pscBalance, err := testServer.psc.BalanceOf(&bind.CallOpts{}, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -192,11 +228,17 @@ func testAccountFields(
 	}
 }
 
-func TestCreateAccount(t *testing.T) {
+func testCreateAccount(t *testing.T, useRawJSONPayload bool) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	testAcc := testTruffleAPI.GetTestAccounts()[0]
-	payload := getTestAccountPayload(&testAcc)
+	var payload *accountCreatePayload
+	if useRawJSONPayload {
+		payload = getTestAccountKeyStorePayload(&testAcc)
+	} else {
+		payload = getTestAccountPayload(&testAcc)
+	}
 
 	res := sendPayload(t, http.MethodPost, accountsPath, payload)
 
@@ -216,16 +258,43 @@ func TestCreateAccount(t *testing.T) {
 	testAccountFields(t, &testAcc, payload, created)
 }
 
+func TestCreateAccount(t *testing.T) {
+	testCreateAccount(t, false)
+	testCreateAccount(t, true)
+}
+
+func TestExportAccountPrivateKey(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	acc := data.NewTestAccount(testPassword)
+	expectedBytes := []byte(`{"hello": "world"}`)
+	acc.PrivateKey = data.FromBytes(expectedBytes)
+	insertItems(t, acc)
+
+	res := sendPayload(t, http.MethodGet, accountsPath+acc.ID+"/pkey", nil)
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusOK)
+	}
+
+	body, _ := ioutil.ReadAll(res.Body)
+	if !bytes.Equal(body, expectedBytes) {
+		t.Fatalf("wrong pkey exported: expected %x got %x", expectedBytes, body)
+	}
+}
+
 func TestGetAccounts(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	// Test returns empty all accounts in the system.
 
 	res := getResources(t, accountsPath, nil)
 	testGetResources(t, res, 0)
 
-	acc1 := data.NewTestAccount()
-	acc2 := data.NewTestAccount()
+	acc1 := data.NewTestAccount(testPassword)
+	acc2 := data.NewTestAccount(testPassword)
 	insertItems(t, acc1, acc2)
 
 	res = getResources(t, accountsPath, nil)

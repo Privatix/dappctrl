@@ -1,7 +1,8 @@
 {
     "AgentServer": {
         "Addr": "localhost:3000",
-        "TLS": null
+        "TLS": null,
+        "EthCallTimeout": 5
     },
 
     "DB": {
@@ -47,6 +48,11 @@
 
     "PayServer": {
         "Addr": "localhost:9000",
+        "TLS": null
+    },
+
+    "SessionServer": {
+        "Addr": "localhost:8000",
         "TLS": null
     },
 

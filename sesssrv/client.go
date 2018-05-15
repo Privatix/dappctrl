@@ -9,7 +9,7 @@ import (
 
 // Post posts a request with given arguments and returns a response result.
 func Post(conf *srv.Config, username, password, path string,
-	args interface{}, result interface{}) error {
+	args, result interface{}) error {
 	data, err := json.Marshal(args)
 	if err != nil {
 		return err

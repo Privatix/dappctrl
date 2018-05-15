@@ -1,28 +1,32 @@
 package uisrv
 
 import (
-	"encoding/hex"
+	"context"
+	"crypto/ecdsa"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
+	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
 
-type accountCreatePayload struct {
-	EthAddr    string `json:"ethAddr"`
-	PrivateKey string `json:"privateKey"`
-	IsDefault  bool   `json:"isDefault"`
-	InUse      bool   `json:"inUse"`
-	Name       string `json:"name"`
-}
-
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		if c := strings.Split(r.URL.Path, "/"); len(c) > 1 {
+			id, format := c[len(c)-2], c[len(c)-1]
+			if format == "pkey" {
+				s.handleExportAccount(w, r, id)
+				return
+			}
+		}
+
 		s.handleGetAccounts(w, r)
 		return
 	}
@@ -38,6 +42,34 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
+func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id string) {
+	if !util.IsUUID(id) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var acc data.Account
+	if err := s.db.FindByPrimaryKeyTo(&acc, id); err != nil {
+		if err == reform.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		return
+	}
+
+	privKeyJSONBytes, err := data.ToBytes(acc.PrivateKey)
+	if err != nil {
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if _, err := w.Write(privKeyJSONBytes); err != nil {
+		s.logger.Warn("failed to reply with the private key: %v", err)
+	}
+}
+
 func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: []queryParam{{Name: "id", Field: "id"}},
@@ -45,43 +77,87 @@ func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type accountCreatePayload struct {
+	PrivateKey           string `json:"privateKey"`
+	JSONKeyStoreRaw      string `json:"jsonKeyStoreRaw"`
+	JSONKeyStorePassword string `json:"jsonKeyStorePassword"`
+	IsDefault            bool   `json:"isDefault"`
+	InUse                bool   `json:"inUse"`
+	Name                 string `json:"name"`
+}
+
+func (p *accountCreatePayload) fromPrivateKeyToECDSA() (*ecdsa.PrivateKey, error) {
+	pkBytes, err := data.ToBytes(p.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode private key: %v", err)
+	}
+	privKey, err := crypto.ToECDSA(pkBytes)
+	if err != nil {
+		return nil, fmt.Errorf("could not make ecdsa priv key: %v", err)
+	}
+	return privKey, nil
+}
+
+func (p *accountCreatePayload) fromJSONKeyStoreRawToECDSA() (*ecdsa.PrivateKey, error) {
+	key, err := keystore.DecryptKey([]byte(p.JSONKeyStoreRaw), p.JSONKeyStorePassword)
+	if err != nil {
+		return nil, fmt.Errorf("could not decrypt keystore: %v", err)
+	}
+	return key.PrivateKey, nil
+}
+
+func (p *accountCreatePayload) toECDSA() (*ecdsa.PrivateKey, error) {
+	if p.PrivateKey != "" {
+		return p.fromPrivateKeyToECDSA()
+	} else if p.JSONKeyStoreRaw != "" {
+		return p.fromJSONKeyStoreRawToECDSA()
+	}
+
+	return nil, fmt.Errorf("neither private key nor raw keystore json provided")
+}
+
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	payload := &accountCreatePayload{}
 	s.parsePayload(w, r, payload)
 	acc := &data.Account{}
 	acc.ID = util.NewUUID()
-	acc.EthAddr = payload.EthAddr
-	acc.PrivateKey = payload.PrivateKey
-	acc.IsDefault = payload.IsDefault
-	acc.InUse = payload.InUse
-	acc.Name = payload.Name
 
-	ethAddrB, err := data.ToBytes(payload.EthAddr)
+	privKey, err := payload.toECDSA()
 	if err != nil {
-		s.logger.Warn("could not decode eth addr: %v", err)
+		s.logger.Warn("could not extract priv key: %v", err)
+		s.replyInvalidPayload(w)
+		return
+	}
+
+	acc.PrivateKey, err = s.encryptKeyFunc(privKey, s.pwdStorage.Get())
+	if err != nil {
+		s.logger.Warn("could not encrypt priv key: %v", err)
 		s.replyUnexpectedErr(w)
 		return
 	}
 
-	ethAddrHex := hex.EncodeToString(ethAddrB)
+	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&privKey.PublicKey))
 
-	gResponse, err := s.ethClient.GetBalance("0x"+ethAddrHex, eth.BlockLatest)
+	ethAddr := crypto.PubkeyToAddress(privKey.PublicKey)
+	acc.EthAddr = data.FromBytes(ethAddr.Bytes())
+
+	acc.IsDefault = payload.IsDefault
+	acc.InUse = payload.InUse
+	acc.Name = payload.Name
+
+	timeout := time.Duration(s.conf.EthCallTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	amount, err := s.ethClient.BalanceAt(ctx, ethAddr, nil)
 	if err != nil {
 		s.logger.Warn("could not get eth balance")
 		s.replyUnexpectedErr(w)
 		return
 	}
 
-	amount, err := eth.NewUint192(gResponse.Result)
-	if err != nil {
-		s.logger.Warn("could not convert geth response to uint192: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
+	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
-	acc.EthBalance = data.FromBytes(amount.ToBigInt().Bytes())
-
-	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, common.BytesToAddress(ethAddrB))
+	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, ethAddr)
 	if err != nil {
 		s.logger.Warn("could not get psc balance: %v", err)
 		s.replyUnexpectedErr(w)
@@ -90,7 +166,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	acc.PSCBalance = pscBalance.Uint64()
 
-	ptcBalance, err := s.ptc.BalanceOf(&bind.CallOpts{}, common.BytesToAddress(ethAddrB))
+	ptcBalance, err := s.ptc.BalanceOf(&bind.CallOpts{}, ethAddr)
 	if err != nil {
 		s.logger.Warn("could not get ptc balance: %v", err)
 		s.replyUnexpectedErr(w)
@@ -98,22 +174,6 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	acc.PTCBalance = ptcBalance.Uint64()
-
-	pkb, err := data.ToBytes(payload.PrivateKey)
-	if err != nil {
-		s.logger.Warn("could not decode private key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	pk, err := crypto.ToECDSA(pkb)
-	if err != nil {
-		s.logger.Warn("could not make ecdsa priv key: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&pk.PublicKey))
 
 	if err := s.db.Insert(acc); err != nil {
 		s.logger.Warn("could not insert account: %v", err)

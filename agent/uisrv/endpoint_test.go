@@ -22,6 +22,8 @@ func testGetEndpoint(t *testing.T, exp int, ch, id string) {
 
 func TestGetEndpoints(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	// Get empty list.
 	testGetEndpoint(t, 0, "", "")
 

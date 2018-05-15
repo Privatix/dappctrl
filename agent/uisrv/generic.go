@@ -12,46 +12,78 @@ import (
 type queryParam struct {
 	Name  string // in request.
 	Field string // column name in db.
+	Op    string // comparison operator ({Field} {Op} {Value}, default "=")
 }
 
 // getConf is a config for generic get handler.
 type getConf struct {
-	Params []queryParam
-	View   reform.View
+	Params       []queryParam
+	View         reform.View
+	FilteringSQL string
+}
+
+func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []string, args []interface{}) {
+	placei := 1
+
+	for _, param := range conf.Params {
+		op := "="
+		if param.Op != "" {
+			op = param.Op
+		}
+
+		val := r.FormValue(param.Name)
+		if val == "" {
+			continue
+		}
+
+		var ph string
+		if op == "in" {
+			subvals := strings.Split(val, ",")
+			for _, subval := range subvals {
+				args = append(args, subval)
+			}
+
+			phs := s.db.Placeholders(placei, len(subvals))
+			placei += len(subvals)
+			ph = "(" + strings.Join(phs, ",") + ")"
+		} else {
+			args = append(args, val)
+			ph = s.db.Placeholder(placei)
+			placei++
+		}
+
+		cond := fmt.Sprintf("%s %s %s", param.Field, op, ph)
+		conds = append(conds, cond)
+	}
+
+	return conds, args
+
 }
 
 // handleGetResources select and returns records.
 func (s *Server) handleGetResources(w http.ResponseWriter,
 	r *http.Request, conf *getConf) {
+
+	conds, args := s.formatConditions(r, conf)
+	if conf.FilteringSQL != "" {
+		conds = append(conds, conf.FilteringSQL)
+	}
+
 	var tail string
-	var eqs []string
-	var args []interface{}
-
-	for _, param := range conf.Params {
-		val := r.FormValue(param.Name)
-		if val == "" {
-			continue
-		}
-		eqs = append(eqs,
-			fmt.Sprintf("%s=%s",
-				param.Field,
-				s.db.Placeholder(len(eqs)+1)))
-		args = append(args, val)
+	if len(conds) > 0 {
+		tail = "WHERE " + strings.Join(conds, " AND ")
 	}
 
-	if len(args) > 0 {
-		tail = "WHERE " + strings.Join(eqs, " AND ")
-	}
-
-	items, err := s.db.SelectAllFrom(conf.View, tail, args...)
+	records, err := s.db.SelectAllFrom(conf.View, tail, args...)
 	if err != nil {
 		s.logger.Warn("failed to select: %v", err)
 		s.replyUnexpectedErr(w)
 		return
 	}
-	if items == nil {
-		s.reply(w, []struct{}{})
-		return
+
+	if records == nil {
+		records = []reform.Struct{}
 	}
-	s.reply(w, items)
+
+	s.reply(w, records)
 }

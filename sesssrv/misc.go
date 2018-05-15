@@ -27,6 +27,16 @@ func (s *Server) findProduct(
 	return &prod, true
 }
 
+func (s *Server) updateProduct(
+	w http.ResponseWriter, prod *data.Product) bool {
+	if err := s.db.Update(prod); err != nil {
+		s.Logger().Error("failed to update product: %v", err)
+		s.RespondError(w, srv.ErrInternalServerError)
+		return false
+	}
+	return true
+}
+
 func (s *Server) identClient(w http.ResponseWriter,
 	productID, clientID string) (*data.Channel, bool) {
 	prod, ok := s.findProduct(w, productID)

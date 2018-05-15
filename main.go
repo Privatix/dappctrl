@@ -1,22 +1,20 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"log"
-	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/privatix/dappctrl/agent/uisrv"
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/eth/truffle"
+	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
@@ -30,6 +28,7 @@ type ethConfig struct {
 	GethURL       string
 	TruffleAPIURL string
 }
+
 type config struct {
 	AgentServer   *uisrv.Config
 	Eth           *ethConfig
@@ -37,53 +36,21 @@ type config struct {
 	Job           *job.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
+	Proc          *proc.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 }
 
 func newConfig() *config {
 	return &config{
-		DB:   data.NewDBConfig(),
-		Job:  job.NewConfig(),
-		Log:  util.NewLogConfig(),
-		SOMC: somc.NewConfig(),
+		DB:            data.NewDBConfig(),
+		AgentServer:   uisrv.NewConfig(),
+		Job:           job.NewConfig(),
+		Log:           util.NewLogConfig(),
+		Proc:          proc.NewConfig(),
+		SessionServer: sesssrv.NewConfig(),
+		SOMC:          somc.NewConfig(),
 	}
-}
-
-func fetchPSCAddress(truffleAPI string) string {
-	response, err := http.Get(truffleAPI + "/getPSC")
-	if err != nil || response.StatusCode != http.StatusOK {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	return data["contract"].(map[string]interface{})["address"].(string)
-}
-
-func fetchPTCAddress(truffleAPI string) string {
-	response, err := http.Get(truffleAPI + "/getPrix")
-	if err != nil || response.StatusCode != 200 {
-		log.Fatal("Can't fetch PSC address. It seems that test environment is broken.")
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-	if err != nil {
-		log.Fatal("Can't read response body. It seems that test environment is broken.")
-	}
-
-	data := make(map[string]interface{})
-	json.Unmarshal(body, &data)
-
-	return data["contract"].(map[string]interface{})["address"].(string)
 }
 
 func readConfig(conf *config) {
@@ -121,22 +88,23 @@ func main() {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}
 
-	ethClient := eth.NewEthereumClient(conf.Eth.GethURL)
-
-	ptcAddr := common.StringToAddress(conf.Eth.Contract.PTCAddr)
+	ptcAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PTCAddr))
 	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
 	if err != nil {
 		logger.Fatal("failed to create ptc instance: %v", err)
 	}
 
-	pscAddr := common.StringToAddress(conf.Eth.Contract.PSCAddr)
+	pscAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PSCAddr))
 
 	psc, err := contract.NewPrivatixServiceContract(pscAddr, gethConn)
 	if err != nil {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, ethClient, ptc, psc)
+	pwdStorage := new(data.PWDStorage)
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, ptc, psc, pwdStorage)
+
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
@@ -152,6 +120,13 @@ func main() {
 	go func() {
 		logger.Fatal("failed to start session server: %s",
 			sess.ListenAndServe())
+	}()
+
+	// TODO: Remove when not needed anymore.
+	exec := execsrv.NewServer(logger)
+	go func() {
+		logger.Fatal("failed to start exec server: %s",
+			exec.ListenAndServe())
 	}()
 
 	queue := job.NewQueue(conf.Job, logger, db, jobHandlers)

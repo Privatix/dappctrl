@@ -21,8 +21,11 @@ func testGetSettings(t *testing.T, exp int) {
 
 func TestGetSettings(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	// get empty list.
 	testGetSettings(t, 0)
+
 	// get settings.
 	setting := &data.Setting{
 		Key:         "foo",
@@ -39,6 +42,7 @@ func putSetting(t *testing.T, pld settingPayload) *http.Response {
 
 func TestUpdateSettingsSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	settings := []data.Setting{
 		{

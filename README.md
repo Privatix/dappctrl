@@ -5,7 +5,7 @@
 [develop](https://github.com/Privatix/dappctrl/tree/develop):
 <img align="center" src="https://ci.privatix.net/plugins/servlet/wittified/build-status/PC-ICT0">
 
-# Privatix Controller.
+# Privatix Controller
 
 Privatix Controller is a core of Agent and Client functionality.
 
@@ -42,6 +42,7 @@ mkdir -p $DAPPCTRL_DIR
 git clone git@github.com:Privatix/dappctrl.git $DAPPCTRL_DIR
 go get -d $DAPPCTRL/...
 go get -u gopkg.in/reform.v1/reform
+go get github.com/ethereum/go-ethereum/cmd/abigen
 go generate $DAPPCTRL/...
 go install -tags=notest $DAPPCTRL
 ```
@@ -51,7 +52,6 @@ Prepare a `dappctrl` database instance:
 ```bash
 psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
-psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/test_data.sql
 ```
 
 Make a copy of `dappctrl.config.json`:
@@ -66,10 +66,10 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build `OpenVPN` session trigger:
+Build `OpenVPN` service adapter:
 
 ```bash
-go install $DAPPCTRL/tool/dapptrig
+go install $DAPPCTRL/svc/dappvpn
 ```
 
 ## Using docker
@@ -79,7 +79,8 @@ We have prepared two images and a compose file to make it easier to run app and 
 There are 3 services in compose file:
 
 1. `db` — uses public `postgres` image
-1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn that uses `dapptrig` for auth, connect and disconnect
+1. `vpn` — image `privatix/dapp-vpn-server` is an openvpn with attached
+`dappvpn`.
 1. `dappctrl` — image `privatix/dappctrl` is a main controller app
 
 If you want to develop `dappctrl` then it is convenient to run its dependencies using `docker`, but controller itself at your host machine:
@@ -147,7 +148,6 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 ## Authors
 
 * [ababo](https://github.com/ababo)
-* [HaySayCheese](https://github.com/HaySayCheese)
 * [furkhat](https://github.com/furkhat)
 
 See also the list of [contributors](https://github.com/Privatix/dappctrl/contributors) who participated in this project.

@@ -17,6 +17,8 @@ func postTemplate(t *testing.T, tpl *data.Template) *http.Response {
 
 func TestPostTemplateValidation(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	for _, testcase := range []struct {
 		Payload *data.Template
 		Code    int
@@ -53,6 +55,8 @@ func TestPostTemplateValidation(t *testing.T) {
 
 func TestPostTemplateSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	for _, payload := range []data.Template{
 		{
 			Kind: data.TemplateOffer,
@@ -88,6 +92,7 @@ func testGetTemplates(t *testing.T, tplType, id string, exp int) {
 
 func TestGetTemplate(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	// Get zerro templates.
 	testGetTemplates(t, "", "", 0)
@@ -114,17 +119,22 @@ func TestGetTemplate(t *testing.T) {
 
 	// Get all templates.
 	testGetTemplates(t, "", "", len(records))
+
 	// Get by id with a match.
 	testGetTemplates(t, "", records[0].ID, 1)
+
 	// Get by id, without matches.
 	id := util.NewUUID()
 	testGetTemplates(t, "", id, 0)
+
 	// Get all by type.
 	testGetTemplates(t, data.TemplateOffer, "", 2)
 	testGetTemplates(t, data.TemplateAccess, "", 1)
+
 	// Get by type and id with a match.
 	id = records[1].ID
 	testGetTemplates(t, data.TemplateOffer, id, 1)
+
 	// Get by type and id without matches.
 	testGetTemplates(t, data.TemplateAccess, id, 0)
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -23,7 +24,7 @@ var (
 func createOfferingFixtures(t *testing.T) {
 	testTpl = data.NewTestTemplate(data.TemplateAccess)
 	testProd = data.NewTestProduct()
-	testAgent = data.NewTestAccount()
+	testAgent = data.NewTestAccount(testPassword)
 	insertItems(t, testTpl, testProd, testAgent)
 }
 
@@ -81,6 +82,7 @@ func putOffering(t *testing.T, v *data.Offering) *http.Response {
 
 func TestPostOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 
@@ -99,6 +101,8 @@ func TestPostOfferingSuccess(t *testing.T) {
 
 func TestPostOfferingValidation(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	// Prepare test data.
 	createOfferingFixtures(t)
 	validPld := validOfferingPayload()
@@ -172,6 +176,7 @@ func TestPostOfferingValidation(t *testing.T) {
 
 func TestPutOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
@@ -191,37 +196,107 @@ func TestPutOfferingSuccess(t *testing.T) {
 	testOfferingReply(t, offering)
 }
 
-func getOfferings(t *testing.T, id string) *http.Response {
-	return getResources(t, offeringsPath,
-		map[string]string{"id": id})
-}
-
-func testGetOfferings(t *testing.T, id string, exp int) {
-	res := getOfferings(t, id)
+func testGetOfferings(t *testing.T, id, product, status string, exp int) {
+	res := getResources(t, offeringsPath,
+		map[string]string{
+			"id":          id,
+			"product":     product,
+			"offerStatus": status})
 	testGetResources(t, res, exp)
 }
 
 func TestGetOffering(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	// Get empty list.
-	testGetOfferings(t, "", 0)
+	testGetOfferings(t, "", "", "", 0)
+
+	// Insert test offerings.
+	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1.OfferStatus = data.OfferRegister
+	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off2.OfferStatus = data.OfferEmpty
+
+	insertItems(t, off1, off2)
 
 	// Get all offerings.
-	testOfferings := []*data.Offering{
-		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
-		data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID),
-	}
-	insertItems(t, testOfferings[0], testOfferings[1])
-	testGetOfferings(t, "", 2)
+	testGetOfferings(t, "", "", "", 2)
 
-	// Get offering by id.
-	testGetOfferings(t, testOfferings[0].ID, 1)
+	// Get offerings by id.
+	testGetOfferings(t, off1.ID, "", "", 1)
+
+	// Get offerings by product.
+	testGetOfferings(t, "", testProd.ID, "", 2)
+
+	// Get offerings by status.
+	testGetOfferings(t, "", "", data.OfferEmpty, 1)
+}
+
+func testGetClientOfferings(t *testing.T, minp, maxp, country string, exp int) {
+	res := getResources(t, clientOfferingsPath,
+		map[string]string{
+			"minUnitPrice": minp,
+			"maxUnitPrice": maxp,
+			"country":      country})
+	testGetResources(t, res, exp)
+}
+
+func TestGetClientOffering(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	createOfferingFixtures(t)
+	// Get empty list.
+	testGetClientOfferings(t, "", "", "", 0)
+
+	// Insert test offerings.
+	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1.OfferStatus = data.OfferRegister
+	off1.IsLocal = false
+	off1.Country = "US"
+
+	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off2.OfferStatus = data.OfferRegister
+	off2.IsLocal = false
+	off2.Country = "SU"
+
+	off3 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off3.OfferStatus = data.OfferEmpty
+	off3.IsLocal = false
+	off3.Country = "SU"
+
+	off4 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off4.OfferStatus = data.OfferEmpty
+	off4.IsLocal = true
+
+	insertItems(t, off1, off2, off3)
+
+	// all non-local offerings
+	testGetClientOfferings(t, "", "", "", 2)
+
+	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
+	price := strconv.FormatUint(off1.UnitPrice, 10)
+	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
+
+	// price range
+	testGetClientOfferings(t, lowPrice, "", "", 2)     // inside range
+	testGetClientOfferings(t, "", highPrice, "", 2)    // inside range
+	testGetClientOfferings(t, "", lowPrice, "", 0)     // above range
+	testGetClientOfferings(t, highPrice, "", "", 0)    // below range
+	testGetClientOfferings(t, lowPrice, price, "", 2)  // on edge
+	testGetClientOfferings(t, price, highPrice, "", 2) // on edge
+	testGetClientOfferings(t, price, price, "", 2)     // on edge
+
+	// country filter
+	testGetClientOfferings(t, "", "", "US", 1)
+	testGetClientOfferings(t, "", "", "SU", 1)
+	testGetClientOfferings(t, "", "", "US,SU", 2)
 }
 
 func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {
-	url := fmt.Sprintf("http://%s%s%s/status",
+	url := fmt.Sprintf("http://:%s@%s%s%s/status", testPassword,
 		testServer.conf.Addr, offeringsPath, id)
 	if action != "" {
 		url += "?action=" + action
@@ -252,6 +327,7 @@ func TestPutOfferingStatus(t *testing.T) {
 
 func TestGetOfferingStatus(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	createOfferingFixtures(t)
 	offer := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)

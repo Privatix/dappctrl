@@ -46,7 +46,9 @@ func populateEvents() {
 	psc, err := contract.NewPrivatixServiceContract(contractAddress, conn)
 	failOnErr(err, "Failed to connect to the Ethereum client")
 
-	pKeyBytes, err := hex.DecodeString(testTruffleAPI.FetchTestPrivateKey())
+	testAccounts := testTruffleAPI.GetTestAccounts()
+
+	pKeyBytes, err := hex.DecodeString(testAccounts[0].PrivateKey)
 	failOnErr(err, "Failed to fetch test private key from the API")
 
 	key, err := crypto.ToECDSA(pKeyBytes)
@@ -72,9 +74,6 @@ func populateEvents() {
 
 	_, err = psc.ThrowEventLogOfferingEndpoint(auth, Addr1, Addr2, B32Zero, 0, B32Full)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingEndpoint")
-
-	_, err = psc.ThrowEventLogOfferingSupplyChanged(auth, Addr1, B32Zero, 0)
-	failOnErr(err, "Failed to call ThrowEventLogOfferingSupplyChanged")
 
 	_, err = psc.ThrowEventLogOfferingPopedUp(auth, Addr1, B32Zero)
 	failOnErr(err, "Failed to call ThrowEventLogOfferingPopedUp")
@@ -191,17 +190,6 @@ func TestNormalLogsFetching(t *testing.T) {
 		cmpU256(event.OfferingHash, U256Zero, "OfferingEndpoint: offering hash is unexpected")
 		cmpU256(event.OpenBlockNumber, U256Zero, "OfferingEndpoint: open block number is unexpected")
 		cmpU256(event.EndpointHash, U256Full, "OfferingEndpoint: endpoint hash is unexpected")
-	}
-
-	{
-		topics, data := fetchEventData(EthOfferingSupplyChanged)
-		event, err := NewOfferingSupplyChangedEvent([3]string{topics[0], topics[1], topics[2]}, data)
-		failOnErr(err, "Can't create EventOfferingSupplyChanged")
-
-		agent := event.Agent.Bytes()
-		cmpBytes(agent[:], Addr1[:], "OfferingSupplyChanged: agent address is unexpected")
-		cmpU256(event.OfferingHash, U256Zero, "OfferingSupplyChanged: offering hash is unexpected")
-		cmpU192(event.CurrentSupply, U192Zero, "OfferingSupplyChanged: current supply is unexpected")
 	}
 
 	{

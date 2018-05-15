@@ -23,6 +23,7 @@ func testGetChannels(t *testing.T, exp int, id string) {
 
 func TestGetChannels(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
 
 	// Get empty list.
 	testGetChannels(t, 0, "")
@@ -37,7 +38,8 @@ func TestGetChannels(t *testing.T) {
 }
 
 func getChannelStatus(t *testing.T, id string) *http.Response {
-	url := fmt.Sprintf("http://%s/%s%s/status", testServer.conf.Addr, channelsPath, id)
+	url := fmt.Sprintf("http://:%s@%s/%s%s/status", testPassword,
+		testServer.conf.Addr, channelsPath, id)
 	r, err := http.Get(url)
 	if err != nil {
 		t.Fatal("failed to get channels: ", err)
@@ -47,6 +49,8 @@ func getChannelStatus(t *testing.T, id string) *http.Response {
 
 func TestGetChannelStatus(t *testing.T) {
 	defer cleanDB(t)
+	setTestUserCredentials(t)
+
 	ch := createTestChannel(t)
 	// get channel status with a match.
 	res := getChannelStatus(t, ch.ID)

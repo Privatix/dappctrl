@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum"
 
 	"gopkg.in/reform.v1"
@@ -40,6 +39,7 @@ type Monitor struct {
 	lastProcessedBlock uint64
 
 	cancel context.CancelFunc
+	tickers []*time.Ticker
 }
 
 // NewMonitor creates a Monitor with specified settings.
@@ -56,47 +56,54 @@ func NewMonitor(
 	}
 }
 
+func (m *Monitor) start(ctx context.Context, collectTicker, scheduleTicker <-chan time.Time) error {
+	go m.repeatEvery(ctx, collectTicker, "collect", func() {m.collect(ctx)})
+	// FIXME: implement
+	// go m.repeatEvery(ctx, scheduleTicker, "schedule", func() {m.schedule()})
+
+	m.logger.Debug("monitor started")
+	return nil
+}
+
 // Start starts the monitor. It will continue collecting logs and scheduling
 // jobs until it is stopped with Stop.
 func (m *Monitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	d := 10 * time.Second // FIXME: hardcoded duration
-	go m.repeatEvery(ctx, d, "collect", func() {m.collect(ctx)})
-	// go m.repeatEvery(ctx, d, "schedule", func() {m.schedule()})
-
-	m.logger.Debug("monitor started")
-	return nil
+	collectTicker := time.NewTicker(10 * time.Second) // FIXME: hardcoded period
+	scheduleTicker := time.NewTicker(10 * time.Second) // FIXME: hardcoded period
+	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
+	return m.start(ctx, collectTicker.C, scheduleTicker.C)
 }
 
 // Stop makes the monitor stop.
 func (m *Monitor) Stop() error {
 	m.cancel()
+	for _, t := range m.tickers {
+		t.Stop()
+	}
 
 	m.logger.Debug("monitor stopped")
 	return nil
 }
 
-// repeatEvery calls a given action function repeatedly with period d. It
-// recovers and continues repeating in case of panic. To stop the loop,
-// cancel the context.
-func (m *Monitor) repeatEvery(ctx context.Context, d time.Duration, name string, action func()) {
+// repeatEvery calls a given action function repeatedly every time a read on
+// ticker channel succeeds. It recovers and continues repeating in case of
+// panic. To stop the loop, cancel the context.
+func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time, name string, action func()) {
 	defer func() {
 		if r := recover(); r != nil {
 			m.logger.Error("recovered in monitor's %s loop: %v", name, r)
-			go m.repeatEvery(ctx, d, name, action)
+			go m.repeatEvery(ctx, ticker, name, action)
 		}
 	}()
-
-	ticker := time.NewTicker(d)
-	defer ticker.Stop()
 
 	for {
 		select {
 			case <-ctx.Done():
 				return
-			case <-ticker.C:
+			case <-ticker:
 				action()
 		}
 	}
@@ -118,17 +125,16 @@ func (m *Monitor) collect(ctx context.Context) {
 
 	pscAddr := []common.Address{m.pscAddr}
 	fromBlock, toBlock := m.blocksOfInterest(ctx)
+	addresses := m.getAddressesInUse()
+	if fromBlock > toBlock || len(addresses) == 0 {
+		m.logger.Debug("monitor has nothing to collect")
+		return
+	}
 	m.logger.Debug(
 		"monitor is collecting logs from blocks %d to %d",
 		fromBlock,
 		toBlock,
 	)
-	if fromBlock > toBlock {
-		m.logger.Debug("monitor has nothing to collect")
-		return
-	}
-
-	addresses := m.getAddressesInUse()
 
 	agentQ := ethereum.FilterQuery{
 		Addresses: pscAddr,

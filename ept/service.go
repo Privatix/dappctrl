@@ -143,17 +143,11 @@ func (s *Service) objects(done chan bool, errC chan error,
 		select {
 		case <-done:
 			terminate <- true
-			exit = true
 		case err := <-localErr:
 			if err != nil {
 				errC <- errWrapper(err, invalidProduct)
 				terminate <- true
-				exit = true
 			}
-		}
-
-		if exit {
-			return
 		}
 	}()
 	wg.Wait()
@@ -230,13 +224,10 @@ func (s *Service) processing(req *req) {
 		if !validMsg(temp.Raw, *m) {
 			select {
 			case <-req.done:
-				exit = true
 			case resp <- newResult(nil, ErrInvalidFormat):
-				exit = true
 			}
-			if exit {
-				return
-			}
+			return
+
 		}
 
 		select {

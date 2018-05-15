@@ -42,7 +42,9 @@ mkdir -p $DAPPCTRL_DIR
 git clone git@github.com:Privatix/dappctrl.git $DAPPCTRL_DIR
 go get -d $DAPPCTRL/...
 go get -u gopkg.in/reform.v1/reform
+go get -u github.com/rakyll/statik
 go get github.com/ethereum/go-ethereum/cmd/abigen
+
 go generate $DAPPCTRL/...
 go install -tags=notest $DAPPCTRL
 ```

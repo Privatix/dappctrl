@@ -3,7 +3,6 @@
 package monitor
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
@@ -33,7 +32,7 @@ type mockClient struct {
 
 func addressIsAmong(x *common.Address, addresses []common.Address) bool {
 	for _, a := range addresses {
-		if bytes.Equal(x.Bytes(), a.Bytes()) {
+		if *x == a {
 			return true
 		}
 	}
@@ -42,7 +41,7 @@ func addressIsAmong(x *common.Address, addresses []common.Address) bool {
 
 func hashIsAmong(x *common.Hash, hashes []common.Hash) bool {
 	for _, h := range hashes {
-		if bytes.Equal(x.Bytes(), h.Bytes()) {
+		if *x == h {
 			return true
 		}
 	}

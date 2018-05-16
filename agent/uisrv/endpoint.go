@@ -12,6 +12,7 @@ func (s *Server) handleGetEndpoints(w http.ResponseWriter, r *http.Request) {
 		Params: []queryParam{
 			{Name: "ch_id", Field: "channel"},
 			{Name: "id", Field: "id"},
+			{Name: "template", Field: "template"},
 		},
 		View: data.EndpointTable,
 	})

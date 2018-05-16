@@ -174,7 +174,7 @@ func done(db *reform.DB, id, status string) bool {
 		return false
 	}
 
-	defer remJob(db,j)
+	defer remJob(db, j)
 
 	if j.CreatedBy != data.JobBillingChecker ||
 		j.Type != status ||

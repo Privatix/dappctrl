@@ -4,34 +4,34 @@ package billing
 
 import (
 	"os"
-	"sync"
 	"testing"
 	"time"
 
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
 var (
 	conf struct {
 		DB          *data.DBConfig
+		Job         *job.Config
 		Log         *util.LogConfig
+		Proc        *proc.Config
 		BillingTest *billingTestConfig
 	}
+
 	testDB  *reform.DB
-	testMon *atomicMonitor
+	testMon *Monitor
 )
 
 const (
 	testPassword = "test-password"
+	jobRelatedId = "related_id"
 )
-
-type atomicMonitor struct {
-	mu  sync.Mutex
-	mon *Monitor
-}
 
 type billingTestConfig struct {
 	Offer   offer
@@ -71,53 +71,13 @@ type testFixture struct {
 	testObjs []reform.Record
 }
 
-func newTestMonitor(mon *Monitor) *atomicMonitor {
-	return &atomicMonitor{
-		mu:  sync.Mutex{},
-		mon: mon,
+func newTestMonitor(interval time.Duration, db *reform.DB,
+	logger *util.Logger, pc *proc.Processor) *Monitor {
+	mon, err := NewMonitor(interval, db, logger, pc)
+	if err != nil {
+		panic(err)
 	}
-}
-
-func (a *atomicMonitor) testsSelectedChannelsIDs() []string {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.testsSelectedChannelsIDs
-}
-
-func (a *atomicMonitor) VerifySecondsBasedChannels() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySecondsBasedChannels()
-}
-
-func (a *atomicMonitor) VerifyUnitsBasedChannels() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyUnitsBasedChannels()
-}
-
-func (a *atomicMonitor) VerifyBillingLags() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyBillingLags()
-}
-
-func (a *atomicMonitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySuspendedChannelsAndTryToUnsuspend()
-}
-
-func (a *atomicMonitor) VerifyChannelsForInactivity() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyChannelsForInactivity()
-}
-
-func (a *atomicMonitor) VerifySuspendedChannelsAndTryToTerminate() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySuspendedChannelsAndTryToTerminate()
+	return mon
 }
 
 func newBillingTestConfig() *billingTestConfig {
@@ -153,7 +113,7 @@ func newFixture(t *testing.T) *testFixture {
 func (f *testFixture) addTestObjects(testObjs []reform.Record) {
 	data.SaveToTestDB(f.t, testDB, testObjs...)
 
-	f.testObjs = testObjs
+	f.testObjs = append(f.testObjs, testObjs...)
 }
 
 func (f *testFixture) clean() {
@@ -207,33 +167,26 @@ func sesFabric(chanID string, secondsConsumed,
 	return sessions
 }
 
-func TestMain(m *testing.M) {
-	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
-	conf.BillingTest = newBillingTestConfig()
+func done(db *reform.DB, id, status string) bool {
+	var j data.Job
 
-	util.ReadTestConfig(&conf)
-
-	logger := util.NewTestLogger(conf.Log)
-
-	testDB = data.NewTestDB(conf.DB, logger)
-
-	defer data.CloseDB(testDB)
-
-	if _, err := NewMonitor(time.Second, nil, logger); err == nil {
-		panic("Monitor object with empty database is created")
+	if err := db.FindOneTo(&j, jobRelatedId, id); err != nil {
+		return false
 	}
 
-	mon, err := NewMonitor(time.Second, testDB, logger)
-	if err != nil {
-		panic(err)
+	defer remJob(db,j)
+
+	if j.CreatedBy != data.JobBillingChecker ||
+		j.Type != status ||
+		j.Status != data.JobActive {
+		return false
 	}
 
-	mon.testMode = true
+	return true
+}
 
-	testMon = newTestMonitor(mon)
-
-	os.Exit(m.Run())
+func remJob(db *reform.DB, j data.Job) {
+	db.Delete(&j)
 }
 
 // Source conditions:
@@ -271,12 +224,12 @@ func TestVerifySecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 		offering, channel1, channel2})
 
 	if err := testMon.VerifySecondsBasedChannels(); err != nil {
+		t.Log(err)
 		t.Fatalf("Failed to read channel information" +
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -338,8 +291,7 @@ func TestVerifySecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -386,8 +338,7 @@ func TestVerifyUnitsBasedChannelsLowTotalDeposit(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -451,8 +402,7 @@ func TestVerifyUnitsBasedChannelsUnitLimitExceeded(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -511,8 +461,7 @@ func TestVerifyBillingLags(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel2.ID {
+	if !done(testDB, channel2.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -577,8 +526,7 @@ func TestVerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceUnsuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be unsuspended")
 	}
@@ -638,8 +586,7 @@ func TestVerifyChannelsForInactivity(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
+	if !done(testDB, channel1.ID, data.JobAgentPreServiceSuspend) {
 		t.Fatal("Billing ignored channel," +
 			" that must be suspended")
 	}
@@ -653,6 +600,7 @@ func TestVerifyChannelsForInactivity(t *testing.T) {
 // Channel 1 is selected for terminating.
 func TestVerifySuspendedChannelsAndTryToTerminate(t *testing.T) {
 	fixture := newFixture(t)
+	//defer data.CleanTestDB(t,testDB)
 	defer fixture.clean()
 
 	pastTime := time.Now().Add(time.Second * (-100))
@@ -677,9 +625,30 @@ func TestVerifySuspendedChannelsAndTryToTerminate(t *testing.T) {
 			" from the database")
 	}
 
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel.ID {
+	if !done(testDB, channel.ID, data.JobAgentPreServiceTerminate) {
 		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
+			" that must be terminating")
 	}
+}
+
+func TestMain(m *testing.M) {
+	conf.DB = data.NewDBConfig()
+	conf.Job = job.NewConfig()
+	conf.Log = util.NewLogConfig()
+	conf.Proc = proc.NewConfig()
+	conf.BillingTest = newBillingTestConfig()
+
+	util.ReadTestConfig(&conf)
+
+	logger := util.NewTestLogger(conf.Log)
+
+	testDB = data.NewTestDB(conf.DB, logger)
+	defer data.CloseDB(testDB)
+
+	queue := job.NewQueue(conf.Job, logger, testDB, nil)
+	pc := proc.NewProcessor(conf.Proc, queue)
+
+	testMon = newTestMonitor(time.Second, testDB, logger, pc)
+
+	os.Exit(m.Run())
 }

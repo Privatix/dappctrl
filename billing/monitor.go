@@ -1,10 +1,23 @@
 package billing
 
 import (
-	"errors"
-	"github.com/privatix/dappctrl/util"
-	"gopkg.in/reform.v1"
 	"time"
+
+	"github.com/pkg/errors"
+	"gopkg.in/reform.v1"
+
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/util"
+)
+
+const (
+	jobCreator = data.JobBillingChecker
+)
+
+// Billing monitor specific errors.
+var (
+	ErrInput = errors.New("one or more input parameters is wrong")
 )
 
 // Monitor provides logic for checking channels for various cases,
@@ -14,28 +27,21 @@ import (
 type Monitor struct {
 	db     *reform.DB
 	logger *util.Logger
+	pc     *proc.Processor
 
 	// Interval between next round checks.
 	interval time.Duration
-
-	// Used only in tests purposes.
-	// By default, in production builds is set to nil.
-	// If not nil - collects IDs of channels, that was selected for further processing.
-	testsSelectedChannelsIDs []string
-
-	// if testMode is true the query results will be written
-	// in the testsSelectedChannelsIDs slice
-	testMode bool
 }
 
 // NewMonitor creates new instance of billing monitor.
 // 'interval' specifies how often channels checks must be performed.
-func NewMonitor(interval time.Duration, db *reform.DB, logger *util.Logger) (*Monitor, error) {
-	if db == nil {
-		return nil, errors.New("`db` is required")
+func NewMonitor(interval time.Duration, db *reform.DB,
+	logger *util.Logger, pc *proc.Processor) (*Monitor, error) {
+	if db == nil || logger == nil || pc == nil || interval <= 0 {
+		return nil, ErrInput
 	}
 
-	return &Monitor{db, logger, interval, nil, false}, nil
+	return &Monitor{db, logger, pc, interval}, nil
 }
 
 // Run begins monitoring of channels.
@@ -53,61 +59,82 @@ func (m *Monitor) Run() error {
 }
 
 // VerifySecondsBasedChannels checks all active seconds based channels
-// for not using more units, than provided by quota and not exceeding over total deposit.
+// for not using more units, than provided by quota and not exceeding
+// over total deposit.
 func (m *Monitor) VerifySecondsBasedChannels() error {
 	// Selects all channels, which
 	// 1. used tokens >= deposit tokens
 	// 2. total consumed seconds >= max offer units (seconds in this case)
-	// Only checks channels, which corresponding offers are using seconds as billing basis.
+	// Only checks channels, which corresponding offers are using seconds
+	// as billing basis.
 	query := `
                 SELECT channels.id::text
-                FROM channels
-                        LEFT JOIN sessions ses ON channels.id = ses.channel
-                        LEFT JOIN offerings offer ON channels.offering = offer.id
-          
-                WHERE
-                        channels.service_status IN ('pending', 'active') AND
-                        offer.unit_type = 'seconds'
-          
-                GROUP BY channels.id, offer.setup_price, offer.unit_price, offer.max_unit
-                HAVING
-                        (
-				offer.setup_price + 
-				coalesce(sum(ses.seconds_consumed), 0) * offer.unit_price 
-				>= channels.total_deposit
-                        ) OR 
-			(
-				coalesce(sum(ses.seconds_consumed), 0) >= offer.max_unit
-			)`
+		FROM channels
+  			LEFT JOIN sessions ses
+				ON channels.id = ses.channel
+  			LEFT JOIN offerings offer
+				ON channels.offering = offer.id
+  			LEFT JOIN accounts acc
+				ON channels.agent = acc.eth_addr
 
-	return m.processEachChannel(query, m.terminateService)
+		WHERE channels.service_status IN ('pending', 'active')
+			AND channels.channel_status NOT IN ('pending')
+			AND offer.unit_type = 'seconds'
+			AND acc.in_use = TRUE
+
+		GROUP BY channels.id, offer.setup_price, offer.unit_price,
+			offer.max_unit
+		
+		HAVING
+  			(
+    				offer.setup_price +
+    				coalesce(sum(ses.seconds_consumed), 0) *
+				offer.unit_price
+				>= channels.total_deposit
+  			) OR
+  			(
+    				coalesce(sum(ses.seconds_consumed), 0)
+				>= offer.max_unit
+  			);`
+
+	return m.processEachChannel(query, m.suspendService)
 }
 
 // VerifyUnitsBasedChannels checks all active units based channels
-// for not using more units, than provided by quota and not exceeding over total deposit.
+// for not using more units, than provided by quota
+// and not exceeding over total deposit.
 func (m *Monitor) VerifyUnitsBasedChannels() error {
 	query := `
 		SELECT channels.id::text
-                FROM channels
-                        LEFT JOIN sessions ses ON channels.id = ses.channel
-                        LEFT JOIN offerings offer ON channels.offering = offer.id
-          
-                WHERE
-                        channels.service_status IN ('pending', 'active') AND
-                        offer.unit_type = 'units'
-          
-                GROUP BY channels.id, offer.setup_price, offer.unit_price, offer.max_unit
-                HAVING
-                        (
-				offer.setup_price + 
-				coalesce(sum(ses.units_used), 0) * offer.unit_price 
-				>= channels.total_deposit
-                        ) OR 
-			(
-				coalesce(sum(ses.units_used), 0) >= offer.max_unit
-			)`
+		FROM channels
+  			LEFT JOIN sessions ses
+				ON channels.id = ses.channel
+  			LEFT JOIN offerings offer
+				ON channels.offering = offer.id
+			LEFT JOIN accounts acc
+				ON channels.agent = acc.eth_addr
 
-	return m.processEachChannel(query, m.terminateService)
+		WHERE channels.service_status IN ('pending', 'active')
+  			AND channels.channel_status NOT IN ('pending')
+  			AND offer.unit_type = 'units'
+  			AND acc.in_use = TRUE
+
+		GROUP BY channels.id, offer.setup_price, offer.unit_price,
+			offer.max_unit
+
+		HAVING
+			(
+    				offer.setup_price +
+    				coalesce(sum(ses.units_used), 0) *
+				offer.unit_price
+    				>= channels.total_deposit
+  			) OR
+  			(
+    				coalesce(sum(ses.units_used), 0)
+				>= offer.max_unit
+  			);`
+
+	return m.processEachChannel(query, m.suspendService)
 }
 
 // VerifyBillingLags checks all active channels for billing lags,
@@ -118,39 +145,83 @@ func (m *Monitor) VerifyBillingLags() error {
 	// but are suffering from the billing lags - must be suspended.
 	query := `
 		SELECT channels.id :: text
-                FROM channels
-                        LEFT JOIN sessions ses ON channels.id = ses.channel
-                        LEFT JOIN offerings offer ON channels.offering = offer.id
+		FROM channels
+  			LEFT JOIN sessions ses 
+				ON channels.id = ses.channel
+  			LEFT JOIN offerings offer 
+				ON channels.offering = offer.id
+  			LEFT JOIN accounts acc 
+				ON channels.agent = acc.eth_addr
 
-                WHERE
-                        channels.service_status IN ('pending', 'active')
+		WHERE channels.service_status IN ('pending', 'active')
+  			AND channels.channel_status NOT IN ('pending')
+  			AND acc.in_use = TRUE
 
-                GROUP BY channels.id, offer.billing_interval, offer.setup_price, offer.unit_price, offer.max_billing_unit_lag
-                HAVING
-                        (coalesce(sum(ses.units_used), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price) > offer.max_billing_unit_lag OR
-                        (coalesce(sum(ses.seconds_consumed), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price) > offer.max_billing_unit_lag;`
+		GROUP BY channels.id, offer.billing_interval,
+			offer.setup_price, offer.unit_price,
+			offer.max_billing_unit_lag
+		HAVING
+  			(
+    				coalesce(sum(ses.units_used), 0) /
+    				offer.billing_interval -
+				(channels.receipt_balance -
+				offer.setup_price ) /
+    				offer.unit_price
+				> offer.max_billing_unit_lag
+			) OR 
+			(
+    				coalesce(sum(ses.seconds_consumed), 0) /
+    				offer.billing_interval -
+				(channels.receipt_balance -
+				offer.setup_price) /
+    				offer.unit_price
+				> offer.max_billing_unit_lag
+  			);`
 
-	return m.processEachChannel(query, m.unsuspendService)
+	return m.processEachChannel(query, m.suspendService)
 }
 
 // VerifySuspendedChannelsAndTryToUnsuspend scans all supsended channels,
 // and checks if all conditions are met to unsuspend them.
 // Is so - schedules task for appropriate channel unsuspending.
 func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
-	// All channels, that are suspended, but now seems to be payed - must be unsuspended.
+	// All channels, that are suspended,
+	// but now seems to be payed - must be unsuspended.
 	query := `
 		SELECT channels.id :: text
-                FROM channels
-                        LEFT JOIN sessions ses ON channels.id = ses.channel
-                        LEFT JOIN offerings offer ON channels.offering = offer.id
+		FROM channels
+  			LEFT JOIN sessions ses 
+				ON channels.id = ses.channel
+  			LEFT JOIN offerings offer 
+				ON channels.offering = offer.id
+  			LEFT JOIN accounts acc 
+				ON channels.agent = acc.eth_addr
 
-                WHERE
-                        channels.service_status IN ('suspended')
+		WHERE channels.service_status IN ('suspended')
+  			AND channels.channel_status NOT IN ('pending')
+  			AND acc.in_use = TRUE
 
-                GROUP BY channels.id, offer.billing_interval, offer.setup_price, offer.unit_price, offer.max_billing_unit_lag
-                HAVING
-                        (coalesce(sum(ses.units_used), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price) <= offer.max_billing_unit_lag OR
-                        (coalesce(sum(ses.seconds_consumed), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price) <= offer.max_billing_unit_lag;`
+		GROUP BY channels.id, offer.billing_interval,
+			offer.setup_price, offer.unit_price,
+			offer.max_billing_unit_lag
+
+		HAVING
+  			(
+				coalesce(sum(ses.units_used), 0) /
+				offer.billing_interval -
+				(channels.receipt_balance -
+				offer.setup_price) /
+				offer.unit_price
+				<= offer.max_billing_unit_lag
+			) OR
+  			(
+				coalesce(sum(ses.seconds_consumed), 0) /
+				offer.billing_interval -
+				(channels.receipt_balance -
+				offer.setup_price) /
+				offer.unit_price
+				<= offer.max_billing_unit_lag
+			);`
 
 	return m.processEachChannel(query, m.unsuspendService)
 }
@@ -161,15 +232,25 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
 	query := `
 		SELECT channels.id::text
 		FROM channels
-			LEFT JOIN sessions ses ON channels.id = ses.channel
-			LEFT JOIN offerings offer ON channels.offering = offer.id
-		
-		WHERE
-			channels.service_status IN ('pending', 'active', 'suspended')
-		GROUP BY channels.id, offer.max_inactive_time_sec
-		HAVING max(ses.last_usage_time) + (offer.max_inactive_time_sec * INTERVAL '1 second') < now()`
+  			LEFT JOIN sessions ses
+				ON channels.id = ses.channel
+  			LEFT JOIN offerings offer
+				ON channels.offering = offer.id
+  			LEFT JOIN accounts acc
+				ON channels.agent = acc.eth_addr
 
-	return m.processEachChannel(query, m.terminateService)
+		WHERE channels.service_status IN ('pending', 'active',
+			'suspended')
+  			AND channels.channel_status NOT IN ('pending')
+  			AND acc.in_use = TRUE
+	
+		GROUP BY channels.id, offer.max_inactive_time_sec
+
+		HAVING max(ses.last_usage_time) +
+			(offer.max_inactive_time_sec * INTERVAL '1 second')
+			< now();`
+
+	return m.processEachChannel(query, m.suspendService)
 }
 
 // VerifySuspendedChannelsAndTryToTerminate scans all suspended channels,
@@ -178,11 +259,17 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
 	query := `
 		SELECT channels.id::text
 		FROM channels
-			LEFT JOIN offerings offer ON channels.offering = offer.id
-		
-		WHERE
-			channels.service_status = 'suspended' AND
-			channels.service_changed_time + (offer.max_suspended_time * INTERVAL '1 second') < now()`
+			LEFT JOIN offerings offer
+				ON channels.offering = offer.id
+  			LEFT JOIN accounts acc
+    				ON channels.agent = acc.eth_addr
+
+		WHERE channels.service_status = 'suspended'
+			AND channels.channel_status NOT IN ('pending')
+  			AND acc.in_use = TRUE
+  			AND channels.service_changed_time +
+				(offer.max_suspended_time *
+				INTERVAL '1 second') < now();`
 
 	return m.processEachChannel(query, m.terminateService)
 }
@@ -197,25 +284,26 @@ func (m *Monitor) processRound() error {
 }
 
 func (m *Monitor) suspendService(uuid string) error {
-	// todo: [call the task] [simon]
-	return nil
+	_, err := m.pc.SuspendChannel(uuid, jobCreator)
+	return err
 }
 
 func (m *Monitor) terminateService(uuid string) error {
-	// todo: [call the task] [simon]
-	return nil
+	_, err := m.pc.TerminateChannel(uuid, jobCreator)
+	return err
 }
 
 func (m *Monitor) unsuspendService(uuid string) error {
-	// todo: [call the task] [simon]
-	return nil
+	_, err := m.pc.ActivateChannel(uuid, jobCreator)
+	return err
 }
 
 func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 	for _, method := range checks {
 		err := method()
 		if err != nil {
-			m.logger.Error("Internal billing error occurred. Details: ", err.Error())
+			m.logger.Error("Internal billing error occurred."+
+				" Details: ", err.Error())
 			return err
 		}
 	}
@@ -223,28 +311,19 @@ func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 	return nil
 }
 
-func (m *Monitor) processEachChannel(query string, processor func(string) error) error {
+func (m *Monitor) processEachChannel(query string,
+	processor func(string) error) error {
 	rows, err := m.db.Query(query)
 	if err != nil {
 		return err
 	}
 
-	if m.testMode {
-		if m.testsSelectedChannelsIDs != nil {
-			m.testsSelectedChannelsIDs = make([]string, 0)
-		}
-	}
-
 	for rows.Next() {
 		channelUUID := ""
 		rows.Scan(&channelUUID)
-		processor(channelUUID)
-
-		if m.testMode {
-			m.testsSelectedChannelsIDs =
-				append(m.testsSelectedChannelsIDs, channelUUID)
+		if err := processor(channelUUID); err != nil {
+			return err
 		}
-
 	}
 
 	return nil

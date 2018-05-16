@@ -218,8 +218,8 @@ type Endpoint struct {
 	Template               string  `json:"template" reform:"template"`
 	Channel                string  `json:"channel" reform:"channel"`
 	Hash                   string  `json:"hash" reform:"hash"`
+	RawMsg                 string  `reform:"raw_msg"`
 	Status                 string  `json:"status" reform:"status"`
-	Signature              string  `json:"signature" reform:"signature"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
 	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 	Username               *string `json:"-" reform:"username"`

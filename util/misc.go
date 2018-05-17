@@ -24,6 +24,19 @@ func ReadJSONFile(name string, data interface{}) error {
 	return json.NewDecoder(file).Decode(data)
 }
 
+// WriteJSONFile converts a given data instance to JSON and writes it to file.
+func WriteJSONFile(name, prefix, indent string, data interface{}) error {
+	file, err := os.Create(name)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	enc := json.NewEncoder(file)
+	enc.SetIndent(prefix, indent)
+	return enc.Encode(data)
+}
+
 // NewUUID generates a new UUID.
 func NewUUID() string {
 	return uuid.Must(uuid.NewV4()).String()

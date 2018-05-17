@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,10 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
+)
+
+const (
+	maxRetryKey = "eth.event.maxretry"
 )
 
 var offeringRelatedEventsMap = map[common.Hash]bool{
@@ -45,10 +50,18 @@ func (m *Monitor) schedule(ctx context.Context) {
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, 2)) // topic[2] (client) in active accounts
 
 	query := fmt.Sprintf(
-		"select %s from eth_logs where job IS NULL",
+		"select %s from eth_logs where job is null",
 		strings.Join(columns, ","),
 	)
-	rows, err := m.db.Query(query)
+
+	var args []interface{}
+	maxRetries := m.getUint64Setting(maxRetryKey)
+	if maxRetries != 0 {
+		query += " and failures <= " + m.db.Placeholder(1)
+		args = append(args, maxRetries)
+	}
+
+	rows, err := m.db.Query(query, args...)
 	if err != nil {
 		panic(fmt.Errorf("failed to select log entries: %v", err))
 	}
@@ -61,16 +74,25 @@ func (m *Monitor) schedule(ctx context.Context) {
 			panic(fmt.Errorf("failed to scan the selected log entries: %v", err))
 		}
 
+		eventHash := common.HexToHash(e.Topics[0])
+
+		var scheduler funcAndType
+		found := false
 		switch {
 			case forAgent:
-				m.scheduleAgentRelated(&e)
+				scheduler, found = agentSchedulers[eventHash]
 			case forClient:
-				m.scheduleClientRelated(&e)
+				scheduler, found = clientSchedulers[eventHash]
 			case isOfferingRelated(&e):
-				m.scheduleOfferingRelated(&e)
-			default:
-				m.ignoreEvent(&e)
+				scheduler, found = offeringSchedulers[eventHash]
 		}
+
+		if !found {
+			m.ignoreEvent(&e)
+			continue
+		}
+
+		scheduler.f(m, &e, scheduler.t)
 	}
 	if err := rows.Err(); err != nil {
 		panic(fmt.Errorf("failed to fetch the next selected log entry: %v", err))
@@ -81,83 +103,189 @@ func isOfferingRelated(e *data.LogEntry) bool {
 	return len(e.Topics) > 0 && offeringRelatedEventsMap[common.HexToHash(e.Topics[0])]
 }
 
-var agentEventToJobMap = map[common.Hash]string{
-	common.HexToHash(eth.EthDigestChannelCreated): data.JobAgentAfterChannelCreate,
-	common.HexToHash(eth.EthDigestChannelToppedUp): data.JobAgentAfterChannelTopUp,
-	common.HexToHash(eth.EthChannelCloseRequested): data.JobAgentAfterUncooperativeCloseRequest,
-	// common.HexToHash(eth.EthOfferingEndpoint) // FIXME: ignore?
-	common.HexToHash(eth.EthCooperativeChannelClose): data.JobAgentAfterCooperativeClose,
-	common.HexToHash(eth.EthUncooperativeChannelClose): data.JobAgentAfterUncooperativeClose,
-	common.HexToHash(eth.EthOfferingCreated): data.JobAgentAfterOfferingMsgBCPublish,
+type scheduleFunc func(*Monitor, *data.LogEntry, string)
+type funcAndType struct {
+	f scheduleFunc
+	t string
 }
 
-var clientEventToJobMap = map[common.Hash]string{
-	common.HexToHash(eth.EthDigestChannelCreated): data.JobClientAfterChannelCreate,
-	common.HexToHash(eth.EthDigestChannelToppedUp): data.JobClientAfterChannelTopUp,
-	common.HexToHash(eth.EthChannelCloseRequested): data.JobClientAfterUncooperativeCloseRequest,
-	// common.HexToHash(eth.EthOfferingEndpoint) // FIXME: ignore?
-	common.HexToHash(eth.EthCooperativeChannelClose): data.JobClientAfterCooperativeClose,
-	common.HexToHash(eth.EthUncooperativeChannelClose): data.JobClientAfterUncooperativeClose,
+var agentSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthDigestChannelCreated): {
+		(*Monitor).scheduleAgent_ChannelCreated,
+		data.JobAgentAfterChannelCreate,
+	},
+	common.HexToHash(eth.EthDigestChannelToppedUp): {
+		(*Monitor).scheduleAgent_Channel,
+		data.JobAgentAfterChannelTopUp,
+	},
+	common.HexToHash(eth.EthChannelCloseRequested): {
+		(*Monitor).scheduleAgent_Channel,
+		data.JobAgentAfterUncooperativeCloseRequest,
+	},
+	common.HexToHash(eth.EthCooperativeChannelClose): {
+		(*Monitor).scheduleAgent_Channel,
+		data.JobAgentAfterCooperativeClose,
+	},
+	common.HexToHash(eth.EthUncooperativeChannelClose): {
+		(*Monitor).scheduleAgent_Channel,
+		data.JobAgentAfterUncooperativeClose,
+	},
 }
 
-var offeringEventToJobMap = map[common.Hash]string{
-	common.HexToHash(eth.EthOfferingCreated): data.JobClientAfterOfferingMsgBCPublish,
-	// common.HexToHash(eth.EthOfferingDeleted) // special case handled by the monitor itself
-	common.HexToHash(eth.EthOfferingPoppedUp): data.JobClientAfterOfferingMsgBCPublish,
+var clientSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthDigestChannelCreated): {
+		(*Monitor).scheduleClient_Channel,
+		data.JobClientAfterChannelCreate,
+	},
+	common.HexToHash(eth.EthDigestChannelToppedUp): {
+		(*Monitor).scheduleClient_Channel,
+		data.JobClientAfterChannelTopUp,
+	},
+	common.HexToHash(eth.EthChannelCloseRequested): {
+		(*Monitor).scheduleClient_Channel,
+		data.JobClientAfterUncooperativeCloseRequest,
+	},
+	common.HexToHash(eth.EthCooperativeChannelClose): {
+		(*Monitor).scheduleClient_Channel,
+		data.JobClientAfterCooperativeClose,
+	},
+	common.HexToHash(eth.EthUncooperativeChannelClose): {
+		(*Monitor).scheduleClient_Channel,
+		data.JobClientAfterUncooperativeClose,
+	},
 }
 
-// schedule creates an agent job for a given event.
-func (m *Monitor) scheduleAgentRelated(e *data.LogEntry) {
-	jobType, found := agentEventToJobMap[common.HexToHash(e.Topics[0])]
-	if !found {
-		m.ignoreEvent(e)
-		return
+var offeringSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthOfferingCreated): {
+		(*Monitor).scheduleClient_OfferingCreated,
+		data.JobClientAfterOfferingMsgBCPublish,
+	},
+	common.HexToHash(eth.EthOfferingPoppedUp): {
+		(*Monitor).scheduleClient_OfferingCreated,
+		data.JobClientAfterOfferingMsgBCPublish,
+	},
+	/* // FIXME: uncomment if monitor should actually delete the offering
+	common.HexToHash(eth.EthCOfferingDeleted): {
+		(*Monitor).scheduleClient_OfferingDeleted,
+		"",
+	},
+	*/
+}
+
+func (m *Monitor) findChannelID(e *data.LogEntry) string {
+	agentAddress := common.HexToAddress(e.Topics[1])
+	clientAddress := common.HexToAddress(e.Topics[2])
+	offeringHash := common.HexToHash(e.Topics[3])
+	query := fmt.Sprintf(`
+		select channels.id
+		from channels, offerings
+		where
+			channels.offering = offerings.id
+			and offerings.hash = %s
+			and channels.agent = %s
+			and channels.client = %s
+	`, m.db.Placeholder(1), m.db.Placeholder(2), m.db.Placeholder(3))
+
+	row := m.db.QueryRow(
+		query,
+		data.FromBytes(offeringHash.Bytes()),
+		data.FromBytes(agentAddress.Bytes()),
+		data.FromBytes(clientAddress.Bytes()),
+	)
+
+	var id string
+	err := row.Scan(&id)
+	if err == sql.ErrNoRows {
+		return ""
+	}
+	if err != nil {
+		panic(err)
 	}
 
+	return id
+}
+
+func (m *Monitor) scheduleAgent_ChannelCreated(e *data.LogEntry, jobType string) {
 	j := &data.Job{
 		Type:        jobType,
+		RelatedID:   util.NewUUID(),
 		RelatedType: data.JobChannel,
-	}
-
-	switch jobType {
-		case data.JobAgentAfterChannelCreate:
-			j.RelatedID = util.NewUUID()
-		default:
-			j.RelatedID = util.NewUUID() // FIXME: query the db
 	}
 
 	m.scheduleCommon(e, j)
 }
 
-// schedule creates a client job for a given event.
-func (m *Monitor) scheduleClientRelated(e *data.LogEntry) {
-	jobType, found := clientEventToJobMap[common.HexToHash(e.Topics[0])]
-	if !found {
-		m.ignoreEvent(e)
-		return
-	}
-
+func (m *Monitor) scheduleAgent_Channel(e *data.LogEntry, jobType string) {
 	j := &data.Job{
 		Type:        jobType,
+		RelatedID:   m.findChannelID(e),
 		RelatedType: data.JobChannel,
 	}
+
 	m.scheduleCommon(e, j)
 }
 
-// schedule creates a job for a given offering-related event.
-func (m *Monitor) scheduleOfferingRelated(e *data.LogEntry) {
-	jobType, found := offeringEventToJobMap[common.HexToHash(e.Topics[0])]
-	if !found {
+func (m *Monitor) scheduleClient_Channel(e *data.LogEntry, jobType string) {
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   m.findChannelID(e),
+		RelatedType: data.JobChannel,
+	}
+
+	m.scheduleCommon(e, j)
+}
+
+func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
+	query := fmt.Sprintf(`
+		select count(*)
+		from eth_logs
+		where
+			topics->>1 = %s
+			and topics->>2 = %s
+	`, m.db.Placeholder(1), m.db.Placeholder(2))
+	row := m.db.QueryRow(query, eth.EthOfferingDeleted, offeringHash.Hex())
+
+	var count int
+	if err := row.Scan(&count); err != nil {
+		panic(err)
+	}
+
+	return count > 0
+}
+
+func (m *Monitor) scheduleClient_OfferingCreated(e *data.LogEntry, jobType string) {
+	offeringHash := common.HexToHash(e.Topics[1])
+	if m.isOfferingDeleted(offeringHash) {
 		m.ignoreEvent(e)
 		return
 	}
 
 	j := &data.Job{
 		Type:        jobType,
+		RelatedID:   util.NewUUID(),
 		RelatedType: data.JobOffering,
 	}
+
 	m.scheduleCommon(e, j)
 }
+
+/* // FIXME: uncomment if monitor should actually delete the offering
+
+// scheduleClient_OfferingDeleted is a special case, which does not
+// actually schedule any task, it deletes the offering instead.
+func (m *Monitor) scheduleClient_OfferingDeleted(e *data.LogEntry, jobType string) {
+	offeringHash := common.HexToHash(e.Topics[1])
+	tail := fmt.Sprintf(
+		"where hash = %s",
+		m.db.Placeholder(1),
+	)
+	_, err := m.db.DeleteFrom(data.OfferingTable, tail, data.FromBytes(offeringHash.Bytes()))
+	if err != nil {
+		panic(err)
+	}
+	m.ignoreEvent(e)
+}
+*/
 
 func (m *Monitor) scheduleCommon(e *data.LogEntry, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor

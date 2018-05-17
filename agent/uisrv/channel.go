@@ -31,9 +31,9 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 		Params: []queryParam{
 			{Name: "id", Field: "id"},
 			{Name: "serviceStatus", Field: "service_status"},
-        },
+		},
 
-		View:   data.ChannelTable,
+		View: data.ChannelTable,
 	})
 }
 

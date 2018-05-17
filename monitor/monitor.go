@@ -126,7 +126,7 @@ var offeringRelatedEvents = []common.Hash{
 }
 
 /*
-Log collecting is performed periodically.
+Monitor performs Log collecting periodically.
 
 Several most recent blocks on the blockchain are considered "unreliable" (the
 relevant setting is "eth.min.confirmations").
@@ -141,6 +141,8 @@ and for offering it is:
 
     if F > 0 Ro = Ri ∩ [Z - C - F, +inf)
     else Ro = Ri
+
+These are the rules for filtering logs on the blockchain:
 
 1. Events for agent
    - From: A + 1
@@ -353,7 +355,7 @@ func (m *Monitor) getAddressesInUse() []common.Hash {
 	return addresses
 }
 
-// newReliableBlocks returns the range of block numbers that need to be scanned
+// getRangeOfInterest returns the range of block numbers that need to be scanned
 // for new logs. It respects the min confirmations setting.
 func (m *Monitor) getRangeOfInterest(ctx context.Context) (first, fresh, last uint64) {
 	unreliableNum := m.getUint64Setting(minConfirmationsKey)

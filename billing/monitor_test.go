@@ -40,20 +40,11 @@ const (
 	errAccNotUsed = "Billing processes channels with" +
 		" not used account"
 
-	errDB = "Failed to read channel information" +
-		" from the database"
-
 	errChStatusPending = "Billing processes channels with channel" +
 		" status is pending"
 
-	errChMustSuspended = "Billing ignored channel," +
-		" that must be suspended"
-
-	errChMustTerminating = "Billing ignored channel," +
-		" that must be terminating"
-
-	errChMustUnsuspended = "Billing ignored channel," +
-		" that must be suspended"
+	errDB = "Failed to read channel information" +
+		" from the database"
 
 	errTestResult = "Wrong result"
 )
@@ -157,6 +148,41 @@ func (f *testFixture) clean() {
 	}
 }
 
+func (f *testFixture) checkJob(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	checker(t)
+
+	if !done(f.chs[ch].ID, status) {
+		t.Fatal(errTestResult)
+	}
+}
+
+func (f *testFixture) checkChanStatus(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	chStatus(t, f.chs[ch], data.ChannelPending)
+
+	checker(t)
+
+	if done(f.chs[ch].ID, status) {
+		t.Fatal(errChStatusPending)
+	}
+
+	chStatus(t, f.chs[ch], data.ChannelActive)
+}
+
+func (f *testFixture) checkAcc(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	accNotUse(t, f.agent)
+
+	checker(t)
+
+	if done(f.chs[ch].ID, status) {
+		t.Fatal(errAccNotUsed)
+	}
+}
+
+
+
 func reverse(rs []reform.Record) {
 	last := len(rs) - 1
 
@@ -215,8 +241,8 @@ func remJob(j data.Job) {
 	tDB.Delete(&j)
 }
 
-func chStatusPending(t *testing.T, ch *data.Channel) {
-	ch.ChannelStatus = data.ChannelPending
+func chStatus(t *testing.T, ch *data.Channel, status string) {
+	ch.ChannelStatus = status
 	if err := tDB.Update(ch); err != nil {
 		t.Fatal(err)
 	}

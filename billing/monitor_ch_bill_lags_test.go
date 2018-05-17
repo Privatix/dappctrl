@@ -72,37 +72,11 @@ func TestBillingLags(t *testing.T) {
 	fixture := genBillingLags(t)
 	defer fixture.clean()
 
-	if err := tMon.VerifyBillingLags(); err != nil {
-		t.Fatalf(errDB)
-	}
+	status := data.JobAgentPreServiceSuspend
 
-	if !done(fixture.chs[1].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errChMustSuspended)
-	}
-}
+	fixture.checkJob(t,1,verifyBillingLags, status)
 
-func TestBillingLagsWithChStatusNotPending(t *testing.T) {
-	fixture := genBillingLags(t)
-	defer fixture.clean()
+	fixture.checkChanStatus(t,1,verifyBillingLags, status)
 
-	chStatusPending(t, fixture.chs[1])
-
-	verifyBillingLags(t)
-
-	if done(fixture.chs[1].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errChStatusPending)
-	}
-}
-
-func TestBillingLagsWithAccNotUse(t *testing.T) {
-	fixture := genBillingLags(t)
-	defer fixture.clean()
-
-	accNotUse(t, fixture.agent)
-
-	verifyUnitsBasedChannels(t)
-
-	if done(fixture.chs[1].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errAccNotUsed)
-	}
+	fixture.checkAcc(t,1, verifyBillingLags, status)
 }

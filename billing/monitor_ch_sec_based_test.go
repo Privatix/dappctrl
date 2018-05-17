@@ -101,11 +101,9 @@ func TestSecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 	fixture := genSecondsBasedChannelsLowTotalDeposit(t)
 	defer fixture.clean()
 
-	verifySecondsBasedChannels(t)
+	status := data.JobAgentPreServiceSuspend
 
-	if !done(fixture.chs[0].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errChMustSuspended)
-	}
+	fixture.checkJob(t,0,verifySecondsBasedChannels, status)
 }
 
 // Source conditions:
@@ -124,35 +122,11 @@ func TestSecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 	fixture := genSecondsBasedChannelsUnitLimitExceeded(t)
 	defer fixture.clean()
 
-	verifySecondsBasedChannels(t)
+	status := data.JobAgentPreServiceSuspend
 
-	if !done(fixture.chs[0].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errChMustSuspended)
-	}
-}
+	fixture.checkJob(t,0,verifySecondsBasedChannels, status)
 
-func TestSecondsBasedChannelsWithChStatusNotPending(t *testing.T) {
-	fixture := genSecondsBasedChannelsUnitLimitExceeded(t)
-	defer fixture.clean()
+	fixture.checkChanStatus(t,0,verifySecondsBasedChannels, status)
 
-	chStatusPending(t, fixture.chs[0])
-
-	verifySecondsBasedChannels(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errChStatusPending)
-	}
-}
-
-func TestSecondsBasedChannelsWithAccNotUse(t *testing.T) {
-	fixture := genSecondsBasedChannelsUnitLimitExceeded(t)
-	defer fixture.clean()
-
-	accNotUse(t, fixture.agent)
-
-	verifySecondsBasedChannels(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceSuspend) {
-		t.Fatal(errAccNotUsed)
-	}
+	fixture.checkAcc(t, 0, verifySecondsBasedChannels, status)
 }

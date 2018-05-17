@@ -78,35 +78,12 @@ func TestSuspendedChannelsToUnsuspend(t *testing.T) {
 	fixture := genSuspendedChannelsToUnsuspend(t)
 	defer fixture.clean()
 
-	verifySuspendedChannelsAndTryToUnsuspend(t)
+	status := data.JobAgentPreServiceUnsuspend
 
-	if !done(fixture.chs[0].ID, data.JobAgentPreServiceUnsuspend) {
-		t.Fatal(errChMustUnsuspended)
-	}
+	fixture.checkJob(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
+
+	fixture.checkChanStatus(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
+
+	fixture.checkAcc(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
 }
 
-func TestSuspendedChannelsToUnsuspendWithChStatusNotPending(t *testing.T) {
-	fixture := genSuspendedChannelsToUnsuspend(t)
-	defer fixture.clean()
-
-	chStatusPending(t, fixture.chs[0])
-
-	verifySuspendedChannelsAndTryToUnsuspend(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceUnsuspend) {
-		t.Fatal(errChStatusPending)
-	}
-}
-
-func TestSuspendedChannelsToUnsuspendWithAccNotUse(t *testing.T) {
-	fixture := genSuspendedChannelsToUnsuspend(t)
-	defer fixture.clean()
-
-	accNotUse(t, fixture.agent)
-
-	verifySuspendedChannelsAndTryToUnsuspend(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceUnsuspend) {
-		t.Fatal(errAccNotUsed)
-	}
-}

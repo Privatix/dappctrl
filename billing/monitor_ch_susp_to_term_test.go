@@ -52,35 +52,11 @@ func TestSuspendedChannelsAndTryToTerminate(t *testing.T) {
 	fixture := genSuspendedChannelsAndTryToTerminate(t)
 	defer fixture.clean()
 
-	verifySuspendedChannelsAndTryToTerminate(t)
+	status := data.JobAgentPreServiceTerminate
 
-	if !done(fixture.chs[0].ID, data.JobAgentPreServiceTerminate) {
-		t.Fatal(errChMustTerminating)
-	}
-}
+	fixture.checkJob(t,0,verifySuspendedChannelsAndTryToTerminate, status)
 
-func TestSuspendedChannelsToTerminateWithChStatusNotPending(t *testing.T) {
-	fixture := genSuspendedChannelsAndTryToTerminate(t)
-	defer fixture.clean()
+	fixture.checkChanStatus(t,0,verifySuspendedChannelsAndTryToTerminate, status)
 
-	chStatusPending(t, fixture.chs[0])
-
-	verifySuspendedChannelsAndTryToTerminate(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceTerminate) {
-		t.Fatal(errChStatusPending)
-	}
-}
-
-func TestSuspendedChannelsAndTryToTerminateWithAccNotUse(t *testing.T) {
-	fixture := genSuspendedChannelsAndTryToTerminate(t)
-	defer fixture.clean()
-
-	accNotUse(t, fixture.agent)
-
-	verifySuspendedChannelsAndTryToTerminate(t)
-
-	if done(fixture.chs[0].ID, data.JobAgentPreServiceTerminate) {
-		t.Fatal(errAccNotUsed)
-	}
+	fixture.checkAcc(t, 0, verifySuspendedChannelsAndTryToTerminate, status)
 }

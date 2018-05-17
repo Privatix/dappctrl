@@ -52,11 +52,12 @@ func TestSuspendedChannelsAndTryToTerminate(t *testing.T) {
 	fixture := genSuspendedChannelsAndTryToTerminate(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceTerminate
+	fixture.checkJob(t, 0, verifySuspendedChannelsAndTryToTerminate,
+		data.JobAgentPreServiceTerminate)
 
-	fixture.checkJob(t,0,verifySuspendedChannelsAndTryToTerminate, status)
+	fixture.checkChanStatus(t, 0, verifySuspendedChannelsAndTryToTerminate,
+		data.JobAgentPreServiceTerminate)
 
-	fixture.checkChanStatus(t,0,verifySuspendedChannelsAndTryToTerminate, status)
-
-	fixture.checkAcc(t, 0, verifySuspendedChannelsAndTryToTerminate, status)
+	fixture.checkAcc(t, 0, verifySuspendedChannelsAndTryToTerminate,
+		data.JobAgentPreServiceTerminate)
 }

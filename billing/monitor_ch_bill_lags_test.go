@@ -72,11 +72,12 @@ func TestBillingLags(t *testing.T) {
 	fixture := genBillingLags(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceSuspend
+	fixture.checkJob(t, 1, verifyBillingLags,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkJob(t,1,verifyBillingLags, status)
+	fixture.checkChanStatus(t, 1, verifyBillingLags,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkChanStatus(t,1,verifyBillingLags, status)
-
-	fixture.checkAcc(t,1, verifyBillingLags, status)
+	fixture.checkAcc(t, 1, verifyBillingLags,
+		data.JobAgentPreServiceSuspend)
 }

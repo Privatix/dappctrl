@@ -181,8 +181,6 @@ func (f *testFixture) checkAcc(t *testing.T, ch int,
 	}
 }
 
-
-
 func reverse(rs []reform.Record) {
 	last := len(rs) - 1
 

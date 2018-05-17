@@ -78,12 +78,12 @@ func TestSuspendedChannelsToUnsuspend(t *testing.T) {
 	fixture := genSuspendedChannelsToUnsuspend(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceUnsuspend
+	fixture.checkJob(t, 0, verifySuspendedChannelsAndTryToUnsuspend,
+		data.JobAgentPreServiceUnsuspend)
 
-	fixture.checkJob(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
+	fixture.checkChanStatus(t, 0, verifySuspendedChannelsAndTryToUnsuspend,
+		data.JobAgentPreServiceUnsuspend)
 
-	fixture.checkChanStatus(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
-
-	fixture.checkAcc(t,0, verifySuspendedChannelsAndTryToUnsuspend, status)
+	fixture.checkAcc(t, 0, verifySuspendedChannelsAndTryToUnsuspend,
+		data.JobAgentPreServiceUnsuspend)
 }
-

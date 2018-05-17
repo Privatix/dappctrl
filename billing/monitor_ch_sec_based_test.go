@@ -101,9 +101,8 @@ func TestSecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 	fixture := genSecondsBasedChannelsLowTotalDeposit(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceSuspend
-
-	fixture.checkJob(t,0,verifySecondsBasedChannels, status)
+	fixture.checkJob(t, 0, verifySecondsBasedChannels,
+		data.JobAgentPreServiceSuspend)
 }
 
 // Source conditions:
@@ -122,11 +121,12 @@ func TestSecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 	fixture := genSecondsBasedChannelsUnitLimitExceeded(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceSuspend
+	fixture.checkJob(t, 0, verifySecondsBasedChannels,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkJob(t,0,verifySecondsBasedChannels, status)
+	fixture.checkChanStatus(t, 0, verifySecondsBasedChannels,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkChanStatus(t,0,verifySecondsBasedChannels, status)
-
-	fixture.checkAcc(t, 0, verifySecondsBasedChannels, status)
+	fixture.checkAcc(t, 0, verifySecondsBasedChannels,
+		data.JobAgentPreServiceSuspend)
 }

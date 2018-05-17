@@ -73,11 +73,12 @@ func TestChannelsForInactivity(t *testing.T) {
 	fixture := genChannelsForInactivity(t)
 	defer fixture.clean()
 
-	status := data.JobAgentPreServiceSuspend
+	fixture.checkJob(t, 0, verifyChannelsForInactivity,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkJob(t,0,verifyChannelsForInactivity, status)
+	fixture.checkChanStatus(t, 0, verifyChannelsForInactivity,
+		data.JobAgentPreServiceSuspend)
 
-	fixture.checkChanStatus(t,0,verifyChannelsForInactivity, status)
-
-	fixture.checkAcc(t,0,verifyChannelsForInactivity, status)
+	fixture.checkAcc(t, 0, verifyChannelsForInactivity,
+		data.JobAgentPreServiceSuspend)
 }

@@ -252,12 +252,12 @@ CREATE TABLE endpoints (
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
-    signature text NOT NULL, -- agent's signature
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
     username varchar(100),
     password varchar(48),
-    additional_params json -- all additional parameters stored as JSON
+    additional_params json, -- all additional parameters stored as JSON
+    raw_msg text -- raw message in base64 (RFC-4648)
 );
 
 -- Job queue.

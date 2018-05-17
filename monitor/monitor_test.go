@@ -191,11 +191,11 @@ func genRandData(length int) []byte {
 	return randbytes
 }
 
-func setMinConfirmations(t *testing.T, db *reform.DB, value uint64) {
+func setUint64Setting(t *testing.T, db *reform.DB, key string, value uint64) {
 	setting := data.Setting{
-		Key: "eth.min.confirmations",
+		Key: key,
 		Value: strconv.FormatUint(value, 10),
-		Name: "eth.min.confirmations",
+		Name: key,
 	}
 	if err := db.Save(&setting); err != nil {
 		t.Fatalf("failed to save min confirmtions setting: %v", err)
@@ -221,8 +221,8 @@ func TestMonitorLogCollect(t *testing.T) {
 	someAddress := common.HexToAddress("0xdeadbeef")
 	someHash := common.HexToHash("0xc0ffee")
 
-	eventForClient := common.HexToHash(eth.EthOfferingEndpoint)
-	eventForAgent := common.HexToHash(eth.EthOfferingCreated)
+	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
+	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
 
 	var block uint64 = 10
 
@@ -232,17 +232,18 @@ func TestMonitorLogCollect(t *testing.T) {
 		agent common.Address
 		client common.Address
 	}{
+		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
 		{someHash, someAddress, someAddress}, // 0 no match
 		{someHash, agentAddress, someAddress}, // 1 match agent
 		{someHash, someAddress, clientAddress}, // 0 match client, but not a client event
 		// ----- 6 confirmations
-		{eventForAgent, someAddress, someAddress}, // 0 no match
-		{eventForAgent, agentAddress, someAddress}, // 1 match agent
-		{eventForAgent, someAddress, clientAddress}, // 0 match client, but not a client event
-		{eventForClient, someAddress, someAddress}, // 0 no match
+		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
+		{eventAboutChannel, someAddress, someAddress}, // 0 no match
+		{eventAboutChannel, agentAddress, someAddress}, // 1 match agent
+		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
 		// ----- 2 confirmations
-		{eventForClient, agentAddress, someAddress}, // 1 match agent
-		{eventForClient, someAddress, clientAddress}, // 1 match client
+		{eventAboutOffering, agentAddress, someAddress}, // 1 match agent
+		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
 		// ----- 0 confirmations
 	}
 	for _, contractAddr := range []common.Address{someAddress, pscAddr} {
@@ -265,18 +266,20 @@ func TestMonitorLogCollect(t *testing.T) {
 
 	cases := []struct{
 		confirmations uint64
+		freshnum uint64
 		lognum int
 	}{
-		{6, 1},
-		{2, 2},
-		{0, 4},
+		{6, 2, 1}, // freshnum = 2: will skip the first offering event
+		{2, 0, 4}, // freshnum = 0: will include the second offering event
+		{0, 2, 6},
 	}
 
 	var logs []*data.LogEntry
 	for _, c := range cases {
-		setMinConfirmations(t, db, c.confirmations)
+		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
+		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
 		ticker.tick()
-		name := fmt.Sprintf("with %d confirmations", c.confirmations)
+		name := fmt.Sprintf("with %d confirmations and %d freshnum", c.confirmations, c.freshnum)
 		logs = expectLogs(t, c.lognum, name, "")
 	}
 

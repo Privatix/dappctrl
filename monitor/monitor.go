@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -21,6 +22,7 @@ import (
 
 const (
 	minConfirmationsKey = "eth.min.confirmations"
+	freshOfferingsKey = "eth.event.freshofferings"
 )
 
 type Client interface {
@@ -58,8 +60,7 @@ func NewMonitor(
 
 func (m *Monitor) start(ctx context.Context, collectTicker, scheduleTicker <-chan time.Time) error {
 	go m.repeatEvery(ctx, collectTicker, "collect", func() {m.collect(ctx)})
-	// FIXME: implement
-	// go m.repeatEvery(ctx, scheduleTicker, "schedule", func() {m.schedule()})
+	go m.repeatEvery(ctx, scheduleTicker, "schedule", func() {m.schedule(ctx)})
 
 	m.logger.Debug("monitor started")
 	return nil
@@ -118,35 +119,96 @@ var clientRelatedEvents = []common.Hash{
 	common.HexToHash(eth.EthUncooperativeChannelClose),
 }
 
+var offeringRelatedEvents = []common.Hash{
+	common.HexToHash(eth.EthOfferingCreated),
+	common.HexToHash(eth.EthOfferingDeleted),
+	common.HexToHash(eth.EthOfferingPoppedUp),
+}
+
+/*
+Log collecting is performed periodically.
+
+Several most recent blocks on the blockchain are considered "unreliable" (the
+relevant setting is "eth.min.confirmations").
+
+Let A = last processed block number
+    Z = most recent block number on the blockchain
+    C = the min confirmations setting
+    F = the fresh offerings setting
+
+Thus the range of interest for agent and client logs Ri = [A + 1, Z - C],
+and for offering it is:
+
+    if F > 0 Ro = Ri ∩ [Z - C - F, +inf)
+    else Ro = Ri
+
+1. Events for agent
+   - From: A + 1
+   - To:   Z - C
+   - Topics[0]: any
+   - Topics[1]: one of accounts with in_use = true
+
+2. Events for client
+   - From: A + 1
+   - To:   Z - C
+   - Topics[0]: one of these hashes
+     - LogChannelCreated
+     - LogChannelToppedUp
+     - LogChannelCloseRequested
+     - LogCooperativeChannelClose
+     - LogUnCooperativeChannelClose
+   - Topics[2]: one of the accounts with in_use = true
+
+3. Offering events
+   - From: max(A + 1, Z - C - F) if F > 0
+   - From: A + 1 if F == 0
+   - To:   Z - C
+   - Topics[0]: one of these hashes
+     - LogOfferingCreated
+     - LogOfferingDeleted
+     - LogOfferingPopedUp
+   - Topics[1]: not one of the accounts with in_use = true
+   - Topics[2]: one of the accounts with in_use = true
+*/
+
 // collect requests new logs and puts them into the database.
 func (m *Monitor) collect(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded duration
 	defer cancel()
 
 	pscAddr := []common.Address{m.pscAddr}
-	fromBlock, toBlock := m.blocksOfInterest(ctx)
+	firstBlock, freshBlock, lastBlock := m.getRangeOfInterest(ctx)
 	addresses := m.getAddressesInUse()
-	if fromBlock > toBlock || len(addresses) == 0 {
+	addressMap := make(map[common.Hash]bool)
+	for _, a := range addresses {
+		addressMap[a] = true
+	}
+
+	if firstBlock > lastBlock {
 		m.logger.Debug("monitor has nothing to collect")
 		return
 	}
 	m.logger.Debug(
 		"monitor is collecting logs from blocks %d to %d",
-		fromBlock,
-		toBlock,
+		firstBlock,
+		lastBlock,
 	)
 
 	agentQ := ethereum.FilterQuery{
 		Addresses: pscAddr,
-		FromBlock: new(big.Int).SetUint64(fromBlock),
-		ToBlock:   new(big.Int).SetUint64(toBlock),
+		FromBlock: new(big.Int).SetUint64(firstBlock),
+		ToBlock:   new(big.Int).SetUint64(lastBlock),
 		Topics:    [][]common.Hash{nil, addresses},
 	}
 
 	clientQ := agentQ
 	clientQ.Topics = [][]common.Hash{clientRelatedEvents, nil, addresses}
 
-	queries := []*ethereum.FilterQuery{&agentQ, &clientQ}
+	offeringQ := agentQ
+	offeringQ.FromBlock = new(big.Int).SetUint64(freshBlock)
+	offeringQ.Topics = [][]common.Hash{offeringRelatedEvents}
+
+	queries := []*ethereum.FilterQuery{&agentQ, &clientQ, &offeringQ}
 
 	err := m.db.InTransaction(func(tx *reform.TX) error {
 		for _, q := range queries {
@@ -156,7 +218,15 @@ func (m *Monitor) collect(ctx context.Context) {
 			}
 
 			for i := range events {
-				m.collectEvent(tx, &events[i])
+				e := &events[i]
+				offeringRelated := q == &offeringQ
+				forAgent := len(e.Topics) > 1 && addressMap[e.Topics[1]]
+
+				if e.Removed || offeringRelated && forAgent {
+					continue
+				}
+
+				m.collectEvent(tx, e)
 			}
 		}
 
@@ -166,14 +236,80 @@ func (m *Monitor) collect(ctx context.Context) {
 		panic(fmt.Errorf("log collecting failed: %v", err))
 	}
 
-	m.setLastProcessedBlockNumber(toBlock)
+	m.setLastProcessedBlockNumber(lastBlock)
+}
+
+// schedule creates a job for each unprocessed log event in the database.
+func (m *Monitor) schedule(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded duration
+	defer cancel()
+
+	// TODO: Move this logic into a database view? The query is just supposed to
+	// append two boolean columns calculated based on topics: whether the
+	// event is for agent, and the same for client.
+	//
+	// eth_logs.topics is a json array with '0xdeadbeef' encoding of addresses,
+	// whereas accounts.eth_addr is a base64 encoding of raw bytes of addresses.
+	// The encode-decode-substr is there to convert from one to another.
+	// coalesce() converts null into false for the case when topics->>n does not exist.
+	topicInAccExpr := `
+		coalesce(
+			encode(decode(substr(topics->>%d, 3), 'hex'), 'base64')
+			in (select eth_addr from accounts where in_use),
+			false
+		)
+	`
+	columns := m.db.QualifiedColumns(data.LogEntryTable)
+	columns = append(columns, fmt.Sprintf(topicInAccExpr, 1)) // topic[1] (agent) in active accounts
+	columns = append(columns, fmt.Sprintf(topicInAccExpr, 2)) // topic[2] (client) in active accounts
+
+	query := fmt.Sprintf(
+		"select %s from eth_logs where job IS NULL",
+		strings.Join(columns, ","),
+	)
+	rows, err := m.db.Query(query)
+	if err != nil {
+		panic(fmt.Errorf("failed to select log entries: %v", err))
+	}
+
+	for rows.Next() {
+		var e data.LogEntry
+		var forAgent, forClient bool
+		pointers := append(e.Pointers(), &forAgent, &forClient)
+		if err := rows.Scan(pointers...); err != nil {
+			panic(fmt.Errorf("failed to scan the selected log entries: %v", err))
+		}
+
+		if forAgent {
+			m.scheduleForAgent(&e)
+		} else if forClient {
+			m.scheduleForClient(&e)
+		} else {
+			m.ignoreEvent(&e)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		panic(fmt.Errorf("failed to fetch the next selected log entry: %v", err))
+	}
+}
+
+// schedule creates an agent job for a given event.
+func (m *Monitor) scheduleForAgent(e *data.LogEntry) {
+}
+
+// schedule creates a client job for a given event.
+func (m *Monitor) scheduleForClient(e *data.LogEntry) {
+}
+
+func (m *Monitor) ignoreEvent(e *data.LogEntry) {
+	zero := "00000000-0000-0000-0000-000000000000"
+	e.JobID = &zero
+	if err := m.db.Save(e); err != nil {
+		panic(fmt.Errorf("failed to ignore event: %v", err))
+	}
 }
 
 func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
-	if e.Removed {
-		return
-	}
-
 	var topics data.LogTopics
 	for _, hash := range e.Topics {
 		topics = append(topics, hash.Hex())
@@ -217,20 +353,36 @@ func (m *Monitor) getAddressesInUse() []common.Hash {
 	return addresses
 }
 
-// blocksOfInterest returns the range of block numbers that need to be scanned
+// newReliableBlocks returns the range of block numbers that need to be scanned
 // for new logs. It respects the min confirmations setting.
-func (m *Monitor) blocksOfInterest(ctx context.Context) (from, to uint64) {
-	minConfirmations := m.getMinConfirmations()
+func (m *Monitor) getRangeOfInterest(ctx context.Context) (first, fresh, last uint64) {
+	unreliableNum := m.getUint64Setting(minConfirmationsKey)
+	freshNum := m.getUint64Setting(freshOfferingsKey)
 
-	from = m.getLastProcessedBlockNumber() + 1
-	to = m.getLatestBlockNumber(ctx)
-	if minConfirmations < to {
-		to -= minConfirmations
+	first = m.getLastProcessedBlockNumber() + 1
+	last = safeSub(m.getLatestBlockNumber(ctx), unreliableNum)
+
+	if freshNum == 0 {
+		fresh = first
 	} else {
-		to = 0
+		fresh = max(first, safeSub(last, freshNum))
 	}
 
-	return from, to
+	return first, fresh, last
+}
+
+func safeSub(a, b uint64) uint64 {
+	if a > b {
+		return a - b
+	}
+	return 0
+}
+
+func max(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (m *Monitor) getLastProcessedBlockNumber() uint64 {
@@ -253,9 +405,9 @@ func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
 	m.lastProcessedBlock = number
 }
 
-func (m *Monitor) getMinConfirmations() uint64 {
+func (m *Monitor) getUint64Setting(key string) uint64 {
 	var setting data.Setting
-	err := m.db.FindByPrimaryKeyTo(&setting, minConfirmationsKey)
+	err := m.db.FindByPrimaryKeyTo(&setting, key)
 	switch err {
 		case nil:
 			break
@@ -267,7 +419,7 @@ func (m *Monitor) getMinConfirmations() uint64 {
 
 	value, err := strconv.ParseUint(setting.Value, 10, 64)
 	if err != nil {
-		m.logger.Error("failed to parse %s setting: %v", minConfirmationsKey, err)
+		m.logger.Error("failed to parse %s setting: %v", key, err)
 		return 0
 	}
 
@@ -275,7 +427,7 @@ func (m *Monitor) getMinConfirmations() uint64 {
 }
 
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) uint64 {
-	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded timeout
 	defer cancel()
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)

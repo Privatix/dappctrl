@@ -28,8 +28,12 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 // handleGetChannels replies with all channels or a channel by id.
 func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: []queryParam{{Name: "id", Field: "id"}},
-		View:   data.ChannelTable,
+		Params: []queryParam{
+			{Name: "id", Field: "id"},
+			{Name: "serviceStatus", Field: "service_status"},
+		},
+
+		View: data.ChannelTable,
 	})
 }
 

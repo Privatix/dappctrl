@@ -303,7 +303,7 @@ func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 		err := method()
 		if err != nil {
 			m.logger.Error("Internal billing error occurred."+
-				" Details: ", err.Error())
+				" Details: %s", err.Error())
 			return err
 		}
 	}

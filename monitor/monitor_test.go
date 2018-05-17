@@ -18,9 +18,10 @@ import (
 
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/eth"
-	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/util"
 )
 
 type mockClient struct {
@@ -122,6 +123,7 @@ func (t *mockTicker) tick() {
 var (
 	logger     *util.Logger
 	db         *reform.DB
+	queue      *job.Queue
 	client     mockClient
 
 	pscAddr    = common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
@@ -132,6 +134,7 @@ func TestMain(m *testing.M) {
 	var conf struct {
 		DB              *data.DBConfig
 		Log             *util.LogConfig
+		Job             *job.Config
 		Eth struct {
 			GethURL       string
 			TruffleAPIURL string
@@ -139,11 +142,13 @@ func TestMain(m *testing.M) {
 	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.Job = job.NewConfig()
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)
 	client.logger = logger
 	db = data.NewTestDB(conf.DB, logger)
+	queue = job.NewQueue(conf.Job, logger, db, job.HandlerMap{})
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())
@@ -205,7 +210,7 @@ func setUint64Setting(t *testing.T, db *reform.DB, key string, value uint64) {
 func TestMonitorLogCollect(t *testing.T) {
 	defer cleanDB(t)
 
-	mon := NewMonitor(logger, db, &client, pscAddr)
+	mon := NewMonitor(logger, db, nil, &client, pscAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -289,4 +294,20 @@ func TestMonitorLogCollect(t *testing.T) {
 		}
 		delete(datamap, e.Data)
 	}
+}
+
+func TestMonitorLogSchedule(t *testing.T) {
+	defer cleanDB(t)
+
+	mon := NewMonitor(logger, db, queue, &client, pscAddr)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ticker := newMockTicker()
+	if err := mon.start(ctx, nil, ticker.C); err != nil {
+		panic(err)
+	}
+
+	// FIXME: implement
 }

@@ -93,7 +93,7 @@ func genSecondsBasedChannelsUnitLimitExceeded(t *testing.T) *testFixture {
 // than offering setup price.
 //
 // Expected result:
-// Channel 1 is selected for suspending.
+// Channel 1 is selected for terminating.
 // Channel 2 is not affected.
 //
 // Description: this test checks first rule in HAVING block.
@@ -102,7 +102,7 @@ func TestSecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 	defer fixture.clean()
 
 	fixture.checkJob(t, 0, verifySecondsBasedChannels,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 }
 
 // Source conditions:
@@ -113,7 +113,7 @@ func TestSecondsBasedChannelsLowTotalDeposit(t *testing.T) {
 // than provided by the offering.
 //
 // Expected result:
-// Channel 1 is selected for suspending.
+// Channel 1 is selected for terminating.
 // Channel 2 is not affected.
 //
 // Description: this test checks second rule in HAVING block.
@@ -122,11 +122,11 @@ func TestSecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 	defer fixture.clean()
 
 	fixture.checkJob(t, 0, verifySecondsBasedChannels,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 
 	fixture.checkChanStatus(t, 0, verifySecondsBasedChannels,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 
 	fixture.checkAcc(t, 0, verifySecondsBasedChannels,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 }

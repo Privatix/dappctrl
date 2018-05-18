@@ -87,7 +87,7 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
               HAVING offer.setup_price + COALESCE(SUM(ses.seconds_consumed), 0) * offer.unit_price >= channels.total_deposit
                   OR COALESCE(SUM(ses.seconds_consumed), 0) >= offer.max_unit;`
 
-	return m.processEachChannel(query, m.suspendService)
+	return m.processEachChannel(query, m.terminateService)
 }
 
 // VerifyUnitsBasedChannels checks all active units based channels
@@ -114,7 +114,7 @@ func (m *Monitor) VerifyUnitsBasedChannels() error {
               HAVING offer.setup_price + coalesce(sum(ses.units_used), 0) * offer.unit_price >= channels.total_deposit
                   OR COALESCE(SUM(ses.units_used), 0) >= offer.max_unit;`
 
-	return m.processEachChannel(query, m.suspendService)
+	return m.processEachChannel(query, m.terminateService)
 }
 
 // VerifyBillingLags checks all active channels for billing lags,
@@ -195,7 +195,7 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
                GROUP BY channels.id, offer.max_inactive_time_sec
               HAVING MAX(ses.last_usage_time) + (offer.max_inactive_time_sec * INTERVAL '1 second') < now();`
 
-	return m.processEachChannel(query, m.suspendService)
+	return m.processEachChannel(query, m.terminateService)
 }
 
 // VerifySuspendedChannelsAndTryToTerminate scans all suspended channels,

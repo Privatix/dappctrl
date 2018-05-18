@@ -67,18 +67,18 @@ func genChannelsForInactivity(t *testing.T) *testFixture {
 // (but has fresh sessions records as well).
 //
 // Expected result:
-// Channel 1 is selected for suspending.
+// Channel 1 is selected for terminating.
 // Channel 2 is not affected.
 func TestChannelsForInactivity(t *testing.T) {
 	fixture := genChannelsForInactivity(t)
 	defer fixture.clean()
 
 	fixture.checkJob(t, 0, verifyChannelsForInactivity,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 
 	fixture.checkChanStatus(t, 0, verifyChannelsForInactivity,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 
 	fixture.checkAcc(t, 0, verifyChannelsForInactivity,
-		data.JobAgentPreServiceSuspend)
+		data.JobAgentPreServiceTerminate)
 }

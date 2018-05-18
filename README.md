@@ -68,11 +68,9 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build `OpenVPN` service adapter:
+## Building and configuring service adapters
 
-```bash
-go install $DAPPCTRL/svc/dappvpn
-```
+* **OpenVPN** - please read `svc/dappvpn/README.md`.
 
 ## Using docker
 

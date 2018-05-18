@@ -11,7 +11,7 @@ import (
 )
 
 func verifySecondsBasedChannels(t *testing.T) {
-	if err := tMon.VerifySecondsBasedChannels(); err != nil {
+	if err := mon.VerifySecondsBasedChannels(); err != nil {
 		t.Fatalf(errDB)
 	}
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func verifySuspendedChannelsAndTryToTerminate(t *testing.T) {
-	if err := tMon.VerifySuspendedChannelsAndTryToTerminate(); err != nil {
+	if err := mon.VerifySuspendedChannelsAndTryToTerminate(); err != nil {
 		t.Fatalf(errDB)
 	}
 }

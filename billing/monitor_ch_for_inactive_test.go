@@ -11,7 +11,7 @@ import (
 )
 
 func verifyChannelsForInactivity(t *testing.T) {
-	if err := tMon.VerifyChannelsForInactivity(); err != nil {
+	if err := mon.VerifyChannelsForInactivity(); err != nil {
 		t.Fatalf(errDB)
 	}
 }

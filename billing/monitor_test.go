@@ -24,10 +24,10 @@ var (
 		Pc          *proc.Config
 	}
 
-	tDB     *reform.DB
-	tLogger *util.Logger
-	tMon    *Monitor
-	tPc     *proc.Processor
+	db     *reform.DB
+	logger *util.Logger
+	mon    *Monitor
+	pr     *proc.Processor
 )
 
 const (
@@ -116,7 +116,7 @@ func newFixture(t *testing.T) *testFixture {
 
 	template := data.NewTestTemplate(data.TemplateOffer)
 
-	data.InsertToTestDB(t, tDB, client, agent, product, template)
+	data.InsertToTestDB(t, db, client, agent, product, template)
 
 	return &testFixture{
 		t:        t,
@@ -128,7 +128,7 @@ func newFixture(t *testing.T) *testFixture {
 }
 
 func (f *testFixture) addTestObjects(testObjs []reform.Record) {
-	data.SaveToTestDB(f.t, tDB, testObjs...)
+	data.SaveToTestDB(f.t, db, testObjs...)
 
 	f.testObjs = append(f.testObjs, testObjs...)
 }
@@ -142,7 +142,7 @@ func (f *testFixture) clean() {
 	reverse(records)
 
 	for _, v := range records {
-		if err := tDB.Delete(v); err != nil {
+		if err := db.Delete(v); err != nil {
 			f.t.Fatalf("failed to delete %T: %s", v, err)
 		}
 	}
@@ -220,7 +220,7 @@ func sesFabric(chanID string, secondsConsumed,
 func done(id, status string) bool {
 	var j data.Job
 
-	if err := tDB.FindOneTo(&j, jobRelatedID, id); err != nil {
+	if err := db.FindOneTo(&j, jobRelatedID, id); err != nil {
 		return false
 	}
 
@@ -236,40 +236,40 @@ func done(id, status string) bool {
 }
 
 func remJob(j data.Job) {
-	tDB.Delete(&j)
+	db.Delete(&j)
 }
 
 func chStatus(t *testing.T, ch *data.Channel, status string) {
 	ch.ChannelStatus = status
-	if err := tDB.Update(ch); err != nil {
+	if err := db.Update(ch); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func accNotUse(t *testing.T, acc *data.Account) {
 	acc.InUse = false
-	if err := tDB.Update(acc); err != nil {
+	if err := db.Update(acc); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestNewMonitor(t *testing.T) {
-	_, err := NewMonitor(-1, tDB, tLogger, tPc)
+	_, err := NewMonitor(-1, db, logger, pr)
 	if err == nil || err != ErrInput {
 		t.Fatal(errTestResult)
 	}
 
-	_, err = NewMonitor(time.Second, nil, tLogger, tPc)
+	_, err = NewMonitor(time.Second, nil, logger, pr)
 	if err == nil || err != ErrInput {
 		t.Fatal(errTestResult)
 	}
 
-	_, err = NewMonitor(time.Second, tDB, nil, tPc)
+	_, err = NewMonitor(time.Second, db, nil, pr)
 	if err == nil || err != ErrInput {
 		t.Fatal(errTestResult)
 	}
 
-	_, err = NewMonitor(time.Second, tDB, tLogger, nil)
+	_, err = NewMonitor(time.Second, db, logger, nil)
 	if err == nil || err != ErrInput {
 		t.Fatal(errTestResult)
 	}
@@ -282,7 +282,7 @@ func TestMonitorRun(t *testing.T) {
 		}
 	}()
 
-	mon, err := NewMonitor(time.Second, &reform.DB{}, tLogger, tPc)
+	mon, err := NewMonitor(time.Second, &reform.DB{}, logger, pr)
 	if err != nil {
 		panic(err)
 	}
@@ -301,15 +301,15 @@ func TestMain(m *testing.M) {
 
 	util.ReadTestConfig(&conf)
 
-	tLogger = util.NewTestLogger(conf.Log)
+	logger = util.NewTestLogger(conf.Log)
 
-	tDB = data.NewTestDB(conf.DB, tLogger)
-	defer data.CloseDB(tDB)
+	db = data.NewTestDB(conf.DB, logger)
+	defer data.CloseDB(db)
 
-	queue := job.NewQueue(conf.Job, tLogger, tDB, nil)
-	tPc = proc.NewProcessor(conf.Pc, queue)
+	queue := job.NewQueue(conf.Job, logger, db, nil)
+	pr = proc.NewProcessor(conf.Pc, queue)
 
-	tMon = newTestMonitor(time.Second, tDB, tLogger, tPc)
+	mon = newTestMonitor(time.Second, db, logger, pr)
 
 	os.Exit(m.Run())
 }

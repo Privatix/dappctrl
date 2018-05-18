@@ -11,7 +11,7 @@ import (
 )
 
 func verifyBillingLags(t *testing.T) {
-	if err := tMon.VerifyBillingLags(); err != nil {
+	if err := mon.VerifyBillingLags(); err != nil {
 		t.Fatalf(errDB)
 	}
 }

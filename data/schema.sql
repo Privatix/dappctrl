@@ -176,6 +176,7 @@ CREATE TABLE offerings (
 
     max_unit bigint -- optional. If specified automatic termination can be invoked
         CONSTRAINT positive_max_unit CHECK (offerings.max_unit >= 0),
+        CONSTRAINT valid_units_number CHECK ((offerings.max_unit > 0 AND offerings.max_unit >= offerings.min_units) OR offerings.max_unit = 0),
 
     billing_interval int NOT NULL -- every unit numbers, that should be paid, after free units consumed
         CONSTRAINT positive_billing_interval CHECK (offerings.billing_interval > 0),

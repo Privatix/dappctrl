@@ -316,6 +316,7 @@ type expectation struct {
 
 type mockQueue struct {
 	t *testing.T
+	db *reform.DB
 	expectations []expectation
 }
 
@@ -328,6 +329,9 @@ func (mq *mockQueue) Add(j *data.Job) error {
 	if !ex.condition(j) {
 		mq.t.Fatalf("unexpected job added, expected %s, got %#v", ex.comment, *j)
 	}
+	j.ID = util.NewUUID()
+	j.Status = data.JobActive
+	data.InsertToTestDB(mq.t, mq.db, j)
 	return nil
 }
 
@@ -349,7 +353,7 @@ func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
 func TestMonitorLogSchedule(t *testing.T) {
 	defer cleanDB(t)
 
-	queue := &mockQueue{t: t}
+	queue := &mockQueue{t: t, db: db}
 	mon := NewMonitor(logger, db, queue, nil, pscAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())

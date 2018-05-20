@@ -23,14 +23,12 @@ func genSecondsBasedChannelsLowTotalDeposit(t *testing.T) *testFixture {
 		fixture.product.ID, fixture.template.ID)
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering.ID, 0,
 		conf.BillingTest.Channel.SmallDeposit,
 		data.ChannelActive)
 
 	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering.ID, 0,
 		conf.BillingTest.Channel.MidDeposit,
 		data.ChannelActive)
 
@@ -53,25 +51,21 @@ func genSecondsBasedChannelsUnitLimitExceeded(t *testing.T) *testFixture {
 	offering.UnitPrice = conf.BillingTest.Offer.UnitPrice
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering.ID, 0,
 		conf.BillingTest.Channel.BigDeposit,
 		data.ChannelActive)
 
 	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering.ID, 0,
 		conf.BillingTest.Channel.BigDeposit,
 		data.ChannelActive)
 
 	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.EmptyUnitsUsed,
+		conf.BillingTest.Session.SecondsConsumed, 0,
 		0, 3)
 
 	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.EmptyUnitsUsed,
+		conf.BillingTest.Session.SecondsConsumed, 0,
 		0, 2)
 
 	fixture.addTestObjects([]reform.Record{

@@ -26,8 +26,7 @@ func genSuspendedChannelsAndTryToTerminate(t *testing.T) *testFixture {
 		fixture.product.ID, fixture.template.ID)
 
 	channel := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering.ID, 0,
 		conf.BillingTest.Channel.BigDeposit,
 		data.ChannelActive)
 

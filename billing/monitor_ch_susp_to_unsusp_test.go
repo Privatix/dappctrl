@@ -30,16 +30,14 @@ func genSuspendedChannelsToUnsuspend(t *testing.T) *testFixture {
 	offering2.MaxBillingUnitLag = conf.BillingTest.Offer.SmallLag
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering1.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering1.ID, 0,
 		conf.BillingTest.Channel.BigDeposit,
 		data.ChannelActive)
 
 	channel1.ServiceStatus = data.ServiceSuspended
 
 	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering2.ID,
-		conf.BillingTest.Channel.EmptyBalance,
+		fixture.client.EthAddr, offering2.ID, 0,
 		conf.BillingTest.Channel.BigDeposit,
 		data.ChannelActive)
 

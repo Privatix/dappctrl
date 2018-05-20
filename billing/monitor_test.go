@@ -65,17 +65,13 @@ type offer struct {
 
 type session struct {
 	UnitsUsed            uint64
-	EmptyUnitsUsed       uint64
 	SecondsConsumed      uint64
-	EmptySecondsConsumed uint64
 }
 
 type channel struct {
 	SmallDeposit   uint64
 	MidDeposit     uint64
 	BigDeposit     uint64
-	EmptyBalance   uint64
-	EmptyUnitsUsed uint64
 }
 
 type testFixture struct {

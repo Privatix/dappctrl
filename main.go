@@ -104,12 +104,6 @@ func main() {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
 
-	mon := monitor.NewMonitor(logger, db, gethConn, pscAddr)
-	if err := mon.Start(); err != nil {
-		logger.Fatal("failed to start the blockchain monitor: %v", err)
-	}
-	defer mon.Stop()
-
 	pwdStorage := new(data.PWDStorage)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, ptc, psc, pwdStorage)
@@ -152,6 +146,12 @@ func main() {
 
 	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
 	handler.SetQueue(queue)
+
+	mon := monitor.NewMonitor(logger, db, queue, gethConn, pscAddr)
+	if err := mon.Start(); err != nil {
+		logger.Fatal("failed to start the blockchain monitor: %v", err)
+	}
+	defer mon.Stop()
 
 	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

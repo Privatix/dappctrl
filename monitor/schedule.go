@@ -40,7 +40,11 @@ func (m *Monitor) schedule(ctx context.Context) {
 	// coalesce() converts null into false for the case when topics->>n does not exist.
 	topicInAccExpr := `
 		coalesce(
-			encode(decode(substr(topics->>%d, 3), 'hex'), 'base64')
+			translate(
+				encode(decode(substr(topics->>%d, 3), 'hex'), 'base64'),
+				'+/',
+				'-_'
+			)
 			in (select eth_addr from accounts where in_use),
 			false
 		)
@@ -115,42 +119,42 @@ var agentSchedulers = map[common.Hash]funcAndType{
 		data.JobAgentAfterChannelCreate,
 	},
 	common.HexToHash(eth.EthDigestChannelToppedUp): {
-		(*Monitor).scheduleAgent_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobAgentAfterChannelTopUp,
 	},
 	common.HexToHash(eth.EthChannelCloseRequested): {
-		(*Monitor).scheduleAgent_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobAgentAfterUncooperativeCloseRequest,
 	},
 	common.HexToHash(eth.EthCooperativeChannelClose): {
-		(*Monitor).scheduleAgent_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobAgentAfterCooperativeClose,
 	},
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
-		(*Monitor).scheduleAgent_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobAgentAfterUncooperativeClose,
 	},
 }
 
 var clientSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthDigestChannelCreated): {
-		(*Monitor).scheduleClient_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobClientAfterChannelCreate,
 	},
 	common.HexToHash(eth.EthDigestChannelToppedUp): {
-		(*Monitor).scheduleClient_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobClientAfterChannelTopUp,
 	},
 	common.HexToHash(eth.EthChannelCloseRequested): {
-		(*Monitor).scheduleClient_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobClientAfterUncooperativeCloseRequest,
 	},
 	common.HexToHash(eth.EthCooperativeChannelClose): {
-		(*Monitor).scheduleClient_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobClientAfterCooperativeClose,
 	},
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
-		(*Monitor).scheduleClient_Channel,
+		(*Monitor).scheduleAgentClient_Channel,
 		data.JobClientAfterUncooperativeClose,
 	},
 }
@@ -215,20 +219,17 @@ func (m *Monitor) scheduleAgent_ChannelCreated(e *data.LogEntry, jobType string)
 	m.scheduleCommon(e, j)
 }
 
-func (m *Monitor) scheduleAgent_Channel(e *data.LogEntry, jobType string) {
-	j := &data.Job{
-		Type:        jobType,
-		RelatedID:   m.findChannelID(e),
-		RelatedType: data.JobChannel,
+func (m *Monitor) scheduleAgentClient_Channel(e *data.LogEntry, jobType string) {
+	cid := m.findChannelID(e)
+	if cid == "" {
+		m.logger.Warn("channel for offering %s does not exist", e.Topics[3])
+		m.ignoreEvent(e)
+		return
 	}
 
-	m.scheduleCommon(e, j)
-}
-
-func (m *Monitor) scheduleClient_Channel(e *data.LogEntry, jobType string) {
 	j := &data.Job{
 		Type:        jobType,
-		RelatedID:   m.findChannelID(e),
+		RelatedID:   cid,
 		RelatedType: data.JobChannel,
 	}
 
@@ -240,10 +241,10 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 		select count(*)
 		from eth_logs
 		where
-			topics->>1 = %s
+			topics->>0 = %s
 			and topics->>2 = %s
 	`, m.db.Placeholder(1), m.db.Placeholder(2))
-	row := m.db.QueryRow(query, eth.EthOfferingDeleted, offeringHash.Hex())
+	row := m.db.QueryRow(query, "0x" + eth.EthOfferingDeleted, offeringHash.Hex())
 
 	var count int
 	if err := row.Scan(&count); err != nil {
@@ -254,7 +255,7 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 }
 
 func (m *Monitor) scheduleClient_OfferingCreated(e *data.LogEntry, jobType string) {
-	offeringHash := common.HexToHash(e.Topics[1])
+	offeringHash := common.HexToHash(e.Topics[2])
 	if m.isOfferingDeleted(offeringHash) {
 		m.ignoreEvent(e)
 		return
@@ -290,7 +291,8 @@ func (m *Monitor) scheduleClient_OfferingDeleted(e *data.LogEntry, jobType strin
 func (m *Monitor) scheduleCommon(e *data.LogEntry, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
 	j.CreatedAt = time.Now()
-	switch err := m.queue.Add(j); err {
+	err := m.queue.Add(j)
+	switch err {
 		case nil:
 			m.updateEventJobID(e, j.ID)
 		case job.ErrDuplicatedJob, job.ErrAlreadyProcessing:

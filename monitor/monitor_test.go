@@ -123,7 +123,6 @@ func (t *mockTicker) tick() {
 var (
 	logger     *util.Logger
 	db         *reform.DB
-	queue      *job.Queue
 	client     mockClient
 
 	pscAddr    = common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
@@ -148,7 +147,6 @@ func TestMain(m *testing.M) {
 	logger = util.NewTestLogger(conf.Log)
 	client.logger = logger
 	db = data.NewTestDB(conf.DB, logger)
-	queue = job.NewQueue(conf.Job, logger, db, job.HandlerMap{})
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())
@@ -296,10 +294,63 @@ func TestMonitorLogCollect(t *testing.T) {
 	}
 }
 
+func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures int) {
+	e := &data.LogEntry{
+		ID: util.NewUUID(),
+		TxHash: data.FromBytes(genRandData(32)),
+		TxStatus: "mined", // FIXME: is this field needed at all?
+		BlockNumber: blockNumber,
+		Addr: data.FromBytes(pscAddr.Bytes()),
+		Data: data.FromBytes(genRandData(32)),
+		Topics: topics,
+	}
+	if err := db.Insert(e); err != nil {
+		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
+	}
+}
+
+type expectation struct {
+	condition func(j *data.Job) bool
+	comment string
+}
+
+type mockQueue struct {
+	t *testing.T
+	expectations []expectation
+}
+
+func (mq *mockQueue) Add(j *data.Job) error {
+	if len(mq.expectations) == 0 {
+		mq.t.Fatalf("unexpected job added, expected none")
+	}
+	ex := mq.expectations[0]
+	mq.expectations = mq.expectations[1:]
+	if !ex.condition(j) {
+		mq.t.Fatalf("unexpected job added, expected %s, got %#v", ex.comment, *j)
+	}
+	return nil
+}
+
+func (mq *mockQueue) expect(comment string, condition func(j *data.Job) bool) {
+	mq.expectations = append(mq.expectations, expectation{condition, comment})
+}
+
+func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if len(mq.expectations) == 0 {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	mq.t.Fatal("not all expected jobs scheduled")
+}
+
 func TestMonitorLogSchedule(t *testing.T) {
 	defer cleanDB(t)
 
-	mon := NewMonitor(logger, db, queue, &client, pscAddr)
+	queue := &mockQueue{t: t}
+	mon := NewMonitor(logger, db, queue, nil, pscAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -309,5 +360,91 @@ func TestMonitorLogSchedule(t *testing.T) {
 		panic(err)
 	}
 
-	// FIXME: implement
+	var blockNum uint64
+	nextBlock := func() uint64 {
+		blockNum++
+		return blockNum
+	}
+
+	someAddress := common.HexToAddress("0xdeadbeef")
+	//someHash := common.HexToHash("0xc0ffee")
+
+	acc1, addr1 := insertNewAccount(t, db, "clientpass")
+	acc2, addr2 := insertNewAccount(t, db, "clientpass")
+
+	product := data.NewTestProduct()
+	template := data.NewTestTemplate(data.TemplateOffer)
+
+	offering1 := data.NewTestOffering(acc1.EthAddr, product.ID, template.ID)
+	offeringX := data.NewTestOffering(
+		data.FromBytes(someAddress.Bytes()),
+		product.ID, template.ID,
+	)
+	offeringU := data.NewTestOffering(
+		data.FromBytes(someAddress.Bytes()),
+		product.ID, template.ID,
+	)
+
+	channel1 := data.NewTestChannel(
+		acc1.EthAddr, data.FromBytes(someAddress.Bytes()),
+		offering1.ID, 0, 100, data.ChannelActive,
+	)
+	channelX := data.NewTestChannel(
+		data.FromBytes(someAddress.Bytes()), acc2.EthAddr,
+		offeringX.ID, 0, 100, data.ChannelActive,
+	)
+
+	data.InsertToTestDB(t, db,
+		product, template,
+		offering1, offeringX, offeringU,
+		channel1, channelX)
+
+	insertEvent(db, nextBlock(), []string{
+		eth.EthOfferingCreated,
+		addr1.Hex(),
+		someAddress.Hex(),
+		offering1.Hash,
+	}, 0)
+	// offering events containing agent address should be ignored
+
+	insertEvent(db, nextBlock(), []string{
+		eth.EthOfferingCreated,
+		someAddress.Hex(),
+		addr2.Hex(),
+		offeringX.Hash,
+	}, 0)
+	// offering events containing client address should be ignored
+
+	insertEvent(db, nextBlock(), []string{
+		eth.EthOfferingCreated,
+		someAddress.Hex(),
+		someAddress.Hex(),
+		offeringU.Hash,
+	}, 0)
+	queue.expect("client offering created", func(j *data.Job) bool {
+		return j.Type == data.JobClientAfterOfferingMsgBCPublish
+	})
+
+	insertEvent(db, nextBlock(), []string{
+		eth.EthDigestChannelCreated,
+		addr1.Hex(),
+		someAddress.Hex(),
+		offering1.Hash,
+	}, 0)
+	queue.expect("agent after channel created", func(j *data.Job) bool {
+		return j.Type == data.JobAgentAfterChannelCreate
+	})
+
+	insertEvent(db, nextBlock(), []string{
+		eth.EthDigestChannelToppedUp,
+		addr1.Hex(),
+		someAddress.Hex(),
+		offeringX.Hash,
+	}, 0)
+	queue.expect("agent after channel created", func(j *data.Job) bool {
+		return j.Type == data.JobAgentAfterChannelCreate
+	})
+
+	ticker.tick()
+	queue.awaitCompletion(time.Second)
 }

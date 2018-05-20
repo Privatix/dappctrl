@@ -319,7 +319,8 @@ CREATE TABLE eth_logs (
     addr eth_addr NOT NULL, -- address of contract from which this log originated
     data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
     topics jsonb, -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
-    failures int NOT NULL DEFAULT 0 -- how many times we failed to schedule a job
+    failures int NOT NULL DEFAULT 0, -- how many times we failed to schedule a job
+    ignore boolean NOT NULL DEFAULT FALSE
 );
 
 END TRANSACTION;

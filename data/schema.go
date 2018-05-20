@@ -348,4 +348,5 @@ type LogEntry struct {
 	Data        string    `reform:"data"`
 	Topics      LogTopics `reform:"topics"`
 	Failures    uint64    `reform:"failures"`
+	Ignore      bool      `reform:"ignore"`
 }

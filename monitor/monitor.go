@@ -11,16 +11,19 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
+
+type Queue interface {
+	Add(j *data.Job) error
+}
 
 // Monitor implements blockchain monitor which fetches logs from the blockchain
 // and creates jobs accordingly.
 type Monitor struct {
 	logger  *util.Logger
 	db      *reform.DB
-	queue   *job.Queue
+	queue   Queue
 	eth     Client
 	pscAddr common.Address
 
@@ -34,7 +37,7 @@ type Monitor struct {
 func NewMonitor(
 	logger *util.Logger,
 	db *reform.DB,
-	queue *job.Queue,
+	queue Queue,
 	eth Client,
 	pscAddr common.Address) *Monitor {
 	return &Monitor{

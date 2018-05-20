@@ -50,7 +50,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, 2)) // topic[2] (client) in active accounts
 
 	query := fmt.Sprintf(
-		"select %s from eth_logs where job is null",
+		"select %s from eth_logs where job is null and not ignore order by block_number",
 		strings.Join(columns, ","),
 	)
 
@@ -303,18 +303,21 @@ func (m *Monitor) scheduleCommon(e *data.LogEntry, j *data.Job) {
 func (m *Monitor) incrementEventFailures(e *data.LogEntry) {
 	e.Failures++
 	if err := m.db.UpdateColumns(e, "failures"); err != nil {
-		panic(fmt.Errorf("failed to ignore event: %v", err))
+		panic(fmt.Errorf("failed to update failure counter of an event: %v", err))
 	}
 }
 
 func (m *Monitor) updateEventJobID(e *data.LogEntry, jobID string) {
 	e.JobID = &jobID
 	if err := m.db.UpdateColumns(e, "job"); err != nil {
-		panic(fmt.Errorf("failed to update job_id of an event: %v", err))
+		panic(fmt.Errorf("failed to update job_id of an event to %s: %v", jobID, err))
 	}
 }
 
 func (m *Monitor) ignoreEvent(e *data.LogEntry) {
-	m.updateEventJobID(e, "00000000-0000-0000-0000-000000000000")
+	e.Ignore = true
+	if err := m.db.UpdateColumns(e, "ignore"); err != nil {
+		panic(fmt.Errorf("failed to ignore an event: %v", err))
+	}
 }
 

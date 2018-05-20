@@ -65,10 +65,21 @@ func (s *Server) parseProductPayload(w http.ResponseWriter,
 	return true
 }
 
-// handleGetProducts replies with all products.
+// handleGetProducts replies with all products available to the agent.
 func (s *Server) handleGetProducts(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: nil,
-		View:   data.ProductTable,
+		Params:       nil,
+		View:         data.ProductTable,
+		FilteringSQL: `products.is_server`,
+	})
+}
+
+// handleGetProducts replies with all products available to the client.
+func (s *Server) handleGetClientProducts(w http.ResponseWriter,
+	r *http.Request) {
+	s.handleGetResources(w, r, &getConf{
+		Params:       nil,
+		View:         data.ProductTable,
+		FilteringSQL: `NOT products.is_server`,
 	})
 }

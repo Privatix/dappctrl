@@ -8,16 +8,21 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
 
-func getChannels(t *testing.T, id string) *http.Response {
-	return getResources(t, channelsPath,
+func getChannels(t *testing.T, id string, agent bool) *http.Response {
+	if agent {
+		return getResources(t, channelsPath,
+			map[string]string{"id": id})
+	}
+	return getResources(t, clientChannelsPath,
 		map[string]string{"id": id})
 }
 
-func testGetChannels(t *testing.T, exp int, id string) {
-	res := getChannels(t, id)
+func testGetChannels(t *testing.T, exp int, id string, agent bool) {
+	res := getChannels(t, id, agent)
 	testGetResources(t, res, exp)
 }
 
@@ -25,16 +30,34 @@ func TestGetChannels(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
+	createAcc := func(t *testing.T, ch *data.Channel, agent bool) {
+		acc := data.NewTestAccount(testPassword)
+		if agent {
+			acc.EthAddr = ch.Agent
+		} else {
+			acc.EthAddr = genEthAddr(t)
+		}
+		insertItems(t, acc)
+	}
+
 	// Get empty list.
-	testGetChannels(t, 0, "")
+	testGetChannels(t, 0, "", true)
 
-	ch := createTestChannel(t)
+	chAgent := createTestChannel(t)
+	chClient := createTestChannel(t)
 
-	// Get all channels.
-	testGetChannels(t, 1, "")
+	createAcc(t, chAgent, true)
+	createAcc(t, nil, false)
+
+	// Get all channels for Agent and Client.
+	testGetChannels(t, 1, "", true)
+	testGetChannels(t, 1, "", false)
+
 	// Get channel by id.
-	testGetChannels(t, 1, ch.ID)
-	testGetChannels(t, 0, util.NewUUID())
+	testGetChannels(t, 1, chAgent.ID, true)
+	testGetChannels(t, 1, chClient.ID, false)
+	testGetChannels(t, 0, util.NewUUID(), true)
+	testGetChannels(t, 0, util.NewUUID(), false)
 }
 
 func getChannelStatus(t *testing.T, id string) *http.Response {

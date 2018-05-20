@@ -6,6 +6,11 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
+var channelsGetParams = []queryParam{
+	{Name: "id", Field: "id"},
+	{Name: "serviceStatus", Field: "service_status"},
+}
+
 // handleChannels calls appropriate handler by scanning incoming request.
 func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	if id := idFromStatusPath(channelsPath, r.URL.Path); id != "" {
@@ -25,15 +30,26 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
-// handleGetChannels replies with all channels or a channel by id.
+// handleGetChannels replies with all channels or a channel by id
+// available to the agent.
 func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params: []queryParam{
-			{Name: "id", Field: "id"},
-			{Name: "serviceStatus", Field: "service_status"},
-		},
+		Params: channelsGetParams,
 
-		View: data.ChannelTable,
+		View:         data.ChannelTable,
+		FilteringSQL: `channels.agent IN (SELECT eth_addr FROM accounts)`,
+	})
+}
+
+// handleGetChannels replies with all channels or a channel by id
+// available to the client.
+func (s *Server) handleGetClientChannels(w http.ResponseWriter,
+	r *http.Request) {
+	s.handleGetResources(w, r, &getConf{
+		Params: channelsGetParams,
+
+		View:         data.ChannelTable,
+		FilteringSQL: `channels.agent NOT IN (SELECT eth_addr FROM accounts)`,
 	})
 }
 

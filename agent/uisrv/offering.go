@@ -117,8 +117,8 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	return nil
 }
 
-// handleGetClientOfferings replies with all active offerings available to the
-// client.
+// handleGetClientOfferings replies with all active offerings
+// available to the client.
 func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -132,11 +132,12 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 			{Name: "country", Field: "country", Op: "in"},
 		},
 		View:         data.OfferingTable,
-		FilteringSQL: "offer_status = 'register' and status = 'msg_channel_published' and not is_local",
+		FilteringSQL: `offer_status = 'register' AND status = 'msg_channel_published' AND NOT is_local AND offerings.agent NOT IN (SELECT eth_addr FROM accounts)`,
 	})
 }
 
-// handleGetOfferings replies with all offerings or an offering by id.
+// handleGetOfferings replies with all offerings or an offering by id
+// available to the agent.
 func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: []queryParam{
@@ -144,7 +145,8 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 			{Name: "product", Field: "product"},
 			{Name: "offerStatus", Field: "offer_status"},
 		},
-		View: data.OfferingTable,
+		View:         data.OfferingTable,
+		FilteringSQL: `offerings.agent IN (SELECT eth_addr FROM accounts) AND (SELECT in_use FROM accounts WHERE eth_addr = offerings.agent)`,
 	})
 }
 

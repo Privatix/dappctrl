@@ -3,7 +3,9 @@ package ept
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 
+	"github.com/sethvargo/go-password/password"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -29,11 +31,20 @@ func fillMsg(o *obj, paymentReceiverAddress, serviceEndpointAddress string,
 	return &Message{
 		TemplateHash:           o.tmpl.Hash,
 		Username:               o.ch.ID,
-		Password:               o.ch.Password,
+		Password:               genPass(),
 		PaymentReceiverAddress: paymentReceiverAddress,
 		ServiceEndpointAddress: serviceEndpointAddress,
 		AdditionalParams:       conf,
 	}, nil
+}
+
+func genPass() string {
+	// Passing valid arguments, thus ignoring errors.
+	// Password of length 12 with up to 5 digits and 0 symbols,
+	// allowing no repeats.
+	generated, _ := password.Generate(12, rand.Intn(5), 0, false, false)
+	fmt.Println(generated)
+	return generated
 }
 
 func config(confByte []byte) (map[string]string, error) {

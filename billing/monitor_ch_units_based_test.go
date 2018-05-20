@@ -68,7 +68,7 @@ func genUnitsBasedChannelsUnitLimitExceeded(t *testing.T) *testFixture {
 		conf.BillingTest.Session.UnitsUsed,
 		0, 3)
 
-	sesChannel2 := sesFabric(channel2.ID,0,
+	sesChannel2 := sesFabric(channel2.ID, 0,
 		conf.BillingTest.Session.UnitsUsed,
 		0, 2)
 

@@ -20,32 +20,7 @@ func AgentSeal(msg, clientPub []byte, agentKey *ecdsa.PrivateKey) ([]byte, error
 		return nil, err
 	}
 
-	sig, err := Signature(agentKey, msgEncrypted)
-	if err != nil {
-		return nil, err
-	}
-
-	return PackSignature(msgEncrypted, sig), nil
-}
-
-// PackSignature packs msg with signature.
-func PackSignature(msg, sig []byte) []byte {
-	ret := make([]byte, len(msg)+len(sig))
-	copy(ret, msg)
-	copy(ret[len(msg):], sig)
-
-	return ret
-}
-
-// Signature computes and returns signature.
-func Signature(key *ecdsa.PrivateKey, msg []byte) ([]byte, error) {
-	hash := ethcrypto.Keccak256(msg)
-	sig, err := ethcrypto.Sign(hash, key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign: %v", err)
-	}
-	sig = sig[:len(sig)-1]
-	return sig, nil
+	return PackWithSignature(msgEncrypted, agentKey)
 }
 
 // ClientOpen decrypts message using client's key and verifies using agent's key.
@@ -66,4 +41,33 @@ func ClientOpen(c, agentPub []byte, clientPrv *ecdsa.PrivateKey) ([]byte, error)
 	}
 
 	return opened, nil
+}
+
+// PackWithSignature packs message with signature.
+func PackWithSignature(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
+	sig, err := signature(key, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	return packSignature(msg, sig), nil
+}
+
+// signature computes and returns signature.
+func signature(key *ecdsa.PrivateKey, msg []byte) ([]byte, error) {
+	hash := ethcrypto.Keccak256(msg)
+	sig, err := ethcrypto.Sign(hash, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign: %v", err)
+	}
+	sig = sig[:len(sig)-1]
+	return sig, nil
+}
+
+func packSignature(msg, sig []byte) []byte {
+	ret := make([]byte, len(msg)+len(sig))
+	copy(ret, msg)
+	copy(ret[len(msg):], sig)
+
+	return ret
 }

@@ -310,10 +310,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	hash, err := messages.Hash(msgSealed)
-	if err != nil {
-		return err
-	}
+	hash := crypto.Keccak256(msgSealed)
 
 	newEndpoint := &data.Endpoint{
 		ID:               util.NewUUID(),

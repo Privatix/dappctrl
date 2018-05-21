@@ -13,13 +13,10 @@ import (
 	"github.com/privatix/dappctrl/pay"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
-	"github.com/privatix/dappctrl/messages"
-	"github.com/privatix/dappctrl/messages/so"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
@@ -166,26 +163,6 @@ type workerTestFixture struct {
 func (e *workerTest) newTestFixture(t *testing.T,
 	jobType, relType string) *workerTestFixture {
 	f := data.NewTestFixture(t, e.db)
-	offeringMsg := so.NewOfferingMessage(f.Account, f.TemplateOffer,
-		f.Offering)
-	offeringHash, err := messages.Hash(offeringMsg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.Offering.Hash = data.FromBytes(offeringHash)
-
-	key, err := data.TestToPrivateKey(f.Account.PrivateKey, data.TestPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sig, err := crypto.Sign(offeringHash, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.Offering.Signature = data.FromBytes(sig)
-
-	e.updateInTestDB(t, f.Offering)
 
 	job := data.NewTestJob(jobType, data.JobBCMonitor, relType)
 	switch relType {

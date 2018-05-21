@@ -112,7 +112,7 @@ type Offering struct {
 	OfferStatus        string  `json:"offerStatus" reform:"offer_status"`
 	BlockNumberUpdated uint64  `json:"blockNumberUpdated" reform:"block_number_updated"`
 	Agent              string  `json:"agent" reform:"agent" validate:"required"`
-	Signature          string  `json:"signature" reform:"signature"` // Agent's signature.
+	RawMsg             string  `json:"rawMsg" reform:"raw_msg"`
 	ServiceName        string  `json:"serviceName" reform:"service_name" validate:"required"`
 	Description        *string `json:"description" reform:"description"`
 	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.

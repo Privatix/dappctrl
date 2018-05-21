@@ -162,7 +162,7 @@ CREATE TABLE offerings (
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
 
     agent eth_addr NOT NULL,
-    signature text NOT NULL, -- agent's signature
+    raw_msg text NOT NULL,
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2

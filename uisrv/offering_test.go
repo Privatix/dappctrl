@@ -9,7 +9,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/so"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -54,19 +57,22 @@ func validOfferingPayload() data.Offering {
 func testOfferingReply(t *testing.T, agent *data.Account,
 	template *data.Template, offering *data.Offering) {
 	// TODO: figure out how to store hash and signature.
-	// // test hash
-	// msg := so.NewOfferingMessage(agent, template, offering)
-	// hash, _ := messages.Hash(msg)
-	// expected := data.FromBytes(hash)
-	// if offering.Hash != expected {
-	// 	t.Errorf("expected hash %s, got: %s", expected, offering.Hash)
-	// }
-	// // test signature.
-	// pub, _ := data.ToBytes(testAgent.PublicKey)
-	// sig, _ := data.ToBytes(offering.Signature)
-	// if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
-	// 	t.Error("wrong signature")
-	// }
+	// test hash
+	msg := so.OfferingMessage(agent, template, offering)
+	msgBytes, _ := json.Marshal(msg)
+	key, _ := data.TestToPrivateKey(agent.PrivateKey, testPassword)
+	packed, _ := messages.PackWithSignature(msgBytes, key)
+
+	expected := data.FromBytes(packed)
+	if offering.RawMsg != expected {
+		t.Fatal("wrong raw msg stored")
+	}
+
+	hash := crypto.Keccak256(packed)
+	expected = data.FromBytes(hash)
+	if offering.Hash != expected {
+		t.Fatalf("expected hash %s, got: %s", expected, offering.Hash)
+	}
 }
 
 func sendOffering(t *testing.T, v *data.Offering, m string) *http.Response {

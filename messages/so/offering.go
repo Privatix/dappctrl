@@ -4,10 +4,10 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
-// NewOfferingMessage returns new Offering message
-func NewOfferingMessage(agent *data.Account, template *data.Template,
-	offering *data.Offering) *OfferingMessage {
-	msg := &OfferingMessage{
+// OfferingMessage returns new Offering message
+func OfferingMessage(agent *data.Account, template *data.Template,
+	offering *data.Offering) *Message {
+	msg := &Message{
 		AgentPubKey:               agent.PublicKey,
 		TemplateHash:              template.Hash,
 		Country:                   offering.Country,

@@ -9,8 +9,6 @@ import (
 
 	"github.com/privatix/dappctrl/somc"
 
-	"github.com/privatix/dappctrl/messages"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -347,7 +345,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	}
 
 	rawMsgBytes := data.TestToBytes(t, endpoint.RawMsg)
-	expectedHash, err := messages.Hash(rawMsgBytes)
+	expectedHash, err := ethcrypto.Keccak256(rawMsgBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -538,54 +536,6 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,
 		*fixture.job)
 }
-
-// func testSOMCReceivedOfferingMsg(t *testing.T, fixture *workerTestFixture) {
-// 	ch := make(chan []somc.OfferingData, 1)
-// 	go func() {
-// 		ret, err := testSOMCConn.FindOfferings(
-// 			[]string{fixture.Offering.Hash},
-// 		)
-// 		if err != nil {
-// 			t.Fatal("failed to get endpoint: ", err)
-// 		}
-// 		ch <- ret
-// 	}()
-
-// 	select {
-// 	case actual := <-ch:
-// 		offeringMsg := so.NewOfferingMessage(fixture.Account,
-// 			fixture.TemplateOffer,
-// 			fixture.Offering)
-
-// 		msgBytes, err := json.Marshal(offeringMsg)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-
-// 		key, err := data.TestToPrivateKey(fixture.Account.PrivateKey,
-// 			data.TestPassword)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-
-// 		sig, err := crypto.Signature(key, msgBytes)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-
-// 		msgPacked := crypto.PackSignature(msgBytes, sig)
-
-// 		expected := []somc.OfferingData{{
-// 			Hash:     fixture.Offering.Hash,
-// 			Offering: msgPacked,
-// 		}}
-// 		if !reflect.DeepEqual(expected, actual) {
-// 			t.Fatal("wrong offering found")
-// 		}
-// 	case <-time.After(10 * time.Second):
-// 		t.Fatal("failed to get offering: timeout")
-// 	}
-// }
 
 func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC

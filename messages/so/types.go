@@ -1,7 +1,7 @@
 package so
 
-// OfferingMessage is a message being published to SOMC.
-type OfferingMessage struct {
+// Message is a message being published to SOMC.
+type Message struct {
 	AgentPubKey               string  `json:"agentPublicKey"`
 	TemplateHash              string  `json:"templateHash"`
 	Country                   string  `json:"country"`

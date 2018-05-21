@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privatix/dappctrl/eth/truffle"
-
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -67,20 +67,14 @@ func TestMain(m *testing.M) {
 
 		testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
 
-		contractAddress, err := eth.NewAddress(testTruffleAPI.FetchPTCAddress())
-		if err != nil {
-			panic(err)
-		}
-		ptc, err = contract.NewPrivatixTokenContract(contractAddress, conn)
+		ptcAddr := common.HexToAddress(testTruffleAPI.FetchPTCAddress())
+		ptc, err = contract.NewPrivatixTokenContract(ptcAddr, conn)
 		if err != nil {
 			panic(err)
 		}
 
-		contractAddress, err = eth.NewAddress(testTruffleAPI.FetchPSCAddress())
-		if err != nil {
-			panic(err)
-		}
-		psc, err = contract.NewPrivatixServiceContract(contractAddress, conn)
+		pscAddr := common.HexToAddress(testTruffleAPI.FetchPSCAddress())
+		psc, err = contract.NewPrivatixServiceContract(pscAddr, conn)
 		if err != nil {
 			panic(err)
 		}
@@ -126,6 +120,15 @@ func createTestChannel(t *testing.T) *data.Channel {
 		offering,
 		ch)
 	return ch
+}
+
+func genEthAddr(t *testing.T) string {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data.FromBytes(
+		crypto.PubkeyToAddress(key.PublicKey).Bytes())
 }
 
 func sendPayload(t *testing.T,

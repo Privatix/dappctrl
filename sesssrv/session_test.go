@@ -11,7 +11,7 @@ import (
 )
 
 func TestBadClientIdent(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	var args AuthArgs
@@ -35,7 +35,7 @@ func TestBadClientIdent(t *testing.T) {
 }
 
 func TestBadAuth(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	args := AuthArgs{ClientID: fxt.Channel.ID, Password: "bad-password"}
@@ -47,7 +47,7 @@ func TestBadAuth(t *testing.T) {
 }
 
 func TestBadUpdate(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	args := UpdateArgs{ClientID: fxt.Channel.ID}
@@ -57,7 +57,7 @@ func TestBadUpdate(t *testing.T) {
 }
 
 func TestNormalSessionFlow(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	testAuthNormalFlow(fxt)

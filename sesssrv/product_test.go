@@ -10,7 +10,7 @@ import (
 )
 
 func TestNormalProductConfig(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	args := ProductArgs{
@@ -24,7 +24,7 @@ func TestNormalProductConfig(t *testing.T) {
 }
 
 func TestBadProductConfig(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	args := ProductArgs{}

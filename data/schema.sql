@@ -88,7 +88,7 @@ CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
     'endpoint', -- service endpoint
-    'account' -- ethereum account
+    'account' -- for transfre and approve jobs
 );
 
 CREATE TABLE settings (
@@ -164,7 +164,7 @@ CREATE TABLE offerings (
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
 
     agent eth_addr NOT NULL,
-    signature text NOT NULL, -- agent's signature
+    raw_msg text NOT NULL,
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
@@ -179,6 +179,7 @@ CREATE TABLE offerings (
 
     max_unit bigint -- optional. If specified automatic termination can be invoked
         CONSTRAINT positive_max_unit CHECK (offerings.max_unit >= 0),
+        CONSTRAINT valid_units_number CHECK ((offerings.max_unit > 0 AND offerings.max_unit >= offerings.min_units) OR offerings.max_unit = 0),
 
     billing_interval int NOT NULL -- every unit numbers, that should be paid, after free units consumed
         CONSTRAINT positive_billing_interval CHECK (offerings.billing_interval > 0),
@@ -261,7 +262,7 @@ CREATE TABLE endpoints (
     username varchar(100),
     password varchar(48),
     additional_params json, -- all additional parameters stored as JSON
-    raw_msg text -- raw message in base64 (RFC-4648)
+    raw_msg text NOT NULL -- raw message in base64 (RFC-4648)
 );
 
 -- Job queue.
@@ -275,7 +276,7 @@ CREATE TABLE jobs (
     not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
     try_count smallint NOT NULL, -- number of tries performed
-    data json -- job data storage
+    data json -- information required for standalone jobs like token transfers
 );
 
 -- Ethereum transactions.

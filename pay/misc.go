@@ -2,11 +2,13 @@ package pay
 
 import (
 	"encoding/json"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 )
 
 // serverError is a payment server error.
@@ -41,7 +43,7 @@ var (
 func (s *Server) findChannel(w http.ResponseWriter,
 	offeringHash string,
 	agentAddr string,
-	block uint) (*data.Channel, bool) {
+	block uint32) (*data.Channel, bool) {
 
 	ch := &data.Channel{}
 
@@ -94,7 +96,34 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 		return false
 	}
 
-	if !crypto.VerifySignature(pub, hash(pld), sig[:len(sig)-1]) {
+	clientAddr, err := data.ToAddress(client.EthAddr)
+	if err != nil {
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
+		return false
+	}
+
+	pscAddr, err := data.ToAddress(pld.ContractAddress)
+	if err != nil {
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
+		return false
+	}
+
+	agentAddr, err := data.ToAddress(ch.Agent)
+	if err != nil {
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
+		return false
+	}
+
+	offeringHash, err := data.ToHash(pld.OfferingHash)
+	if err != nil {
+		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
+		return false
+	}
+
+	hash := eth.BalanceProofHash(clientAddr, pscAddr, agentAddr,
+		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+
+	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
 		s.replyErr(w, http.StatusBadRequest, errInvalidSignature)
 		return false
 	}

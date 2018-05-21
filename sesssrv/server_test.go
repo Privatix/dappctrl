@@ -48,6 +48,15 @@ var (
 		PathProductConfig}
 )
 
+func newTestFixtures(t *testing.T) *data.TestFixture {
+	fixture := data.NewTestFixture(t, db)
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	if err := db.Update(fixture.Channel); err != nil {
+		t.Fatal(err)
+	}
+	return fixture
+}
+
 func TestBadMethod(t *testing.T) {
 	client := &http.Client{}
 	for _, v := range allPaths {
@@ -71,7 +80,7 @@ func TestBadMethod(t *testing.T) {
 }
 
 func TestBadProductAuth(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixtures(t)
 	defer fxt.Close()
 
 	for _, v := range allPaths {

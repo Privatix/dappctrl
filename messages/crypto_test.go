@@ -1,4 +1,4 @@
-package crypto_test
+package messages_test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/messages/crypto"
+	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -28,12 +28,14 @@ func TestSealOpen(t *testing.T) {
 	clientKey, _ := ecdsa.GenerateKey(ethcrypto.S256(), rand.Reader)
 	agentKey, _ := ecdsa.GenerateKey(ethcrypto.S256(), rand.Reader)
 
-	sealed, err := crypto.AgentSeal(msg, ethcrypto.FromECDSAPub(&clientKey.PublicKey), agentKey)
+	sealed, err := messages.AgentSeal(msg,
+		ethcrypto.FromECDSAPub(&clientKey.PublicKey), agentKey)
 	if err != nil {
 		t.Fatal("failed to encrypt: ", err)
 	}
 
-	opened, err := crypto.ClientOpen(sealed, ethcrypto.FromECDSAPub(&agentKey.PublicKey), clientKey)
+	opened, err := messages.ClientOpen(sealed,
+		ethcrypto.FromECDSAPub(&agentKey.PublicKey), clientKey)
 	if err != nil {
 		t.Fatal("failed to decrypt: ", err)
 	}

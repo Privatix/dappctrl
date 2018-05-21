@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/privatix/dappctrl/pay"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
@@ -23,12 +25,13 @@ import (
 )
 
 type testConfig struct {
-	DB       *data.DBConfig
-	Job      *job.Config
-	Log      *util.LogConfig
-	SOMC     *somc.Config
-	SOMCTest *somc.TestConfig
-	pscAddr  common.Address
+	DB        *data.DBConfig
+	Job       *job.Config
+	Log       *util.LogConfig
+	PayServer *pay.Config
+	SOMC      *somc.Config
+	SOMCTest  *somc.TestConfig
+	pscAddr   common.Address
 }
 
 func newTestConfig() *testConfig {
@@ -42,7 +45,7 @@ func newTestConfig() *testConfig {
 	}
 }
 
-type testEnv struct {
+type workerTest struct {
 	db       *reform.DB
 	ethBack  *testEthBackend
 	fakeSOMC *somc.FakeSOMC
@@ -56,7 +59,7 @@ var (
 	logger *util.Logger
 )
 
-func newTestEnv(t *testing.T) *testEnv {
+func newWorkerTest(t *testing.T) *workerTest {
 
 	fakeSOMC := somc.NewFakeSOMC(t, conf.SOMC.URL,
 		conf.SOMCTest.ServerStartupDelay)
@@ -74,15 +77,14 @@ func newTestEnv(t *testing.T) *testEnv {
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(db, somcConn, jobQueue, ethBack,
-		conf.pscAddr, pwdStorage, data.TestToPrivateKey)
-
+		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
 	if err != nil {
 		fakeSOMC.Close()
 		somcConn.Close()
 		panic(err)
 	}
 
-	return &testEnv{
+	return &workerTest{
 		db:       db,
 		ethBack:  ethBack,
 		fakeSOMC: fakeSOMC,
@@ -91,7 +93,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	}
 }
 
-func (e *testEnv) close() {
+func (e *workerTest) close() {
 	e.fakeSOMC.Close()
 	e.somcConn.Close()
 }
@@ -117,26 +119,26 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func (e *testEnv) insertToTestDB(t *testing.T, recs ...reform.Struct) {
+func (e *workerTest) insertToTestDB(t *testing.T, recs ...reform.Struct) {
 	data.InsertToTestDB(t, e.db, recs...)
 }
 
-func (e *testEnv) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
+func (e *workerTest) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
 	data.DeleteFromTestDB(t, e.db, recs...)
 }
 
-func (e *testEnv) updateInTestDB(t *testing.T, rec reform.Record) {
+func (e *workerTest) updateInTestDB(t *testing.T, rec reform.Record) {
 	data.SaveToTestDB(t, e.db, rec)
 }
 
-func (e *testEnv) findTo(t *testing.T, rec reform.Record, id string) {
+func (e *workerTest) findTo(t *testing.T, rec reform.Record, id string) {
 	err := e.db.FindByPrimaryKeyTo(rec, id)
 	if err != nil {
 		t.Fatal("failed to find: ", err)
 	}
 }
 
-func (e *testEnv) deleteJob(t *testing.T, jobType, relType, relID string) {
+func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 	job := &data.Job{}
 	err := e.db.SelectOneTo(job,
 		"WHERE type=$1 AND status=$2 AND related_type=$3"+
@@ -161,7 +163,7 @@ type workerTestFixture struct {
 	job *data.Job
 }
 
-func (e *testEnv) newTestFixture(t *testing.T,
+func (e *workerTest) newTestFixture(t *testing.T,
 	jobType, relType string) *workerTestFixture {
 	f := data.NewTestFixture(t, e.db)
 	offeringMsg := so.NewOfferingMessage(f.Account, f.TemplateOffer,

@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/privatix/dappctrl/messages"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -21,7 +23,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	// 5. ch_status="Active"
 	// 6. svc_status="Pending"
 	// 7. "preEndpointMsgCreate"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterChannelCreate,
 		data.JobChannel)
 	defer env.close()
@@ -73,7 +75,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 
 func TestAgentAfterChannelTopUp(t *testing.T) {
 	// 1. Add deposit to channels.total_deposit
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterChannelTopUp,
 		data.JobChannel)
 	defer env.close()
@@ -120,7 +122,7 @@ func TestAgentAfterChannelTopUp(t *testing.T) {
 }
 
 func testChannelStatusChanged(t *testing.T,
-	job *data.Job, env *testEnv, newStatus string) {
+	job *data.Job, env *workerTest, newStatus string) {
 	updated := &data.Channel{}
 	env.findTo(t, updated, job.RelatedID)
 
@@ -135,7 +137,7 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 	//   then "preCooperativeClose"
 	//   else "preServiceTerminate"
 
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
 		data.JobChannel)
 	defer env.close()
@@ -170,7 +172,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 	// 1. set ch_status="closed_uncoop"
 	// 2. "preServiceTerminate"
 
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -194,7 +196,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 func TestAgentPreCooperativeClose(t *testing.T) {
 	// 1. PSC.cooperativeClose()
 	// 2. "preServiceTerminate"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreCooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -239,7 +241,7 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
 	// set ch_status="closed_coop"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterCooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -253,7 +255,7 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 }
 
 func testServiceStatusChanged(t *testing.T,
-	job *data.Job, env *testEnv, newStatus string) {
+	job *data.Job, env *workerTest, newStatus string) {
 	updated := &data.Channel{}
 	env.findTo(t, updated, job.RelatedID)
 
@@ -264,7 +266,7 @@ func testServiceStatusChanged(t *testing.T,
 
 func TestAgentPreServiceSuspend(t *testing.T) {
 	// svc_status="Suspended"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceSuspend,
 		data.JobChannel)
 	defer env.close()
@@ -280,7 +282,7 @@ func TestAgentPreServiceSuspend(t *testing.T) {
 func TestAgentPreServiceUnsuspend(t *testing.T) {
 	// svc_status="Active"ing.T) {
 	// svc_status="Suspended"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceUnsuspend,
 		data.JobChannel)
 	defer env.close()
@@ -298,7 +300,7 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 
 func TestAgentPreServiceTerminate(t *testing.T) {
 	// svc_status="Terminated"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceTerminate,
 		data.JobChannel)
 	defer env.close()
@@ -319,8 +321,48 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	// store raw endpoint message in DB.endpoints.raw_msg
 	// msg_status="unpublished"
 	// "preEndpointMsgSOMCPublish"
-	t.Skip("TODO")
+	env := newWorkerTest(t)
+	fixture := env.newTestFixture(t, data.JobAgentPreEndpointMsgCreate,
+		data.JobChannel)
+	defer env.close()
+	defer fixture.close()
 
+	runJob(t, env.worker.AgentPreEndpointMsgCreate, fixture.job)
+
+	endpoint := &data.Endpoint{}
+	if err := env.db.SelectOneTo(endpoint,
+		"where template=$1 and channel=$2 and status=$3",
+		fixture.TemplateAccess.ID,
+		fixture.Channel.ID, data.MsgUnpublished); err != nil {
+		t.Fatal("failed to get desired endpoint: ", err)
+	}
+	defer env.deleteFromTestDB(t, endpoint)
+
+	if endpoint.RawMsg == "" {
+		t.Fatal("raw msg is not set")
+	}
+
+	rawMsgBytes := data.TestToBytes(t, endpoint.RawMsg)
+	expectedHash, err := messages.Hash(rawMsgBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data.FromBytes(expectedHash) != endpoint.Hash {
+		t.Fatal("wrong hash stored")
+	}
+
+	channel := &data.Channel{}
+	env.findTo(t, channel, fixture.Channel.ID)
+	if channel.Password == fixture.Channel.Password ||
+		channel.Salt == fixture.Channel.Salt {
+		t.Fatal("password is not stored in channel")
+	}
+
+	// Check pre publish job created.
+	env.deleteJob(t, data.JobAgentPreEndpointMsgSOMCPublish,
+		data.JobEndpoint, endpoint.ID)
+
+	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
 // func testSOMCReceivedEndpoint(t *testing.T, fixture *workerTestFixture) {
@@ -357,7 +399,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 }
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
-	fixture *workerTestFixture, env *testEnv,
+	fixture *workerTestFixture, env *workerTest,
 	setupPrice uint64, billingType, expectedStatus string) {
 
 	fixture.Channel.ServiceStatus = data.ServicePending
@@ -376,7 +418,7 @@ func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. If pre_paid OR setup_price > 0, then
 	// svc_status="Suspended"
 	// else svc_status="Active"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterEndpointMsgSOMCPublish,
 		data.JobChannel)
 	defer env.close()
@@ -395,7 +437,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 1. PSC.registerServiceOffering()
 	// 2. msg_status="bchain_publishing"
 	// 3. offer_status="register"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
 		data.JobOfferring)
 	defer env.close()
@@ -433,7 +475,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	// 1. msg_status="bchain_published"
 	// 2. "preOfferingMsgSOMCPublish"
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterOfferingMsgBCPublish,
 		data.JobOfferring)
 	defer env.close()
@@ -514,7 +556,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 func TestAgentPreAccountAddBalanceApprove(t *testing.T) {
 	// 1. check PTC balance PTC.balanceOf()
 	// 2. PTC.approve()
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreAccountAddBalanceApprove,
 		data.JobAccount)
 	defer env.close()
@@ -544,7 +586,7 @@ func TestAgentPreAccountAddBalanceApprove(t *testing.T) {
 
 func TestAgentPreAccountAddBalance(t *testing.T) {
 	// 1. PSC.addBalanceERC20()
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreAccountAddBalance,
 		data.JobAccount)
 	defer env.close()
@@ -568,7 +610,7 @@ func TestAgentPreAccountAddBalance(t *testing.T) {
 
 func TestAgentAfterAccountAddBalance(t *testing.T) {
 	// 1. update balance in DB
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterAccountAddBalance,
 		data.JobAccount)
 	defer env.close()
@@ -596,7 +638,7 @@ func TestAgentAfterAccountAddBalance(t *testing.T) {
 func TestAgentPreAccountReturnBalance(t *testing.T) {
 	// 1. check PSC balance PSC.balanceOf()
 	// 2. PSC.returnBalanceERC20()
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreAccountReturnBalance,
 		data.JobAccount)
 	defer env.close()
@@ -625,7 +667,7 @@ func TestAgentPreAccountReturnBalance(t *testing.T) {
 
 func TestAgentAfterAccountReturnBalance(t *testing.T) {
 	// 1. update balance in DB
-	env := newTestEnv(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterAccountReturnBalance,
 		data.JobAccount)
 	defer env.close()

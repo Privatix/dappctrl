@@ -259,7 +259,7 @@ CREATE TABLE endpoints (
     username varchar(100),
     password varchar(48),
     additional_params json, -- all additional parameters stored as JSON
-    raw_msg text -- raw message in base64 (RFC-4648)
+    raw_msg text NOT NULL -- raw message in base64 (RFC-4648)
 );
 
 -- Job queue.

@@ -60,8 +60,20 @@ func (w *Worker) account(ethAddr string) (account *data.Account, err error) {
 	return
 }
 
+func (w *Worker) user(ethAddr string) (user *data.User, err error) {
+	user = &data.User{}
+	err = w.db.FindOneTo(user, "eth_addr", ethAddr)
+	return
+}
+
 func (w *Worker) template(pk string) (template *data.Template, err error) {
 	template = &data.Template{}
 	err = w.db.FindByPrimaryKeyTo(template, pk)
+	return
+}
+
+func (w *Worker) templateByHash(hash string) (template *data.Template, err error) {
+	template = &data.Template{}
+	err = w.db.FindOneTo(template, "hash", hash)
 	return
 }

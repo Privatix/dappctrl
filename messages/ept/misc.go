@@ -2,7 +2,6 @@ package ept
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 
 	"github.com/sethvargo/go-password/password"
@@ -15,7 +14,6 @@ func validMsg(schema []byte, msg Message) bool {
 
 	result, err := gojsonschema.Validate(sch, loader)
 	if err != nil || !result.Valid() || len(result.Errors()) != 0 {
-		fmt.Printf("%+v\n", result.Errors())
 		return false
 	}
 	return true
@@ -43,7 +41,6 @@ func genPass() string {
 	// Password of length 12 with up to 5 digits and 0 symbols,
 	// allowing no repeats.
 	generated, _ := password.Generate(12, rand.Intn(5), 0, false, false)
-	fmt.Println(generated)
 	return generated
 }
 

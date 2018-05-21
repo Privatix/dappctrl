@@ -7,7 +7,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/pay"
 )
 
 const (
@@ -58,12 +57,12 @@ func newResult(tpl *Message, err error) *result {
 
 // New function for initialize the service for generating
 // the Endpoint Message
-func New(db *reform.DB, payConfig *pay.Config) (*Service, error) {
-	if db == nil || payConfig == nil {
+func New(db *reform.DB, payAddr string) (*Service, error) {
+	if db == nil {
 		return nil, ErrInput
 	}
 
-	return &Service{db, make(chan *req), payConfig.Addr}, nil
+	return &Service{db, make(chan *req), payAddr}, nil
 }
 
 // EndpointMessage returns the endpoint message object
@@ -159,7 +158,7 @@ func (s *Service) objects(done chan bool, errC chan error,
 			terminate <- true
 		case err := <-localErr:
 			if err != nil {
-				errC <- errWrapper(err, invalidProduct)
+				errC <- errWrapper(err, invalidTemplate)
 				terminate <- true
 			}
 		}

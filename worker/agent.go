@@ -1,8 +1,13 @@
 package worker
 
 import (
+	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -10,6 +15,8 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/util"
 )
 
 // AgentAfterChannelCreate registers client and creates pre service create job.
@@ -47,6 +54,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 	}
 
 	if err := tx.Commit(); err != nil {
+		tx.Rollback()
 		return err
 	}
 
@@ -254,10 +262,105 @@ func (w *Worker) agentUpdateServiceStatus(job *data.Job, jobType string) error {
 	return w.db.Update(channel)
 }
 
-// AgentPreEndpointMessageCreate prepares endpoint message to be sent to client.
-func (w *Worker) AgentPreEndpointMessageCreate(job *data.Job) error {
-	// TODO
-	return nil
+// AgentPreEndpointMsgCreate prepares endpoint message to be sent to client.
+func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
+	channel, err := w.relatedChannel(job, data.JobAgentPreEndpointMsgCreate)
+	if err != nil {
+		return err
+	}
+
+	// TODO: move timeout to conf.
+	msg, err := w.ept.EndpointMessage(channel.ID, time.Second)
+	if err != nil {
+		return err
+	}
+
+	template, err := w.templateByHash(msg.TemplateHash)
+	if err != nil {
+		return err
+	}
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	client, err := w.user(channel.Client)
+	if err != nil {
+		return err
+	}
+
+	clientPub, err := data.ToBytes(client.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	agent, err := w.account(channel.Agent)
+	if err != nil {
+		return err
+	}
+
+	agentKey, err := w.key(agent.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	msgSealed, err := messages.AgentSeal(msgBytes, clientPub, agentKey)
+	if err != nil {
+		return err
+	}
+
+	hash, err := messages.Hash(msgSealed)
+	if err != nil {
+		return err
+	}
+
+	newEndpoint := &data.Endpoint{
+		ID:               util.NewUUID(),
+		Template:         template.ID,
+		Channel:          channel.ID,
+		Hash:             data.FromBytes(hash),
+		RawMsg:           data.FromBytes(msgSealed),
+		Status:           data.MsgUnpublished,
+		AdditionalParams: []byte("{}"),
+	}
+
+	salt, err := rand.Int(rand.Reader, big.NewInt(9*1e18))
+	if err != nil {
+		return err
+	}
+
+	salted := append([]byte(msg.Password), salt.Bytes()...)
+	passwordHash, err := bcrypt.GenerateFromPassword(salted, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	channel.Password = data.FromBytes(passwordHash)
+	channel.Salt = salt.Uint64()
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err = tx.Insert(newEndpoint); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err = tx.Update(channel); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return w.addJob(data.JobAgentPreEndpointMsgSOMCPublish,
+		data.JobEndpoint, newEndpoint.ID)
 }
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.

@@ -9,10 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/messages"
-	"github.com/privatix/dappctrl/messages/so"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -54,27 +51,6 @@ func validOfferingPayload() data.Offering {
 	}
 }
 
-func testOfferingReply(t *testing.T, agent *data.Account,
-	template *data.Template, offering *data.Offering) {
-	// TODO: figure out how to store hash and signature.
-	// test hash
-	msg := so.OfferingMessage(agent, template, offering)
-	msgBytes, _ := json.Marshal(msg)
-	key, _ := data.TestToPrivateKey(agent.PrivateKey, testPassword)
-	packed, _ := messages.PackWithSignature(msgBytes, key)
-
-	expected := data.FromBytes(packed)
-	if offering.RawMsg != expected {
-		t.Fatal("wrong raw msg stored")
-	}
-
-	hash := crypto.Keccak256(packed)
-	expected = data.FromBytes(hash)
-	if offering.Hash != expected {
-		t.Fatalf("expected hash %s, got: %s", expected, offering.Hash)
-	}
-}
-
 func sendOffering(t *testing.T, v *data.Offering, m string) *http.Response {
 	return sendPayload(t, m, offeringsPath, v)
 }
@@ -99,11 +75,6 @@ func TestPostOfferingSuccess(t *testing.T) {
 	if res.StatusCode != http.StatusCreated {
 		t.Errorf("failed to create, response: %d", res.StatusCode)
 	}
-	reply := &replyEntity{}
-	json.NewDecoder(res.Body).Decode(reply)
-	offering := &data.Offering{}
-	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
-	testOfferingReply(t, testAgent, testTpl, offering)
 }
 
 func TestPostOfferingValidation(t *testing.T) {
@@ -196,11 +167,6 @@ func TestPutOfferingSuccess(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("failed to put, response: %d", res.StatusCode)
 	}
-	reply := &replyEntity{}
-	json.NewDecoder(res.Body).Decode(reply)
-	offering := &data.Offering{}
-	testServer.db.FindByPrimaryKeyTo(offering, reply.ID)
-	testOfferingReply(t, testAgent, testTpl, offering)
 }
 
 func testGetOfferings(t *testing.T, id, product, status string, exp int) {

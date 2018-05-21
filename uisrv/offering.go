@@ -1,14 +1,9 @@
 package uisrv
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/privatix/dappctrl/messages"
-
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/messages/so"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -111,29 +106,6 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	offering.Status = data.MsgUnpublished
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
-
-	template := &data.Template{}
-	if err := s.db.FindByPrimaryKeyTo(template, offering.Template); err != nil {
-		return err
-	}
-
-	agentKey, err := s.decryptKeyFunc(agent.PrivateKey, s.pwdStorage.Get())
-	if err != nil {
-		return err
-	}
-
-	msg := so.OfferingMessage(agent, template, offering)
-
-	msgBytes, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	msgPacked, err := messages.PackWithSignature(msgBytes, agentKey)
-
-	offering.RawMsg = data.FromBytes(msgPacked)
-
-	offering.Hash = data.FromBytes(crypto.Keccak256(msgPacked))
 
 	return nil
 }

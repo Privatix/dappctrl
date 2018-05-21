@@ -4,7 +4,7 @@ BEGIN TRANSACTION;
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates kinds.
-CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
+CREATE TYPE tpl_kind AS ENUM ('offer', 'access');
 
 -- Billing types.
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
@@ -87,7 +87,8 @@ CREATE TYPE job_status AS ENUM (
 CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
-    'endpoint' -- service endpoint
+    'endpoint', -- service endpoint
+    'account' -- ethereum account
 );
 
 CREATE TABLE settings (
@@ -109,10 +110,13 @@ CREATE TABLE accounts (
     in_use boolean NOT NULL DEFAULT TRUE, -- this account is in use or not
     name varchar(30) NOT NULL -- display name
         CONSTRAINT unique_account_name UNIQUE,
+
     ptc_balance bigint NOT NULL -- PTC balance
         CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
+
     psc_balance bigint NOT NULL -- PSC balance
         CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
+        
     eth_balance char(32) NOT NULL, -- ethereum balance up to 99999 ETH in WEI. Ethereum's uint192 in base64 (RFC-4648).
     last_balance_check timestamp with time zone -- time when balance was checked
 );
@@ -138,7 +142,6 @@ CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
-    -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
     usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
     is_server boolean NOT NULL, -- product is defined as server (Agent) or client (Client)
@@ -191,31 +194,32 @@ CREATE TABLE offerings (
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
+
     additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
 
 -- State channels.
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
-    is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
     agent eth_addr NOT NULL,
     client eth_addr NOT NULL,
     offering uuid NOT NULL REFERENCES offerings(id),
     block int NOT NULL -- block number, when state channel created
-        CONSTRAINT positive_block CHECK (channels.block > 0),
+        CONSTRAINT positive_block CHECK (channels.block >= 0),
 
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
     total_deposit bigint NOT NULL -- total deposit after all top-ups
         CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
-    salt bigint NOT NULL, -- password salt
+
+    salt bigint, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
-    password sha3_256 NOT NULL,
-    -- TODO change to bigint
+    password sha3_256,
     receipt_balance bigint NOT NULL -- last payment amount received
         CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
-    receipt_signature text NOT NULL -- signature corresponding to last payment
+
+    receipt_signature text -- signature corresponding to last payment
 );
 
 -- Client sessions.
@@ -270,7 +274,8 @@ CREATE TABLE jobs (
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
     not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    try_count smallint NOT NULL -- number of tries performed
+    try_count smallint NOT NULL, -- number of tries performed
+    data json -- job data storage
 );
 
 -- Ethereum transactions.
@@ -293,7 +298,9 @@ CREATE TABLE eth_txs (
     gas bigint
         CONSTRAINT positive_gas CHECK (eth_txs.gas > 0), -- tx gas field
 
-    tx_raw jsonb -- raw tx as was sent
+    tx_raw jsonb, -- raw tx as was sent
+    related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    related_id uuid NOT NULL -- related object (offering, channel, endpoint, etc.)
 );
 
 -- Ethereum events.

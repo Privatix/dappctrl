@@ -90,12 +90,13 @@ type productTestData struct {
 	Product   *data.Product
 }
 
-func createProductTestData(t *testing.T) *productTestData {
+func createProductTestData(t *testing.T, agent bool) *productTestData {
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	tplAccess := data.NewTestTemplate(data.TemplateAccess)
 	prod := data.NewTestProduct()
 	prod.OfferTplID = &tplOffer.ID
 	prod.OfferAccessID = &tplAccess.ID
+	prod.IsServer = agent
 	insertItems(t, tplOffer, tplAccess, prod)
 	return &productTestData{tplOffer, tplAccess, prod}
 }
@@ -104,7 +105,7 @@ func TestPutProduct(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
-	testData := createProductTestData(t)
+	testData := createProductTestData(t, true)
 	payload := validProductPayload(testData.TplOffer.ID, testData.TplAccess.ID)
 	payload.ID = testData.Product.ID
 	res := putProduct(t, &payload)
@@ -121,12 +122,15 @@ func TestPutProduct(t *testing.T) {
 	}
 }
 
-func getProducts(t *testing.T) *http.Response {
-	return getResources(t, productsPath, nil)
+func getProducts(t *testing.T, agent bool) *http.Response {
+	if agent {
+		return getResources(t, productsPath, nil)
+	}
+	return getResources(t, clientProductsPath, nil)
 }
 
-func testGetProducts(t *testing.T, exp int) {
-	res := getProducts(t)
+func testGetProducts(t *testing.T, exp int, agent bool) {
+	res := getProducts(t, agent)
 	testGetResources(t, res, exp)
 }
 
@@ -135,8 +139,13 @@ func TestGetProducts(t *testing.T) {
 	setTestUserCredentials(t)
 
 	// Get empty list.
-	testGetProducts(t, 0)
-	// Get all products.
-	createProductTestData(t)
-	testGetProducts(t, 1)
+	testGetProducts(t, 0, true)
+
+	// Get all products for Agent.
+	createProductTestData(t, true)
+	testGetProducts(t, 1, true)
+
+	// Get all products for Client.
+	createProductTestData(t, false)
+	testGetProducts(t, 1, false)
 }

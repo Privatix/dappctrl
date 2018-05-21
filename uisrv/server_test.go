@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privatix/dappctrl/eth/truffle"
-
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -126,6 +126,15 @@ func createTestChannel(t *testing.T) *data.Channel {
 		offering,
 		ch)
 	return ch
+}
+
+func genEthAddr(t *testing.T) string {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data.FromBytes(
+		crypto.PubkeyToAddress(key.PublicKey).Bytes())
 }
 
 func sendPayload(t *testing.T,

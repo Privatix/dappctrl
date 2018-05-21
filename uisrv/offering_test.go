@@ -209,17 +209,35 @@ func TestGetOffering(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
+	createNotUsedAcc := func(t *testing.T) *data.Account {
+		acc := data.NewTestAccount(testPassword)
+		acc.InUse = false
+		insertItems(t, acc)
+		return acc
+	}
+
 	createOfferingFixtures(t)
 	// Get empty list.
 	testGetOfferings(t, "", "", "", 0)
 
 	// Insert test offerings.
-	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1 := data.NewTestOffering(testAgent.EthAddr,
+		testProd.ID, testTpl.ID)
 	off1.OfferStatus = data.OfferRegister
-	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+
+	off2 := data.NewTestOffering(testAgent.EthAddr,
+		testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferEmpty
 
-	insertItems(t, off1, off2)
+	off3 := data.NewTestOffering(createNotUsedAcc(t).EthAddr,
+		testProd.ID, testTpl.ID)
+	off3.OfferStatus = data.OfferRegister
+
+	off4 := data.NewTestOffering(genEthAddr(t),
+		testProd.ID, testTpl.ID)
+	off4.OfferStatus = data.OfferRegister
+
+	insertItems(t, off1, off2, off3, off4)
 
 	// Get all offerings.
 	testGetOfferings(t, "", "", "", 2)
@@ -252,26 +270,32 @@ func TestGetClientOffering(t *testing.T) {
 	testGetClientOfferings(t, "", "", "", 0)
 
 	// Insert test offerings.
-	off1 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off1.OfferStatus = data.OfferRegister
 	off1.IsLocal = false
 	off1.Country = "US"
 
-	off2 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off2 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferRegister
 	off2.IsLocal = false
 	off2.Country = "SU"
 
-	off3 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off3 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off3.OfferStatus = data.OfferEmpty
 	off3.IsLocal = false
 	off3.Country = "SU"
 
-	off4 := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
+	off4 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off4.OfferStatus = data.OfferEmpty
 	off4.IsLocal = true
 
-	insertItems(t, off1, off2, off3)
+	off5 := data.NewTestOffering(testAgent.EthAddr, testProd.ID,
+		testTpl.ID)
+	off5.OfferStatus = data.OfferRegister
+	off5.IsLocal = false
+	off5.Country = "SU"
+
+	insertItems(t, off1, off2, off3, off4, off5)
 
 	// all non-local offerings
 	testGetClientOfferings(t, "", "", "", 2)

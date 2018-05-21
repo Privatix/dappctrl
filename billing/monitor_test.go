@@ -4,34 +4,50 @@ package billing
 
 import (
 	"os"
-	"sync"
 	"testing"
 	"time"
 
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
 var (
 	conf struct {
-		DB          *data.DBConfig
-		Log         *util.LogConfig
 		BillingTest *billingTestConfig
+		DB          *data.DBConfig
+		Job         *job.Config
+		Log         *util.LogConfig
+		Pc          *proc.Config
 	}
-	testDB  *reform.DB
-	testMon *atomicMonitor
+
+	db     *reform.DB
+	logger *util.Logger
+	mon    *Monitor
+	pr     *proc.Processor
 )
 
 const (
+	jobRelatedID = "related_id"
+
 	testPassword = "test-password"
 )
 
-type atomicMonitor struct {
-	mu  sync.Mutex
-	mon *Monitor
-}
+const (
+	errAccNotUsed = "Billing processes channels with" +
+		" not used account"
+
+	errChStatusPending = "Billing processes channels with channel" +
+		" status is pending"
+
+	errDB = "Failed to read channel information" +
+		" from the database"
+
+	errTestResult = "Wrong result"
+)
 
 type billingTestConfig struct {
 	Offer   offer
@@ -48,18 +64,14 @@ type offer struct {
 }
 
 type session struct {
-	UnitsUsed            uint64
-	EmptyUnitsUsed       uint64
-	SecondsConsumed      uint64
-	EmptySecondsConsumed uint64
+	UnitsUsed       uint64
+	SecondsConsumed uint64
 }
 
 type channel struct {
-	SmallDeposit   uint64
-	MidDeposit     uint64
-	BigDeposit     uint64
-	EmptyBalance   uint64
-	EmptyUnitsUsed uint64
+	SmallDeposit uint64
+	MidDeposit   uint64
+	BigDeposit   uint64
 }
 
 type testFixture struct {
@@ -69,55 +81,16 @@ type testFixture struct {
 	product  *data.Product
 	template *data.Template
 	testObjs []reform.Record
+	chs      []*data.Channel
 }
 
-func newTestMonitor(mon *Monitor) *atomicMonitor {
-	return &atomicMonitor{
-		mu:  sync.Mutex{},
-		mon: mon,
+func newTestMonitor(interval time.Duration, db *reform.DB,
+	logger *util.Logger, pc *proc.Processor) *Monitor {
+	mon, err := NewMonitor(interval, db, logger, pc)
+	if err != nil {
+		panic(err)
 	}
-}
-
-func (a *atomicMonitor) testsSelectedChannelsIDs() []string {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.testsSelectedChannelsIDs
-}
-
-func (a *atomicMonitor) VerifySecondsBasedChannels() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySecondsBasedChannels()
-}
-
-func (a *atomicMonitor) VerifyUnitsBasedChannels() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyUnitsBasedChannels()
-}
-
-func (a *atomicMonitor) VerifyBillingLags() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyBillingLags()
-}
-
-func (a *atomicMonitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySuspendedChannelsAndTryToUnsuspend()
-}
-
-func (a *atomicMonitor) VerifyChannelsForInactivity() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifyChannelsForInactivity()
-}
-
-func (a *atomicMonitor) VerifySuspendedChannelsAndTryToTerminate() error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.mon.VerifySuspendedChannelsAndTryToTerminate()
+	return mon
 }
 
 func newBillingTestConfig() *billingTestConfig {
@@ -139,7 +112,7 @@ func newFixture(t *testing.T) *testFixture {
 
 	template := data.NewTestTemplate(data.TemplateOffer)
 
-	data.InsertToTestDB(t, testDB, client, agent, product, template)
+	data.InsertToTestDB(t, db, client, agent, product, template)
 
 	return &testFixture{
 		t:        t,
@@ -151,9 +124,9 @@ func newFixture(t *testing.T) *testFixture {
 }
 
 func (f *testFixture) addTestObjects(testObjs []reform.Record) {
-	data.SaveToTestDB(f.t, testDB, testObjs...)
+	data.SaveToTestDB(f.t, db, testObjs...)
 
-	f.testObjs = testObjs
+	f.testObjs = append(f.testObjs, testObjs...)
 }
 
 func (f *testFixture) clean() {
@@ -165,9 +138,42 @@ func (f *testFixture) clean() {
 	reverse(records)
 
 	for _, v := range records {
-		if err := testDB.Delete(v); err != nil {
+		if err := db.Delete(v); err != nil {
 			f.t.Fatalf("failed to delete %T: %s", v, err)
 		}
+	}
+}
+
+func (f *testFixture) checkJob(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	checker(t)
+
+	if !done(f.chs[ch].ID, status) {
+		t.Fatal(errTestResult)
+	}
+}
+
+func (f *testFixture) checkChanStatus(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	chStatus(t, f.chs[ch], data.ChannelPending)
+
+	checker(t)
+
+	if done(f.chs[ch].ID, status) {
+		t.Fatal(errChStatusPending)
+	}
+
+	chStatus(t, f.chs[ch], data.ChannelActive)
+}
+
+func (f *testFixture) checkAcc(t *testing.T, ch int,
+	checker func(t *testing.T), status string) {
+	accNotUse(t, f.agent)
+
+	checker(t)
+
+	if done(f.chs[ch].ID, status) {
+		t.Fatal(errAccNotUsed)
 	}
 }
 
@@ -207,479 +213,99 @@ func sesFabric(chanID string, secondsConsumed,
 	return sessions
 }
 
-func TestMain(m *testing.M) {
-	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
-	conf.BillingTest = newBillingTestConfig()
+func done(id, status string) bool {
+	var j data.Job
 
-	util.ReadTestConfig(&conf)
-
-	logger := util.NewTestLogger(conf.Log)
-
-	testDB = data.NewTestDB(conf.DB, logger)
-
-	defer data.CloseDB(testDB)
-
-	if _, err := NewMonitor(time.Second, nil, logger); err == nil {
-		panic("Monitor object with empty database is created")
+	if err := db.FindOneTo(&j, jobRelatedID, id); err != nil {
+		return false
 	}
 
-	mon, err := NewMonitor(time.Second, testDB, logger)
+	defer remJob(j)
+
+	if j.CreatedBy != data.JobBillingChecker ||
+		j.Type != status ||
+		j.Status != data.JobActive {
+		return false
+	}
+
+	return true
+}
+
+func remJob(j data.Job) {
+	db.Delete(&j)
+}
+
+func chStatus(t *testing.T, ch *data.Channel, status string) {
+	ch.ChannelStatus = status
+	if err := db.Update(ch); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func accNotUse(t *testing.T, acc *data.Account) {
+	acc.InUse = false
+	if err := db.Update(acc); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNewMonitor(t *testing.T) {
+	_, err := NewMonitor(-1, db, logger, pr)
+	if err == nil || err != ErrInput {
+		t.Fatal(errTestResult)
+	}
+
+	_, err = NewMonitor(time.Second, nil, logger, pr)
+	if err == nil || err != ErrInput {
+		t.Fatal(errTestResult)
+	}
+
+	_, err = NewMonitor(time.Second, db, nil, pr)
+	if err == nil || err != ErrInput {
+		t.Fatal(errTestResult)
+	}
+
+	_, err = NewMonitor(time.Second, db, logger, nil)
+	if err == nil || err != ErrInput {
+		t.Fatal(errTestResult)
+	}
+}
+
+func TestMonitorRun(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal(errTestResult)
+		}
+	}()
+
+	mon, err := NewMonitor(time.Second, &reform.DB{}, logger, pr)
 	if err != nil {
 		panic(err)
 	}
 
-	mon.testMode = true
+	if err := mon.Run(); err == nil {
+		t.Fatal(errTestResult)
+	}
+}
 
-	testMon = newTestMonitor(mon)
+func TestMain(m *testing.M) {
+	conf.DB = data.NewDBConfig()
+	conf.Job = job.NewConfig()
+	conf.Log = util.NewLogConfig()
+	conf.Pc = proc.NewConfig()
+	conf.BillingTest = newBillingTestConfig()
+
+	util.ReadTestConfig(&conf)
+
+	logger = util.NewTestLogger(conf.Log)
+
+	db = data.NewTestDB(conf.DB, logger)
+	defer data.CloseDB(db)
+
+	queue := job.NewQueue(conf.Job, logger, db, nil)
+	pr = proc.NewProcessor(conf.Pc, queue)
+
+	mon = newTestMonitor(time.Second, db, logger, pr)
 
 	os.Exit(m.Run())
-}
-
-// Source conditions:
-// There are 2 active SECONDS-based channels.
-// First one has very low "total_deposit", that is less,
-// than offering setup price.
-// Second one has enough "total_deposit", that is greater
-// than offering setup price.
-//
-// Expected result:
-// Channel 1 is selected for suspending.
-// Channel 2 is not affected.
-//
-// Description: this test checks first rule in HAVING block.
-func TestVerifySecondsBasedChannelsLowTotalDeposit(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.SmallDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.MidDeposit,
-		data.ChannelActive)
-
-	fixture.addTestObjects([]reform.Record{
-		offering, channel1, channel2})
-
-	if err := testMon.VerifySecondsBasedChannels(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There are 2 active SECONDS-based channels.
-// First one has 3 sessions records, that used in total more seconds,
-// than is provided by the offering.
-// Second one has 2 sessions records, that used less seconds,
-// than provided by the offering.
-//
-// Expected result:
-// Channel 1 is selected for suspending.
-// Channel 2 is not affected.
-//
-// Description: this test checks second rule in HAVING block.
-func TestVerifySecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering.MaxUnit = &conf.BillingTest.Offer.MaxUnit
-
-	offering.UnitPrice = conf.BillingTest.Offer.UnitPrice
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.EmptyUnitsUsed,
-		0, 3)
-
-	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.EmptyUnitsUsed,
-		0, 2)
-
-	fixture.addTestObjects([]reform.Record{
-		offering, channel1, channel2,
-		sesChannel1[0], sesChannel1[1], sesChannel1[2],
-		sesChannel2[0], sesChannel2[1]},
-	)
-
-	if err := testMon.VerifySecondsBasedChannels(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There are 2 active UNITS-based channels.
-// First one has very low "total_deposit", that is less,
-// than offering setup price.
-// Second one has enough "total_deposit",
-// that is greater than offering setup price.
-//
-// Expected result:
-// Channel 1 is selected for suspending.
-// Channel 2 is not affected.
-//
-// Description: this test checks first rule in HAVING block.
-func TestVerifyUnitsBasedChannelsLowTotalDeposit(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering.UnitType = data.UnitScalar
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.SmallDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.MidDeposit,
-		data.ChannelActive)
-
-	fixture.addTestObjects([]reform.Record{
-		offering, channel1, channel2})
-
-	if err := testMon.VerifyUnitsBasedChannels(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There are 2 active UNITS-based channels.
-// First one has 3 sessions records, that used in total more units,
-// than is provided by the offering.
-// Second one has 2 sessions records, that used less seconds,
-// than provided by the offering.
-//
-// Expected result:
-// Channel 1 is selected for suspending.
-// Channel 2 is not affected.
-//
-// Description: this test checks second rule in HAVING block.
-func TestVerifyUnitsBasedChannelsUnitLimitExceeded(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering.MaxUnit = &conf.BillingTest.Offer.MaxUnit
-
-	offering.UnitPrice = conf.BillingTest.Offer.UnitPrice
-
-	offering.UnitType = data.UnitScalar
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.EmptySecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed,
-		0, 3)
-
-	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.EmptySecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed,
-		0, 2)
-
-	fixture.addTestObjects([]reform.Record{
-		offering, channel1, channel2,
-		sesChannel1[0], sesChannel1[1], sesChannel1[2],
-		sesChannel2[0], sesChannel2[1]},
-	)
-
-	if err := testMon.VerifyUnitsBasedChannels(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There are 2 active channels, that are related to 2 different offerings.
-// First offering has relatively big billing lag.
-// Seconds one has very small billing lag.
-//
-// Expected result:
-// Channel 1 is not affected.
-// Channel 2 is selected for suspending.
-func TestVerifyBillingLags(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering1 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering1.MaxBillingUnitLag = conf.BillingTest.Offer.BigLag
-
-	offering2 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering2.MaxBillingUnitLag = conf.BillingTest.Offer.SmallLag
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering1.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering2.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, 0, 3)
-
-	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, 0, 2)
-
-	fixture.addTestObjects([]reform.Record{offering1, offering2,
-		channel1, channel2, sesChannel1[0],
-		sesChannel1[1], sesChannel1[2],
-		sesChannel2[0], sesChannel2[1]},
-	)
-
-	if err := testMon.VerifyBillingLags(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel2.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There are 2 suspended channels, that are related to 2 different offerings.
-// First offering has relatively big billing lag, so on the next check
-// would be interpret as paid.
-// Seconds one has very small billing lag, so on the next check
-// would be interpret as not paid.
-//
-// Expected result:
-// Channel 1 is selected for UNsuspending.
-// Channel 2 is not affected.
-func TestVerifySuspendedChannelsAndTryToUnsuspend(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering1 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering1.MaxBillingUnitLag = conf.BillingTest.Offer.BigLag
-
-	offering2 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering2.MaxBillingUnitLag = conf.BillingTest.Offer.SmallLag
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering1.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel1.ServiceStatus = data.ServiceSuspended
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering2.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel2.ServiceStatus = data.ServiceSuspended
-
-	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, 0, 3)
-
-	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, 0, 2)
-
-	fixture.addTestObjects([]reform.Record{offering1, offering2,
-		channel1, channel2, sesChannel1[0],
-		sesChannel1[1], sesChannel1[2],
-		sesChannel2[0], sesChannel2[1]},
-	)
-
-	if err := testMon.VerifySuspendedChannelsAndTryToUnsuspend(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be unsuspended")
-	}
-}
-
-// Source conditions:
-// There are 2 active channels, that are related to 2 different offerings.
-// First offering has several obsolete session records and is inactive.
-// Seconds one has no one obsolete session record
-// (but has fresh sessions records as well).
-//
-// Expected result:
-// Channel 1 is selected for suspending.
-// Channel 2 is not affected.
-func TestVerifyChannelsForInactivity(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	offering1 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering1.MaxInactiveTimeSec =
-		&conf.BillingTest.Offer.MaxInactiveTimeSec
-
-	offering2 := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	offering2.MaxInactiveTimeSec =
-		&conf.BillingTest.Offer.MaxInactiveTimeSec
-
-	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering1.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel2 := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering2.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	sesChannel1 := sesFabric(channel1.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, -100, 2)
-
-	sesChannel2 := sesFabric(channel2.ID,
-		conf.BillingTest.Session.SecondsConsumed,
-		conf.BillingTest.Session.UnitsUsed, 0, 2)
-
-	fixture.addTestObjects([]reform.Record{offering1, offering2,
-		channel1, channel2, sesChannel1[0], sesChannel1[1],
-		sesChannel2[0], sesChannel2[1]})
-
-	if err := testMon.VerifyChannelsForInactivity(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel1.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
-}
-
-// Source conditions:
-// There is one suspended channel, that was suspended much earlier,
-// than service offering allows, before terminating.
-//
-// Expected result:
-// Channel 1 is selected for terminating.
-func TestVerifySuspendedChannelsAndTryToTerminate(t *testing.T) {
-	fixture := newFixture(t)
-	defer fixture.clean()
-
-	pastTime := time.Now().Add(time.Second * (-100))
-
-	offering := data.NewTestOffering(fixture.agent.EthAddr,
-		fixture.product.ID, fixture.template.ID)
-
-	channel := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, offering.ID,
-		conf.BillingTest.Channel.EmptyBalance,
-		conf.BillingTest.Channel.BigDeposit,
-		data.ChannelActive)
-
-	channel.ServiceStatus = data.ServiceSuspended
-
-	channel.ServiceChangedTime = &pastTime
-
-	fixture.addTestObjects([]reform.Record{offering, channel})
-
-	if err := testMon.VerifySuspendedChannelsAndTryToTerminate(); err != nil {
-		t.Fatalf("Failed to read channel information" +
-			" from the database")
-	}
-
-	if len(testMon.testsSelectedChannelsIDs()) != 1 ||
-		testMon.testsSelectedChannelsIDs()[0] != channel.ID {
-		t.Fatal("Billing ignored channel," +
-			" that must be suspended")
-	}
 }

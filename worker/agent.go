@@ -16,6 +16,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -469,16 +470,47 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	rawMsg, err := data.ToBytes(offering.RawMsg)
+	agent, err := w.account(offering.Agent)
 	if err != nil {
 		return err
 	}
 
-	if err = w.somc.PublishOffering(rawMsg); err != nil {
+	template, err := w.template(offering.Template)
+	if err != nil {
 		return err
 	}
 
+	msg := offer.OfferingMessage(agent, template, offering)
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	agentKey, err := w.key(agent.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	packed, err := messages.PackWithSignature(msgBytes, agentKey)
+	if err != nil {
+		return err
+	}
+
+	offering.RawMsg = data.FromBytes(packed)
+
+	offering.Hash = data.FromBytes(crypto.Keccak256(packed))
+
 	offering.Status = data.MsgChPublished
+
+	if err = w.db.Update(offering); err != nil {
+		return err
+	}
+
+	if err = w.somc.PublishOffering(packed); err != nil {
+		return err
+	}
+
 	return w.db.Update(offering)
 }
 

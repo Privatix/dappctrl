@@ -1,4 +1,4 @@
-package so
+package offer
 
 // Message is a message being published to SOMC.
 type Message struct {

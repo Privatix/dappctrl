@@ -1,4 +1,4 @@
-package so
+package offer
 
 import (
 	"github.com/privatix/dappctrl/data"

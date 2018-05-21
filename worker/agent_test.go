@@ -525,17 +525,28 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	workerF := env.worker.AgentPreOfferingMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
-	select {
-	case ret := <-somcOfferingsChan:
-		t.Log(ret)
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
-	}
-
 	offering := &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
 	if offering.Status != data.MsgChPublished {
 		t.Fatal("offering's status is not updated")
+	}
+
+	select {
+	case ret := <-somcOfferingsChan:
+		if offering.RawMsg == "" {
+			t.Fatal("offerring message is not filled")
+		}
+		if offering.Hash == "" {
+			t.Fatal("offering hash is not filled")
+		}
+		if ret.Data != offering.RawMsg {
+			t.Fatal("wrong offering published")
+		}
+		if ret.Hash != offering.Hash {
+			t.Fatal("wrong hash stored")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout")
 	}
 
 	testCommonErrors(t, workerF, *fixture.job)

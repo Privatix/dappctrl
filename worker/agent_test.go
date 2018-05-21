@@ -1,9 +1,13 @@
 package worker
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
+	"time"
+
+	"github.com/privatix/dappctrl/somc"
 
 	"github.com/privatix/dappctrl/messages"
 
@@ -395,7 +399,44 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
 	// 3. "afterEndpointMsgSOMCPublish"
-	t.Skip("Publish Endpoint message BV-233")
+	env := newWorkerTest(t)
+	fixture := env.newTestFixture(t,
+		data.JobAgentPreEndpointMsgSOMCPublish, data.JobEndpoint)
+	defer env.close()
+	defer fixture.close()
+
+	somcEndpointCh := make(chan somc.TestEndpointParams)
+	go func() {
+		somcEndpointCh <- env.fakeSOMC.ReadPublishEndpoint(t)
+	}()
+
+	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
+	runJob(t, workerF, fixture.job)
+
+	select {
+	case ret := <-somcEndpointCh:
+		if ret.Channel != fixture.Endpoint.Channel {
+			t.Fatal("wrong channel used to publish endpoint")
+		}
+		msgBytes := data.TestToBytes(t, fixture.Endpoint.RawMsg)
+		if !bytes.Equal(msgBytes, ret.Endpoint) {
+			t.Fatal("wrong endpoint sent to somc")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout")
+	}
+
+	endpoint := &data.Endpoint{}
+	env.findTo(t, endpoint, fixture.Endpoint.ID)
+	if endpoint.Status != data.MsgChPublished {
+		t.Fatal("endpoint status is not updated")
+	}
+
+	// Test after publish job created.
+	env.deleteJob(t, data.JobAgentAfterEndpointMsgSOMCPublish,
+		data.JobChannel, endpoint.Channel)
+
+	testCommonErrors(t, workerF, *fixture.job)
 }
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,

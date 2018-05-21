@@ -1,6 +1,9 @@
+// +build !notest
+
 package somc
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"sync"
@@ -9,6 +12,9 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+// TestEndpointParams used for tests.
+type TestEndpointParams endpointParams
 
 // TestConfig the config related to somc tests.
 type TestConfig struct {
@@ -99,4 +105,16 @@ func (s *FakeSOMC) Write(t *testing.T, msg *JSONRPCMessage) {
 	if err := s.conn.WriteJSON(msg); err != nil {
 		t.Fatalf("failed to write message: %s", err)
 	}
+}
+
+// ReadPublishEndpoint recieves and returns published endpoint.
+func (s *FakeSOMC) ReadPublishEndpoint(t *testing.T) TestEndpointParams {
+	req := s.Read(t, publishEndpointMethod)
+	params := endpointParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
+	}
+	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
+	s.Write(t, &repl)
+	return TestEndpointParams(params)
 }

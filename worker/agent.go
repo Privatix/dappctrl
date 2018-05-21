@@ -365,8 +365,28 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
 func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
-	// TODO
-	return nil
+	endpoint, err := w.relatedEndpoint(job, data.JobAgentPreEndpointMsgSOMCPublish)
+	if err != nil {
+		return err
+	}
+
+	msg, err := data.ToBytes(endpoint.RawMsg)
+	if err != nil {
+		return err
+	}
+
+	if err = w.somc.PublishEndpoint(endpoint.Channel, msg); err != nil {
+		return err
+	}
+
+	endpoint.Status = data.MsgChPublished
+
+	if err = w.db.Update(endpoint); err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobAgentAfterEndpointMsgSOMCPublish,
+		data.JobChannel, endpoint.Channel)
 }
 
 // AgentAfterEndpointMsgSOMCPublish suspends service if some pre payment expected.

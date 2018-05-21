@@ -29,7 +29,7 @@ type Monitor struct {
 
 	lastProcessedBlock uint64
 
-	cancel context.CancelFunc
+	cancel  context.CancelFunc
 	tickers []*time.Ticker
 }
 
@@ -41,17 +41,17 @@ func NewMonitor(
 	eth Client,
 	pscAddr common.Address) *Monitor {
 	return &Monitor{
-		logger: logger,
-		db: db,
-		queue: queue,
-		eth: eth,
+		logger:  logger,
+		db:      db,
+		queue:   queue,
+		eth:     eth,
 		pscAddr: pscAddr,
 	}
 }
 
 func (m *Monitor) start(ctx context.Context, collectTicker, scheduleTicker <-chan time.Time) error {
-	go m.repeatEvery(ctx, collectTicker, "collect", func() {m.collect(ctx)})
-	go m.repeatEvery(ctx, scheduleTicker, "schedule", func() {m.schedule(ctx)})
+	go m.repeatEvery(ctx, collectTicker, "collect", func() { m.collect(ctx) })
+	go m.repeatEvery(ctx, scheduleTicker, "schedule", func() { m.schedule(ctx) })
 
 	m.logger.Debug("monitor started")
 	return nil
@@ -63,7 +63,7 @@ func (m *Monitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	collectTicker := time.NewTicker(10 * time.Second) // FIXME: hardcoded period
+	collectTicker := time.NewTicker(10 * time.Second)  // FIXME: hardcoded period
 	scheduleTicker := time.NewTicker(10 * time.Second) // FIXME: hardcoded period
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
 	return m.start(ctx, collectTicker.C, scheduleTicker.C)
@@ -93,10 +93,10 @@ func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time, name
 
 	for {
 		select {
-			case <-ctx.Done():
-				return
-			case <-ticker:
-				action()
+		case <-ctx.Done():
+			return
+		case <-ticker:
+			action()
 		}
 	}
 }
@@ -105,12 +105,12 @@ func (m *Monitor) getUint64Setting(key string) uint64 {
 	var setting data.Setting
 	err := m.db.FindByPrimaryKeyTo(&setting, key)
 	switch err {
-		case nil:
-			break
-		case sql.ErrNoRows:
-			return 0
-		default:
-			panic(err)
+	case nil:
+		break
+	case sql.ErrNoRows:
+		return 0
+	default:
+		panic(err)
 	}
 
 	value, err := strconv.ParseUint(setting.Value, 10, 64)

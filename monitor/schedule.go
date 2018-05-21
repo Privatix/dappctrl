@@ -20,14 +20,14 @@ const (
 )
 
 var offeringRelatedEventsMap = map[common.Hash]bool{
-	common.HexToHash(eth.EthOfferingCreated): true,
-	common.HexToHash(eth.EthOfferingDeleted): true,
+	common.HexToHash(eth.EthOfferingCreated):  true,
+	common.HexToHash(eth.EthOfferingDeleted):  true,
 	common.HexToHash(eth.EthOfferingPoppedUp): true,
 }
 
 // schedule creates a job for each unprocessed log event in the database.
 func (m *Monitor) schedule(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded duration
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // FIXME: hardcoded duration
 	defer cancel()
 
 	// TODO: Move this logic into a database view? The query is just supposed to
@@ -83,12 +83,12 @@ func (m *Monitor) schedule(ctx context.Context) {
 		var scheduler funcAndType
 		found := false
 		switch {
-			case forAgent:
-				scheduler, found = agentSchedulers[eventHash]
-			case forClient:
-				scheduler, found = clientSchedulers[eventHash]
-			case isOfferingRelated(&e):
-				scheduler, found = offeringSchedulers[eventHash]
+		case forAgent:
+			scheduler, found = agentSchedulers[eventHash]
+		case forClient:
+			scheduler, found = clientSchedulers[eventHash]
+		case isOfferingRelated(&e):
+			scheduler, found = offeringSchedulers[eventHash]
 		}
 
 		if !found {
@@ -244,7 +244,7 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 			topics->>0 = %s
 			and topics->>2 = %s
 	`, m.db.Placeholder(1), m.db.Placeholder(2))
-	row := m.db.QueryRow(query, "0x" + eth.EthOfferingDeleted, offeringHash.Hex())
+	row := m.db.QueryRow(query, "0x"+eth.EthOfferingDeleted, offeringHash.Hex())
 
 	var count int
 	if err := row.Scan(&count); err != nil {
@@ -293,12 +293,12 @@ func (m *Monitor) scheduleCommon(e *data.LogEntry, j *data.Job) {
 	j.CreatedAt = time.Now()
 	err := m.queue.Add(j)
 	switch err {
-		case nil:
-			m.updateEventJobID(e, j.ID)
-		case job.ErrDuplicatedJob, job.ErrAlreadyProcessing:
-			m.ignoreEvent(e)
-		default:
-			m.incrementEventFailures(e)
+	case nil:
+		m.updateEventJobID(e, j.ID)
+	case job.ErrDuplicatedJob, job.ErrAlreadyProcessing:
+		m.ignoreEvent(e)
+	default:
+		m.incrementEventFailures(e)
 	}
 }
 
@@ -322,4 +322,3 @@ func (m *Monitor) ignoreEvent(e *data.LogEntry) {
 		panic(fmt.Errorf("failed to ignore an event: %v", err))
 	}
 }
-

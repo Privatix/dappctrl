@@ -7,9 +7,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum"
 
 	"gopkg.in/reform.v1"
 
@@ -20,7 +20,7 @@ import (
 
 const (
 	minConfirmationsKey = "eth.min.confirmations"
-	freshOfferingsKey = "eth.event.freshofferings"
+	freshOfferingsKey   = "eth.event.freshofferings"
 )
 
 type Client interface {
@@ -93,7 +93,7 @@ These are the rules for filtering logs on the blockchain:
 
 // collect requests new logs and puts them into the database.
 func (m *Monitor) collect(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded duration
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // FIXME: hardcoded duration
 	defer cancel()
 
 	pscAddr := []common.Address{m.pscAddr}
@@ -166,13 +166,13 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
 	}
 
 	le := &data.LogEntry{
-		ID: util.NewUUID(),
-		TxHash: data.FromBytes(e.TxHash.Bytes()),
-		TxStatus: "mined", // FIXME: is this field needed at all?
+		ID:          util.NewUUID(),
+		TxHash:      data.FromBytes(e.TxHash.Bytes()),
+		TxStatus:    "mined", // FIXME: is this field needed at all?
 		BlockNumber: e.BlockNumber,
-		Addr: data.FromBytes(e.Address.Bytes()),
-		Data: data.FromBytes(e.Data),
-		Topics: topics,
+		Addr:        data.FromBytes(e.Address.Bytes()),
+		Data:        data.FromBytes(e.Data),
+		Topics:      topics,
 	}
 
 	if err := tx.Insert(le); err != nil {
@@ -256,7 +256,7 @@ func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
 }
 
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) uint64 {
-	ctx, cancel := context.WithTimeout(ctx, 5 * time.Second) // FIXME: hardcoded timeout
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // FIXME: hardcoded timeout
 	defer cancel()
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)

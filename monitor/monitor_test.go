@@ -115,25 +115,25 @@ func newMockTicker() *mockTicker {
 
 func (t *mockTicker) tick() {
 	select {
-		case t.C <- time.Now():
-		default:
+	case t.C <- time.Now():
+	default:
 	}
 }
 
 var (
-	logger     *util.Logger
-	db         *reform.DB
-	client     mockClient
+	logger *util.Logger
+	db     *reform.DB
+	client mockClient
 
-	pscAddr    = common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
+	pscAddr = common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 )
 
 // TestMain reads config and run tests.
 func TestMain(m *testing.M) {
 	var conf struct {
-		DB              *data.DBConfig
-		Log             *util.LogConfig
-		Job             *job.Config
+		DB  *data.DBConfig
+		Log *util.LogConfig
+		Job *job.Config
 		Eth struct {
 			GethURL       string
 			TruffleAPIURL string
@@ -196,9 +196,9 @@ func genRandData(length int) []byte {
 
 func setUint64Setting(t *testing.T, db *reform.DB, key string, value uint64) {
 	setting := data.Setting{
-		Key: key,
+		Key:   key,
 		Value: strconv.FormatUint(value, 10),
-		Name: key,
+		Name:  key,
 	}
 	if err := db.Save(&setting); err != nil {
 		t.Fatalf("failed to save min confirmtions setting: %v", err)
@@ -230,23 +230,23 @@ func TestMonitorLogCollect(t *testing.T) {
 	var block uint64 = 10
 
 	datamap := make(map[string]bool)
-	logsToInject := []struct{
-		event common.Hash
-		agent common.Address
+	logsToInject := []struct {
+		event  common.Hash
+		agent  common.Address
 		client common.Address
 	}{
 		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
-		{someHash, someAddress, someAddress}, // 0 no match
-		{someHash, agentAddress, someAddress}, // 1 match agent
-		{someHash, someAddress, clientAddress}, // 0 match client, but not a client event
+		{someHash, someAddress, someAddress},           // 0 no match
+		{someHash, agentAddress, someAddress},          // 1 match agent
+		{someHash, someAddress, clientAddress},         // 0 match client, but not a client event
 		// ----- 6 confirmations
-		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
-		{eventAboutChannel, someAddress, someAddress}, // 0 no match
-		{eventAboutChannel, agentAddress, someAddress}, // 1 match agent
+		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
+		{eventAboutChannel, someAddress, someAddress},   // 0 no match
+		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
 		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
 		// ----- 2 confirmations
 		{eventAboutOffering, agentAddress, someAddress}, // 1 match agent
-		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
+		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
 		// ----- 0 confirmations
 	}
 	for _, contractAddr := range []common.Address{someAddress, pscAddr} {
@@ -254,7 +254,7 @@ func TestMonitorLogCollect(t *testing.T) {
 			d := genRandData(32 * 5)
 			datamap[data.FromBytes(d)] = true
 			client.injectEvent(&ethtypes.Log{
-				Address: contractAddr,
+				Address:     contractAddr,
 				BlockNumber: block,
 				Topics: []common.Hash{
 					log.event,
@@ -267,10 +267,10 @@ func TestMonitorLogCollect(t *testing.T) {
 		}
 	}
 
-	cases := []struct{
+	cases := []struct {
 		confirmations uint64
-		freshnum uint64
-		lognum int
+		freshnum      uint64
+		lognum        int
 	}{
 		{6, 2, 1}, // freshnum = 2: will skip the first offering event
 		{2, 0, 4}, // freshnum = 0: will include the second offering event
@@ -296,13 +296,13 @@ func TestMonitorLogCollect(t *testing.T) {
 
 func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures int) {
 	e := &data.LogEntry{
-		ID: util.NewUUID(),
-		TxHash: data.FromBytes(genRandData(32)),
-		TxStatus: "mined", // FIXME: is this field needed at all?
+		ID:          util.NewUUID(),
+		TxHash:      data.FromBytes(genRandData(32)),
+		TxStatus:    "mined", // FIXME: is this field needed at all?
 		BlockNumber: blockNumber,
-		Addr: data.FromBytes(pscAddr.Bytes()),
-		Data: data.FromBytes(genRandData(32)),
-		Topics: topics,
+		Addr:        data.FromBytes(pscAddr.Bytes()),
+		Data:        data.FromBytes(genRandData(32)),
+		Topics:      topics,
 	}
 	if err := db.Insert(e); err != nil {
 		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
@@ -311,12 +311,12 @@ func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures in
 
 type expectation struct {
 	condition func(j *data.Job) bool
-	comment string
+	comment   string
 }
 
 type mockQueue struct {
-	t *testing.T
-	db *reform.DB
+	t            *testing.T
+	db           *reform.DB
 	expectations []expectation
 }
 
@@ -409,16 +409,16 @@ func TestMonitorLogSchedule(t *testing.T) {
 		channel1, channelX)
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthOfferingCreated,
-		addr1.Hex(), // agent
+		"0x" + eth.EthOfferingCreated,
+		addr1.Hex(),                  // agent
 		b64toHashHex(offering1.Hash), // offering hash
 		"0x123", // min deposit
 	}, 0)
 	// offering events containing agent address should be ignored
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthOfferingCreated,
-		someAddress.Hex(), // agent
+		"0x" + eth.EthOfferingCreated,
+		someAddress.Hex(),            // agent
 		b64toHashHex(offeringU.Hash), // offering hash
 		"0x123", // min deposit
 	}, 0)
@@ -427,8 +427,8 @@ func TestMonitorLogSchedule(t *testing.T) {
 	})
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthOfferingPoppedUp,
-		someAddress.Hex(), // agent
+		"0x" + eth.EthOfferingPoppedUp,
+		someAddress.Hex(),            // agent
 		b64toHashHex(offeringU.Hash), // offering hash
 	}, 0)
 	queue.expect("client offering popped up", func(j *data.Job) bool {
@@ -441,23 +441,23 @@ func TestMonitorLogSchedule(t *testing.T) {
 	queue.awaitCompletion(time.Second)
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthOfferingDeleted,
-		someAddress.Hex(), // agent
+		"0x" + eth.EthOfferingDeleted,
+		someAddress.Hex(),            // agent
 		b64toHashHex(offeringU.Hash), // offering hash
 	}, 0)
 	// should ignore the deletion event
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthOfferingPoppedUp,
-		someAddress.Hex(), // agent
+		"0x" + eth.EthOfferingPoppedUp,
+		someAddress.Hex(),            // agent
 		b64toHashHex(offeringU.Hash), // offering hash
 	}, 0)
 	// should ignore the creation event after deleting
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthDigestChannelCreated,
-		addr1.Hex(), // agent
-		someAddress.Hex(), // client
+		"0x" + eth.EthDigestChannelCreated,
+		addr1.Hex(),                  // agent
+		someAddress.Hex(),            // client
 		b64toHashHex(offering1.Hash), // offering
 	}, 0)
 	queue.expect("agent after channel created", func(j *data.Job) bool {
@@ -465,17 +465,17 @@ func TestMonitorLogSchedule(t *testing.T) {
 	})
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthDigestChannelToppedUp,
-		addr1.Hex(), // agent
-		someAddress.Hex(), // client
+		"0x" + eth.EthDigestChannelToppedUp,
+		addr1.Hex(),                  // agent
+		someAddress.Hex(),            // client
 		b64toHashHex(offeringX.Hash), // offering
 	}, 0)
 	// channel does not exist, thus event ignored
 
 	insertEvent(db, nextBlock(), []string{
-		"0x"+eth.EthDigestChannelToppedUp,
-		someAddress.Hex(), // agent
-		addr2.Hex(), // client
+		"0x" + eth.EthDigestChannelToppedUp,
+		someAddress.Hex(),            // agent
+		addr2.Hex(),                  // client
 		b64toHashHex(offeringX.Hash), // offering
 	}, 0)
 	queue.expect("client after channel topup", func(j *data.Job) bool {

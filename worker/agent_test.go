@@ -345,10 +345,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	}
 
 	rawMsgBytes := data.TestToBytes(t, endpoint.RawMsg)
-	expectedHash, err := ethcrypto.Keccak256(rawMsgBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	expectedHash := ethcrypto.Keccak256(rawMsgBytes)
 	if data.FromBytes(expectedHash) != endpoint.Hash {
 		t.Fatal("wrong hash stored")
 	}
@@ -367,32 +364,6 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
-// func testSOMCReceivedEndpoint(t *testing.T, fixture *workerTestFixture) {
-// 	ch := make(chan []byte, 1)
-// 	go func() {
-// 		ret, err := testSOMCConn.WaitForEndpoint(fixture.Channel.ID)
-// 		if err != nil {
-// 			t.Fatal("failed to get endpoint: ", err)
-// 		}
-// 		ch <- ret
-// 	}()
-
-// 	select {
-// 	case ret := <-ch:
-// 		expected, err := json.Marshal(fixture.Endpoint)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-// 		if bytes.Compare(expected, ret) == 0 {
-// 			t.Logf("wanted: len(%d) %v\ngot: len(%d) %v",
-// 				len(expected), expected, len(ret), ret)
-// 			t.Fatal("wrong endpoint sent")
-// 		}
-// 	case <-time.After(10 * time.Second):
-// 		t.Fatal("failed to get endpoint: timeout")
-// 	}
-// }
-
 func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
@@ -403,16 +374,16 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	somcEndpointCh := make(chan somc.TestEndpointParams)
+	somcEndpointChan := make(chan somc.TestEndpointParams)
 	go func() {
-		somcEndpointCh <- env.fakeSOMC.ReadPublishEndpoint(t)
+		somcEndpointChan <- env.fakeSOMC.ReadPublishEndpoint(t)
 	}()
 
 	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
 	select {
-	case ret := <-somcEndpointCh:
+	case ret := <-somcEndpointChan:
 		if ret.Channel != fixture.Endpoint.Channel {
 			t.Fatal("wrong channel used to publish endpoint")
 		}
@@ -540,8 +511,34 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
-	// 3. "afterOfferingMsgSOMCPublish"
-	t.Skip("MOCK SOMC SERVER")
+	env := newWorkerTest(t)
+	fixture := env.newTestFixture(t,
+		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
+	defer env.close()
+	defer fixture.close()
+
+	somcOfferingsChan := make(chan somc.TestOfferingParams)
+	go func() {
+		somcOfferingsChan <- env.fakeSOMC.ReadPublishOfferings(t)
+	}()
+
+	workerF := env.worker.AgentPreOfferingMsgSOMCPublish
+	runJob(t, workerF, fixture.job)
+
+	select {
+	case ret := <-somcOfferingsChan:
+		t.Log(ret)
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout")
+	}
+
+	offering := &data.Offering{}
+	env.findTo(t, offering, fixture.Offering.ID)
+	if offering.Status != data.MsgChPublished {
+		t.Fatal("offering's status is not updated")
+	}
+
+	testCommonErrors(t, workerF, *fixture.job)
 }
 
 func TestAgentPreAccountAddBalanceApprove(t *testing.T) {

@@ -463,49 +463,23 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 
 // AgentPreOfferingMsgSOMCPublish publishes to somc and creates after job.
 func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
-	// TODO
 	offering, err := w.relatedOffering(job,
 		data.JobAgentPreOfferingMsgSOMCPublish)
 	if err != nil {
 		return err
 	}
 
-	// agent, err := w.account(offering.Agent)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// template, err := w.template(offering.Template)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// msg := so.NewOfferingMessage(agent, template, offering)
-
-	// key, err := w.key(agent.PrivateKey)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// msgBytes, err := json.Marshal(msg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// packed, err := crypto.SignedMessage(key, msgBytes)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// return w.somc.PublishOffering(packed)
-	offering.Status = data.MsgChPublished
-	if err = w.db.Update(offering); err != nil {
+	rawMsg, err := data.ToBytes(offering.RawMsg)
+	if err != nil {
 		return err
 	}
 
-	return w.addJob(data.JobAgentAfterOfferingMsgSOMCPublish,
-		data.JobOfferring,
-		offering.ID)
+	if err = w.somc.PublishOffering(rawMsg); err != nil {
+		return err
+	}
+
+	offering.Status = data.MsgChPublished
+	return w.db.Update(offering)
 }
 
 // AgentPreAccountAddBalanceApprove approve balance if amount exists.

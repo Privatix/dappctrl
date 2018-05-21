@@ -13,8 +13,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// TestEndpointParams used for tests.
+// TestEndpointParams exported for tests.
 type TestEndpointParams endpointParams
+
+// TestOfferingParams used for tests.
+type TestOfferingParams publishOfferingParams
 
 // TestConfig the config related to somc tests.
 type TestConfig struct {
@@ -117,4 +120,16 @@ func (s *FakeSOMC) ReadPublishEndpoint(t *testing.T) TestEndpointParams {
 	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
 	s.Write(t, &repl)
 	return TestEndpointParams(params)
+}
+
+// ReadPublishOfferings recieves and returns published endpoint.
+func (s *FakeSOMC) ReadPublishOfferings(t *testing.T) TestOfferingParams {
+	req := s.Read(t, publishOfferingMethod)
+	params := publishOfferingParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
+	}
+	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
+	s.Write(t, &repl)
+	return TestOfferingParams(params)
 }

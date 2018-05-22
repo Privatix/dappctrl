@@ -159,11 +159,6 @@ func (m *Monitor) collect(ctx context.Context) {
 }
 
 func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
-	var topics data.LogTopics
-	for _, hash := range e.Topics {
-		topics = append(topics, hash.Hex())
-	}
-
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(e.TxHash.Bytes()),
@@ -171,7 +166,7 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
 		BlockNumber: e.BlockNumber,
 		Addr:        data.FromBytes(e.Address.Bytes()),
 		Data:        data.FromBytes(e.Data),
-		Topics:      topics,
+		Topics:      e.Topics,
 	}
 
 	if err := tx.Insert(el); err != nil {

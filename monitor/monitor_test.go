@@ -294,7 +294,33 @@ func TestMonitorLogCollect(t *testing.T) {
 	}
 }
 
-func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures int) {
+func toHashes(topics []interface{}) []common.Hash {
+	hashes := make([]common.Hash, len(topics))
+	if len(topics) > 0 {
+		hashes[0] = common.HexToHash(topics[0].(string))
+	}
+	for i, t := range topics[1:] {
+		switch v := t.(type) {
+			case string:
+				if bs, err := data.ToBytes(v); err == nil {
+					hashes[i + 1] = common.BytesToHash(bs)
+				} else {
+					panic(err)
+				}
+			case int:
+				hashes[i + 1] = common.BigToHash(big.NewInt(int64(v)))
+			case common.Address:
+				hashes[i + 1] = v.Hash()
+			case common.Hash:
+				hashes[i + 1] = v
+			default:
+				panic(fmt.Errorf("unsupported type %T as topic", t))
+		}
+	}
+	return hashes
+}
+
+func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64, failures uint64, topics ...interface{}) {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(genRandData(32)),
@@ -302,7 +328,8 @@ func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures in
 		BlockNumber: blockNumber,
 		Addr:        data.FromBytes(pscAddr.Bytes()),
 		Data:        data.FromBytes(genRandData(32)),
-		Topics:      topics,
+		Topics:      toHashes(topics),
+		Failures:    failures,
 	}
 	if err := db.Insert(el); err != nil {
 		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
@@ -322,7 +349,7 @@ type mockQueue struct {
 
 func (mq *mockQueue) Add(j *data.Job) error {
 	if len(mq.expectations) == 0 {
-		mq.t.Fatalf("unexpected job added, expected none")
+		mq.t.Fatalf("unexpected job added, expected none, got %#v", *j)
 	}
 	ex := mq.expectations[0]
 	mq.expectations = mq.expectations[1:]
@@ -348,11 +375,6 @@ func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	mq.t.Fatal("not all expected jobs scheduled")
-}
-
-func b64toHashHex(b64 string) string {
-	bs, _ := data.ToBytes(b64)
-	return common.BytesToHash(bs).Hex()
 }
 
 func TestMonitorLogSchedule(t *testing.T) {
@@ -408,29 +430,29 @@ func TestMonitorLogSchedule(t *testing.T) {
 		offering1, offeringX, offeringU,
 		channel1, channelX)
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthOfferingCreated,
-		addr1.Hex(),                  // agent
-		b64toHashHex(offering1.Hash), // offering hash
-		"0x123", // min deposit
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthOfferingCreated,
+		addr1,                  // agent
+		offering1.Hash, // offering hash
+		123, // min deposit
+	)
 	// offering events containing agent address should be ignored
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthOfferingCreated,
-		someAddress.Hex(),            // agent
-		b64toHashHex(offeringU.Hash), // offering hash
-		"0x123", // min deposit
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthOfferingCreated,
+		someAddress,            // agent
+		offeringU.Hash, // offering hash
+		123, // min deposit
+	)
 	queue.expect("unrelated offering created", func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
 	})
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthOfferingPoppedUp,
-		someAddress.Hex(),            // agent
-		b64toHashHex(offeringU.Hash), // offering hash
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthOfferingPoppedUp,
+		someAddress,            // agent
+		offeringU.Hash, // offering hash
+	)
 	queue.expect("client offering popped up", func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
 	})
@@ -440,44 +462,44 @@ func TestMonitorLogSchedule(t *testing.T) {
 	ticker.tick()
 	queue.awaitCompletion(time.Second)
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthOfferingDeleted,
-		someAddress.Hex(),            // agent
-		b64toHashHex(offeringU.Hash), // offering hash
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthOfferingDeleted,
+		someAddress,            // agent
+		offeringU.Hash, // offering hash
+	)
 	// should ignore the deletion event
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthOfferingPoppedUp,
-		someAddress.Hex(),            // agent
-		b64toHashHex(offeringU.Hash), // offering hash
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthOfferingPoppedUp,
+		someAddress,            // agent
+		offeringU.Hash, // offering hash
+	)
 	// should ignore the creation event after deleting
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthDigestChannelCreated,
-		addr1.Hex(),                  // agent
-		someAddress.Hex(),            // client
-		b64toHashHex(offering1.Hash), // offering
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthDigestChannelCreated,
+		addr1,                  // agent
+		someAddress,            // client
+		offering1.Hash, // offering
+	)
 	queue.expect("agent after channel created", func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterChannelCreate
 	})
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthDigestChannelToppedUp,
-		addr1.Hex(),                  // agent
-		someAddress.Hex(),            // client
-		b64toHashHex(offeringX.Hash), // offering
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthDigestChannelToppedUp,
+		addr1,                  // agent
+		someAddress,            // client
+		offeringX.Hash, // offering
+	)
 	// channel does not exist, thus event ignored
 
-	insertEvent(db, nextBlock(), []string{
-		"0x" + eth.EthDigestChannelToppedUp,
-		someAddress.Hex(),            // agent
-		addr2.Hex(),                  // client
-		b64toHashHex(offeringX.Hash), // offering
-	}, 0)
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthDigestChannelToppedUp,
+		someAddress,            // agent
+		addr2,                  // client
+		offeringX.Hash, // offering
+	)
 	queue.expect("client after channel topup", func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterChannelTopUp
 	})

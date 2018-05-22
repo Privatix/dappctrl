@@ -34,14 +34,14 @@ func (m *Monitor) schedule(ctx context.Context) {
 	// append two boolean columns calculated based on topics: whether the
 	// event is for agent, and the same for client.
 	//
-	// eth_logs.topics is a json array with '0xdeadbeef' encoding of addresses,
+	// eth_logs.topics is a json array with '0x0..0deadbeef' encoding of addresses,
 	// whereas accounts.eth_addr is a base64 encoding of raw bytes of addresses.
 	// The encode-decode-substr is there to convert from one to another.
 	// coalesce() converts null into false for the case when topics->>n does not exist.
 	topicInAccExpr := `
 		coalesce(
 			translate(
-				encode(decode(substr(topics->>%d, 3), 'hex'), 'base64'),
+				encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'),
 				'+/',
 				'-_'
 			)
@@ -78,7 +78,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 			panic(fmt.Errorf("failed to scan the selected log entries: %v", err))
 		}
 
-		eventHash := common.HexToHash(el.Topics[0])
+		eventHash := el.Topics[0]
 
 		var scheduler funcAndType
 		found := false
@@ -92,6 +92,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 		}
 
 		if !found {
+			m.logger.Debug("scheduler not found for event %s", eventHash.Hex())
 			m.ignoreEvent(&el)
 			continue
 		}
@@ -104,7 +105,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 }
 
 func isOfferingRelated(el *data.EthLog) bool {
-	return len(el.Topics) > 0 && offeringRelatedEventsMap[common.HexToHash(el.Topics[0])]
+	return len(el.Topics) > 0 && offeringRelatedEventsMap[el.Topics[0]]
 }
 
 type scheduleFunc func(*Monitor, *data.EthLog, string)
@@ -177,9 +178,9 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 }
 
 func (m *Monitor) findChannelID(el *data.EthLog) string {
-	agentAddress := common.HexToAddress(el.Topics[1])
-	clientAddress := common.HexToAddress(el.Topics[2])
-	offeringHash := common.HexToHash(el.Topics[3])
+	agentAddress := common.BytesToAddress(el.Topics[1].Bytes())
+	clientAddress := common.BytesToAddress(el.Topics[2].Bytes())
+	offeringHash := el.Topics[3]
 	query := fmt.Sprintf(`
 		select channels.id
 		from channels, offerings
@@ -222,7 +223,7 @@ func (m *Monitor) scheduleAgent_ChannelCreated(el *data.EthLog, jobType string) 
 func (m *Monitor) scheduleAgentClient_Channel(el *data.EthLog, jobType string) {
 	cid := m.findChannelID(el)
 	if cid == "" {
-		m.logger.Warn("channel for offering %s does not exist", el.Topics[3])
+		m.logger.Warn("channel for offering %s does not exist", el.Topics[3].Hex())
 		m.ignoreEvent(el)
 		return
 	}
@@ -255,7 +256,7 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 }
 
 func (m *Monitor) scheduleClient_OfferingCreated(el *data.EthLog, jobType string) {
-	offeringHash := common.HexToHash(el.Topics[2])
+	offeringHash := el.Topics[2]
 	if m.isOfferingDeleted(offeringHash) {
 		m.ignoreEvent(el)
 		return

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // B64BigInt is a base64 of big.Int that implements json.Marshaler.
@@ -22,7 +24,7 @@ func (i B64BigInt) MarshalJSON() ([]byte, error) {
 }
 
 // LogTopics is a database/sql compatible type for ethereum log topics.
-type LogTopics []string
+type LogTopics []common.Hash
 
 // Value serializes the log topics.
 func (t LogTopics) Value() (driver.Value, error) {

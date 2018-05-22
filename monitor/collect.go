@@ -164,7 +164,7 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
 		topics = append(topics, hash.Hex())
 	}
 
-	le := &data.LogEntry{
+	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(e.TxHash.Bytes()),
 		TxStatus:    "mined", // FIXME: is this field needed at all?
@@ -174,7 +174,7 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) {
 		Topics:      topics,
 	}
 
-	if err := tx.Insert(le); err != nil {
+	if err := tx.Insert(el); err != nil {
 		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
 	}
 }

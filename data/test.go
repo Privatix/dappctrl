@@ -337,7 +337,7 @@ func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 // CleanTestDB deletes all records from all test DB tables.
 func CleanTestDB(t *testing.T, db *reform.DB) {
 	tx := BeginTestTX(t, db)
-	for _, v := range []reform.View{LogEntryTable, JobTable,
+	for _, v := range []reform.View{EthLogTable, JobTable,
 		EndpointTable, SessionTable, ChannelTable, OfferingTable,
 		UserTable, AccountTable, ProductTable, TemplateTable,
 		ContractTable, SettingTable} {

@@ -156,21 +156,21 @@ func cleanDB(t *testing.T) {
 	data.CleanTestDB(t, db)
 }
 
-func expectLogs(t *testing.T, expected int, errMsg, tail string, args ...interface{}) []*data.LogEntry {
+func expectLogs(t *testing.T, expected int, errMsg, tail string, args ...interface{}) []*data.EthLog {
 	var (
 		actual int
 	)
 	for i := 0; i < 10; i++ {
 		time.Sleep(100 * time.Millisecond)
-		structs, err := db.SelectAllFrom(data.LogEntryTable, tail, args...)
+		structs, err := db.SelectAllFrom(data.EthLogTable, tail, args...)
 		if err != nil {
 			t.Fatalf("failed to select log entries: %v", err)
 		}
 		actual = len(structs)
 		if actual == expected {
-			logs := make([]*data.LogEntry, actual)
+			logs := make([]*data.EthLog, actual)
 			for li, s := range structs {
-				logs[li] = s.(*data.LogEntry)
+				logs[li] = s.(*data.EthLog)
 			}
 			return logs
 		}
@@ -277,7 +277,7 @@ func TestMonitorLogCollect(t *testing.T) {
 		{0, 2, 6},
 	}
 
-	var logs []*data.LogEntry
+	var logs []*data.EthLog
 	for _, c := range cases {
 		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
 		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
@@ -295,7 +295,7 @@ func TestMonitorLogCollect(t *testing.T) {
 }
 
 func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures int) {
-	e := &data.LogEntry{
+	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(genRandData(32)),
 		TxStatus:    "mined", // FIXME: is this field needed at all?
@@ -304,7 +304,7 @@ func insertEvent(db *reform.DB, blockNumber uint64, topics []string, failures in
 		Data:        data.FromBytes(genRandData(32)),
 		Topics:      topics,
 	}
-	if err := db.Insert(e); err != nil {
+	if err := db.Insert(el); err != nil {
 		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
 	}
 }

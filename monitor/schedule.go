@@ -49,7 +49,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 			false
 		)
 	`
-	columns := m.db.QualifiedColumns(data.LogEntryTable)
+	columns := m.db.QualifiedColumns(data.EthLogTable)
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, 1)) // topic[1] (agent) in active accounts
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, 2)) // topic[2] (client) in active accounts
 
@@ -71,14 +71,14 @@ func (m *Monitor) schedule(ctx context.Context) {
 	}
 
 	for rows.Next() {
-		var e data.LogEntry
+		var el data.EthLog
 		var forAgent, forClient bool
-		pointers := append(e.Pointers(), &forAgent, &forClient)
+		pointers := append(el.Pointers(), &forAgent, &forClient)
 		if err := rows.Scan(pointers...); err != nil {
 			panic(fmt.Errorf("failed to scan the selected log entries: %v", err))
 		}
 
-		eventHash := common.HexToHash(e.Topics[0])
+		eventHash := common.HexToHash(el.Topics[0])
 
 		var scheduler funcAndType
 		found := false
@@ -87,27 +87,27 @@ func (m *Monitor) schedule(ctx context.Context) {
 			scheduler, found = agentSchedulers[eventHash]
 		case forClient:
 			scheduler, found = clientSchedulers[eventHash]
-		case isOfferingRelated(&e):
+		case isOfferingRelated(&el):
 			scheduler, found = offeringSchedulers[eventHash]
 		}
 
 		if !found {
-			m.ignoreEvent(&e)
+			m.ignoreEvent(&el)
 			continue
 		}
 
-		scheduler.f(m, &e, scheduler.t)
+		scheduler.f(m, &el, scheduler.t)
 	}
 	if err := rows.Err(); err != nil {
 		panic(fmt.Errorf("failed to fetch the next selected log entry: %v", err))
 	}
 }
 
-func isOfferingRelated(e *data.LogEntry) bool {
-	return len(e.Topics) > 0 && offeringRelatedEventsMap[common.HexToHash(e.Topics[0])]
+func isOfferingRelated(el *data.EthLog) bool {
+	return len(el.Topics) > 0 && offeringRelatedEventsMap[common.HexToHash(el.Topics[0])]
 }
 
-type scheduleFunc func(*Monitor, *data.LogEntry, string)
+type scheduleFunc func(*Monitor, *data.EthLog, string)
 type funcAndType struct {
 	f scheduleFunc
 	t string
@@ -176,10 +176,10 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 	*/
 }
 
-func (m *Monitor) findChannelID(e *data.LogEntry) string {
-	agentAddress := common.HexToAddress(e.Topics[1])
-	clientAddress := common.HexToAddress(e.Topics[2])
-	offeringHash := common.HexToHash(e.Topics[3])
+func (m *Monitor) findChannelID(el *data.EthLog) string {
+	agentAddress := common.HexToAddress(el.Topics[1])
+	clientAddress := common.HexToAddress(el.Topics[2])
+	offeringHash := common.HexToHash(el.Topics[3])
 	query := fmt.Sprintf(`
 		select channels.id
 		from channels, offerings
@@ -209,21 +209,21 @@ func (m *Monitor) findChannelID(e *data.LogEntry) string {
 	return id
 }
 
-func (m *Monitor) scheduleAgent_ChannelCreated(e *data.LogEntry, jobType string) {
+func (m *Monitor) scheduleAgent_ChannelCreated(el *data.EthLog, jobType string) {
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   util.NewUUID(),
 		RelatedType: data.JobChannel,
 	}
 
-	m.scheduleCommon(e, j)
+	m.scheduleCommon(el, j)
 }
 
-func (m *Monitor) scheduleAgentClient_Channel(e *data.LogEntry, jobType string) {
-	cid := m.findChannelID(e)
+func (m *Monitor) scheduleAgentClient_Channel(el *data.EthLog, jobType string) {
+	cid := m.findChannelID(el)
 	if cid == "" {
-		m.logger.Warn("channel for offering %s does not exist", e.Topics[3])
-		m.ignoreEvent(e)
+		m.logger.Warn("channel for offering %s does not exist", el.Topics[3])
+		m.ignoreEvent(el)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (m *Monitor) scheduleAgentClient_Channel(e *data.LogEntry, jobType string) 
 		RelatedType: data.JobChannel,
 	}
 
-	m.scheduleCommon(e, j)
+	m.scheduleCommon(el, j)
 }
 
 func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
@@ -254,10 +254,10 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 	return count > 0
 }
 
-func (m *Monitor) scheduleClient_OfferingCreated(e *data.LogEntry, jobType string) {
-	offeringHash := common.HexToHash(e.Topics[2])
+func (m *Monitor) scheduleClient_OfferingCreated(el *data.EthLog, jobType string) {
+	offeringHash := common.HexToHash(el.Topics[2])
 	if m.isOfferingDeleted(offeringHash) {
-		m.ignoreEvent(e)
+		m.ignoreEvent(el)
 		return
 	}
 
@@ -267,15 +267,15 @@ func (m *Monitor) scheduleClient_OfferingCreated(e *data.LogEntry, jobType strin
 		RelatedType: data.JobOffering,
 	}
 
-	m.scheduleCommon(e, j)
+	m.scheduleCommon(el, j)
 }
 
 /* // FIXME: uncomment if monitor should actually delete the offering
 
 // scheduleClient_OfferingDeleted is a special case, which does not
 // actually schedule any task, it deletes the offering instead.
-func (m *Monitor) scheduleClient_OfferingDeleted(e *data.LogEntry, jobType string) {
-	offeringHash := common.HexToHash(e.Topics[1])
+func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string) {
+	offeringHash := common.HexToHash(el.Topics[1])
 	tail := fmt.Sprintf(
 		"where hash = %s",
 		m.db.Placeholder(1),
@@ -284,41 +284,41 @@ func (m *Monitor) scheduleClient_OfferingDeleted(e *data.LogEntry, jobType strin
 	if err != nil {
 		panic(err)
 	}
-	m.ignoreEvent(e)
+	m.ignoreEvent(el)
 }
 */
 
-func (m *Monitor) scheduleCommon(e *data.LogEntry, j *data.Job) {
+func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
 	j.CreatedAt = time.Now()
 	err := m.queue.Add(j)
 	switch err {
 	case nil:
-		m.updateEventJobID(e, j.ID)
+		m.updateEventJobID(el, j.ID)
 	case job.ErrDuplicatedJob, job.ErrAlreadyProcessing:
-		m.ignoreEvent(e)
+		m.ignoreEvent(el)
 	default:
-		m.incrementEventFailures(e)
+		m.incrementEventFailures(el)
 	}
 }
 
-func (m *Monitor) incrementEventFailures(e *data.LogEntry) {
-	e.Failures++
-	if err := m.db.UpdateColumns(e, "failures"); err != nil {
+func (m *Monitor) incrementEventFailures(el *data.EthLog) {
+	el.Failures++
+	if err := m.db.UpdateColumns(el, "failures"); err != nil {
 		panic(fmt.Errorf("failed to update failure counter of an event: %v", err))
 	}
 }
 
-func (m *Monitor) updateEventJobID(e *data.LogEntry, jobID string) {
-	e.JobID = &jobID
-	if err := m.db.UpdateColumns(e, "job"); err != nil {
+func (m *Monitor) updateEventJobID(el *data.EthLog, jobID string) {
+	el.JobID = &jobID
+	if err := m.db.UpdateColumns(el, "job"); err != nil {
 		panic(fmt.Errorf("failed to update job_id of an event to %s: %v", jobID, err))
 	}
 }
 
-func (m *Monitor) ignoreEvent(e *data.LogEntry) {
-	e.Ignore = true
-	if err := m.db.UpdateColumns(e, "ignore"); err != nil {
+func (m *Monitor) ignoreEvent(el *data.EthLog) {
+	el.Ignore = true
+	if err := m.db.UpdateColumns(el, "ignore"); err != nil {
 		panic(fmt.Errorf("failed to ignore an event: %v", err))
 	}
 }

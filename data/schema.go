@@ -336,9 +336,9 @@ type EthLog struct {
 	Topics      []byte `reform:"topics"`
 }
 
-// LogEntry is an ethereum log entry.
+// EthLog is an ethereum log entry.
 //reform:eth_logs
-type LogEntry struct {
+type EthLog struct {
 	ID          string    `reform:"id,pk"`
 	TxHash      string    `reform:"tx_hash"`
 	TxStatus    string    `reform:"status"`

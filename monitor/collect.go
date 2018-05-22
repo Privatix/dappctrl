@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"

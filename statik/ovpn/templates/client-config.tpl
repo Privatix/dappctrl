@@ -59,7 +59,7 @@ ping {{if .Ping}}{{.Ping}}{{else}}10{{autogen}}{{end}}
 
 # Authenticate with server using
 # username/password in interactive mode
-auth-user-pass
+auth-user-pass access.ovpn
 
 # or you can use directive below:
 # auth-user-pass /path/to/pass.file Authenticate

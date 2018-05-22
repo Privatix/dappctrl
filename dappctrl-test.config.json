@@ -45,6 +45,10 @@
         "ConfValidCaInvalid": "conf.valid.ca.invalid",
         "ConfValidCaNotExist": "conf.valid.ca.notexist",
         "ConfValidCaValid": "conf.valid.ca.valid",
+        "ConfigTest": {
+            "Login": "!login!",
+            "Pass": "test-pass"
+        },
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
         "RetrySec": [ 0, 1, 2 ],

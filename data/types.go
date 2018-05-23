@@ -35,13 +35,11 @@ func (t LogTopics) Value() (driver.Value, error) {
 func (t *LogTopics) Scan(src interface{}) error {
 	source, ok := src.([]byte)
 	if !ok {
-		return fmt.Errorf("type assertion .([]byte) failed")
+		return fmt.Errorf(
+			"type assertion .([]byte) failed, actual type is %T",
+			src,
+		)
 	}
 
-	err := json.Unmarshal(source, &t)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return json.Unmarshal(source, &t)
 }

@@ -27,20 +27,28 @@ type Client interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
 }
 
-var clientRelatedEvents = []common.Hash{
-	common.HexToHash(eth.EthDigestChannelCreated),
-	common.HexToHash(eth.EthDigestChannelToppedUp),
-	common.HexToHash(eth.EthChannelCloseRequested),
-	common.HexToHash(eth.EthOfferingEndpoint),
-	common.HexToHash(eth.EthCooperativeChannelClose),
-	common.HexToHash(eth.EthUncooperativeChannelClose),
+func hexesToHashes(hexes ...string) []common.Hash {
+	hashes := make([]common.Hash, len(hexes))
+	for i, hex := range hexes {
+		hashes[i] = common.HexToHash(hex)
+	}
+	return hashes
 }
 
-var offeringRelatedEvents = []common.Hash{
-	common.HexToHash(eth.EthOfferingCreated),
-	common.HexToHash(eth.EthOfferingDeleted),
-	common.HexToHash(eth.EthOfferingPoppedUp),
-}
+var clientRelatedEvents = hexesToHashes(
+	eth.EthDigestChannelCreated,
+	eth.EthDigestChannelToppedUp,
+	eth.EthChannelCloseRequested,
+	eth.EthOfferingEndpoint,
+	eth.EthCooperativeChannelClose,
+	eth.EthUncooperativeChannelClose,
+)
+
+var offeringRelatedEvents = hexesToHashes(
+	eth.EthOfferingCreated,
+	eth.EthOfferingDeleted,
+	eth.EthOfferingPoppedUp,
+)
 
 /*
 Monitor performs Log collecting periodically.

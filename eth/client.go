@@ -67,7 +67,7 @@ type apiResponse struct {
 //
 // Tests: this is a base method for all raw API calls
 // so, it is automatically covered by the all tests of all low-level methods,
-// for example, GetBlockNumber(), or GetLogs().
+// for example, GetBlockNumber()
 func (e *EthereumClient) fetch(method, params string, result interface{}) error {
 	body := fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[%s]}`, method, params)
 	httpResponse, err := e.client.Post(e.GethURL, "application/json", strings.NewReader(body))

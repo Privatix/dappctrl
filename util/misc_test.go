@@ -8,7 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	var conf struct {}
+	var conf struct{}
 	ReadTestConfig(&conf)
 	os.Exit(m.Run())
 }

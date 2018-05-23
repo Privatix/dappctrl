@@ -39,14 +39,14 @@ func (m *Monitor) schedule(ctx context.Context) {
 	// The encode-decode-substr is there to convert from one to another.
 	// coalesce() converts null into false for the case when topics->>n does not exist.
 	topicInAccExpr := `
-		coalesce(
-			translate(
+		COALESCE(
+			TRANSLATE(
 				encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'),
 				'+/',
 				'-_'
 			)
-			in (select eth_addr from accounts where in_use),
-			false
+			IN (SELECT eth_addr FROM accounts WHERE in_use),
+			FALSE
 		)
 	`
 	columns := m.db.QualifiedColumns(data.EthLogTable)
@@ -54,14 +54,14 @@ func (m *Monitor) schedule(ctx context.Context) {
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, 2)) // topic[2] (client) in active accounts
 
 	query := fmt.Sprintf(
-		"select %s from eth_logs where job is null and not ignore order by block_number",
+		"SELECT %s FROM eth_logs WHERE job IS NULL AND NOT ignore ORDER BY block_number",
 		strings.Join(columns, ","),
 	)
 
 	var args []interface{}
 	maxRetries := m.getUint64Setting(maxRetryKey)
 	if maxRetries != 0 {
-		query += " and failures <= " + m.db.Placeholder(1)
+		query += " AND failures <= $1"
 		args = append(args, maxRetries)
 	}
 
@@ -181,16 +181,16 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	agentAddress := common.BytesToAddress(el.Topics[1].Bytes())
 	clientAddress := common.BytesToAddress(el.Topics[2].Bytes())
 	offeringHash := el.Topics[3]
-	query := fmt.Sprintf(`
-		select channels.id
-		from channels, offerings
-		where
-			channels.offering = offerings.id
-			and offerings.hash = %s
-			and channels.agent = %s
-			and channels.client = %s
-	`, m.db.Placeholder(1), m.db.Placeholder(2), m.db.Placeholder(3))
 
+	query := `
+		SELECT channels.id
+		FROM channels, offerings
+		WHERE
+			channels.offering = offerings.id
+			AND offerings.hash = $1
+			AND channels.agent = $2
+			AND channels.client = $3
+	`
 	row := m.db.QueryRow(
 		query,
 		data.FromBytes(offeringHash.Bytes()),
@@ -238,13 +238,13 @@ func (m *Monitor) scheduleAgentClient_Channel(el *data.EthLog, jobType string) {
 }
 
 func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
-	query := fmt.Sprintf(`
-		select count(*)
-		from eth_logs
-		where
-			topics->>0 = %s
-			and topics->>2 = %s
-	`, m.db.Placeholder(1), m.db.Placeholder(2))
+	query := `
+		SELECT COUNT(*)
+		FROM eth_logs
+		WHERE
+			topics->>0 = $1
+			AND topics->>2 = $2
+	`
 	row := m.db.QueryRow(query, "0x"+eth.EthOfferingDeleted, offeringHash.Hex())
 
 	var count int
@@ -277,10 +277,7 @@ func (m *Monitor) scheduleClient_OfferingCreated(el *data.EthLog, jobType string
 // actually schedule any task, it deletes the offering instead.
 func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string) {
 	offeringHash := common.HexToHash(el.Topics[1])
-	tail := fmt.Sprintf(
-		"where hash = %s",
-		m.db.Placeholder(1),
-	)
+	tail := "where hash = $1"
 	_, err := m.db.DeleteFrom(data.OfferingTable, tail, data.FromBytes(offeringHash.Bytes()))
 	if err != nil {
 		panic(err)

@@ -229,11 +229,13 @@ func TestMonitorLogCollect(t *testing.T) {
 	var block uint64 = 10
 
 	datamap := make(map[string]bool)
-	logsToInject := []struct {
+
+	type logToInject struct {
 		event  common.Hash
 		agent  common.Address
 		client common.Address
-	}{
+	}
+	logsToInject := []logToInject{
 		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
 		{someHash, someAddress, someAddress},           // 0 no match
 		{someHash, agentAddress, someAddress},          // 1 match agent

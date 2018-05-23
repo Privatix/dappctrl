@@ -10,11 +10,11 @@ import (
 
 // Config for Pusher object
 type Config struct {
-	ExportConfigParams []string
-	ConfigPath         string
-	CaCertPath         string
-	Pushed             bool
-	TimeOut            int64
+	ExportConfigKeys []string
+	ConfigPath       string
+	CaCertPath       string
+	Pushed           bool
+	TimeOut          int64
 }
 
 // Pusher sends the OpenVpn configuration to sessrv
@@ -37,12 +37,7 @@ func NewPusher(config *Config, srvConfig *srv.Config,
 // Push send the OpenVpn configuration to sessrv
 func (p *Pusher) Push(ctx context.Context, username, pass string) error {
 	req := c.NewPushConfigReq(username, pass, p.c.ConfigPath,
-		p.c.CaCertPath, p.c.ExportConfigParams, p.c.TimeOut)
+		p.c.CaCertPath, p.c.ExportConfigKeys, p.c.TimeOut)
 
 	return c.PushConfig(ctx, p.srvConf, p.logger, req)
-}
-
-// Context creates a new context with cancel function
-func Context() (context.Context, context.CancelFunc) {
-	return context.WithCancel(context.Background())
 }

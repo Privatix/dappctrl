@@ -59,10 +59,7 @@ func main() {
 		log.Fatalf("failed to create logger: %s\n", err)
 	}
 
-	ctx, cancel := pusher.Context()
-	defer cancel()
-
-	go pushConfig(ctx, *fconfig)
+	go pushConfig(context.Background(), conf, logger, *fconfig)
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
@@ -157,22 +154,24 @@ func handleMonitor() {
 		monitor.MonitorTraffic())
 }
 
-func pushConfig(ctx context.Context, fconfig string) {
-	if !conf.Pusher.Pushed {
+func pushConfig(ctx context.Context, localCfg *config, logger *util.Logger,
+	localCfgFile string) {
+	if !localCfg.Pusher.Pushed {
 
-		p := pusher.NewPusher(conf.Pusher, conf.Server.Config,
+		p := pusher.NewPusher(localCfg.Pusher,
+			localCfg.Server.Config,
 			logger)
 
-		if err := p.Push(ctx, conf.Server.Username,
-			conf.Server.Password); err != nil {
+		if err := p.Push(ctx, localCfg.Server.Username,
+			localCfg.Server.Password); err != nil {
 			log.Printf("failed to send OpenVpn server"+
 				" configuration: %s\n", err)
 			return
 		}
 
-		conf.Pusher.Pushed = true
+		localCfg.Pusher.Pushed = true
 
-		if err := writeConfig(fconfig, conf); err != nil {
+		if err := writeConfig(localCfgFile, localCfg); err != nil {
 			log.Printf("failed to write "+
 				"configuration: %s\n", err)
 		}

@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
-	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -79,9 +78,5 @@ func getCreds() (string, string) {
 }
 
 func writeConfig(name string, cfg *config) error {
-	data, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	return util.WriteJSONFile(name, "", jsonIdent, data)
+	return util.WriteJSONFile(name, "", jsonIdent, cfg)
 }

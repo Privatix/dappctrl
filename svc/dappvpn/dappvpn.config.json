@@ -14,7 +14,7 @@
     "Pusher": {
         "CaCertPath": "",
         "ConfigPath": "",
-        "ExportConfigParams": [ "proto", "cipher", "ping-restart", "ping",
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo"],
         "Pushed": false,
         "TimeOut": 120

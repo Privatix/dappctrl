@@ -3,13 +3,20 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/privatix/dappctrl/util"
 )
 
-const chanPerm = 0644
+const (
+	chanPerm = 0644
+
+	jsonIdent = "    "
+)
 
 func encode(s string) string {
 	return base64.URLEncoding.EncodeToString([]byte(s))
@@ -69,4 +76,12 @@ func getCreds() (string, string) {
 	}
 
 	return user, pass
+}
+
+func writeConfig(name string, cfg *config) error {
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return util.WriteJSONFile(name, "", jsonIdent, data)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
+	"github.com/privatix/dappctrl/svc/dappvpn/pusher"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -22,6 +24,7 @@ type config struct {
 	ChannelDir string // Directory for common-name -> channel mappings.
 	Log        *util.LogConfig
 	Monitor    *mon.Config
+	Pusher     *pusher.Config
 	Server     *serverConfig
 }
 
@@ -30,6 +33,7 @@ func newConfig() *config {
 		ChannelDir: ".",
 		Log:        util.NewLogConfig(),
 		Monitor:    mon.NewConfig(),
+		Pusher:     &pusher.Config{},
 		Server:     &serverConfig{Config: srv.NewConfig()},
 	}
 }
@@ -54,6 +58,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create logger: %s\n", err)
 	}
+
+	ctx, cancel := pusher.Context()
+	defer cancel()
+
+	go pushConfig(ctx, *fconfig)
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
@@ -146,4 +155,26 @@ func handleMonitor() {
 
 	logger.Fatal("failed to monitor vpn traffic: %s",
 		monitor.MonitorTraffic())
+}
+
+func pushConfig(ctx context.Context, fconfig string) {
+	if !conf.Pusher.Pushed {
+
+		p := pusher.NewPusher(conf.Pusher, conf.Server.Config,
+			logger)
+
+		if err := p.Push(ctx, conf.Server.Username,
+			conf.Server.Password); err != nil {
+			log.Printf("failed to send OpenVpn server"+
+				" configuration: %s\n", err)
+			return
+		}
+
+		conf.Pusher.Pushed = true
+
+		if err := writeConfig(fconfig, conf); err != nil {
+			log.Printf("failed to write "+
+				"configuration: %s\n", err)
+		}
+	}
 }

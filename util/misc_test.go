@@ -1,10 +1,17 @@
 package util
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 )
+
+func TestMain(m *testing.M) {
+	var conf struct {}
+	ReadTestConfig(&conf)
+	os.Exit(m.Run())
+}
 
 func TestGenChannelID(t *testing.T) {
 	client := common.HexToAddress("0xa")

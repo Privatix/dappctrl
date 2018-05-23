@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/rakyll/statik/fs"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	_ "github.com/privatix/dappctrl/statik"
@@ -83,15 +84,21 @@ func TestDeployClientConfig(t *testing.T) {
 	defer os.RemoveAll(rootDir)
 
 	d := NewConfDeployer(rootDir)
-	end, err := d.Deploy(&data.Channel{ID: util.NewUUID()},
-		srv.addr, conf.EptTest.ConfigTest.Login,
-		conf.EptTest.ConfigTest.Pass, srv.param)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	if isNotExist(filepath.Join(end, clientConfName)) ||
-		isNotExist(filepath.Join(end, clientAccessName)) {
-		t.Fatal(errDeployConfig)
+	objects := []reform.Record{&data.Channel{ID: util.NewUUID()},
+		&data.Endpoint{Channel: util.NewUUID()}}
+
+	for _, record := range objects {
+		end, err := d.Deploy(record, srv.addr,
+			conf.EptTest.ConfigTest.Login,
+			conf.EptTest.ConfigTest.Pass, srv.param)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if isNotExist(filepath.Join(end, clientConfName)) ||
+			isNotExist(filepath.Join(end, clientAccessName)) {
+			t.Fatal(errDeployConfig)
+		}
 	}
 }

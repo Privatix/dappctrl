@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/rakyll/statik/fs"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
 	// This is necessary for statik.
 	_ "github.com/privatix/dappctrl/statik"
-	"github.com/privatix/dappctrl/data"
 )
 
 const (
@@ -94,11 +93,19 @@ func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
 
 	switch r := record.(type) {
 	case *data.Channel:
+		if r.ID == "" {
+			return "", ErrInput
+		}
+
 		target = filepath.Join(d.rootDir, r.ID)
 		if err := createPath(target); err != nil {
 			return "", err
 		}
 	case *data.Endpoint:
+		if r.Channel == "" {
+			return "", ErrInput
+		}
+
 		target = filepath.Join(d.rootDir, r.Channel)
 		if err := createPath(target); err != nil {
 			return "", err
@@ -222,15 +229,4 @@ func clientConfig(srvAddr string,
 
 	return config, nil
 
-}
-
-func createPath(target string) error {
-	return os.MkdirAll(target, pathPerm)
-}
-
-func isNotExist(object string) bool {
-	if _, err := os.Stat(object); os.IsNotExist(err) {
-		return true
-	}
-	return false
 }

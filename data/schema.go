@@ -336,6 +336,24 @@ type EthLog struct {
 	Topics      []byte `reform:"topics"`
 }
 
+// EthTx is an ethereum transaction
+//reform:eth_txs
+type EthTx struct {
+	ID          string    `reform:"id,pk"`
+	Hash        string    `reform:"hash"`
+	Method      string    `reform:"method"`
+	Status      string    `reform:"status"`
+	JobID       *string   `reform:"job"`
+	Issued      time.Time `reform:"issued"`
+	BlockNumber uint64    `reform:"block_number"`
+	AddrFrom    string    `reform:"addr_from"`
+	AddrTo      string    `reform:"addr_to"`
+	Nonce       *string   `reform:"nonce"`
+	GasPrice    uint64    `reform:"gas_price"`
+	Gas         uint64    `reform:"gas"`
+	TxRaw       []byte    `reform:"tx_raw"`
+}
+
 // EthLog is an ethereum log entry.
 //reform:eth_logs
 type EthLog struct {

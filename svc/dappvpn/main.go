@@ -158,6 +158,7 @@ func handleMonitor(confFile string) {
 			if err := pusher.PushConfig(ctx, c); err != nil {
 				logger.Error("failed to send OpenVpn"+
 					" server configuration: %s\n", err)
+				return
 			}
 
 			conf.Pusher.Pushed = true

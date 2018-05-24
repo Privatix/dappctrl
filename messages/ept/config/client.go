@@ -17,13 +17,13 @@ import (
 )
 
 const (
-	autogen     = "autogen"
-	autogenTest = " # autogenerate option"
+	autogen          = "autogen"
+	autogenTest      = " # autogenerate option"
 	clientAccessName = "access.ovpn"
 	clientConfName   = "client.ovpn"
 	clientTpl        = "/ovpn/templates/client-config.tpl"
-	filePerm = 0644
-	pathPerm = 0755
+	filePerm         = 0644
+	pathPerm         = 0755
 
 	nameCompLZO = "comp-lzo"
 )

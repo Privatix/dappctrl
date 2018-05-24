@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
@@ -18,6 +20,16 @@ import (
 const (
 	maxRetryKey = "eth.event.maxretry"
 )
+
+func mustParseABI(abiJSON string) abi.ABI {
+	a, err := abi.JSON(strings.NewReader(abiJSON))
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+var pscABI = mustParseABI(contract.PrivatixServiceContractABI)
 
 var offeringRelatedEventsMap = map[common.Hash]bool{
 	common.HexToHash(eth.EthOfferingCreated):  true,
@@ -177,26 +189,95 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 	*/
 }
 
+// getOpenBlockNumber extracts the Open_block_number field of a given
+// channel-related EthLog. Returns false in case it failed, i.e.
+// the event has no such field.
+func getOpenBlockNumber(el *data.EthLog) (uint32, bool) {
+	bs, err := data.ToBytes(el.Data)
+	if err != nil {
+		return 0, false
+	}
+
+	switch el.Topics[0] {
+	case common.HexToHash(eth.EthDigestChannelToppedUp):
+		e := new(contract.PrivatixServiceContractLogChannelToppedUp)
+		if err := pscABI.Unpack(e, "LogChannelToppedUp", bs); err == nil {
+			return e.Open_block_number, true
+		} else {
+			panic(err)
+		}
+	case common.HexToHash(eth.EthChannelCloseRequested):
+		e := new(contract.PrivatixServiceContractLogChannelCloseRequested)
+		if err := pscABI.Unpack(e, "LogChannelCloseRequested", bs); err == nil {
+			return e.Open_block_number, true
+		} else {
+			panic(err)
+		}
+	case common.HexToHash(eth.EthCooperativeChannelClose):
+		e := new(contract.PrivatixServiceContractLogCooperativeChannelClose)
+		if err := pscABI.Unpack(e, "LogCooperativeChannelClose", bs); err == nil {
+			return e.Open_block_number, true
+		} else {
+			panic(err)
+		}
+	case common.HexToHash(eth.EthUncooperativeChannelClose):
+		e := new(contract.PrivatixServiceContractLogUnCooperativeChannelClose)
+		if err := pscABI.Unpack(e, "LogUnCooperativeChannelClose", bs); err == nil {
+			return e.Open_block_number, true
+		} else {
+			panic(err)
+		}
+	}
+
+	return 0, false
+}
+
 func (m *Monitor) findChannelID(el *data.EthLog) string {
 	agentAddress := common.BytesToAddress(el.Topics[1].Bytes())
 	clientAddress := common.BytesToAddress(el.Topics[2].Bytes())
 	offeringHash := el.Topics[3]
 
-	query := `
-		SELECT channels.id
-		FROM channels, offerings
-		WHERE
-			channels.offering = offerings.id
-			AND offerings.hash = $1
-			AND channels.agent = $2
-			AND channels.client = $3
-	`
-	row := m.db.QueryRow(
-		query,
+	openBlockNumber, haveOpenBlockNumber := getOpenBlockNumber(el)
+	m.logger.Warn("bn = %d, hbn = %t", openBlockNumber, haveOpenBlockNumber)
+
+	var query string
+	args := []interface{}{
 		data.FromBytes(offeringHash.Bytes()),
 		data.FromBytes(agentAddress.Bytes()),
 		data.FromBytes(clientAddress.Bytes()),
-	)
+	}
+	if haveOpenBlockNumber {
+		query = `
+			SELECT c.id
+			FROM
+				channels AS c,
+				offerings AS o
+			WHERE
+				c.offering = o.id
+				AND o.hash = $1
+				AND c.agent = $2
+				AND c.client = $3
+				AND c.block = $4
+		`
+		args = append(args, openBlockNumber)
+	} else {
+		query = `
+			SELECT c.id
+			FROM
+				channels AS c,
+				offerings AS o,
+				eth_txs AS et
+			WHERE
+				c.offering = o.id
+				AND o.hash = $1
+				AND c.agent = $2
+				AND c.client = $3
+				AND c.block = et.block_number_issued
+				AND et.hash = $4
+		`
+		args = append(args, el.TxHash)
+	}
+	row := m.db.QueryRow(query, args...)
 
 	var id string
 	err := row.Scan(&id)

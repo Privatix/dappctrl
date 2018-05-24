@@ -321,7 +321,7 @@ func toHashes(topics []interface{}) []common.Hash {
 	return hashes
 }
 
-func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64, failures uint64, topics ...interface{}) {
+func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64, failures uint64, topics ...interface{}) *data.EthLog {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(genRandData(32)),
@@ -335,6 +335,7 @@ func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64, failures uint6
 	if err := db.Insert(el); err != nil {
 		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
 	}
+	return el
 }
 
 type expectation struct {
@@ -375,10 +376,10 @@ func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	mq.t.Fatal("not all expected jobs scheduled")
+	mq.t.Fatalf("not all expected jobs scheduled: %d left", len(mq.expectations))
 }
 
-func TestMonitorLogSchedule(t *testing.T) {
+func TestMonitorSchedule(t *testing.T) {
 	defer cleanDB(t)
 
 	queue := &mockQueue{t: t, db: db}
@@ -421,10 +422,12 @@ func TestMonitorLogSchedule(t *testing.T) {
 		acc1.EthAddr, data.FromBytes(someAddress.Bytes()),
 		offering1.ID, 0, 100, data.ChannelActive,
 	)
+	channel1.Block = 7
 	channelX := data.NewTestChannel(
 		data.FromBytes(someAddress.Bytes()), acc2.EthAddr,
 		offeringX.ID, 0, 100, data.ChannelActive,
 	)
+	channelX.Block = 8
 
 	data.InsertToTestDB(t, db,
 		product, template,
@@ -487,20 +490,39 @@ func TestMonitorLogSchedule(t *testing.T) {
 		return j.Type == data.JobAgentAfterChannelCreate
 	})
 
-	insertEvent(t, db, nextBlock(), 0,
+	el := insertEvent(t, db, nextBlock(), 0,
 		eth.EthDigestChannelToppedUp,
 		addr1,          // agent
 		someAddress,    // client
 		offeringX.Hash, // offering
 	)
+	bs, err := pscABI.Events["LogChannelToppedUp"].Inputs.NonIndexed().Pack(
+		uint32(channelX.Block),
+		new(big.Int),
+	)
+	if err != nil {
+		panic(err)
+	}
+	el.Data = data.FromBytes(bs)
+	db.Save(el)
 	// channel does not exist, thus event ignored
 
-	insertEvent(t, db, nextBlock(), 0,
+	el = insertEvent(t, db, nextBlock(), 0,
 		eth.EthDigestChannelToppedUp,
 		someAddress,    // agent
 		addr2,          // client
 		offeringX.Hash, // offering
 	)
+
+	bs, err = pscABI.Events["LogChannelToppedUp"].Inputs.NonIndexed().Pack(
+		uint32(channelX.Block),
+		new(big.Int),
+	)
+	if err != nil {
+		panic(err)
+	}
+	el.Data = data.FromBytes(bs)
+	db.Save(el)
 	queue.expect("client after channel topup", func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterChannelTopUp
 	})

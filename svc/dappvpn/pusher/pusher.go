@@ -8,7 +8,7 @@ import (
 	"github.com/privatix/dappctrl/util/srv"
 )
 
-// Config for Pusher object
+// Config for pushing OpenVpn configuration.
 type Config struct {
 	ExportConfigKeys []string
 	ConfigPath       string
@@ -17,27 +17,41 @@ type Config struct {
 	TimeOut          int64
 }
 
-// Pusher sends the OpenVpn configuration to sessrv
-type Pusher struct {
-	c       *Config
-	srvConf *srv.Config
-	logger  *util.Logger
+// Collect collects the required parameters.
+type Collect struct {
+	Config   *Config
+	Server   *srv.Config
+	Username string
+	Password string
+	Logger   *util.Logger
 }
 
-// NewPusher creates a new Pusher object
-func NewPusher(config *Config, srvConfig *srv.Config,
-	logger *util.Logger) *Pusher {
-	return &Pusher{
-		c:       config,
-		srvConf: srvConfig,
-		logger:  logger,
+// NewConfig for create empty config.
+func NewConfig() *Config {
+	return &Config{}
+}
+
+// NewCollect for create new Collect object.
+func NewCollect(conf *Config, srv *srv.Config, user, pass string,
+	logger *util.Logger) *Collect {
+	return &Collect{
+		Config:   conf,
+		Server:   srv,
+		Username: user,
+		Password: pass,
+		Logger:   logger,
 	}
 }
 
-// Push send the OpenVpn configuration to sessrv
-func (p *Pusher) Push(ctx context.Context, username, pass string) error {
-	req := c.NewPushConfigReq(username, pass, p.c.ConfigPath,
-		p.c.CaCertPath, p.c.ExportConfigKeys, p.c.TimeOut)
+func push(ctx context.Context, username, pass string, config *Config,
+	srvConfig *srv.Config, logger *util.Logger) error {
+	req := c.NewPushConfigReq(username, pass, config.ConfigPath,
+		config.CaCertPath, config.ExportConfigKeys, config.TimeOut)
 
-	return c.PushConfig(ctx, p.srvConf, p.logger, req)
+	return c.PushConfig(ctx, srvConfig, logger, req)
+}
+
+// PushConfig send the OpenVpn configuration to Session server.
+func PushConfig(ctx context.Context, c *Collect) error {
+	return push(ctx, c.Username, c.Password, c.Config, c.Server, c.Logger)
 }

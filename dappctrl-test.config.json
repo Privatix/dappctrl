@@ -127,5 +127,11 @@
 
     "VPNMonitorTest": {
         "ServerStartupDelay": 10
+    },
+
+    "VPNMonitorPusherTest": {
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "TimeOut": 120
     }
 }

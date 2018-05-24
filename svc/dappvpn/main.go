@@ -33,7 +33,7 @@ func newConfig() *config {
 		ChannelDir: ".",
 		Log:        util.NewLogConfig(),
 		Monitor:    mon.NewConfig(),
-		Pusher:     &pusher.Config{},
+		Pusher:     pusher.NewConfig(),
 		Server:     &serverConfig{Config: srv.NewConfig()},
 	}
 }
@@ -59,8 +59,6 @@ func main() {
 		log.Fatalf("failed to create logger: %s\n", err)
 	}
 
-	go pushConfig(context.Background(), conf, logger, *fconfig)
-
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
 		handleAuth()
@@ -69,7 +67,7 @@ func main() {
 	case "client-disconnect":
 		handleDisconnect()
 	default:
-		handleMonitor()
+		handleMonitor(*fconfig)
 	}
 }
 
@@ -129,7 +127,7 @@ func handleDisconnect() {
 	}
 }
 
-func handleMonitor() {
+func handleMonitor(confFile string) {
 	handleByteCount := func(ch string, up, down uint64) bool {
 		args := sesssrv.UpdateArgs{
 			ClientID: ch,
@@ -148,32 +146,32 @@ func handleMonitor() {
 		return true
 	}
 
+	if !conf.Pusher.Pushed {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			c := pusher.NewCollect(conf.Pusher, conf.Server.Config,
+				conf.Server.Username, conf.Server.Password,
+				logger)
+
+			if err := pusher.PushConfig(ctx, c); err != nil {
+				logger.Error("failed to send OpenVpn"+
+					" server configuration: %s\n", err)
+			}
+
+			conf.Pusher.Pushed = true
+
+			// rewrite dappvpn configuration file
+			if err := writeConfig(confFile, conf); err != nil {
+				logger.Error("failed to write "+
+					"configuration: %s\n", err)
+			}
+		}()
+	}
+
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleByteCount)
 
 	logger.Fatal("failed to monitor vpn traffic: %s",
 		monitor.MonitorTraffic())
-}
-
-func pushConfig(ctx context.Context, localCfg *config, logger *util.Logger,
-	localCfgFile string) {
-	if !localCfg.Pusher.Pushed {
-
-		p := pusher.NewPusher(localCfg.Pusher,
-			localCfg.Server.Config,
-			logger)
-
-		if err := p.Push(ctx, localCfg.Server.Username,
-			localCfg.Server.Password); err != nil {
-			log.Printf("failed to send OpenVpn server"+
-				" configuration: %s\n", err)
-			return
-		}
-
-		localCfg.Pusher.Pushed = true
-
-		if err := writeConfig(localCfgFile, localCfg); err != nil {
-			log.Printf("failed to write "+
-				"configuration: %s\n", err)
-		}
-	}
 }

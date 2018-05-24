@@ -17,61 +17,57 @@ import (
 )
 
 const (
+	autogen     = "autogen"
+	autogenTest = " # autogenerate option"
+	clientAccessName = "access.ovpn"
+	clientConfName   = "client.ovpn"
+	clientTpl        = "/ovpn/templates/client-config.tpl"
 	filePerm = 0644
 	pathPerm = 0755
 
-	autogen     = "autogen"
-	autogenTest = " # autogenerate option"
-
-	clientTpl        = "/ovpn/templates/client-config.tpl"
-	clientConfName   = "client.ovpn"
-	clientAccessName = "access.ovpn"
-)
-
-const (
 	nameCompLZO = "comp-lzo"
 )
 
 const (
-	defaultProto         = "tcp"
 	defaultCipher        = "AES-256-CBC"
+	defaultConnectRetry  = "2 120"
+	defaultPing          = "10"
+	defaultPingRestart   = "10"
+	defaultProto         = "tcp"
 	defaultServerAddress = "127.0.0.1"
 	defaultServerPort    = "443"
-	defaultPingRestart   = "10"
-	defaultPing          = "10"
-	defaultConnectRetry  = "2 120"
 )
 
 var defaultConfig = &cConf{
-	Proto:         defaultProto,
 	Cipher:        defaultCipher,
-	ServerAddress: defaultServerAddress,
-	Port:          defaultServerPort,
-	PingRestart:   defaultPingRestart,
-	Ping:          defaultPing,
 	ConnectRetry:  defaultConnectRetry,
+	Ping:          defaultPing,
+	PingRestart:   defaultPingRestart,
+	Port:          defaultServerPort,
+	Proto:         defaultProto,
+	ServerAddress: defaultServerAddress,
 }
 
 // cConf OpenVpn client model config
 type cConf struct {
-	Proto         string `json:"proto"`
-	Cipher        string `json:"cipher"`
-	ServerAddress string
-	Port          string `json:"port"`
-	PingRestart   string `json:"ping-restart"`
-	Ping          string `json:"ping"`
-	ConnectRetry  string `json:"connect-retry"`
 	Ca            string `json:"caData"`
+	Cipher        string `json:"cipher"`
+	ConnectRetry  string `json:"connect-retry"`
 	CompLZO       string `json:"comp-lzo"`
+	Ping          string `json:"ping"`
+	PingRestart   string `json:"ping-restart"`
+	Port          string `json:"port"`
+	Proto         string `json:"proto"`
+	ServerAddress string
 }
 
 // ConfDeployer is needed to store information about the directory in which
-// the directories with configuration files are stored
+// the directories with configuration files are stored.
 type ConfDeployer struct {
 	rootDir string
 }
 
-// NewConfDeployer creates a new ConfDeployer object
+// NewConfDeployer creates a new ConfDeployer object.
 func NewConfDeployer(rootDir string) *ConfDeployer {
 	return &ConfDeployer{rootDir}
 }
@@ -81,7 +77,7 @@ func NewConfDeployer(rootDir string) *ConfDeployer {
 //"access.ovpn"): 1) "client.ovpn" - the file is filled with
 // parameters from "srvAddr" (server host or ip address) and params (OpenVpn
 // server configuration parameters) 2) "access.ovpn" - the file is filled
-// "login" and "pass" parameters
+// "login" and "pass" parameters.
 func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
 	login, pass string, params []byte) (string, error) {
 	var target string
@@ -228,5 +224,4 @@ func clientConfig(srvAddr string,
 	}
 
 	return config, nil
-
 }

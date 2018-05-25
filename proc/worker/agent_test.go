@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"bytes"
@@ -72,7 +72,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.insertToTestDB(t, ethLog)
 	defer env.deleteFromTestDB(t, ethLog)
 
-	runJob(t, env.handler.AgentAfterChannelCreate, fixture.job)
+	runJob(t, env.worker.AgentAfterChannelCreate, fixture.job)
 
 	// Test channel was created.
 	channel := &data.Channel{}
@@ -156,7 +156,7 @@ func TestAgentAfterChannelTopUp(t *testing.T) {
 	env.insertToTestDB(t, ethLog)
 	defer env.deleteFromTestDB(t, ethLog)
 
-	runJob(t, env.handler.AgentAfterChannelTopUp, fixture.job)
+	runJob(t, env.worker.AgentAfterChannelTopUp, fixture.job)
 
 	channel := &data.Channel{}
 	env.findTo(t, channel, fixture.Channel.ID)
@@ -166,11 +166,11 @@ func TestAgentAfterChannelTopUp(t *testing.T) {
 		t.Fatal("total deposit not updated")
 	}
 
-	testCommonErrors(t, env.handler.AgentAfterChannelTopUp, *fixture.job)
+	testCommonErrors(t, env.worker.AgentAfterChannelTopUp, *fixture.job)
 }
 
 func testChannelStatusChanged(t *testing.T,
-	job *data.Job, env *handlerTest, newStatus string) {
+	job *data.Job, env *workerTest, newStatus string) {
 	updated := &data.Channel{}
 	env.findTo(t, updated, job.RelatedID)
 
@@ -194,7 +194,7 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 	testChangesStatusAndCreatesJob := func(t *testing.T, balance uint64, jobType string) {
 		fixture.Channel.ReceiptBalance = balance
 		env.updateInTestDB(t, fixture.Channel)
-		runJob(t, env.handler.AgentAfterUncooperativeCloseRequest,
+		runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
 			fixture.job)
 		testChannelStatusChanged(t, fixture.job, env,
 			data.ChannelInChallenge)
@@ -212,7 +212,7 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 		testChangesStatusAndCreatesJob(t, 1, data.JobAgentPreCooperativeClose)
 	})
 
-	testCommonErrors(t, env.handler.AgentAfterUncooperativeCloseRequest,
+	testCommonErrors(t, env.worker.AgentAfterUncooperativeCloseRequest,
 		*fixture.job)
 }
 
@@ -226,7 +226,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentAfterUncooperativeClose, fixture.job)
+	runJob(t, env.worker.AgentAfterUncooperativeClose, fixture.job)
 
 	testChannelStatusChanged(t,
 		fixture.job,
@@ -237,7 +237,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel,
 		fixture.Channel.ID)
 
-	testCommonErrors(t, env.handler.AgentAfterUncooperativeClose,
+	testCommonErrors(t, env.worker.AgentAfterUncooperativeClose,
 		*fixture.job)
 }
 
@@ -250,7 +250,7 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentPreCooperativeClose, fixture.job)
+	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 
@@ -284,7 +284,7 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 	// Test agent pre service terminate job created.
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
 
-	testCommonErrors(t, env.handler.AgentPreCooperativeClose, *fixture.job)
+	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
@@ -295,15 +295,15 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentAfterCooperativeClose, fixture.job)
+	runJob(t, env.worker.AgentAfterCooperativeClose, fixture.job)
 
 	testChannelStatusChanged(t, fixture.job, env, data.ChannelClosedCoop)
 
-	testCommonErrors(t, env.handler.AgentAfterCooperativeClose, *fixture.job)
+	testCommonErrors(t, env.worker.AgentAfterCooperativeClose, *fixture.job)
 }
 
 func testServiceStatusChanged(t *testing.T,
-	job *data.Job, env *handlerTest, newStatus string) {
+	job *data.Job, env *workerTest, newStatus string) {
 	updated := &data.Channel{}
 	env.findTo(t, updated, job.RelatedID)
 
@@ -320,11 +320,11 @@ func TestAgentPreServiceSuspend(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentPreServiceSuspend, fixture.job)
+	runJob(t, env.worker.AgentPreServiceSuspend, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceSuspended)
 
-	testCommonErrors(t, env.handler.AgentPreServiceSuspend, *fixture.job)
+	testCommonErrors(t, env.worker.AgentPreServiceSuspend, *fixture.job)
 }
 
 func TestAgentPreServiceUnsuspend(t *testing.T) {
@@ -338,11 +338,11 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 	fixture.Channel.ServiceStatus = data.ServiceSuspended
 	env.updateInTestDB(t, fixture.Channel)
 
-	runJob(t, env.handler.AgentPreServiceUnsuspend, fixture.job)
+	runJob(t, env.worker.AgentPreServiceUnsuspend, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceActive)
 
-	testCommonErrors(t, env.handler.AgentPreServiceUnsuspend, *fixture.job)
+	testCommonErrors(t, env.worker.AgentPreServiceUnsuspend, *fixture.job)
 }
 
 func TestAgentPreServiceTerminate(t *testing.T) {
@@ -353,11 +353,11 @@ func TestAgentPreServiceTerminate(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentPreServiceTerminate, fixture.job)
+	runJob(t, env.worker.AgentPreServiceTerminate, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
 
-	testCommonErrors(t, env.handler.AgentPreServiceTerminate, *fixture.job)
+	testCommonErrors(t, env.worker.AgentPreServiceTerminate, *fixture.job)
 }
 
 func TestAgentPreEndpointMsgCreate(t *testing.T) {
@@ -374,7 +374,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentPreEndpointMsgCreate, fixture.job)
+	runJob(t, env.worker.AgentPreEndpointMsgCreate, fixture.job)
 
 	endpoint := &data.Endpoint{}
 	if err := env.db.SelectOneTo(endpoint,
@@ -406,7 +406,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	env.deleteJob(t, data.JobAgentPreEndpointMsgSOMCPublish,
 		data.JobEndpoint, endpoint.ID)
 
-	testCommonErrors(t, env.handler.AgentPreEndpointMsgCreate, *fixture.job)
+	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
 func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
@@ -424,7 +424,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 		somcEndpointChan <- env.fakeSOMC.ReadPublishEndpoint(t)
 	}()
 
-	workerF := env.handler.AgentPreEndpointMsgSOMCPublish
+	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
 	select {
@@ -454,7 +454,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 }
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
-	fixture *handlerTestFixture, env *handlerTest,
+	fixture *workerTestFixture, env *workerTest,
 	setupPrice uint64, billingType, expectedStatus string) {
 
 	fixture.Channel.ServiceStatus = data.ServicePending
@@ -464,7 +464,7 @@ func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
 	fixture.Offering.BillingType = billingType
 	env.updateInTestDB(t, fixture.Offering)
 
-	runJob(t, env.handler.AgentAfterEndpointMsgSOMCPublish, fixture.job)
+	runJob(t, env.worker.AgentAfterEndpointMsgSOMCPublish, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, expectedStatus)
 }
@@ -484,7 +484,7 @@ func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
 	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env, 1, data.BillingPostpaid,
 		data.ServiceSuspended)
 
-	testCommonErrors(t, env.handler.AgentAfterEndpointMsgSOMCPublish,
+	testCommonErrors(t, env.worker.AgentAfterEndpointMsgSOMCPublish,
 		*fixture.job)
 }
 
@@ -498,7 +498,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentPreOfferingMsgBCPublish, fixture.job)
+	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 
@@ -523,7 +523,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 			data.OfferRegister, offering.OfferStatus)
 	}
 
-	testCommonErrors(t, env.handler.AgentPreOfferingMsgBCPublish,
+	testCommonErrors(t, env.worker.AgentPreOfferingMsgBCPublish,
 		*fixture.job)
 }
 
@@ -536,7 +536,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	runJob(t, env.handler.AgentAfterOfferingMsgBCPublish, fixture.job)
+	runJob(t, env.worker.AgentAfterOfferingMsgBCPublish, fixture.job)
 
 	offering := &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -549,7 +549,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring,
 		offering.ID)
 
-	testCommonErrors(t, env.handler.AgentAfterOfferingMsgBCPublish,
+	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,
 		*fixture.job)
 }
 
@@ -567,7 +567,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		somcOfferingsChan <- env.fakeSOMC.ReadPublishOfferings(t)
 	}()
 
-	workerF := env.handler.AgentPreOfferingMsgSOMCPublish
+	workerF := env.worker.AgentPreOfferingMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
 	offering := &data.Offering{}

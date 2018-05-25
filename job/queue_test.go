@@ -1,6 +1,6 @@
 // +build !nojobtest
 
-package queue
+package job
 
 import (
 	"errors"

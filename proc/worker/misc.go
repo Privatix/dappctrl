@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"crypto/ecdsa"
@@ -16,11 +16,11 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-func (w *Handler) key(key string) (*ecdsa.PrivateKey, error) {
+func (w *Worker) key(key string) (*ecdsa.PrivateKey, error) {
 	return w.decryptKeyFunc(key, w.pwdGetter.Get())
 }
 
-func (w *Handler) toHashArr(h string) (ret [common.HashLength]byte, err error) {
+func (w *Worker) toHashArr(h string) (ret [common.HashLength]byte, err error) {
 	var hash common.Hash
 	hash, err = data.ToHash(h)
 	if err != nil {
@@ -31,7 +31,7 @@ func (w *Handler) toHashArr(h string) (ret [common.HashLength]byte, err error) {
 	return
 }
 
-func (w *Handler) balanceData(job *data.Job) (*data.JobBalanceData, error) {
+func (w *Worker) balanceData(job *data.Job) (*data.JobBalanceData, error) {
 	balanceData := &data.JobBalanceData{}
 	if err := json.Unmarshal(job.Data, balanceData); err != nil {
 		return nil, fmt.Errorf("could not unmarshal data to %T: %v",
@@ -40,7 +40,7 @@ func (w *Handler) balanceData(job *data.Job) (*data.JobBalanceData, error) {
 	return balanceData, nil
 }
 
-func (w *Handler) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
+func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
 	hash, err := data.ToHash(ethLog.TxHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode eth tx hash: %v", err)
@@ -49,7 +49,7 @@ func (w *Handler) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
 	return w.getTransaction(hash)
 }
 
-func (w *Handler) newUser(tx *types.Transaction) (*data.User, error) {
+func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
 	signer := &types.HomesteadSigner{}
 	pubkey, err := ethutil.RecoverPubKey(signer, tx)
 	if err != nil {
@@ -66,7 +66,7 @@ func (w *Handler) newUser(tx *types.Transaction) (*data.User, error) {
 	}, nil
 }
 
-func (w *Handler) addJob(jType, rType, rID string) error {
+func (w *Worker) addJob(jType, rType, rID string) error {
 	return w.queue.Add(&data.Job{
 		ID:          util.NewUUID(),
 		Status:      data.JobActive,
@@ -79,7 +79,7 @@ func (w *Handler) addJob(jType, rType, rID string) error {
 	})
 }
 
-func (w *Handler) updateAccountBalances(job *data.Job, jobType string) error {
+func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
 	acc, err := w.relatedAccount(job, jobType)
 	if err != nil {
 		return err

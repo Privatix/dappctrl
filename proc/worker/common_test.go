@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"math/big"
@@ -26,7 +26,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 
 	env.ethBack.balancePTC = big.NewInt(transferAmount)
 
-	runJob(t, env.handler.PreAccountAddBalanceApprove, fixture.job)
+	runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
@@ -36,7 +36,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 	noCallerAddr := common.BytesToAddress([]byte{})
 	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, agentAddr)
 
-	testCommonErrors(t, env.handler.PreAccountAddBalanceApprove,
+	testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
 		*fixture.job)
 }
 
@@ -54,14 +54,14 @@ func TestPreAccountAddBalance(t *testing.T) {
 		Amount: uint(transferAmount),
 	})
 
-	runJob(t, env.handler.PreAccountAddBalance, fixture.job)
+	runJob(t, env.worker.PreAccountAddBalance, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	env.ethBack.testCalled(t, "PSCAddBalanceERC20", agentAddr,
 		big.NewInt(transferAmount))
 
-	testCommonErrors(t, env.handler.PreAccountAddBalance, *fixture.job)
+	testCommonErrors(t, env.worker.PreAccountAddBalance, *fixture.job)
 }
 
 func TestAfterAccountAddBalance(t *testing.T) {
@@ -75,7 +75,7 @@ func TestAfterAccountAddBalance(t *testing.T) {
 	env.ethBack.balancePTC = big.NewInt(100)
 	env.ethBack.balancePSC = big.NewInt(200)
 
-	runJob(t, env.handler.AfterAccountAddBalance, fixture.job)
+	runJob(t, env.worker.AfterAccountAddBalance, fixture.job)
 
 	account := &data.Account{}
 	env.findTo(t, account, fixture.Account.ID)
@@ -88,7 +88,7 @@ func TestAfterAccountAddBalance(t *testing.T) {
 			account.PSCBalance)
 	}
 
-	testCommonErrors(t, env.handler.AfterAccountAddBalance, *fixture.job)
+	testCommonErrors(t, env.worker.AfterAccountAddBalance, *fixture.job)
 }
 
 func TestPreAccountReturnBalance(t *testing.T) {
@@ -108,7 +108,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 
 	env.ethBack.balancePSC = big.NewInt(amount)
 
-	runJob(t, env.handler.PreAccountReturnBalance, fixture.job)
+	runJob(t, env.worker.PreAccountReturnBalance, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
@@ -118,7 +118,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	env.ethBack.testCalled(t, "PSCReturnBalanceERC20", agentAddr,
 		big.NewInt(amount))
 
-	testCommonErrors(t, env.handler.PreAccountReturnBalance, *fixture.job)
+	testCommonErrors(t, env.worker.PreAccountReturnBalance, *fixture.job)
 }
 
 func TestAfterAccountReturnBalance(t *testing.T) {
@@ -132,7 +132,7 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 	env.ethBack.balancePTC = big.NewInt(100)
 	env.ethBack.balancePSC = big.NewInt(200)
 
-	runJob(t, env.handler.AfterAccountReturnBalance, fixture.job)
+	runJob(t, env.worker.AfterAccountReturnBalance, fixture.job)
 
 	account := &data.Account{}
 	env.findTo(t, account, fixture.Account.ID)
@@ -145,5 +145,5 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 			account.PSCBalance)
 	}
 
-	testCommonErrors(t, env.handler.AfterAccountReturnBalance, *fixture.job)
+	testCommonErrors(t, env.worker.AfterAccountReturnBalance, *fixture.job)
 }

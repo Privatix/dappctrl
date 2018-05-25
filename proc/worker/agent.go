@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"crypto/rand"
@@ -19,7 +19,7 @@ import (
 )
 
 // AgentAfterChannelCreate registers client and creates pre service create job.
-func (w *Handler) AgentAfterChannelCreate(job *data.Job) error {
+func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 	err := w.validateJob(job, data.JobAgentAfterChannelCreate, data.JobChannel)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (w *Handler) AgentAfterChannelCreate(job *data.Job) error {
 }
 
 // AgentAfterChannelTopUp updates deposit of a channel.
-func (w *Handler) AgentAfterChannelTopUp(job *data.Job) error {
+func (w *Worker) AgentAfterChannelTopUp(job *data.Job) error {
 	channel, err := w.relatedChannel(job, data.JobAgentAfterChannelTopUp)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (w *Handler) AgentAfterChannelTopUp(job *data.Job) error {
 }
 
 // AgentAfterUncooperativeCloseRequest sets channel's status to challenge period.
-func (w *Handler) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
+func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 	channel, err := w.relatedChannel(job,
 		data.JobAgentAfterUncooperativeCloseRequest)
 	if err != nil {
@@ -165,7 +165,7 @@ func (w *Handler) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 }
 
 // AgentAfterUncooperativeClose marks channel closed uncoop.
-func (w *Handler) AgentAfterUncooperativeClose(job *data.Job) error {
+func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 	channel, err := w.relatedChannel(job,
 		data.JobAgentAfterUncooperativeClose)
 	if err != nil {
@@ -187,7 +187,7 @@ func (w *Handler) AgentAfterUncooperativeClose(job *data.Job) error {
 
 // AgentPreCooperativeClose call contract cooperative close method and trigger
 // service terminate job.
-func (w *Handler) AgentPreCooperativeClose(job *data.Job) error {
+func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 	channel, err := w.relatedChannel(job, data.JobAgentPreCooperativeClose)
 	if err != nil {
 		return err
@@ -257,7 +257,7 @@ func (w *Handler) AgentPreCooperativeClose(job *data.Job) error {
 }
 
 // AgentAfterCooperativeClose marks channel as closed coop.
-func (w *Handler) AgentAfterCooperativeClose(job *data.Job) error {
+func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 	channel, err := w.relatedChannel(job, data.JobAgentAfterCooperativeClose)
 	if err != nil {
 		return err
@@ -268,21 +268,21 @@ func (w *Handler) AgentAfterCooperativeClose(job *data.Job) error {
 }
 
 // AgentPreServiceSuspend marks service as suspended.
-func (w *Handler) AgentPreServiceSuspend(job *data.Job) error {
+func (w *Worker) AgentPreServiceSuspend(job *data.Job) error {
 	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceSuspend)
 }
 
 // AgentPreServiceUnsuspend marks service as active.
-func (w *Handler) AgentPreServiceUnsuspend(job *data.Job) error {
+func (w *Worker) AgentPreServiceUnsuspend(job *data.Job) error {
 	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceUnsuspend)
 }
 
 // AgentPreServiceTerminate marks service as active.
-func (w *Handler) AgentPreServiceTerminate(job *data.Job) error {
+func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
 	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceTerminate)
 }
 
-func (w *Handler) agentUpdateServiceStatus(job *data.Job, jobType string) error {
+func (w *Worker) agentUpdateServiceStatus(job *data.Job, jobType string) error {
 	channel, err := w.relatedChannel(job, jobType)
 	if err != nil {
 		return err
@@ -305,7 +305,7 @@ func (w *Handler) agentUpdateServiceStatus(job *data.Job, jobType string) error 
 }
 
 // AgentPreEndpointMsgCreate prepares endpoint message to be sent to client.
-func (w *Handler) AgentPreEndpointMsgCreate(job *data.Job) error {
+func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 	channel, err := w.relatedChannel(job, data.JobAgentPreEndpointMsgCreate)
 	if err != nil {
 		return err
@@ -402,7 +402,7 @@ func (w *Handler) AgentPreEndpointMsgCreate(job *data.Job) error {
 }
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
-func (w *Handler) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
+func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 	endpoint, err := w.relatedEndpoint(job, data.JobAgentPreEndpointMsgSOMCPublish)
 	if err != nil {
 		return err
@@ -428,7 +428,7 @@ func (w *Handler) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 }
 
 // AgentAfterEndpointMsgSOMCPublish suspends service if some pre payment expected.
-func (w *Handler) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
+func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 	channel, err := w.relatedChannel(job,
 		data.JobAgentAfterEndpointMsgSOMCPublish)
 	if err != nil {
@@ -451,7 +451,7 @@ func (w *Handler) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 }
 
 // AgentPreOfferingMsgBCPublish publishes offering to blockchain.
-func (w *Handler) AgentPreOfferingMsgBCPublish(job *data.Job) error {
+func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	offering, err := w.relatedOffering(job,
 		data.JobAgentPreOfferingMsgBCPublish)
 	if err != nil {
@@ -487,7 +487,7 @@ func (w *Handler) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates
 // somc publish job.
-func (w *Handler) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
+func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 	offering, err := w.relatedOffering(job,
 		data.JobAgentAfterOfferingMsgBCPublish)
 	if err != nil {
@@ -504,7 +504,7 @@ func (w *Handler) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 }
 
 // AgentPreOfferingMsgSOMCPublish publishes to somc and creates after job.
-func (w *Handler) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
+func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 	offering, err := w.relatedOffering(job,
 		data.JobAgentPreOfferingMsgSOMCPublish)
 	if err != nil {

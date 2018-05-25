@@ -12,10 +12,9 @@ import (
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
-	"github.com/privatix/dappctrl/job/handler"
-	"github.com/privatix/dappctrl/job/queue"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/uisrv"
@@ -35,7 +34,7 @@ type config struct {
 	AgentServer   *uisrv.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
-	JobQueue      *queue.Config
+	Job           *job.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
 	PayAddress    string
@@ -48,7 +47,7 @@ func newConfig() *config {
 	return &config{
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
-		JobQueue:      queue.NewConfig(),
+		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
@@ -137,14 +136,14 @@ func main() {
 		panic(err)
 	}
 
-	handler, err := handler.NewHandler(db, somcConn,
-		handler.NewEthBackend(psc, ptc, gethConn),
+	handler, err := worker.NewWorker(db, somcConn,
+		worker.NewEthBackend(psc, ptc, gethConn),
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
 	if err != nil {
 		panic(err)
 	}
 
-	queue := queue.NewQueue(conf.JobQueue, logger, db, job.HandlersMap(handler))
+	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
 	handler.SetQueue(queue)
 
 	logger.Fatal("failed to process job queue: %s", queue.Process())

@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (w *Handler) getTransaction(hash common.Hash) (*types.Transaction, error) {
+func (w *Worker) getTransaction(hash common.Hash) (*types.Transaction, error) {
 	// TODO: move timeout to conf
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

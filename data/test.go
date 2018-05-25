@@ -351,7 +351,7 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 // CleanTestTable deletes all records from a given DB table.
 func CleanTestTable(t *testing.T, db *reform.DB, tbl reform.Table) {
 	if _, err := db.DeleteFrom(tbl, ""); err != nil {
-		t.Fatal("failed to clean %T table: %s", tbl, err)
+		t.Fatalf("failed to clean %T table: %s", tbl, err)
 	}
 }
 

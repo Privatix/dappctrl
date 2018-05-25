@@ -25,7 +25,12 @@ const (
 	filePerm         = 0644
 	pathPerm         = 0755
 
-	nameCompLZO = "comp-lzo"
+	nameCipher       = "cipher"
+	nameConnectRetry = "connect-retry"
+	nameCompLZO      = "comp-lzo"
+	namePing         = "ping"
+	namePingRestart  = "ping-restart"
+	nameProto        = "proto"
 )
 
 const (
@@ -61,24 +66,15 @@ type cConf struct {
 	ServerAddress string
 }
 
-// ConfDeployer is needed to store information about the directory in which
-// the directories with configuration files are stored.
-type ConfDeployer struct {
-	rootDir string
-}
-
-// NewConfDeployer creates a new ConfDeployer object.
-func NewConfDeployer(rootDir string) *ConfDeployer {
-	return &ConfDeployer{rootDir}
-}
-
 // Deploy creates target directory, the name is equivalent to channel.ID or
 // endpoint.Channel. In target directory, two files are created ("client.ovpn",
-//"access.ovpn"): 1) "client.ovpn" - the file is filled with
+// "access.ovpn"): 1) "client.ovpn" - the file is filled with
 // parameters from "srvAddr" (server host or ip address) and params (OpenVpn
 // server configuration parameters) 2) "access.ovpn" - the file is filled
 // "login" and "pass" parameters.
-func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
+// rootDir - information about the location of the directory in which
+// the directories with configuration files are stored.
+func Deploy(record reform.Record, rootDir, srvAddr string,
 	login, pass string, params []byte) (string, error) {
 	var target string
 
@@ -93,7 +89,7 @@ func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
 			return "", ErrInput
 		}
 
-		target = filepath.Join(d.rootDir, r.ID)
+		target = filepath.Join(rootDir, r.ID)
 		if err := createPath(target); err != nil {
 			return "", err
 		}
@@ -102,7 +98,7 @@ func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
 			return "", ErrInput
 		}
 
-		target = filepath.Join(d.rootDir, r.Channel)
+		target = filepath.Join(rootDir, r.Channel)
 		if err := createPath(target); err != nil {
 			return "", err
 		}
@@ -110,21 +106,21 @@ func (d *ConfDeployer) Deploy(record reform.Record, srvAddr string,
 		return "", ErrInput
 	}
 
-	if err := d.deploy(target, srvAddr, login, pass, params); err != nil {
+	if err := deploy(target, srvAddr, login, pass, params); err != nil {
 		return "", err
 	}
 
 	return target, nil
 }
 
-func (d *ConfDeployer) deploy(targetDir, srvAddr string,
+func deploy(targetDir, srvAddr string,
 	login, pass string, params []byte) error {
 	cfg, err := clientConfig(srvAddr, params)
 	if err != nil {
 		return err
 	}
 
-	if isNotExist(targetDir) {
+	if notExist(targetDir) {
 		if err := createPath(targetDir); err != nil {
 			return err
 		}

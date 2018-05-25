@@ -110,8 +110,8 @@ func createPath(target string) error {
 	return os.MkdirAll(target, pathPerm)
 }
 
-func isNotExist(object string) bool {
-	if _, err := os.Stat(object); os.IsNotExist(err) {
+func notExist(location string) bool {
+	if _, err := os.Stat(location); os.IsNotExist(err) {
 		return true
 	}
 	return false

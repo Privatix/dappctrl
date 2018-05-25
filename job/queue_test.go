@@ -106,6 +106,8 @@ func waitForJob(queue *Queue, job *data.Job, ch chan<- error) {
 }
 
 func TestFailure(t *testing.T) {
+	data.CleanTestTable(t, db, data.JobTable)
+
 	makeHandler := func(limit uint8) Handler {
 		return func(j *data.Job) error {
 			if j.TryCount+1 < limit {
@@ -147,8 +149,9 @@ func TestFailure(t *testing.T) {
 }
 
 func TestStress(t *testing.T) {
-	started := time.Now()
-	numStressJobs := int(conf.JobQueueTest.StressJobs)
+	data.CleanTestTable(t, db, data.JobTable)
+
+	numStressJobs := int(conf.JobTest.StressJobs)
 
 	ch := make(chan struct{})
 	handler := func(j *data.Job) error {
@@ -160,10 +163,7 @@ func TestStress(t *testing.T) {
 			return errors.New("some error")
 		}
 
-		// Ignore stale jobs not to deadlock the test.
-		if j.CreatedAt.After(started) {
-			ch <- struct{}{}
-		}
+		ch <- struct{}{}
 
 		return nil
 	}

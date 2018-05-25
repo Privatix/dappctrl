@@ -230,6 +230,10 @@ func (q *Queue) processMain() error {
 		}
 
 		for rows.Next() {
+			if q.checkExit() {
+				return ErrQueueClosed
+			}
+
 			var job, related string
 			if err = rows.Scan(&job, &related); err != nil {
 				return err

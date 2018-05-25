@@ -15,22 +15,22 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type jobTestConfig struct {
+type testConfig struct {
 	StressJobs uint
 }
 
-func newJobQueueTestConfig() *jobTestConfig {
-	return &jobTestConfig{
+func newTestConfig() *testConfig {
+	return &testConfig{
 		StressJobs: 100,
 	}
 }
 
 var (
 	conf struct {
-		DB           *data.DBConfig
-		JobQueue     *Config
-		JobQueueTest *jobTestConfig
-		Log          *util.LogConfig
+		DB      *data.DBConfig
+		Job     *Config
+		JobTest *testConfig
+		Log     *util.LogConfig
 	}
 
 	logger *util.Logger
@@ -58,7 +58,7 @@ func createJob() *data.Job {
 }
 
 func TestAdd(t *testing.T) {
-	queue := NewQueue(conf.JobQueue, logger, db, nil)
+	queue := NewQueue(conf.Job, logger, db, nil)
 	defer queue.Close()
 
 	job := createJob()
@@ -78,7 +78,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestHandlerNotFound(t *testing.T) {
-	queue := NewQueue(conf.JobQueue, logger, db, nil)
+	queue := NewQueue(conf.Job, logger, db, nil)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -118,9 +118,9 @@ func TestFailure(t *testing.T) {
 	}
 
 	handlerMap := HandlerMap{
-		data.JobClientPreChannelCreate: makeHandler(conf.JobQueue.TryLimit),
+		data.JobClientPreChannelCreate: makeHandler(conf.Job.TryLimit),
 	}
-	queue := NewQueue(conf.JobQueue, logger, db, handlerMap)
+	queue := NewQueue(conf.Job, logger, db, handlerMap)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -128,7 +128,9 @@ func TestFailure(t *testing.T) {
 
 	ch := make(chan error)
 	go waitForJob(queue, job, ch)
+	logger.Info("-1")
 	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	logger.Info("-2")
 	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobDone {
 		t.Fatalf("job status is not done: %s", job.Status)
@@ -137,11 +139,13 @@ func TestFailure(t *testing.T) {
 	job.TryCount = 0
 	job.Status = data.JobActive
 	handlerMap[data.JobClientPreChannelCreate] =
-		makeHandler(conf.JobQueue.TryLimit + 1)
+		makeHandler(conf.Job.TryLimit + 1)
 	util.TestExpectResult(t, "Save", nil, db.Save(job))
 
 	go waitForJob(queue, job, ch)
+	logger.Info("1")
 	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	logger.Info("2")
 	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobFailed {
 		t.Fatalf("job status is not failed: %s", job.Status)
@@ -159,7 +163,7 @@ func TestStress(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 
-		if j.TryCount+1 < conf.JobQueue.TryLimit && rand.Uint32()%2 == 0 {
+		if j.TryCount+1 < conf.Job.TryLimit && rand.Uint32()%2 == 0 {
 			return errors.New("some error")
 		}
 
@@ -168,7 +172,7 @@ func TestStress(t *testing.T) {
 		return nil
 	}
 
-	queue := NewQueue(conf.JobQueue, logger, db,
+	queue := NewQueue(conf.Job, logger, db,
 		HandlerMap{data.JobClientPreChannelCreate: handler})
 
 	ch2 := make(chan error)
@@ -191,10 +195,10 @@ func TestStress(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.JobQueue = NewConfig()
-	conf.Log = util.NewLogConfig()
-	conf.JobQueueTest = newJobQueueTestConfig()
 	conf.DB = data.NewDBConfig()
+	conf.Job = NewConfig()
+	conf.JobTest = newTestConfig()
+	conf.Log = util.NewLogConfig()
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)

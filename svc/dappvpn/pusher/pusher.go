@@ -9,6 +9,14 @@ import (
 )
 
 // Config for pushing OpenVpn configuration.
+// ExportConfigKeys - list of parameters that are exported to
+// the OpenVpn client configuration from the OpenVpn server configuration.
+// ConfigPath - absolute path to OpenVpn server configuration file.
+// CaCertPath - absolute path to Ca certificate file
+// Pushed - if the configuration is passed to the Session server
+// then this parameter is true.
+// TimeOut - pause between attempts
+// to send a configuration to the Session server.
 type Config struct {
 	ExportConfigKeys []string
 	ConfigPath       string

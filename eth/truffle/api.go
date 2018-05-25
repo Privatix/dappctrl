@@ -1,4 +1,4 @@
-// +build !noagentuisrvtest
+// +build !notest
 
 package truffle
 

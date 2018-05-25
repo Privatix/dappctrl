@@ -1,4 +1,4 @@
-// +build !noethtest
+// +build !notest
 
 package truffle
 

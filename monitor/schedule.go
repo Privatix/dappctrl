@@ -272,7 +272,6 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 				AND o.hash = $1
 				AND c.agent = $2
 				AND c.client = $3
-				AND c.block = et.block_number_issued
 				AND et.hash = $4
 		`
 		args = append(args, el.TxHash)

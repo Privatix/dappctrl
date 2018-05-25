@@ -70,18 +70,20 @@ func NewServer(conf *Config,
 }
 
 const (
-	accountsPath        = "/ui/accounts/"
-	authPath            = "/ui/auth"
-	channelsPath        = "/ui/channels/"
-	clientChannelsPath  = "/ui/client/channels/"
-	clientOfferingsPath = "/ui/client/offerings"
-	clientProductsPath  = "/ui/client/products"
-	endpointsPath       = "/ui/endpoints"
-	offeringsPath       = "/ui/offerings/"
-	productsPath        = "/ui/products"
-	sessionsPath        = "/ui/sessions"
-	settingsPath        = "/ui/settings"
-	templatePath        = "/ui/templates"
+	accountsPath        = "/accounts/"
+	authPath            = "/auth"
+	channelsPath        = "/channels/"
+	clientChannelsPath  = "/client/channels/"
+	clientOfferingsPath = "/client/offerings"
+	clientProductsPath  = "/client/products"
+	endpointsPath       = "/endpoints"
+	incomePath          = "/income"
+	offeringsPath       = "/offerings/"
+	productsPath        = "/products"
+	sessionsPath        = "/sessions"
+	settingsPath        = "/settings"
+	templatePath        = "/templates"
+	usagePath           = "/usage"
 )
 
 // ListenAndServe starts a server.
@@ -97,11 +99,13 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(clientProductsPath,
 		basicAuthMiddleware(s, s.handleGetClientProducts))
 	mux.HandleFunc(endpointsPath, basicAuthMiddleware(s, s.handleGetEndpoints))
+	mux.HandleFunc(incomePath, basicAuthMiddleware(s, s.handleGetIncome))
 	mux.HandleFunc(offeringsPath, basicAuthMiddleware(s, s.handleOfferings))
 	mux.HandleFunc(productsPath, basicAuthMiddleware(s, s.handleProducts))
 	mux.HandleFunc(sessionsPath, basicAuthMiddleware(s, s.handleGetSessions))
 	mux.HandleFunc(settingsPath, basicAuthMiddleware(s, s.handleSettings))
 	mux.HandleFunc(templatePath, basicAuthMiddleware(s, s.handleTempaltes))
+	mux.HandleFunc(usagePath, basicAuthMiddleware(s, s.handleGetUsage))
 	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {

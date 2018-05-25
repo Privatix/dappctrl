@@ -183,18 +183,25 @@ func testGetResources(t *testing.T, res *http.Response, exp int) {
 	}
 }
 
-func setTestUserCredentials(t *testing.T) {
+func setTestUserCredentials(t *testing.T) func() {
 	hash, err := data.HashPassword(testPassword, "test-salt")
 	if err != nil {
 		t.Fatal("failed to hash password: ", err)
 	}
-	insertItems(t, &data.Setting{
+	pwdSetting := &data.Setting{
 		Key:   passwordKey,
 		Value: string(hash),
 		Name:  "password",
-	}, &data.Setting{
+	}
+
+	saltSetting := &data.Setting{
 		Key:   saltKey,
 		Value: "test-salt",
 		Name:  "salt",
-	})
+	}
+
+	data.InsertToTestDB(t, testServer.db, pwdSetting, saltSetting)
+	return func() {
+		data.DeleteFromTestDB(t, testServer.db, pwdSetting, saltSetting)
+	}
 }

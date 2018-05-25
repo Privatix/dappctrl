@@ -295,7 +295,8 @@ func InsertToTestDB(t *testing.T, db *reform.DB, rows ...reform.Struct) {
 	for _, v := range rows {
 		if err := tx.Insert(v); err != nil {
 			RollbackTestTX(t, tx)
-			t.Fatalf("failed to insert %T: %s", v, err)
+			t.Fatalf("failed to insert %T: %s. %s", v, err,
+				util.Caller())
 		}
 	}
 	CommitTestTX(t, tx)

@@ -23,6 +23,28 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+const (
+	agentPass      = "agentpass"
+	clientPass     = "clientpass"
+	someAddressStr = "0xdeadbeef"
+	someHashStr    = "0xc0ffee"
+
+	minDepositVal  = 123
+	chanDepositVal = 100
+
+	unrelatedOfferingCreated = "unrelated offering created"
+	clientOfferingPoppedUp   = "client offering popped up"
+	agentAfterChannelCreated = "agent after channel created"
+	clientAfterChannelTopUp  = "client after channel topup"
+
+	LogChannelTopUp = "LogChannelToppedUp"
+)
+
+var (
+	pscAddr = common.HexToAddress(
+		"0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
+)
+
 type mockClient struct {
 	logger  *util.Logger
 	headers []ethtypes.Header
@@ -75,7 +97,8 @@ func eventSatisfiesFilter(e *ethtypes.Log, q ethereum.FilterQuery) bool {
 	return true
 }
 
-func (c *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]ethtypes.Log, error) {
+func (c *mockClient) FilterLogs(ctx context.Context,
+	q ethereum.FilterQuery) ([]ethtypes.Log, error) {
 	var filtered []ethtypes.Log
 	for _, e := range c.logs {
 		if eventSatisfiesFilter(&e, q) {
@@ -86,11 +109,14 @@ func (c *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return filtered, nil
 }
 
-// HeaderByNumber returns a minimal header for testing. It only supports calls where number is nil.
+// HeaderByNumber returns a minimal header for testing.
+// It only supports calls where number is nil.
 // Moreover, only the Number field in the returned header is valid.
-func (c *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error) {
+func (c *mockClient) HeaderByNumber(ctx context.Context,
+	number *big.Int) (*ethtypes.Header, error) {
 	if number != nil {
-		return nil, fmt.Errorf("mock HeaderByNumber() only supports nil as 'number'")
+		return nil, fmt.Errorf("mock HeaderByNumber()" +
+			" only supports nil as 'number'")
 	}
 	return &ethtypes.Header{
 		Number: new(big.Int).SetUint64(c.number),
@@ -123,8 +149,6 @@ var (
 	logger *util.Logger
 	db     *reform.DB
 	client mockClient
-
-	pscAddr = common.HexToAddress("0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
 )
 
 // TestMain reads config and run tests.
@@ -155,13 +179,15 @@ func cleanDB(t *testing.T) {
 	data.CleanTestDB(t, db)
 }
 
-func expectLogs(t *testing.T, expected int, errMsg, tail string, args ...interface{}) []*data.EthLog {
+func expectLogs(t *testing.T, expected int, errMsg, tail string,
+	args ...interface{}) []*data.EthLog {
 	var (
 		actual int
 	)
 	for i := 0; i < 10; i++ {
 		time.Sleep(100 * time.Millisecond)
-		structs, err := db.SelectAllFrom(data.EthLogTable, tail, args...)
+		structs, err := db.SelectAllFrom(data.EthLogTable,
+			tail, args...)
 		if err != nil {
 			t.Fatalf("failed to select log entries: %v", err)
 		}
@@ -174,15 +200,21 @@ func expectLogs(t *testing.T, expected int, errMsg, tail string, args ...interfa
 			return logs
 		}
 	}
-	t.Fatalf("%s: wrong number of log entries collected: got %d, expected %d", errMsg, actual, expected)
+	t.Fatalf("%s: wrong number of log entries collected:"+
+		" got %d, expected %d", errMsg, actual, expected)
 	return nil
 }
 
-func insertNewAccount(t *testing.T, db *reform.DB, auth string) (*data.Account, common.Address) {
+func insertNewAccount(t *testing.T, db *reform.DB,
+	auth string) (*data.Account, common.Address) {
 	acc := data.NewTestAccount(auth)
 	data.InsertToTestDB(t, db, acc)
 
-	addrBytes, _ := data.ToBytes(acc.EthAddr)
+	addrBytes, err := data.ToBytes(acc.EthAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	addr := common.BytesToAddress(addrBytes)
 	return acc, addr
 }
@@ -193,35 +225,49 @@ func genRandData(length int) []byte {
 	return randbytes
 }
 
-func setUint64Setting(t *testing.T, db *reform.DB, key string, value uint64) {
+func setUint64Setting(t *testing.T, db *reform.DB,
+	key string, value uint64) {
 	setting := data.Setting{
 		Key:   key,
 		Value: strconv.FormatUint(value, 10),
 		Name:  key,
 	}
 	if err := db.Save(&setting); err != nil {
-		t.Fatalf("failed to save min confirmtions setting: %v", err)
+		t.Fatalf("failed to save min confirmtions"+
+			" setting: %v", err)
 	}
 }
 
 func TestMonitorLogCollect(t *testing.T) {
 	defer cleanDB(t)
 
-	mon := NewMonitor(logger, db, nil, &client, pscAddr)
+	queue := &mockQueue{t: t, db: db}
+
+	mon, err := NewMonitor(logger, db, queue, &client, pscAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	errCh := make(chan error)
+
+	go func() {
+		for {
+			err := <-errCh
+			t.Fatal(err)
+		}
+	}()
+
 	ticker := newMockTicker()
-	if err := mon.start(ctx, ticker.C, nil); err != nil {
-		panic(err)
-	}
+	mon.start(ctx, 5, ticker.C, nil, errCh)
 
-	_, agentAddress := insertNewAccount(t, db, "agentpass")
-	_, clientAddress := insertNewAccount(t, db, "clientpass")
+	_, agentAddress := insertNewAccount(t, db, agentPass)
+	_, clientAddress := insertNewAccount(t, db, clientPass)
 
-	someAddress := common.HexToAddress("0xdeadbeef")
-	someHash := common.HexToHash("0xc0ffee")
+	someAddress := common.HexToAddress(someAddressStr)
+	someHash := common.HexToHash(someHashStr)
 
 	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
 	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
@@ -283,30 +329,31 @@ func TestMonitorLogCollect(t *testing.T) {
 		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
 		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
 		ticker.tick()
-		name := fmt.Sprintf("with %d confirmations and %d freshnum", c.confirmations, c.freshnum)
+		name := fmt.Sprintf("with %d confirmations and %d freshnum",
+			c.confirmations, c.freshnum)
 		logs = expectLogs(t, c.lognum, name, "")
 	}
 
 	for _, e := range logs {
 		if !datamap[e.Data] {
-			t.Fatalf("wrong data saved in a log entry")
+			t.Fatal("wrong data saved in a log entry")
 		}
 		delete(datamap, e.Data)
 	}
 }
 
-func toHashes(topics []interface{}) []common.Hash {
+func toHashes(t *testing.T, topics []interface{}) []common.Hash {
 	hashes := make([]common.Hash, len(topics))
 	if len(topics) > 0 {
 		hashes[0] = common.HexToHash(topics[0].(string))
 	}
-	for i, t := range topics[1:] {
-		switch v := t.(type) {
+	for i, topic := range topics[1:] {
+		switch v := topic.(type) {
 		case string:
 			if bs, err := data.ToBytes(v); err == nil {
 				hashes[i+1] = common.BytesToHash(bs)
 			} else {
-				panic(err)
+				t.Fatal(err)
 			}
 		case int:
 			hashes[i+1] = common.BigToHash(big.NewInt(int64(v)))
@@ -315,26 +362,29 @@ func toHashes(topics []interface{}) []common.Hash {
 		case common.Hash:
 			hashes[i+1] = v
 		default:
-			panic(fmt.Errorf("unsupported type %T as topic", t))
+			t.Fatalf("unsupported type %T as topic", topic)
 		}
 	}
 	return hashes
 }
 
-func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64, failures uint64, topics ...interface{}) *data.EthLog {
+func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
+	failures uint64, topics ...interface{}) *data.EthLog {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(genRandData(32)),
-		TxStatus:    "mined", // FIXME: is this field needed at all?
+		TxStatus:    txMinedStatus, // FIXME: is this field needed at all?
 		BlockNumber: blockNumber,
 		Addr:        data.FromBytes(pscAddr.Bytes()),
 		Data:        data.FromBytes(genRandData(32)),
-		Topics:      toHashes(topics),
+		Topics:      toHashes(t, topics),
 		Failures:    failures,
 	}
 	if err := db.Insert(el); err != nil {
-		panic(fmt.Errorf("failed to insert a log event into db: %v", err))
+		t.Fatalf("failed to insert a log event"+
+			" into db: %v", err)
 	}
+
 	return el
 }
 
@@ -356,7 +406,8 @@ func (mq *mockQueue) Add(j *data.Job) error {
 	ex := mq.expectations[0]
 	mq.expectations = mq.expectations[1:]
 	if !ex.condition(j) {
-		mq.t.Fatalf("unexpected job added, expected %s, got %#v", ex.comment, *j)
+		mq.t.Fatalf("unexpected job added, expected %s, got %#v",
+			ex.comment, *j)
 	}
 	j.ID = util.NewUUID()
 	j.Status = data.JobActive
@@ -365,7 +416,8 @@ func (mq *mockQueue) Add(j *data.Job) error {
 }
 
 func (mq *mockQueue) expect(comment string, condition func(j *data.Job) bool) {
-	mq.expectations = append(mq.expectations, expectation{condition, comment})
+	mq.expectations = append(mq.expectations,
+		expectation{condition, comment})
 }
 
 func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
@@ -376,22 +428,36 @@ func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	mq.t.Fatalf("not all expected jobs scheduled: %d left", len(mq.expectations))
+	mq.t.Fatalf("not all expected jobs scheduled: %d left",
+		len(mq.expectations))
 }
 
 func TestMonitorSchedule(t *testing.T) {
+	setting := &data.Setting{Key: maxRetryKey, Value: "0"}
+	data.InsertToTestDB(t, db, setting)
+
 	defer cleanDB(t)
 
 	queue := &mockQueue{t: t, db: db}
-	mon := NewMonitor(logger, db, queue, nil, pscAddr)
+	mon, err := NewMonitor(logger, db, queue, &client, pscAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	errCh := make(chan error)
+
+	go func() {
+		for {
+			err := <-errCh
+			t.Fatal(err)
+		}
+	}()
+
 	ticker := newMockTicker()
-	if err := mon.start(ctx, nil, ticker.C); err != nil {
-		panic(err)
-	}
+	mon.start(ctx, 5, nil, ticker.C, errCh)
 
 	var blockNum uint64
 	nextBlock := func() uint64 {
@@ -399,11 +465,10 @@ func TestMonitorSchedule(t *testing.T) {
 		return blockNum
 	}
 
-	someAddress := common.HexToAddress("0xdeadbeef")
-	//someHash := common.HexToHash("0xc0ffee")
+	someAddress := common.HexToAddress(someAddressStr)
 
-	acc1, addr1 := insertNewAccount(t, db, "clientpass")
-	acc2, addr2 := insertNewAccount(t, db, "clientpass")
+	acc1, addr1 := insertNewAccount(t, db, clientPass)
+	acc2, addr2 := insertNewAccount(t, db, clientPass)
 
 	product := data.NewTestProduct()
 	template := data.NewTestTemplate(data.TemplateOffer)
@@ -420,12 +485,12 @@ func TestMonitorSchedule(t *testing.T) {
 
 	channel1 := data.NewTestChannel(
 		acc1.EthAddr, data.FromBytes(someAddress.Bytes()),
-		offering1.ID, 0, 100, data.ChannelActive,
+		offering1.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channel1.Block = 7
 	channelX := data.NewTestChannel(
 		data.FromBytes(someAddress.Bytes()), acc2.EthAddr,
-		offeringX.ID, 0, 100, data.ChannelActive,
+		offeringX.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channelX.Block = 8
 
@@ -438,7 +503,7 @@ func TestMonitorSchedule(t *testing.T) {
 		eth.EthOfferingCreated,
 		addr1,          // agent
 		offering1.Hash, // offering hash
-		123,            // min deposit
+		minDepositVal,  // min deposit
 	)
 	// offering events containing agent address should be ignored
 
@@ -446,9 +511,9 @@ func TestMonitorSchedule(t *testing.T) {
 		eth.EthOfferingCreated,
 		someAddress,    // agent
 		offeringU.Hash, // offering hash
-		123,            // min deposit
+		minDepositVal,  // min deposit
 	)
-	queue.expect("unrelated offering created", func(j *data.Job) bool {
+	queue.expect(unrelatedOfferingCreated, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
 	})
 
@@ -457,7 +522,7 @@ func TestMonitorSchedule(t *testing.T) {
 		someAddress,    // agent
 		offeringU.Hash, // offering hash
 	)
-	queue.expect("client offering popped up", func(j *data.Job) bool {
+	queue.expect(clientOfferingPoppedUp, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
 	})
 
@@ -486,7 +551,7 @@ func TestMonitorSchedule(t *testing.T) {
 		someAddress,    // client
 		offering1.Hash, // offering
 	)
-	queue.expect("agent after channel created", func(j *data.Job) bool {
+	queue.expect(agentAfterChannelCreated, func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterChannelCreate
 	})
 
@@ -496,15 +561,17 @@ func TestMonitorSchedule(t *testing.T) {
 		someAddress,    // client
 		offeringX.Hash, // offering
 	)
-	bs, err := pscABI.Events["LogChannelToppedUp"].Inputs.NonIndexed().Pack(
+	bs, err := mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
 		uint32(channelX.Block),
 		new(big.Int),
 	)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	el.Data = data.FromBytes(bs)
-	db.Save(el)
+	if err := db.Save(el); err != nil {
+		t.Fatal(err)
+	}
 	// channel does not exist, thus event ignored
 
 	el = insertEvent(t, db, nextBlock(), 0,
@@ -514,16 +581,18 @@ func TestMonitorSchedule(t *testing.T) {
 		offeringX.Hash, // offering
 	)
 
-	bs, err = pscABI.Events["LogChannelToppedUp"].Inputs.NonIndexed().Pack(
+	bs, err = mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
 		uint32(channelX.Block),
 		new(big.Int),
 	)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	el.Data = data.FromBytes(bs)
-	db.Save(el)
-	queue.expect("client after channel topup", func(j *data.Job) bool {
+	if err := db.Save(el); err != nil {
+		t.Fatal(err)
+	}
+	queue.expect(clientAfterChannelTopUp, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterChannelTopUp
 	})
 

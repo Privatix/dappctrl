@@ -2,18 +2,30 @@ package monitor
 
 import (
 	"context"
-	"database/sql"
-	"strconv"
+	"fmt"
+	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
 
+const (
+	collectName  = "collect"
+	scheduleName = "schedule"
+)
+
+// blockchain monitor errors.
+var (
+	ErrInput = fmt.Errorf("one or more input parameters is wrong")
+)
+
+// Queue is a job processing queue.
 type Queue interface {
 	Add(j *data.Job) error
 }
@@ -26,47 +38,66 @@ type Monitor struct {
 	queue   Queue
 	eth     Client
 	pscAddr common.Address
+	pscABI  abi.ABI
 
+	mu                 sync.Mutex
 	lastProcessedBlock uint64
 
 	cancel  context.CancelFunc
+	errors  chan error
 	tickers []*time.Ticker
 }
 
 // NewMonitor creates a Monitor with specified settings.
-func NewMonitor(
-	logger *util.Logger,
-	db *reform.DB,
-	queue Queue,
-	eth Client,
-	pscAddr common.Address) *Monitor {
+func NewMonitor(logger *util.Logger, db *reform.DB, queue Queue, eth Client,
+	pscAddr common.Address) (*Monitor, error) {
+	if logger == nil || db == nil || queue == nil || eth == nil ||
+		!common.IsHexAddress(pscAddr.String()) {
+		return nil, ErrInput
+	}
+
+	pscABI, err := mustParseABI(contract.PrivatixServiceContractABI)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Monitor{
 		logger:  logger,
 		db:      db,
 		queue:   queue,
 		eth:     eth,
 		pscAddr: pscAddr,
-	}
+		pscABI:  pscABI,
+		mu:      sync.Mutex{},
+		errors:  make(chan error),
+	}, nil
 }
 
-func (m *Monitor) start(ctx context.Context, collectTicker, scheduleTicker <-chan time.Time) error {
-	go m.repeatEvery(ctx, collectTicker, "collect", func() { m.collect(ctx) })
-	go m.repeatEvery(ctx, scheduleTicker, "schedule", func() { m.schedule(ctx) })
+func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
+	scheduleTicker <-chan time.Time, errCh chan error) {
+	go m.repeatEvery(ctx, collectTicker, errCh, collectName,
+		func() { m.collect(ctx, timeout, errCh) })
+	go m.repeatEvery(ctx, scheduleTicker, errCh, scheduleName,
+		func() { m.schedule(ctx, timeout, errCh) })
 
 	m.logger.Debug("monitor started")
-	return nil
 }
 
 // Start starts the monitor. It will continue collecting logs and scheduling
 // jobs until it is stopped with Stop.
-func (m *Monitor) Start() error {
+func (m *Monitor) Start(collectTick, scheduleTick, timeout int64) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	collectTicker := time.NewTicker(10 * time.Second)  // FIXME: hardcoded period
-	scheduleTicker := time.NewTicker(10 * time.Second) // FIXME: hardcoded period
+	if scheduleTick <= 0 || collectTick <= 0 || timeout <= 0 {
+		return fmt.Errorf("one or more parameters are incorrect")
+	}
+
+	collectTicker := time.NewTicker(time.Duration(collectTick) * time.Second)
+	scheduleTicker := time.NewTicker(time.Duration(scheduleTick) * time.Second)
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
-	return m.start(ctx, collectTicker.C, scheduleTicker.C)
+	m.start(ctx, timeout, collectTicker.C, scheduleTicker.C, m.errors)
+	return nil
 }
 
 // Stop makes the monitor stop.
@@ -81,15 +112,9 @@ func (m *Monitor) Stop() error {
 }
 
 // repeatEvery calls a given action function repeatedly every time a read on
-// ticker channel succeeds. It recovers and continues repeating in case of
-// panic. To stop the loop, cancel the context.
-func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time, name string, action func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			m.logger.Error("recovered in monitor's %s loop: %v", name, r)
-			go m.repeatEvery(ctx, ticker, name, action)
-		}
-	}()
+// ticker channel succeeds. To stop the loop, cancel the context.
+func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
+	errCh chan error, name string, action func()) {
 
 	for {
 		select {
@@ -97,27 +122,8 @@ func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time, name
 			return
 		case <-ticker:
 			action()
+		case err := <-errCh:
+			m.logger.Error("blockchain monitor: %s", err)
 		}
 	}
-}
-
-func (m *Monitor) getUint64Setting(key string) uint64 {
-	var setting data.Setting
-	err := m.db.FindByPrimaryKeyTo(&setting, key)
-	switch err {
-	case nil:
-		break
-	case sql.ErrNoRows:
-		return 0
-	default:
-		panic(err)
-	}
-
-	value, err := strconv.ParseUint(setting.Value, 10, 64)
-	if err != nil {
-		m.logger.Error("failed to parse %s setting: %v", key, err)
-		return 0
-	}
-
-	return value
 }

@@ -1,13 +1,17 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/sha3"
+	"gopkg.in/reform.v1"
 )
 
 // ToBytes returns the bytes represented by the base64 string s.
@@ -67,4 +71,27 @@ func ValidatePassword(hash, password, salt string) error {
 		return err
 	}
 	return bcrypt.CompareHashAndPassword(hashB, salted)
+}
+
+// GetUint64Setting finds the key value in table Setting.
+// Checks that the value in the format of uint64
+func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
+	var setting Setting
+	err := db.FindByPrimaryKeyTo(&setting, key)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("key %s is not exist"+
+				" in Setting table", key)
+		}
+		return 0, err
+	}
+
+	value, err := strconv.ParseUint(setting.Value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse %s setting: %v",
+			key, err)
+	}
+
+	return value, nil
+
 }

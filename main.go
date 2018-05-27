@@ -147,8 +147,12 @@ func main() {
 	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
 	handler.SetQueue(queue)
 
-	mon := monitor.NewMonitor(logger, db, queue, gethConn, pscAddr)
-	if err := mon.Start(); err != nil {
+	mon, err := monitor.NewMonitor(logger, db, queue, gethConn, pscAddr)
+	if err != nil {
+		logger.Fatal("failed to create the blockchain monitor: %v", err)
+	}
+
+	if err := mon.Start(10, 10, 5); err != nil {
 		logger.Fatal("failed to start the blockchain monitor: %v", err)
 	}
 	defer mon.Stop()

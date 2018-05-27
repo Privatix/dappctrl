@@ -33,7 +33,7 @@ func newTestJob(channel string) *data.Job {
 		RelatedType: data.JobChannel,
 		RelatedID:   channel,
 		CreatedBy:   data.JobUser,
-		Data:        []byte(""),
+		Data:        []byte("{}"),
 	}
 }
 

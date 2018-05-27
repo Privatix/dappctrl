@@ -348,6 +348,14 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 	CommitTestTX(t, tx)
 }
 
+// CleanTestTable deletes all records from a given DB table.
+func CleanTestTable(t *testing.T, db *reform.DB, tbl reform.Table) {
+	if _, err := db.DeleteFrom(tbl, ""); err != nil {
+		t.Fatalf("failed to clean %T table: %s", tbl, err)
+	}
+}
+
+// TestFixture encapsulates a typical set of DB objects useful for testing.
 type TestFixture struct {
 	T              *testing.T
 	DB             *reform.DB
@@ -361,6 +369,7 @@ type TestFixture struct {
 	Endpoint       *Endpoint
 }
 
+// NewTestFixture creates a new test fixture.
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod := NewTestProduct()
 	acc := NewTestAccount(TestPassword)
@@ -417,6 +426,7 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 	}
 }
 
+// Close closes a given test fixture.
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
 	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,

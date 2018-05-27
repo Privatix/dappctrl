@@ -75,7 +75,7 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
 
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-  			
+
                      LEFT JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active')
@@ -126,13 +126,13 @@ func (m *Monitor) VerifyBillingLags() error {
 	query := `
               SELECT channels.id :: text
 		FROM channels
-                     LEFT JOIN sessions ses 
+                     LEFT JOIN sessions ses
                      ON channels.id = ses.channel
-  			
-                     LEFT JOIN offerings offer 
+
+                     LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-  			
-                     LEFT JOIN accounts acc 
+
+                     LEFT JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active')
                      AND channels.channel_status NOT IN ('pending')
@@ -155,13 +155,13 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
 	query := `
               SELECT channels.id :: text
 		FROM channels
-                     LEFT JOIN sessions ses 
+                     LEFT JOIN sessions ses
                      ON channels.id = ses.channel
-                     
-                     LEFT JOIN offerings offer 
+
+                     LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-  			
-                     LEFT JOIN accounts acc 
+
+                     LEFT JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('suspended')
                  AND channels.channel_status NOT IN ('pending')
@@ -183,10 +183,10 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
 		FROM channels
                      LEFT JOIN sessions ses
                      ON channels.id = ses.channel
-           
+
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-  			
+
                      LEFT JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active', 'suspended')
@@ -206,7 +206,7 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
 		FROM channels
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-  			
+
                      LEFT JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status = 'suspended'

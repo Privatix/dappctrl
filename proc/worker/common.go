@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 // PreAccountAddBalanceApprove approve balance if amount exists.
-func (w *Handler) PreAccountAddBalanceApprove(job *data.Job) error {
+func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	acc, err := w.relatedAccount(job,
 		data.JobPreAccountAddBalanceApprove)
 	if err != nil {
@@ -52,7 +52,7 @@ func (w *Handler) PreAccountAddBalanceApprove(job *data.Job) error {
 }
 
 // PreAccountAddBalance adds balance to psc.
-func (w *Handler) PreAccountAddBalance(job *data.Job) error {
+func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 	acc, err := w.relatedAccount(job, data.JobPreAccountAddBalance)
 	if err != nil {
 		return err
@@ -78,12 +78,12 @@ func (w *Handler) PreAccountAddBalance(job *data.Job) error {
 }
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
-func (w *Handler) AfterAccountAddBalance(job *data.Job) error {
+func (w *Worker) AfterAccountAddBalance(job *data.Job) error {
 	return w.updateAccountBalances(job, data.JobAfterAccountAddBalance)
 }
 
 // PreAccountReturnBalance returns from psc to ptc.
-func (w *Handler) PreAccountReturnBalance(job *data.Job) error {
+func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	acc, err := w.relatedAccount(job, data.JobPreAccountReturnBalance)
 	if err != nil {
 		return err
@@ -120,6 +120,6 @@ func (w *Handler) PreAccountReturnBalance(job *data.Job) error {
 }
 
 // AfterAccountReturnBalance updates psc and ptc balance of an account.
-func (w *Handler) AfterAccountReturnBalance(job *data.Job) error {
+func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
 	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
 }

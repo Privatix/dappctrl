@@ -1,8 +1,8 @@
-package handler
+package worker
 
 import "github.com/privatix/dappctrl/data"
 
 // ClientPreChannelCreate creates channel.
-func (w *Handler) ClientPreChannelCreate(job *data.Job) error {
+func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	return nil
 }

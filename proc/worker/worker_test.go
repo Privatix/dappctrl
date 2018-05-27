@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"database/sql"
@@ -15,7 +15,7 @@ import (
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job/queue"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
@@ -26,7 +26,7 @@ type testConfig struct {
 	JobHanlderTest *struct {
 		SOMCTimeout time.Duration // In seconds.
 	}
-	JobQueue  *queue.Config
+	Job       *job.Config
 	Log       *util.LogConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
@@ -37,7 +37,7 @@ type testConfig struct {
 func newTestConfig() *testConfig {
 	return &testConfig{
 		DB:       data.NewDBConfig(),
-		JobQueue: queue.NewConfig(),
+		Job:      job.NewConfig(),
 		Log:      util.NewLogConfig(),
 		SOMC:     somc.NewConfig(),
 		SOMCTest: somc.NewTestConfig(),
@@ -45,12 +45,12 @@ func newTestConfig() *testConfig {
 	}
 }
 
-type handlerTest struct {
+type workerTest struct {
 	db       *reform.DB
 	ethBack  *testEthBackend
 	fakeSOMC *somc.FakeSOMC
 	somcConn *somc.Conn
-	handler  *Handler
+	worker   *Worker
 }
 
 var (
@@ -59,7 +59,7 @@ var (
 	logger *util.Logger
 )
 
-func newHandlerTest(t *testing.T) *handlerTest {
+func newHandlerTest(t *testing.T) *workerTest {
 
 	fakeSOMC := somc.NewFakeSOMC(t, conf.SOMC.URL,
 		conf.SOMCTest.ServerStartupDelay)
@@ -69,32 +69,32 @@ func newHandlerTest(t *testing.T) *handlerTest {
 		t.Fatal(err)
 	}
 
-	jobQueue := queue.NewQueue(conf.JobQueue, logger, db, nil)
+	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
 	ethBack := newTestEthBackend(conf.pscAddr)
 
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	handler, err := NewHandler(db, somcConn, ethBack,
+	worker, err := NewWorker(db, somcConn, ethBack,
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
 	if err != nil {
 		fakeSOMC.Close()
 		somcConn.Close()
 		panic(err)
 	}
-	handler.SetQueue(jobQueue)
+	worker.SetQueue(jobQueue)
 
-	return &handlerTest{
+	return &workerTest{
 		db:       db,
 		ethBack:  ethBack,
 		fakeSOMC: fakeSOMC,
 		somcConn: somcConn,
-		handler:  handler,
+		worker:   worker,
 	}
 }
 
-func (e *handlerTest) close() {
+func (e *workerTest) close() {
 	e.fakeSOMC.Close()
 	e.somcConn.Close()
 }
@@ -120,26 +120,26 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func (e *handlerTest) insertToTestDB(t *testing.T, recs ...reform.Struct) {
+func (e *workerTest) insertToTestDB(t *testing.T, recs ...reform.Struct) {
 	data.InsertToTestDB(t, e.db, recs...)
 }
 
-func (e *handlerTest) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
+func (e *workerTest) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
 	data.DeleteFromTestDB(t, e.db, recs...)
 }
 
-func (e *handlerTest) updateInTestDB(t *testing.T, rec reform.Record) {
+func (e *workerTest) updateInTestDB(t *testing.T, rec reform.Record) {
 	data.SaveToTestDB(t, e.db, rec)
 }
 
-func (e *handlerTest) findTo(t *testing.T, rec reform.Record, id string) {
+func (e *workerTest) findTo(t *testing.T, rec reform.Record, id string) {
 	err := e.db.FindByPrimaryKeyTo(rec, id)
 	if err != nil {
 		t.Fatal("failed to find: ", err)
 	}
 }
 
-func (e *handlerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
+func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 	job := &data.Job{}
 	err := e.db.SelectOneTo(job,
 		"WHERE type=$1 AND status=$2 AND related_type=$3"+
@@ -159,13 +159,13 @@ func runJob(t *testing.T, workerF func(*data.Job) error, job *data.Job) {
 	}
 }
 
-type handlerTestFixture struct {
+type workerTestFixture struct {
 	*data.TestFixture
 	job *data.Job
 }
 
-func (e *handlerTest) newTestFixture(t *testing.T,
-	jobType, relType string) *handlerTestFixture {
+func (e *workerTest) newTestFixture(t *testing.T,
+	jobType, relType string) *workerTestFixture {
 	f := data.NewTestFixture(t, e.db)
 
 	job := data.NewTestJob(jobType, data.JobBCMonitor, relType)
@@ -184,15 +184,15 @@ func (e *handlerTest) newTestFixture(t *testing.T,
 	// Clear call stack.
 	e.ethBack.callStack = []testEthBackCall{}
 
-	return &handlerTestFixture{f, job}
+	return &workerTestFixture{f, job}
 }
 
-func (f *handlerTestFixture) close() {
+func (f *workerTestFixture) close() {
 	data.DeleteFromTestDB(f.T, f.DB, f.job)
 	f.TestFixture.Close()
 }
 
-func (f *handlerTestFixture) setJobData(t *testing.T, d interface{}) {
+func (f *workerTestFixture) setJobData(t *testing.T, d interface{}) {
 	b, err := json.Marshal(d)
 	if err != nil {
 		t.Fatal(err)

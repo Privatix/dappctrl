@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"strings"
@@ -9,13 +9,13 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/job/queue"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/somc"
 )
 
-// Handler has all worker routines.
-type Handler struct {
+// Worker has all worker routines.
+type Worker struct {
 	abi            abi.ABI
 	db             *reform.DB
 	decryptKeyFunc data.ToPrivateKeyFunc
@@ -24,14 +24,14 @@ type Handler struct {
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
-	queue          *queue.Queue
+	queue          *job.Queue
 }
 
-// NewHandler returns new instance of worker.
-func NewHandler(db *reform.DB, somc *somc.Conn,
+// NewWorker returns new instance of worker.
+func NewWorker(db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter,
-	decryptKeyFunc data.ToPrivateKeyFunc) (*Handler, error) {
+	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
 
 	abi, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -43,7 +43,7 @@ func NewHandler(db *reform.DB, somc *somc.Conn,
 		return nil, err
 	}
 
-	return &Handler{
+	return &Worker{
 		abi:            abi,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
@@ -56,6 +56,6 @@ func NewHandler(db *reform.DB, somc *somc.Conn,
 }
 
 // SetQueue sets queue for handlers.
-func (h *Handler) SetQueue(queue *queue.Queue) {
+func (h *Worker) SetQueue(queue *job.Queue) {
 	h.queue = queue
 }

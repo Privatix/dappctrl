@@ -1,4 +1,4 @@
-package handler
+package worker
 
 import (
 	"fmt"
@@ -9,45 +9,45 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
-func (w *Handler) validateJob(job *data.Job, jobType, relType string) error {
+func (w *Worker) validateJob(job *data.Job, jobType, relType string) error {
 	if job.Type != jobType || job.RelatedType != relType {
 		return ErrInvalidJob
 	}
 	return nil
 }
 
-func (w *Handler) relatedAndValidate(rec reform.Record, job *data.Job, jobType, relType string) error {
+func (w *Worker) relatedAndValidate(rec reform.Record, job *data.Job, jobType, relType string) error {
 	if err := w.validateJob(job, jobType, relType); err != nil {
 		return err
 	}
 	return w.db.FindByPrimaryKeyTo(rec, job.RelatedID)
 }
 
-func (w *Handler) relatedOffering(job *data.Job, jobType string) (*data.Offering, error) {
+func (w *Worker) relatedOffering(job *data.Job, jobType string) (*data.Offering, error) {
 	rec := &data.Offering{}
 	err := w.relatedAndValidate(rec, job, jobType, data.JobOfferring)
 	return rec, err
 }
 
-func (w *Handler) relatedChannel(job *data.Job, jobType string) (*data.Channel, error) {
+func (w *Worker) relatedChannel(job *data.Job, jobType string) (*data.Channel, error) {
 	rec := &data.Channel{}
 	err := w.relatedAndValidate(rec, job, jobType, data.JobChannel)
 	return rec, err
 }
 
-func (w *Handler) relatedEndpoint(job *data.Job, jobType string) (*data.Endpoint, error) {
+func (w *Worker) relatedEndpoint(job *data.Job, jobType string) (*data.Endpoint, error) {
 	rec := &data.Endpoint{}
 	err := w.relatedAndValidate(rec, job, jobType, data.JobEndpoint)
 	return rec, err
 }
 
-func (w *Handler) relatedAccount(job *data.Job, jobType string) (*data.Account, error) {
+func (w *Worker) relatedAccount(job *data.Job, jobType string) (*data.Account, error) {
 	rec := &data.Account{}
 	err := w.relatedAndValidate(rec, job, jobType, data.JobAccount)
 	return rec, err
 }
 
-func (w *Handler) ethLog(job *data.Job) (*data.EthLog, error) {
+func (w *Worker) ethLog(job *data.Job) (*data.EthLog, error) {
 	log := &data.EthLog{}
 	err := w.db.FindOneTo(log, "job", job.ID)
 	if err != nil {
@@ -56,7 +56,7 @@ func (w *Handler) ethLog(job *data.Job) (*data.EthLog, error) {
 	return log, nil
 }
 
-func (w *Handler) endpoint(channel string) (*data.Endpoint, error) {
+func (w *Worker) endpoint(channel string) (*data.Endpoint, error) {
 	endpoint := &data.Endpoint{}
 	err := w.db.FindOneTo(endpoint, "channel", channel)
 	if err != nil {
@@ -65,7 +65,7 @@ func (w *Handler) endpoint(channel string) (*data.Endpoint, error) {
 	return endpoint, nil
 }
 
-func (w *Handler) offering(pk string) (*data.Offering, error) {
+func (w *Worker) offering(pk string) (*data.Offering, error) {
 	offering := &data.Offering{}
 	err := w.db.FindByPrimaryKeyTo(offering, pk)
 	if err != nil {
@@ -74,7 +74,7 @@ func (w *Handler) offering(pk string) (*data.Offering, error) {
 	return offering, nil
 }
 
-func (w *Handler) offeringByHash(hash common.Hash) (*data.Offering, error) {
+func (w *Worker) offeringByHash(hash common.Hash) (*data.Offering, error) {
 	offering := &data.Offering{}
 	hashB64 := data.FromBytes(hash.Bytes())
 	err := w.db.FindOneTo(offering, "hash", hashB64)
@@ -85,7 +85,7 @@ func (w *Handler) offeringByHash(hash common.Hash) (*data.Offering, error) {
 	return offering, nil
 }
 
-func (w *Handler) account(ethAddr string) (*data.Account, error) {
+func (w *Worker) account(ethAddr string) (*data.Account, error) {
 	account := &data.Account{}
 	err := w.db.FindOneTo(account, "eth_addr", ethAddr)
 	if err != nil {
@@ -94,7 +94,7 @@ func (w *Handler) account(ethAddr string) (*data.Account, error) {
 	return account, nil
 }
 
-func (w *Handler) user(ethAddr string) (*data.User, error) {
+func (w *Worker) user(ethAddr string) (*data.User, error) {
 	user := &data.User{}
 	err := w.db.FindOneTo(user, "eth_addr", ethAddr)
 	if err != nil {
@@ -104,7 +104,7 @@ func (w *Handler) user(ethAddr string) (*data.User, error) {
 	return user, nil
 }
 
-func (w *Handler) template(pk string) (*data.Template, error) {
+func (w *Worker) template(pk string) (*data.Template, error) {
 	template := &data.Template{}
 	err := w.db.FindByPrimaryKeyTo(template, pk)
 	if err != nil {
@@ -113,7 +113,7 @@ func (w *Handler) template(pk string) (*data.Template, error) {
 	return template, nil
 }
 
-func (w *Handler) templateByHash(hash string) (*data.Template, error) {
+func (w *Worker) templateByHash(hash string) (*data.Template, error) {
 	template := &data.Template{}
 	err := w.db.FindOneTo(template, "hash", hash)
 	if err != nil {

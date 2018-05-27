@@ -21,7 +21,7 @@
         "GethURL": ""
     },
 
-    "JobQueue": {
+    "Job": {
         "CollectJobs": 100,
         "CollectPeriod": 1000,
         "WorkerBufLen": 10,

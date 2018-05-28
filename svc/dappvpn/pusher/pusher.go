@@ -3,7 +3,7 @@ package pusher
 import (
 	"context"
 
-	c "github.com/privatix/dappctrl/ept/config"
+	c "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/srv"
 )

@@ -28,11 +28,11 @@ const (
 
 var (
 	conf struct {
-		DB                   *data.DBConfig
-		Log                  *util.LogConfig
-		SessionServer        *sesssrv.Config
-		SessionServerTest    *testSessSrvConfig
-		VPNMonitorPusherTest *pusherTestConf
+		DB                *data.DBConfig
+		Log               *util.LogConfig
+		SessionServer     *sesssrv.Config
+		SessionServerTest *testSessSrvConfig
+		VPNConfigPusher   *pusherTestConf
 	}
 
 	db     *reform.DB
@@ -116,11 +116,11 @@ func createTestConfig(t *testing.T, dir string) *Config {
 	}
 
 	return &Config{
-		ExportConfigKeys: conf.VPNMonitorPusherTest.ExportConfigKeys,
+		ExportConfigKeys: conf.VPNConfigPusher.ExportConfigKeys,
 		ConfigPath:       cfgPath,
 		CaCertPath:       caPath,
 		Pushed:           false,
-		TimeOut:          conf.VPNMonitorPusherTest.TimeOut,
+		TimeOut:          conf.VPNConfigPusher.TimeOut,
 	}
 }
 
@@ -152,7 +152,7 @@ func TestMain(m *testing.M) {
 	conf.Log = util.NewLogConfig()
 	conf.SessionServer = sesssrv.NewConfig()
 	conf.SessionServerTest = newSessSrvTestConfig()
-	conf.VPNMonitorPusherTest = newPusherTestConf()
+	conf.VPNConfigPusher = newPusherTestConf()
 
 	util.ReadTestConfig(&conf)
 

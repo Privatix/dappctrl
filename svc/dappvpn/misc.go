@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/privatix/dappctrl/util"
 )
 
 const (
@@ -75,8 +73,4 @@ func getCreds() (string, string) {
 	}
 
 	return user, pass
-}
-
-func writeConfig(name string, cfg *config) error {
-	return util.WriteJSONFile(name, "", jsonIdent, cfg)
 }

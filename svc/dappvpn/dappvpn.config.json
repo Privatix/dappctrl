@@ -16,7 +16,6 @@
         "ConfigPath": "",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo"],
-        "Pushed": false,
         "TimeOut": 120
     },
 

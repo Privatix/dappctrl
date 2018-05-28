@@ -45,16 +45,16 @@
         "ConfValidCaInvalid": "conf.valid.ca.invalid",
         "ConfValidCaNotExist": "conf.valid.ca.notexist",
         "ConfValidCaValid": "conf.valid.ca.valid",
-        "ConfigTest": {
-            "Login": "!login!",
-            "Pass": "test-pass"
-        },
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
         "RetrySec": [ 0, 1, 2 ],
         "SessSrvStartTimeout": [0, 1, 2 ],
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
+        "VPNConfig": {
+            "Login": "!login!",
+            "Pass": "test-pass"
+        }
     },
 
     "Eth": {
@@ -120,6 +120,12 @@
         "ServerStartupDelay": 10
     },
 
+    "VPNConfigPusher": {
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "TimeOut": 120
+    },
+
     "VPNMonitor": {
         "Addr": "localhost:7505",
         "ByteCountPeriod": 5
@@ -127,11 +133,5 @@
 
     "VPNMonitorTest": {
         "ServerStartupDelay": 10
-    },
-
-    "VPNMonitorPusherTest": {
-        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
-            "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "TimeOut": 120
     }
 }

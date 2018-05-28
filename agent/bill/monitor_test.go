@@ -1,4 +1,4 @@
-// +build !nobillingtest
+// +build !noagentbilltest
 
 package billing
 

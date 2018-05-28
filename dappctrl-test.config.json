@@ -28,6 +28,15 @@
         }
     },
 
+    "ClientBilling": {
+        "CollectPeriod":  1
+    },
+
+    "ClientBillingTest": {
+        "MonitorStartupDelay": 10,
+        "ReactionDelay": 2
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",

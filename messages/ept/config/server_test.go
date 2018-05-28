@@ -63,7 +63,7 @@ type eptTestConfig struct {
 	ConfValidCaInvalid  string
 	ConfValidCaEmpty    string
 	ConfValidCaNotExist string
-	ConfigTest          cliConfTest
+	VPNConfig           cliConfTest
 	SessSrvStartTimeout []int64
 	ExportConfigKeys    []string
 	RetrySec            []int64

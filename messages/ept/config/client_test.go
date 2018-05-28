@@ -155,8 +155,8 @@ func TestDeployClientConfig(t *testing.T) {
 
 	for _, record := range objects {
 		end, err := Deploy(record, rootDir, srv.addr,
-			conf.EptTest.ConfigTest.Login,
-			conf.EptTest.ConfigTest.Pass, srv.param)
+			conf.EptTest.VPNConfig.Login,
+			conf.EptTest.VPNConfig.Pass, srv.param)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,8 +169,8 @@ func TestDeployClientConfig(t *testing.T) {
 			t.Fatal(errDeployConfig)
 		}
 
-		checkAccess(t, accessFile, conf.EptTest.ConfigTest.Login,
-			conf.EptTest.ConfigTest.Pass)
+		checkAccess(t, accessFile, conf.EptTest.VPNConfig.Login,
+			conf.EptTest.VPNConfig.Pass)
 
 		checkConf(t, confFile, srv)
 	}

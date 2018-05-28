@@ -49,7 +49,7 @@ const (
 	hash = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 	salt         = 6012867121110302348
-	passwordHash = "7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg="
+	passwordHash = "JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp"
 	password     = "secret"
 
 	jsonIdent = "    "

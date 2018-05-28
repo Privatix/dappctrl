@@ -41,15 +41,43 @@ const (
 )
 
 var (
+	conf *testConf
+
+	logger *util.Logger
+	db     *reform.DB
+
 	pscAddr = common.HexToAddress(
 		"0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
+
+	someAddress = common.HexToAddress(someAddressStr)
+	someHash    = common.HexToHash(someHashStr)
 )
+
+type testConf struct {
+	BlockMonitor *Config
+	DB           *data.DBConfig
+	Log          *util.LogConfig
+	Job          *job.Config
+}
 
 type mockClient struct {
 	logger  *util.Logger
 	headers []ethtypes.Header
 	logs    []ethtypes.Log
 	number  uint64
+}
+
+type mockTicker struct {
+	C chan time.Time
+}
+
+func newTestConf() *testConf {
+	conf := new(testConf)
+	conf.BlockMonitor = NewConfig()
+	conf.DB = data.NewDBConfig()
+	conf.Log = util.NewLogConfig()
+	conf.Job = job.NewConfig()
+	return conf
 }
 
 func addressIsAmong(x *common.Address, addresses []common.Address) bool {
@@ -97,43 +125,6 @@ func eventSatisfiesFilter(e *ethtypes.Log, q ethereum.FilterQuery) bool {
 	return true
 }
 
-func (c *mockClient) FilterLogs(ctx context.Context,
-	q ethereum.FilterQuery) ([]ethtypes.Log, error) {
-	var filtered []ethtypes.Log
-	for _, e := range c.logs {
-		if eventSatisfiesFilter(&e, q) {
-			filtered = append(filtered, e)
-		}
-	}
-	c.logger.Debug("query: %v, filtered: %v", q, filtered)
-	return filtered, nil
-}
-
-// HeaderByNumber returns a minimal header for testing.
-// It only supports calls where number is nil.
-// Moreover, only the Number field in the returned header is valid.
-func (c *mockClient) HeaderByNumber(ctx context.Context,
-	number *big.Int) (*ethtypes.Header, error) {
-	if number != nil {
-		return nil, fmt.Errorf("mock HeaderByNumber()" +
-			" only supports nil as 'number'")
-	}
-	return &ethtypes.Header{
-		Number: new(big.Int).SetUint64(c.number),
-	}, nil
-}
-
-func (c *mockClient) injectEvent(e *ethtypes.Log) {
-	c.logs = append(c.logs, *e)
-	if c.number < e.BlockNumber {
-		c.number = e.BlockNumber
-	}
-}
-
-type mockTicker struct {
-	C chan time.Time
-}
-
 func newMockTicker() *mockTicker {
 	return &mockTicker{C: make(chan time.Time, 1)}
 }
@@ -143,36 +134,6 @@ func (t *mockTicker) tick() {
 	case t.C <- time.Now():
 	default:
 	}
-}
-
-var (
-	logger *util.Logger
-	db     *reform.DB
-	client mockClient
-)
-
-// TestMain reads config and run tests.
-func TestMain(m *testing.M) {
-	var conf struct {
-		DB  *data.DBConfig
-		Log *util.LogConfig
-		Job *job.Config
-		Eth struct {
-			GethURL       string
-			TruffleAPIURL string
-		}
-	}
-	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
-	conf.Job = job.NewConfig()
-	util.ReadTestConfig(&conf)
-
-	logger = util.NewTestLogger(conf.Log)
-	client.logger = logger
-	db = data.NewTestDB(conf.DB, logger)
-	defer data.CloseDB(db)
-
-	os.Exit(m.Run())
 }
 
 func cleanDB(t *testing.T) {
@@ -238,110 +199,6 @@ func setUint64Setting(t *testing.T, db *reform.DB,
 	}
 }
 
-func TestMonitorLogCollect(t *testing.T) {
-	defer cleanDB(t)
-
-	queue := &mockQueue{t: t, db: db}
-
-	mon, err := NewMonitor(logger, db, queue, &client, pscAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	errCh := make(chan error)
-
-	go func() {
-		for {
-			err := <-errCh
-			t.Fatal(err)
-		}
-	}()
-
-	ticker := newMockTicker()
-	mon.start(ctx, 5, ticker.C, nil, errCh)
-
-	_, agentAddress := insertNewAccount(t, db, agentPass)
-	_, clientAddress := insertNewAccount(t, db, clientPass)
-
-	someAddress := common.HexToAddress(someAddressStr)
-	someHash := common.HexToHash(someHashStr)
-
-	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
-	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
-
-	var block uint64 = 10
-
-	datamap := make(map[string]bool)
-
-	type logToInject struct {
-		event  common.Hash
-		agent  common.Address
-		client common.Address
-	}
-	logsToInject := []logToInject{
-		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
-		{someHash, someAddress, someAddress},           // 0 no match
-		{someHash, agentAddress, someAddress},          // 1 match agent
-		{someHash, someAddress, clientAddress},         // 0 match client, but not a client event
-		// ----- 6 confirmations
-		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
-		{eventAboutChannel, someAddress, someAddress},   // 0 no match
-		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
-		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
-		// ----- 2 confirmations
-		{eventAboutOffering, agentAddress, someAddress}, // 1 match agent
-		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
-		// ----- 0 confirmations
-	}
-	for _, contractAddr := range []common.Address{someAddress, pscAddr} {
-		for _, log := range logsToInject {
-			d := genRandData(32 * 5)
-			datamap[data.FromBytes(d)] = true
-			client.injectEvent(&ethtypes.Log{
-				Address:     contractAddr,
-				BlockNumber: block,
-				Topics: []common.Hash{
-					log.event,
-					log.agent.Hash(),
-					log.client.Hash(),
-				},
-				Data: d,
-			})
-			block++
-		}
-	}
-
-	cases := []struct {
-		confirmations uint64
-		freshnum      uint64
-		lognum        int
-	}{
-		{6, 2, 1}, // freshnum = 2: will skip the first offering event
-		{2, 0, 4}, // freshnum = 0: will include the second offering event
-		{0, 2, 6},
-	}
-
-	var logs []*data.EthLog
-	for _, c := range cases {
-		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
-		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
-		ticker.tick()
-		name := fmt.Sprintf("with %d confirmations and %d freshnum",
-			c.confirmations, c.freshnum)
-		logs = expectLogs(t, c.lognum, name, "")
-	}
-
-	for _, e := range logs {
-		if !datamap[e.Data] {
-			t.Fatal("wrong data saved in a log entry")
-		}
-		delete(datamap, e.Data)
-	}
-}
-
 func toHashes(t *testing.T, topics []interface{}) []common.Hash {
 	hashes := make([]common.Hash, len(topics))
 	if len(topics) > 0 {
@@ -399,6 +256,10 @@ type mockQueue struct {
 	expectations []expectation
 }
 
+func newMockQueue(t *testing.T, db *reform.DB) *mockQueue {
+	return &mockQueue{t: t, db: db}
+}
+
 func (mq *mockQueue) Add(j *data.Job) error {
 	if len(mq.expectations) == 0 {
 		mq.t.Fatalf("unexpected job added, expected none, got %#v", *j)
@@ -432,48 +293,182 @@ func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
 		len(mq.expectations))
 }
 
-func TestMonitorSchedule(t *testing.T) {
-	setting := &data.Setting{Key: maxRetryKey, Value: "0"}
-	data.InsertToTestDB(t, db, setting)
+func newMockClient() *mockClient {
+	client := &mockClient{}
+	client.logger = logger
+	return client
+}
 
-	defer cleanDB(t)
+func (c *mockClient) FilterLogs(ctx context.Context,
+	q ethereum.FilterQuery) ([]ethtypes.Log, error) {
+	var filtered []ethtypes.Log
+	for _, e := range c.logs {
+		if eventSatisfiesFilter(&e, q) {
+			filtered = append(filtered, e)
+		}
+	}
+	c.logger.Debug("query: %v, filtered: %v", q, filtered)
+	return filtered, nil
+}
 
-	queue := &mockQueue{t: t, db: db}
-	mon, err := NewMonitor(logger, db, queue, &client, pscAddr)
+// HeaderByNumber returns a minimal header for testing.
+// It only supports calls where number is nil.
+// Moreover, only the Number field in the returned header is valid.
+func (c *mockClient) HeaderByNumber(ctx context.Context,
+	number *big.Int) (*ethtypes.Header, error) {
+	if number != nil {
+		return nil, fmt.Errorf("mock HeaderByNumber()" +
+			" only supports nil as 'number'")
+	}
+	return &ethtypes.Header{
+		Number: new(big.Int).SetUint64(c.number),
+	}, nil
+}
+
+func (c *mockClient) injectEvent(e *ethtypes.Log) {
+	c.logs = append(c.logs, *e)
+	if c.number < e.BlockNumber {
+		c.number = e.BlockNumber
+	}
+}
+
+func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
+	queue := newMockQueue(t, db)
+	client := newMockClient()
+
+	mon, err := NewMonitor(conf.BlockMonitor, logger, db,
+		queue, client, pscAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return mon, queue, client
+}
+
+func newErrorChecker(t *testing.T) chan error {
+	ch := make(chan error)
+	go checkErr(t, ch)
+	return ch
+}
+
+func checkErr(t *testing.T, ch chan error) {
+	for {
+		err := <-ch
+		t.Fatal(err)
+	}
+}
+
+func setMaxRetryKey(t *testing.T) {
+	setting := &data.Setting{Key: maxRetryKey, Value: "0"}
+	data.InsertToTestDB(t, db, setting)
+}
+
+func TestMonitorLogCollect(t *testing.T) {
+	defer cleanDB(t)
+
+	mon, _, client := newTestObjects(t)
+
+	errCh := newErrorChecker(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	errCh := make(chan error)
-
-	go func() {
-		for {
-			err := <-errCh
-			t.Fatal(err)
-		}
-	}()
-
 	ticker := newMockTicker()
-	mon.start(ctx, 5, nil, ticker.C, errCh)
+	mon.start(ctx, 5, ticker.C, nil, errCh)
 
-	var blockNum uint64
-	nextBlock := func() uint64 {
-		blockNum++
-		return blockNum
+	_, agentAddress := insertNewAccount(t, db, agentPass)
+	_, clientAddress := insertNewAccount(t, db, clientPass)
+
+	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
+	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
+
+	var block uint64 = 10
+
+	dataMap := make(map[string]bool)
+
+	type logToInject struct {
+		event  common.Hash
+		agent  common.Address
+		client common.Address
+	}
+	logsToInject := []logToInject{
+		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
+		{someHash, someAddress, someAddress},           // 0 no match
+		{someHash, agentAddress, someAddress},          // 1 match agent
+		{someHash, someAddress, clientAddress},         // 0 match client, but not a client event
+		// ----- 6 confirmations
+		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
+		{eventAboutChannel, someAddress, someAddress},   // 0 no match
+		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
+		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
+		// ----- 2 confirmations
+		{eventAboutOffering, agentAddress, someAddress}, // 1 match agent
+		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
+		// ----- 0 confirmations
+	}
+	for _, contractAddr := range []common.Address{someAddress, pscAddr} {
+		for _, log := range logsToInject {
+			d := genRandData(32 * 5)
+			dataMap[data.FromBytes(d)] = true
+			client.injectEvent(&ethtypes.Log{
+				Address:     contractAddr,
+				BlockNumber: block,
+				Topics: []common.Hash{
+					log.event,
+					log.agent.Hash(),
+					log.client.Hash(),
+				},
+				Data: d,
+			})
+			block++
+		}
 	}
 
-	someAddress := common.HexToAddress(someAddressStr)
+	cases := []struct {
+		confirmations uint64
+		freshnum      uint64
+		lognum        int
+	}{
+		{6, 2, 1}, // freshnum = 2: will skip the first offering event
+		{2, 0, 4}, // freshnum = 0: will include the second offering event
+		{0, 2, 6},
+	}
 
+	var logs []*data.EthLog
+	for _, c := range cases {
+		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
+		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
+		ticker.tick()
+		name := fmt.Sprintf("with %d confirmations and %d freshnum",
+			c.confirmations, c.freshnum)
+		logs = expectLogs(t, c.lognum, name, "")
+	}
+
+	for _, e := range logs {
+		if !dataMap[e.Data] {
+			t.Fatal("wrong data saved in a log entry")
+		}
+		delete(dataMap, e.Data)
+	}
+}
+
+type testData struct {
+	acc      []*data.Account
+	addr     []common.Address
+	product  *data.Product
+	template *data.Template
+	offering []*data.Offering
+	channel  []*data.Channel
+}
+
+func generateTestData(t *testing.T) *testData {
 	acc1, addr1 := insertNewAccount(t, db, clientPass)
 	acc2, addr2 := insertNewAccount(t, db, clientPass)
 
 	product := data.NewTestProduct()
 	template := data.NewTestTemplate(data.TemplateOffer)
 
-	offering1 := data.NewTestOffering(acc1.EthAddr, product.ID, template.ID)
+	offering1 := data.NewTestOffering(
+		acc1.EthAddr, product.ID, template.ID)
 	offeringX := data.NewTestOffering(
 		data.FromBytes(someAddress.Bytes()),
 		product.ID, template.ID,
@@ -499,19 +494,37 @@ func TestMonitorSchedule(t *testing.T) {
 		offering1, offeringX, offeringU,
 		channel1, channelX)
 
+	return &testData{
+		acc:      []*data.Account{acc1, acc2},
+		addr:     []common.Address{addr1, addr2},
+		product:  product,
+		template: template,
+		offering: []*data.Offering{offering1, offeringX, offeringU},
+		channel:  []*data.Channel{channel1, channelX},
+	}
+}
+
+func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
+	ticker *mockTicker, mon *Monitor) {
+	var blockNum uint64
+	nextBlock := func() uint64 {
+		blockNum++
+		return blockNum
+	}
+
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingCreated,
-		addr1,          // agent
-		offering1.Hash, // offering hash
-		minDepositVal,  // min deposit
+		td.addr[0],          // agent
+		td.offering[0].Hash, // offering hash
+		minDepositVal,       // min deposit
 	)
 	// offering events containing agent address should be ignored
 
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingCreated,
-		someAddress,    // agent
-		offeringU.Hash, // offering hash
-		minDepositVal,  // min deposit
+		someAddress,         // agent
+		td.offering[2].Hash, // offering hash
+		minDepositVal,       // min deposit
 	)
 	queue.expect(unrelatedOfferingCreated, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
@@ -519,8 +532,8 @@ func TestMonitorSchedule(t *testing.T) {
 
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingPoppedUp,
-		someAddress,    // agent
-		offeringU.Hash, // offering hash
+		someAddress,         // agent
+		td.offering[2].Hash, // offering hash
 	)
 	queue.expect(clientOfferingPoppedUp, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterOfferingMsgBCPublish
@@ -533,23 +546,23 @@ func TestMonitorSchedule(t *testing.T) {
 
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingDeleted,
-		someAddress,    // agent
-		offeringU.Hash, // offering hash
+		someAddress,         // agent
+		td.offering[2].Hash, // offering hash
 	)
 	// should ignore the deletion event
 
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingPoppedUp,
-		someAddress,    // agent
-		offeringU.Hash, // offering hash
+		someAddress,         // agent
+		td.offering[2].Hash, // offering hash
 	)
 	// should ignore the creation event after deleting
 
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthDigestChannelCreated,
-		addr1,          // agent
-		someAddress,    // client
-		offering1.Hash, // offering
+		td.addr[0],          // agent
+		someAddress,         // client
+		td.offering[0].Hash, // offering
 	)
 	queue.expect(agentAfterChannelCreated, func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterChannelCreate
@@ -557,12 +570,12 @@ func TestMonitorSchedule(t *testing.T) {
 
 	el := insertEvent(t, db, nextBlock(), 0,
 		eth.EthDigestChannelToppedUp,
-		addr1,          // agent
-		someAddress,    // client
-		offeringX.Hash, // offering
+		td.addr[0],          // agent
+		someAddress,         // client
+		td.offering[1].Hash, // offering
 	)
 	bs, err := mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-		uint32(channelX.Block),
+		uint32(td.channel[1].Block),
 		new(big.Int),
 	)
 	if err != nil {
@@ -576,13 +589,13 @@ func TestMonitorSchedule(t *testing.T) {
 
 	el = insertEvent(t, db, nextBlock(), 0,
 		eth.EthDigestChannelToppedUp,
-		someAddress,    // agent
-		addr2,          // client
-		offeringX.Hash, // offering
+		someAddress,         // agent
+		td.addr[1],          // client
+		td.offering[1].Hash, // offering
 	)
 
 	bs, err = mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-		uint32(channelX.Block),
+		uint32(td.channel[1].Block),
 		new(big.Int),
 	)
 	if err != nil {
@@ -598,4 +611,36 @@ func TestMonitorSchedule(t *testing.T) {
 
 	ticker.tick()
 	queue.awaitCompletion(time.Second)
+}
+
+func TestMonitorSchedule(t *testing.T) {
+	defer cleanDB(t)
+
+	setMaxRetryKey(t)
+
+	mon, queue, _ := newTestObjects(t)
+
+	errCh := newErrorChecker(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ticker := newMockTicker()
+	mon.start(ctx, conf.BlockMonitor.Timeout, nil, ticker.C, errCh)
+
+	td := generateTestData(t)
+
+	scheduleTest(t, td, queue, ticker, mon)
+}
+
+// TestMain reads config and run tests.
+func TestMain(m *testing.M) {
+	conf = newTestConf()
+	util.ReadTestConfig(&conf)
+
+	logger = util.NewTestLogger(conf.Log)
+	db = data.NewTestDB(conf.DB, logger)
+	defer data.CloseDB(db)
+
+	os.Exit(m.Run())
 }

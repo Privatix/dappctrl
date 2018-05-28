@@ -5,6 +5,12 @@
         "EthCallTimeout": 5
     },
 
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
+    },
+
     "DB": {
         "Conn": {
             "user": "postgres",

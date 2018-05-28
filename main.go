@@ -33,6 +33,7 @@ type ethConfig struct {
 
 type config struct {
 	AgentServer   *uisrv.Config
+	BlockMonitor  *monitor.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
 	Job           *job.Config
@@ -46,6 +47,7 @@ type config struct {
 
 func newConfig() *config {
 	return &config{
+		BlockMonitor:  monitor.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
@@ -147,13 +149,16 @@ func main() {
 	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
 	handler.SetQueue(queue)
 
-	mon, err := monitor.NewMonitor(logger, db, queue, gethConn, pscAddr)
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
+		gethConn, pscAddr)
 	if err != nil {
-		logger.Fatal("failed to create the blockchain monitor: %v", err)
+		logger.Fatal("failed to initialize"+
+			" the blockchain monitor: %v", err)
 	}
 
-	if err := mon.Start(10, 10, 5); err != nil {
-		logger.Fatal("failed to start the blockchain monitor: %v", err)
+	if err := mon.Start(); err != nil {
+		logger.Fatal("failed to start"+
+			" the blockchain monitor: %v", err)
 	}
 	defer mon.Stop()
 

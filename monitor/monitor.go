@@ -20,10 +20,17 @@ const (
 	scheduleName = "schedule"
 )
 
-// blockchain monitor errors.
+// Blockchain monitor errors.
 var (
 	ErrInput = fmt.Errorf("one or more input parameters is wrong")
 )
+
+// Config for blockchain monitor.
+type Config struct {
+	CollectPause  int64 // pause between collect iterations
+	SchedulePause int64 // pause between schedule iterations
+	Timeout       int64 // maximum time of one operation
+}
 
 // Queue is a job processing queue.
 type Queue interface {
@@ -33,6 +40,7 @@ type Queue interface {
 // Monitor implements blockchain monitor which fetches logs from the blockchain
 // and creates jobs accordingly.
 type Monitor struct {
+	cfg     *Config
 	logger  *util.Logger
 	db      *reform.DB
 	queue   Queue
@@ -48,11 +56,21 @@ type Monitor struct {
 	tickers []*time.Ticker
 }
 
+// NewConfig creates a default blockchain monitor configuration.
+func NewConfig() *Config {
+	return &Config{
+		CollectPause:  6,
+		SchedulePause: 6,
+		Timeout:       5,
+	}
+}
+
 // NewMonitor creates a Monitor with specified settings.
-func NewMonitor(logger *util.Logger, db *reform.DB, queue Queue, eth Client,
-	pscAddr common.Address) (*Monitor, error) {
+func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
+	queue Queue, eth Client, pscAddr common.Address) (*Monitor, error) {
 	if logger == nil || db == nil || queue == nil || eth == nil ||
-		!common.IsHexAddress(pscAddr.String()) {
+		cfg.CollectPause <= 0 || cfg.SchedulePause <= 0 ||
+		cfg.Timeout <= 0 || !common.IsHexAddress(pscAddr.String()) {
 		return nil, ErrInput
 	}
 
@@ -62,6 +80,7 @@ func NewMonitor(logger *util.Logger, db *reform.DB, queue Queue, eth Client,
 	}
 
 	return &Monitor{
+		cfg:     cfg,
 		logger:  logger,
 		db:      db,
 		queue:   queue,
@@ -85,18 +104,17 @@ func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
 
 // Start starts the monitor. It will continue collecting logs and scheduling
 // jobs until it is stopped with Stop.
-func (m *Monitor) Start(collectTick, scheduleTick, timeout int64) error {
+func (m *Monitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	if scheduleTick <= 0 || collectTick <= 0 || timeout <= 0 {
-		return fmt.Errorf("one or more parameters are incorrect")
-	}
-
-	collectTicker := time.NewTicker(time.Duration(collectTick) * time.Second)
-	scheduleTicker := time.NewTicker(time.Duration(scheduleTick) * time.Second)
+	collectTicker := time.NewTicker(
+		time.Duration(m.cfg.CollectPause) * time.Second)
+	scheduleTicker := time.NewTicker(
+		time.Duration(m.cfg.SchedulePause) * time.Second)
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
-	m.start(ctx, timeout, collectTicker.C, scheduleTicker.C, m.errors)
+	m.start(ctx, m.cfg.Timeout, collectTicker.C,
+		scheduleTicker.C, m.errors)
 	return nil
 }
 
@@ -115,7 +133,6 @@ func (m *Monitor) Stop() error {
 // ticker channel succeeds. To stop the loop, cancel the context.
 func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
 	errCh chan error, name string, action func()) {
-
 	for {
 		select {
 		case <-ctx.Done():

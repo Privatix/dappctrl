@@ -8,6 +8,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -42,6 +43,7 @@ type Server struct {
 	logger         *util.Logger
 	db             *reform.DB
 	ethClient      *ethclient.Client
+	queue          *job.Queue
 	ptc            *contract.PrivatixTokenContract
 	psc            *contract.PrivatixServiceContract
 	pwdStorage     data.PWDGetSetter
@@ -54,6 +56,7 @@ func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
 	ethClient *ethclient.Client,
+	queue *job.Queue,
 	ptc *contract.PrivatixTokenContract,
 	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {
@@ -62,6 +65,7 @@ func NewServer(conf *Config,
 		logger,
 		db,
 		ethClient,
+		queue,
 		ptc,
 		psc,
 		pwdStorage,

@@ -75,6 +75,12 @@ func (s *Server) replyInvalidPayload(w http.ResponseWriter) {
 	})
 }
 
+func (s *Server) replyInvalidAction(w http.ResponseWriter) {
+	s.replyErr(w, http.StatusBadRequest, &serverError{
+		Message: "invalid action",
+	})
+}
+
 type replyEntity struct {
 	ID interface{} `json:"id"`
 }

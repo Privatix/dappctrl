@@ -106,15 +106,6 @@ func main() {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
 
-	pwdStorage := new(data.PWDStorage)
-
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, ptc, psc, pwdStorage)
-
-	go func() {
-		logger.Fatal("failed to run agent server: %s\n",
-			uiSrv.ListenAndServe())
-	}()
-
 	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
 		logger.Fatal("failed to start pay server: %s",
@@ -139,6 +130,8 @@ func main() {
 		panic(err)
 	}
 
+	pwdStorage := new(data.PWDStorage)
+
 	handler, err := worker.NewWorker(db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn),
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
@@ -161,6 +154,12 @@ func main() {
 			" the blockchain monitor: %v", err)
 	}
 	defer mon.Stop()
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, queue, ptc, psc, pwdStorage)
+
+	go func() {
+		logger.Fatal("failed to run agent server: %s\n",
+			uiSrv.ListenAndServe())
+	}()
 
 	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

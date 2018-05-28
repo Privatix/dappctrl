@@ -289,13 +289,21 @@ func RollbackTestTX(t *testing.T, tx *reform.TX) {
 	}
 }
 
+// FindInTestDB selects a record from test db
+func FindInTestDB(t *testing.T, db *reform.DB,
+	str reform.Struct, column string, arg interface{}) {
+	if err := db.FindOneTo(str, column, arg); err != nil {
+		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
+	}
+}
+
 // InsertToTestDB inserts rows to test DB.
 func InsertToTestDB(t *testing.T, db *reform.DB, rows ...reform.Struct) {
 	tx := BeginTestTX(t, db)
 	for _, v := range rows {
 		if err := tx.Insert(v); err != nil {
 			RollbackTestTX(t, tx)
-			t.Fatalf("failed to insert %T: %s. %s", v, err,
+			t.Fatalf("failed to insert %T: %v (%s)", v, err,
 				util.Caller())
 		}
 	}
@@ -308,7 +316,8 @@ func SaveToTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 	for _, v := range recs {
 		if err := tx.Save(v); err != nil {
 			RollbackTestTX(t, tx)
-			t.Fatalf("failed to save %T: %s", v, err)
+			t.Fatalf("failed to save %T: %v (%s)", v, err,
+				util.Caller())
 		}
 	}
 	CommitTestTX(t, tx)
@@ -320,7 +329,8 @@ func DeleteFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 	for _, v := range recs {
 		if err := tx.Delete(v); err != nil {
 			RollbackTestTX(t, tx)
-			t.Fatalf("failed to delete %T: %s", v, err)
+			t.Fatalf("failed to delete %T: %v (%s)", v, err,
+				util.Caller())
 		}
 	}
 	CommitTestTX(t, tx)
@@ -330,7 +340,8 @@ func DeleteFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 	for _, v := range recs {
 		if err := db.Reload(v); err != nil {
-			t.Fatalf("failed to reload %T: %s", v, err)
+			t.Fatalf("failed to reload %T: %v (%s)", v, err,
+				util.Caller())
 		}
 	}
 }

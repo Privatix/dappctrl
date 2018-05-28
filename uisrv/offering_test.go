@@ -320,8 +320,33 @@ func getOfferingStatus(t *testing.T, id string) *http.Response {
 	return sendToOfferingStatus(t, id, "", "GET")
 }
 
+func sendOfferingAction(t *testing.T, id, action string) *http.Response {
+	path := fmt.Sprint(offeringsPath, id, "/status")
+	payload := &ActionPayload{Action: action}
+	return sendPayload(t, http.MethodPut, path, payload)
+}
+
 func TestPutOfferingStatus(t *testing.T) {
-	// TODO once job queue implemented.
+	fixture := data.NewTestFixture(t, testServer.db)
+	defer fixture.Close()
+	defer setTestUserCredentials(t)()
+
+	testJobCreated := func(action string, jobType string) {
+		res := sendOfferingAction(t, fixture.Offering.ID, action)
+		if res.StatusCode != http.StatusOK {
+			t.Fatal("got: ", res.Status)
+		}
+		jobTerm := &data.Job{}
+		data.FindInTestDB(t, testServer.db, jobTerm, "type", jobType)
+		data.DeleteFromTestDB(t, testServer.db, jobTerm)
+	}
+
+	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action")
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("wanted: %d, got: %v", http.StatusBadRequest, res.Status)
+	}
+
+	testJobCreated(PublishOffering, data.JobAgentPreOfferingMsgBCPublish)
 }
 
 func TestGetOfferingStatus(t *testing.T) {

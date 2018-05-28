@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/privatix/dappctrl/job"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -41,6 +43,7 @@ func TestMain(m *testing.M) {
 		AgentServer     *Config
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
+		Job             *job.Config
 		Log             *util.LogConfig
 		Eth             struct {
 			GethURL       string
@@ -79,8 +82,11 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
+
+	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc, pwdStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient,
+		queue, ptc, psc, pwdStorage)
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()

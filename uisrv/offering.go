@@ -156,8 +156,27 @@ func (s *Server) handlePutOfferingStatus(
 	if !s.parsePayload(w, r, req) {
 		return
 	}
+	// TODO: popup, deactivate
+	if req.Action != PublishOffering {
+		s.replyInvalidAction(w)
+		return
+	}
+	if !s.findTo(w, &data.Offering{}, id) {
+		return
+	}
 	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
-	// TODO once job queue implemented.
+
+	if err := s.queue.Add(&data.Job{
+		Type:        data.JobAgentPreOfferingMsgBCPublish,
+		RelatedType: data.JobOfferring,
+		RelatedID:   id,
+		CreatedBy:   data.JobUser,
+		Data:        []byte("{}"),
+	}); err != nil {
+		s.logger.Error("failed to add %s: %v",
+			data.JobAgentPreOfferingMsgBCPublish, err)
+		s.replyUnexpectedErr(w)
+	}
 }
 
 // handleGetOfferingStatus replies with offerings status by id.

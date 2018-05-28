@@ -68,6 +68,8 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
+More information about `dappctrl.config.json`: [config fields description](https://github.com/Privatix/dappctrl/wiki/dappctrl.config.json-description).
+
 ## Building and configuring service adapters
 
 * **OpenVPN** - please read `svc/dappvpn/README.md`.

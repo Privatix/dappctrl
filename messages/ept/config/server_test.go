@@ -18,15 +18,16 @@ import (
 )
 
 const (
-	errPars     = "incorrect parsing test"
-	errPush     = "incorrect pushing test"
+	errPars = "incorrect parsing test"
+	errPush = "incorrect pushing test"
+
 	samplesPath = "samples"
 )
 
 var (
 	conf struct {
-		EptTest           *eptTestConfig
 		DB                *data.DBConfig
+		EptTest           *eptTestConfig
 		Log               *util.LogConfig
 		SessionServer     *sesssrv.Config
 		SessionServerTest *testConfig
@@ -46,21 +47,27 @@ type testConfig struct {
 }
 
 type testProduct struct {
-	ValidFormatConfig map[string]string
 	EmptyConfig       string
+	ValidFormatConfig map[string]string
+}
+
+type cliConfTest struct {
+	Login string
+	Pass  string
 }
 
 type eptTestConfig struct {
-	ExportConfigKeys    []string
-	ValidHost           []string
+	Ca                  string
 	ConfValidCaValid    string
 	ConfInvalid         string
 	ConfValidCaInvalid  string
 	ConfValidCaEmpty    string
 	ConfValidCaNotExist string
-	Ca                  string
-	RetrySec            []int64
+	VPNConfig           cliConfTest
 	SessSrvStartTimeout []int64
+	ExportConfigKeys    []string
+	RetrySec            []int64
+	ValidHost           []string
 }
 
 func newTestSessSrv(timeout time.Duration) *testSessSrv {
@@ -145,15 +152,18 @@ func pushConfig(ctx context.Context, productID string, keys []string,
 	return PushConfig(ctx, conf.SessionServer.Config, logger, req)
 }
 
-func TestParsingValidConfig(t *testing.T) {
+func srvConfig(t *testing.T) map[string]string {
 	out, err := ServerConfig(joinFile(samplesPath,
 		conf.EptTest.ConfValidCaValid),
 		true, conf.EptTest.ExportConfigKeys)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	return out
+}
 
-	if !validParams(out) {
+func TestParsingValidConfig(t *testing.T) {
+	if !validParams(srvConfig(t)) {
 		t.Fatal(errPars)
 	}
 }

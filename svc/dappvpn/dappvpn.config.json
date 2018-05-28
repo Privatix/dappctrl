@@ -11,6 +11,14 @@
         "Channel": "ae5deac9-44c3-4840-bdff-ca9de58c89f4"
     },
 
+    "Pusher": {
+        "CaCertPath": "",
+        "ConfigPath": "",
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo"],
+        "TimeOut": 120
+    },
+
     "Server": {
         "Addr": "localhost:8000",
         "Password": "secret",

@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -103,4 +104,15 @@ func fillCa(results map[string]string, filePath string) error {
 	results[caPathName] = certPath
 
 	return nil
+}
+
+func createPath(target string) error {
+	return os.MkdirAll(target, pathPerm)
+}
+
+func notExist(location string) bool {
+	if _, err := os.Stat(location); os.IsNotExist(err) {
+		return true
+	}
+	return false
 }

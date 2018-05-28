@@ -106,7 +106,8 @@ func parseLine(keys map[string]bool,
 	str := strings.TrimSpace(line)
 
 	for key := range keys {
-		if !strings.HasPrefix(str, key) {
+		sStr := strings.Split(str, " ")
+		if sStr[0] != key {
 			continue
 		}
 

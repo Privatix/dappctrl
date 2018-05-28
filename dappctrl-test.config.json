@@ -50,7 +50,11 @@
         "RetrySec": [ 0, 1, 2 ],
         "SessSrvStartTimeout": [0, 1, 2 ],
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
+        "VPNConfig": {
+            "Login": "!login!",
+            "Pass": "test-pass"
+        }
     },
 
     "Eth": {
@@ -114,6 +118,12 @@
 
     "SOMCTest": {
         "ServerStartupDelay": 10
+    },
+
+    "VPNConfigPusher": {
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "TimeOut": 120
     },
 
     "VPNMonitor": {

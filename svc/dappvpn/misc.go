@@ -9,7 +9,11 @@ import (
 	"path/filepath"
 )
 
-const chanPerm = 0644
+const (
+	chanPerm = 0644
+
+	jsonIdent = "    "
+)
 
 func encode(s string) string {
 	return base64.URLEncoding.EncodeToString([]byte(s))

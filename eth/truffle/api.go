@@ -1,5 +1,3 @@
-// +build !notest
-
 package truffle
 
 import (

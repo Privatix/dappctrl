@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/crypto/sha3"
 	"gopkg.in/reform.v1"
 )
 

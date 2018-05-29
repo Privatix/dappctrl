@@ -260,9 +260,9 @@ func NewTestJob(jobType, createdBy, relType string) *Job {
 func NewTestEthLog() *EthLog {
 	return &EthLog{
 		ID:          util.NewUUID(),
-		Status:      TxMined,
+		TxStatus:    TxMined,
 		BlockNumber: uint64(rand.Intn(9999)),
-		Topics:      []byte("{}"),
+		Topics:      LogTopics{},
 	}
 }
 

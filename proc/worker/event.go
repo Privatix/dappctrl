@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -92,19 +91,13 @@ func extractLogChannelToppedUp(log *data.EthLog) (*logChannelTopUpInput, error) 
 		return nil, fmt.Errorf("could not decode event data")
 	}
 
-	topics := []common.Hash{}
-
-	if err = json.Unmarshal(log.Topics, &topics); err != nil {
-		return nil, fmt.Errorf("could not decode event topics: %v", err)
-	}
-
-	if len(topics) != 3 {
+	if len(log.Topics) != 3 {
 		return nil, fmt.Errorf("wrong number of topics")
 	}
 
-	agentAddr := common.BytesToAddress(topics[0].Bytes())
-	clientAddr := common.BytesToAddress(topics[1].Bytes())
-	offeringHash := topics[2]
+	agentAddr := common.BytesToAddress(log.Topics[0].Bytes())
+	clientAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	offeringHash := log.Topics[2]
 
 	return &logChannelTopUpInput{
 		agentAddr:    agentAddr,
@@ -141,19 +134,13 @@ func extractLogChannelCreated(log *data.EthLog) (*logChannelCreatedInput, error)
 		return nil, fmt.Errorf("could not parse authentication hash")
 	}
 
-	topics := []common.Hash{}
-
-	if err = json.Unmarshal(log.Topics, &topics); err != nil {
-		return nil, fmt.Errorf("could not parse topics topics: %v", err)
-	}
-
-	if len(topics) != 3 {
+	if len(log.Topics) != 3 {
 		return nil, fmt.Errorf("wrong number of topics")
 	}
 
-	agentAddr := common.BytesToAddress(topics[0].Bytes())
-	clientAddr := common.BytesToAddress(topics[1].Bytes())
-	offeringHash := topics[2]
+	agentAddr := common.BytesToAddress(log.Topics[0].Bytes())
+	clientAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	offeringHash := log.Topics[2]
 
 	return &logChannelCreatedInput{
 		agentAddr:          agentAddr,

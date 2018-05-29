@@ -323,19 +323,6 @@ type Job struct {
 	Data        []byte    `reform:"data"`
 }
 
-// EthLog is ethereum events.
-//reform:eth_logs
-type EthLog struct {
-	ID          string `reform:"id,pk"`
-	TxHash      string `reform:"tx_hash"`
-	Status      string `reform:"status"`
-	Job         string `reform:"job"`
-	BlockNumber uint64 `reform:"block_number"`
-	Addr        string `reform:"addr"`
-	Data        string `reform:"data"`
-	Topics      []byte `reform:"topics"`
-}
-
 // EthTx is an ethereum transaction
 //reform:eth_txs
 type EthTx struct {

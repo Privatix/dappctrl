@@ -371,7 +371,7 @@ func (m *Monitor) scheduleClientOfferingCreated(el *data.EthLog,
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   util.NewUUID(),
-		RelatedType: data.JobOffering,
+		RelatedType: data.JobOfferring,
 	}
 
 	m.scheduleCommon(el, j)
@@ -395,6 +395,7 @@ func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string
 func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
 	j.CreatedAt = time.Now()
+	j.Data = []byte("{}")
 	err := m.queue.Add(j)
 	switch err {
 	case nil:

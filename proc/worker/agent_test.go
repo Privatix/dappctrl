@@ -2,7 +2,6 @@ package worker
 
 import (
 	"bytes"
-	"encoding/json"
 	"math/big"
 	"testing"
 	"time"
@@ -56,17 +55,17 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
-	topics, err := json.Marshal([]common.Hash{
+	topics :=data.LogTopics{
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
-	})
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 	ethLog := data.NewTestEthLog()
 	ethLog.TxHash = data.FromBytes(env.ethBack.tx.Hash().Bytes())
-	ethLog.Job = fixture.job.ID
+	ethLog.JobID = &fixture.job.ID
 	ethLog.Data = data.FromBytes(logData)
 	ethLog.Topics = topics
 	env.insertToTestDB(t, ethLog)
@@ -140,17 +139,17 @@ func TestAgentAfterChannelTopUp(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
-	topics, err := json.Marshal([]common.Hash{
+	topics :=  data.LogTopics{
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,
-	})
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ethLog := data.NewTestEthLog()
-	ethLog.Job = fixture.job.ID
+	ethLog.JobID = &fixture.job.ID
 	ethLog.Data = data.FromBytes(eventData)
 	ethLog.Topics = topics
 	env.insertToTestDB(t, ethLog)

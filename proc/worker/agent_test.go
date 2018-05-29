@@ -24,7 +24,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	// ch_status="Active"
 	// svc_status="Pending"
 	// "preEndpointMsgCreate"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterChannelCreate,
 		data.JobChannel)
 	// Related to id of a channel that needs to be created.
@@ -55,7 +55,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
-	topics :=data.LogTopics{
+	topics := data.LogTopics{
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
@@ -122,7 +122,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 
 func TestAgentAfterChannelTopUp(t *testing.T) {
 	// Add deposit to channels.total_deposit
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterChannelTopUp,
 		data.JobChannel)
 	defer env.close()
@@ -139,7 +139,7 @@ func TestAgentAfterChannelTopUp(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
-	topics :=  data.LogTopics{
+	topics := data.LogTopics{
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,
@@ -184,7 +184,7 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 	//   then "preCooperativeClose"
 	//   else "preServiceTerminate"
 
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
 		data.JobChannel)
 	defer env.close()
@@ -219,7 +219,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 	// 1. set ch_status="closed_uncoop"
 	// 2. "preServiceTerminate"
 
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -243,7 +243,7 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 func TestAgentPreCooperativeClose(t *testing.T) {
 	// 1. PSC.cooperativeClose()
 	// 2. "preServiceTerminate"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreCooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -288,7 +288,7 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
 	// set ch_status="closed_coop"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterCooperativeClose,
 		data.JobChannel)
 	defer env.close()
@@ -313,7 +313,7 @@ func testServiceStatusChanged(t *testing.T,
 
 func TestAgentPreServiceSuspend(t *testing.T) {
 	// svc_status="Suspended"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceSuspend,
 		data.JobChannel)
 	defer env.close()
@@ -328,7 +328,7 @@ func TestAgentPreServiceSuspend(t *testing.T) {
 
 func TestAgentPreServiceUnsuspend(t *testing.T) {
 	// svc_status="Active"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceUnsuspend,
 		data.JobChannel)
 	defer env.close()
@@ -346,7 +346,7 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 
 func TestAgentPreServiceTerminate(t *testing.T) {
 	// svc_status="Terminated"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceTerminate,
 		data.JobChannel)
 	defer env.close()
@@ -367,7 +367,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	// store raw endpoint message in DB.endpoints.raw_msg
 	// msg_status="unpublished"
 	// "preEndpointMsgSOMCPublish"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreEndpointMsgCreate,
 		data.JobChannel)
 	defer env.close()
@@ -412,7 +412,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
 	// 3. "afterEndpointMsgSOMCPublish"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
 		data.JobAgentPreEndpointMsgSOMCPublish, data.JobEndpoint)
 	defer env.close()
@@ -472,7 +472,7 @@ func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. If pre_paid OR setup_price > 0, then
 	// svc_status="Suspended"
 	// else svc_status="Active"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterEndpointMsgSOMCPublish,
 		data.JobChannel)
 	defer env.close()
@@ -491,7 +491,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 1. PSC.registerServiceOffering()
 	// 2. msg_status="bchain_publishing"
 	// 3. offer_status="register"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
 		data.JobOfferring)
 	defer env.close()
@@ -529,7 +529,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	// 1. msg_status="bchain_published"
 	// 2. "preOfferingMsgSOMCPublish"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterOfferingMsgBCPublish,
 		data.JobOfferring)
 	defer env.close()
@@ -555,7 +555,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
 		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
 	defer env.close()

@@ -59,7 +59,7 @@ var (
 	logger *util.Logger
 )
 
-func newHandlerTest(t *testing.T) *workerTest {
+func newWorkerTest(t *testing.T) *workerTest {
 
 	fakeSOMC := somc.NewFakeSOMC(t, conf.SOMC.URL,
 		conf.SOMCTest.ServerStartupDelay)
@@ -155,7 +155,7 @@ func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 
 func runJob(t *testing.T, workerF func(*data.Job) error, job *data.Job) {
 	if err := workerF(job); err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v (%s)", err, util.Caller())
 	}
 }
 

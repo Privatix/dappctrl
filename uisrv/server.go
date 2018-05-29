@@ -3,11 +3,9 @@ package uisrv
 import (
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/ethclient"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
@@ -42,10 +40,7 @@ type Server struct {
 	conf           *Config
 	logger         *util.Logger
 	db             *reform.DB
-	ethClient      *ethclient.Client
 	queue          *job.Queue
-	ptc            *contract.PrivatixTokenContract
-	psc            *contract.PrivatixServiceContract
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
@@ -55,19 +50,13 @@ type Server struct {
 func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
-	ethClient *ethclient.Client,
 	queue *job.Queue,
-	ptc *contract.PrivatixTokenContract,
-	psc *contract.PrivatixServiceContract,
 	pwdStorage data.PWDGetSetter) *Server {
 	return &Server{
 		conf,
 		logger,
 		db,
-		ethClient,
 		queue,
-		ptc,
-		psc,
 		pwdStorage,
 		data.EncryptedKey,
 		data.ToPrivateKey}

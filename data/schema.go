@@ -301,6 +301,7 @@ const (
 	JobAfterAccountAddBalance               = "afterAccountAddBalance"
 	JobPreAccountReturnBalance              = "preAccountReturnBalance"
 	JobAfterAccountReturnBalance            = "afterAccountReturnBalance"
+	JobAccountBalancesUpdate                = "accountBalancesUpdate"
 )
 
 // JobBalanceData is data required for transfer jobs.

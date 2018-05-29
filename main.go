@@ -142,6 +142,13 @@ func main() {
 	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
 	handler.SetQueue(queue)
 
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
+
+	go func() {
+		logger.Fatal("failed to run agent server: %s\n",
+			uiSrv.ListenAndServe())
+	}()
+
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
 		gethConn, pscAddr)
 	if err != nil {
@@ -154,12 +161,6 @@ func main() {
 			" the blockchain monitor: %v", err)
 	}
 	defer mon.Stop()
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, gethConn, queue, ptc, psc, pwdStorage)
-
-	go func() {
-		logger.Fatal("failed to run agent server: %s\n",
-			uiSrv.ListenAndServe())
-	}()
 
 	logger.Fatal("failed to process job queue: %s", queue.Process())
 }

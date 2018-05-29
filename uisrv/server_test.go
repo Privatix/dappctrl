@@ -12,23 +12,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privatix/dappctrl/job"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/eth/truffle"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
 
 // used throughout all tests in the package.
 var (
 	testServer         *Server
-	testTruffleAPI     truffle.API
 	testEthereumClient *ethclient.Client
 
 	testPassword = "test-password"
@@ -45,10 +40,6 @@ func TestMain(m *testing.M) {
 		DB              *data.DBConfig
 		Job             *job.Config
 		Log             *util.LogConfig
-		Eth             struct {
-			GethURL       string
-			TruffleAPIURL string
-		}
 	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
@@ -58,35 +49,10 @@ func TestMain(m *testing.M) {
 	db := data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(db)
 
-	var ptc *contract.PrivatixTokenContract
-	var psc *contract.PrivatixServiceContract
-
-	if conf.Eth.TruffleAPIURL != "" {
-		conn, err := ethclient.Dial(conf.Eth.GethURL)
-		if err != nil {
-			panic(err)
-		}
-		testEthereumClient = conn
-
-		testTruffleAPI = truffle.API(conf.Eth.TruffleAPIURL)
-
-		ptcAddr := common.HexToAddress(testTruffleAPI.FetchPTCAddress())
-		ptc, err = contract.NewPrivatixTokenContract(ptcAddr, conn)
-		if err != nil {
-			panic(err)
-		}
-
-		pscAddr := common.HexToAddress(testTruffleAPI.FetchPSCAddress())
-		psc, err = contract.NewPrivatixServiceContract(pscAddr, conn)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	queue := job.NewQueue(conf.Job, logger, db, nil)
+
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient,
-		queue, ptc, psc, pwdStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()

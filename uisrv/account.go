@@ -1,15 +1,12 @@
 package uisrv
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
@@ -148,35 +145,10 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc.InUse = payload.InUse
 	acc.Name = payload.Name
 
-	timeout := time.Duration(s.conf.EthCallTimeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	amount, err := s.ethClient.BalanceAt(ctx, ethAddr, nil)
-	if err != nil {
-		s.logger.Warn("could not get eth balance")
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
-
-	pscBalance, err := s.psc.BalanceOf(&bind.CallOpts{}, ethAddr)
-	if err != nil {
-		s.logger.Warn("could not get psc balance: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.PSCBalance = pscBalance.Uint64()
-
-	ptcBalance, err := s.ptc.BalanceOf(&bind.CallOpts{}, ethAddr)
-	if err != nil {
-		s.logger.Warn("could not get ptc balance: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
-
-	acc.PTCBalance = ptcBalance.Uint64()
+	// Set 0 balances on initial create.
+	acc.PTCBalance = 0
+	acc.PSCBalance = 0
+	acc.EthBalance = data.B64BigInt(data.FromBytes([]byte{0}))
 
 	if err := s.db.Insert(acc); err != nil {
 		s.logger.Warn("could not insert account: %v", err)

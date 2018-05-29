@@ -123,3 +123,8 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
 	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
 }
+
+// AccountBalancesUpdate updates ptc, psc and eth balance values.
+func (w *Worker) AccountBalancesUpdate(job *data.Job) error {
+	return w.updateAccountBalances(job, data.JobAccountBalancesUpdate)
+}

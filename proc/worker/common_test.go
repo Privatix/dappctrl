@@ -12,7 +12,7 @@ import (
 func TestPreAccountAddBalanceApprove(t *testing.T) {
 	// check PTC balance PTC.balanceOf()
 	// PTC.increaseApproval()
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobPreAccountAddBalanceApprove,
 		data.JobAccount)
 	defer env.close()
@@ -42,7 +42,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 
 func TestPreAccountAddBalance(t *testing.T) {
 	// PSC.addBalanceERC20()
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobPreAccountAddBalance,
 		data.JobAccount)
 	defer env.close()
@@ -64,37 +64,10 @@ func TestPreAccountAddBalance(t *testing.T) {
 	testCommonErrors(t, env.worker.PreAccountAddBalance, *fixture.job)
 }
 
-func TestAfterAccountAddBalance(t *testing.T) {
-	// update balance in DB.accounts.ptc_balance
-	env := newHandlerTest(t)
-	fixture := env.newTestFixture(t, data.JobAfterAccountAddBalance,
-		data.JobAccount)
-	defer env.close()
-	defer fixture.close()
-
-	env.ethBack.balancePTC = big.NewInt(100)
-	env.ethBack.balancePSC = big.NewInt(200)
-
-	runJob(t, env.worker.AfterAccountAddBalance, fixture.job)
-
-	account := &data.Account{}
-	env.findTo(t, account, fixture.Account.ID)
-	if account.PTCBalance != 100 {
-		t.Fatalf("wrong ptc balance, wanted: %v, got: %v", 100,
-			account.PTCBalance)
-	}
-	if account.PSCBalance != 200 {
-		t.Fatalf("wrong psc balance, wanted: %v, got: %v", 200,
-			account.PSCBalance)
-	}
-
-	testCommonErrors(t, env.worker.AfterAccountAddBalance, *fixture.job)
-}
-
 func TestPreAccountReturnBalance(t *testing.T) {
 	// check PSC balance PSC.balanceOf()
 	// PSC.returnBalanceERC20()
-	env := newHandlerTest(t)
+	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobPreAccountReturnBalance,
 		data.JobAccount)
 	defer env.close()
@@ -121,18 +94,39 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	testCommonErrors(t, env.worker.PreAccountReturnBalance, *fixture.job)
 }
 
-func TestAfterAccountReturnBalance(t *testing.T) {
-	// update balance in DB.accounts.psc_balance
-	env := newHandlerTest(t)
-	fixture := env.newTestFixture(t, data.JobAfterAccountReturnBalance,
-		data.JobAccount)
+func TestAfterAccountAddBalance(t *testing.T) {
+	// update balance in DB.accounts.ptc_balance
+	env := newWorkerTest(t)
 	defer env.close()
+	testAccountBalancesUpdate(t, env, env.worker.AfterAccountAddBalance,
+		data.JobAfterAccountAddBalance)
+}
+
+func TestAfterAccountReturnBalance(t *testing.T) {
+	// Test update balance in DB.accounts.psc_balance
+	env := newWorkerTest(t)
+	defer env.close()
+	testAccountBalancesUpdate(t, env, env.worker.AfterAccountReturnBalance,
+		data.JobAfterAccountReturnBalance)
+}
+
+func TestAccountBalancesUpdate(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	testAccountBalancesUpdate(t, env, env.worker.AccountBalancesUpdate,
+		data.JobAccountBalancesUpdate)
+}
+
+func testAccountBalancesUpdate(t *testing.T, env *workerTest,
+	worker func(*data.Job) error, jobType string) {
+	// update balances in DB.accounts.psc_balance and DB.account.ptc_balance
+	fixture := env.newTestFixture(t, jobType, data.JobAccount)
 	defer fixture.close()
 
 	env.ethBack.balancePTC = big.NewInt(100)
 	env.ethBack.balancePSC = big.NewInt(200)
 
-	runJob(t, env.worker.AfterAccountReturnBalance, fixture.job)
+	runJob(t, worker, fixture.job)
 
 	account := &data.Account{}
 	env.findTo(t, account, fixture.Account.ID)
@@ -145,5 +139,5 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 			account.PSCBalance)
 	}
 
-	testCommonErrors(t, env.worker.AfterAccountReturnBalance, *fixture.job)
+	testCommonErrors(t, worker, *fixture.job)
 }

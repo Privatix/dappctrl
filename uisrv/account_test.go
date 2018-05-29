@@ -1,24 +1,17 @@
-// +build !noethtest
-
 package uisrv
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth/truffle"
 )
 
 func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
@@ -98,10 +91,10 @@ func sendAccountBalanceAction(t *testing.T,
 	return sendPayload(t, http.MethodPut, path, payload)
 }
 
-func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
+func getTestAccountPayload(testkey *ecdsa.PrivateKey) *accountCreatePayload {
 	payload := &accountCreatePayload{}
 
-	payload.PrivateKey = data.FromBytes(crypto.FromECDSA(testAcc.PrivateKey))
+	payload.PrivateKey = data.FromBytes(crypto.FromECDSA(testkey))
 
 	payload.IsDefault = true
 	payload.InUse = true
@@ -110,10 +103,10 @@ func getTestAccountPayload(testAcc *truffle.TestAccount) *accountCreatePayload {
 	return payload
 }
 
-func getTestAccountKeyStorePayload(testAcc *truffle.TestAccount) *accountCreatePayload {
+func getTestAccountKeyStorePayload(testkey *ecdsa.PrivateKey) *accountCreatePayload {
 	payload := &accountCreatePayload{}
 
-	pkB64, _ := data.EncryptedKey(testAcc.PrivateKey, payload.JSONKeyStorePassword)
+	pkB64, _ := data.EncryptedKey(testkey, payload.JSONKeyStorePassword)
 	jsonBytes, _ := data.ToBytes(pkB64)
 	payload.JSONKeyStoreRaw = string(jsonBytes)
 
@@ -132,7 +125,7 @@ func equalECDSA(a, b *ecdsa.PrivateKey) bool {
 
 func testAccountFields(
 	t *testing.T,
-	testAcc *truffle.TestAccount,
+	testkey *ecdsa.PrivateKey,
 	payload *accountCreatePayload,
 	created *data.Account) {
 
@@ -162,47 +155,10 @@ func testAccountFields(
 		t.Fatal("wrong private key stored")
 	}
 
-	pubB := crypto.FromECDSAPub(&testAcc.PrivateKey.PublicKey)
+	pubB := crypto.FromECDSAPub(&testkey.PublicKey)
 
 	if created.PublicKey != data.FromBytes(pubB) {
 		t.Fatal("wrong public key stored")
-	}
-
-	addr := crypto.PubkeyToAddress(testAcc.PrivateKey.PublicKey)
-
-	if created.EthAddr != data.FromBytes(addr.Bytes()) {
-		t.Fatal("wrong eth addr stored")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(testServer.conf.EthCallTimeout)*time.Second)
-	defer cancel()
-	balance, err := testEthereumClient.BalanceAt(ctx, testAcc.Address, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if strings.TrimSpace(string(created.EthBalance)) != data.FromBytes(balance.Bytes()) {
-		t.Fatal("wrong eth balance stored")
-	}
-
-	pscBalance, err := testServer.psc.BalanceOf(&bind.CallOpts{}, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if created.PSCBalance != pscBalance.Uint64() {
-		t.Fatal("wrong psc balance stored")
-	}
-
-	ptcBalance, err := testServer.ptc.BalanceOf(&bind.CallOpts{}, addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if created.PTCBalance != ptcBalance.Uint64() {
-		t.Logf("got: %d, expected: %d", created.PTCBalance, ptcBalance.Uint64())
-		t.Fatal("wrong ptc balance stored")
 	}
 }
 
@@ -210,17 +166,12 @@ func testCreateAccount(t *testing.T, useRawJSONPayload bool) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
-	testAccounts, err := testTruffleAPI.GetTestAccounts()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	testAcc := testAccounts[0]
+	testkey, _ := crypto.GenerateKey()
 	var payload *accountCreatePayload
 	if useRawJSONPayload {
-		payload = getTestAccountKeyStorePayload(&testAcc)
+		payload = getTestAccountKeyStorePayload(testkey)
 	} else {
-		payload = getTestAccountPayload(&testAcc)
+		payload = getTestAccountPayload(testkey)
 	}
 
 	res := sendPayload(t, http.MethodPost, accountsPath, payload)
@@ -238,7 +189,7 @@ func testCreateAccount(t *testing.T, useRawJSONPayload bool) {
 		t.Fatal("failed to retrieve created account: ", err)
 	}
 
-	testAccountFields(t, &testAcc, payload, created)
+	testAccountFields(t, testkey, payload, created)
 }
 
 func TestCreateAccount(t *testing.T) {

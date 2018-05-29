@@ -32,42 +32,19 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 		id          string
 		action      string
 		destination string
-		amount      uint64
+		amount      uint
 	}{
-		// Wrong id.
-		{
-			id:          "wrong-id",
-			action:      accountDelete,
-			destination: data.ContractPSC,
-			amount:      1,
-		},
-		// Wrong action.
-		{
-			id:          acc.ID,
-			action:      "wrong-action",
-			destination: data.ContractPTC,
-			amount:      1,
-		},
 		// Wrong destination.
 		{
 			id:          acc.ID,
-			action:      accountTransfer,
 			destination: "",
 			amount:      1,
 		},
 		// Wrong amount.
 		{
 			id:          acc.ID,
-			action:      accountTransfer,
 			destination: data.ContractPSC,
 			amount:      0,
-		},
-		// Not enough balance.
-		{
-			id:          acc.ID,
-			action:      accountTransfer,
-			destination: data.ContractPSC,
-			amount:      acc.PSCBalance + 1,
 		},
 	}
 
@@ -76,7 +53,6 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 		res := sendAccountBalanceAction(
 			t,
 			testCase.id,
-			testCase.action,
 			testCase.destination,
 			testCase.amount,
 		)
@@ -87,16 +63,35 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 
 	// TODO:
 	// transfer ptc job created
-	// delete ptc job created
+	res := sendAccountBalanceAction(
+		t,
+		acc.ID,
+		data.ContractPTC,
+		1,
+	)
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("got: ", res.Status)
+	}
+	data.FindInTestDB(t, testServer.db, &data.Job{}, "type",
+		data.JobPreAccountReturnBalance)
 	// transfer psc job created
-	// delete psc job created.
+	res = sendAccountBalanceAction(
+		t,
+		acc.ID,
+		data.ContractPSC,
+		1,
+	)
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("got: ", res.Status)
+	}
+	data.FindInTestDB(t, testServer.db, &data.Job{}, "type",
+		data.JobPreAccountAddBalanceApprove)
 }
 
 func sendAccountBalanceAction(t *testing.T,
-	id, action, destination string, amount uint64) *http.Response {
+	id, destination string, amount uint) *http.Response {
 	path := fmt.Sprint(accountsPath, id, "/status")
 	payload := &accountBalancePayload{
-		Action:      action,
 		Amount:      amount,
 		Destination: destination,
 	}

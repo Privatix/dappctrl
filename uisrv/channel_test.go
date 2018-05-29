@@ -92,6 +92,33 @@ func TestGetChannelStatus(t *testing.T) {
 	}
 }
 
+func sendChannelAction(t *testing.T, id, action string) *http.Response {
+	path := fmt.Sprint(channelsPath, id, "/status")
+	payload := &ActionPayload{Action: action}
+	return sendPayload(t, http.MethodPut, path, payload)
+}
+
 func TestUpdateChannelStatus(t *testing.T) {
-	// TODO once job queue implemented.
+	fixture := data.NewTestFixture(t, testServer.db)
+	defer fixture.Close()
+	defer setTestUserCredentials(t)()
+
+	testJobCreated := func(action string, jobType string) {
+		res := sendChannelAction(t, fixture.Channel.ID, action)
+		if res.StatusCode != http.StatusOK {
+			t.Fatal("got: ", res.Status)
+		}
+		jobTerm := &data.Job{}
+		data.FindInTestDB(t, testServer.db, jobTerm, "type", jobType)
+		data.DeleteFromTestDB(t, testServer.db, jobTerm)
+	}
+
+	res := sendChannelAction(t, fixture.Channel.ID, "wrong-action")
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("wanted: %d, got: %v", http.StatusBadRequest, res.Status)
+	}
+
+	testJobCreated(channelTerminate, data.JobAgentPreServiceTerminate)
+	testJobCreated(channelPause, data.JobAgentPreServiceSuspend)
+	testJobCreated(channelResume, data.JobAgentPreServiceUnsuspend)
 }

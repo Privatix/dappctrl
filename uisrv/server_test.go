@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/privatix/dappctrl/job"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -41,6 +43,7 @@ func TestMain(m *testing.M) {
 		AgentServer     *Config
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
+		Job             *job.Config
 		Log             *util.LogConfig
 		Eth             struct {
 			GethURL       string
@@ -79,8 +82,11 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}
+
+	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient, ptc, psc, pwdStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, testEthereumClient,
+		queue, ptc, psc, pwdStorage)
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()
@@ -183,18 +189,25 @@ func testGetResources(t *testing.T, res *http.Response, exp int) {
 	}
 }
 
-func setTestUserCredentials(t *testing.T) {
+func setTestUserCredentials(t *testing.T) func() {
 	hash, err := data.HashPassword(testPassword, "test-salt")
 	if err != nil {
 		t.Fatal("failed to hash password: ", err)
 	}
-	insertItems(t, &data.Setting{
+	pwdSetting := &data.Setting{
 		Key:   passwordKey,
 		Value: string(hash),
 		Name:  "password",
-	}, &data.Setting{
+	}
+
+	saltSetting := &data.Setting{
 		Key:   saltKey,
 		Value: "test-salt",
 		Name:  "salt",
-	})
+	}
+
+	data.InsertToTestDB(t, testServer.db, pwdSetting, saltSetting)
+	return func() {
+		data.DeleteFromTestDB(t, testServer.db, pwdSetting, saltSetting)
+	}
 }

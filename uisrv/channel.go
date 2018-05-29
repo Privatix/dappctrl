@@ -20,6 +20,7 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 		}
 		if r.Method == "PUT" {
 			s.handlePutChannelStatus(w, r, id)
+			return
 		}
 	} else {
 		if r.Method == "GET" {
@@ -62,11 +63,44 @@ func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, 
 	s.replyStatus(w, channel.ChannelStatus)
 }
 
+const (
+	channelTerminate = "terminate"
+	channelPause     = "pause"
+	channelResume    = "resume"
+)
+
 func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
 	payload := &ActionPayload{}
 	if !s.parsePayload(w, r, payload) {
 		return
 	}
+
 	s.logger.Info("action ( %v )  request for channel with id: %v recieved.", payload.Action, id)
-	// TODO once job queue implemented.
+
+	jobTypes := map[string]string{
+		channelTerminate: data.JobAgentPreServiceTerminate,
+		channelPause:     data.JobAgentPreServiceSuspend,
+		channelResume:    data.JobAgentPreServiceUnsuspend,
+	}
+
+	jobType, ok := jobTypes[payload.Action]
+	if !ok {
+		s.replyInvalidAction(w)
+		return
+	}
+
+	if !s.findTo(w, &data.Channel{}, id) {
+		return
+	}
+
+	if err := s.queue.Add(&data.Job{
+		Type:        jobType,
+		RelatedType: data.JobChannel,
+		RelatedID:   id,
+		CreatedBy:   data.JobUser,
+		Data:        []byte("{}"),
+	}); err != nil {
+		s.logger.Error("failed to add job %s: %v", jobType, err)
+		s.replyUnexpectedErr(w)
+	}
 }

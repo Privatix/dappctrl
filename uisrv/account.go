@@ -3,6 +3,7 @@ package uisrv
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -118,7 +119,9 @@ func (p *accountCreatePayload) toECDSA() (*ecdsa.PrivateKey, error) {
 
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	payload := &accountCreatePayload{}
-	s.parsePayload(w, r, payload)
+	if !s.parsePayload(w, r, payload) {
+		return
+	}
 	acc := &data.Account{}
 	acc.ID = util.NewUUID()
 
@@ -184,19 +187,51 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	s.replyEntityCreated(w, acc.ID)
 }
 
-// Actions on account's balance.
-const (
-	accountTransfer = "transfer"
-	accountDelete   = "delete"
-)
-
 type accountBalancePayload struct {
-	Action      string `json:"action"`
-	Amount      uint64 `json:"amount"`
+	Amount      uint   `json:"amount"`
 	Destination string `json:"destination"`
 }
 
 func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Request, id string) {
-	// TODO: validate request params and create balance job.
-	w.WriteHeader(http.StatusBadRequest)
+	payload := &accountBalancePayload{}
+	if !s.parsePayload(w, r, payload) {
+		return
+	}
+	if payload.Amount == 0 || (payload.Destination != data.ContractPSC &&
+		payload.Destination != data.ContractPTC) {
+		s.replyErr(w, http.StatusBadRequest, &serverError{
+			Message: "invalid amount or destination",
+		})
+		return
+	}
+
+	if !s.findTo(w, &data.Account{}, id) {
+		return
+	}
+
+	jobType := data.JobPreAccountAddBalanceApprove
+	if payload.Destination == data.ContractPTC {
+		jobType = data.JobPreAccountReturnBalance
+	}
+
+	jobData := &data.JobBalanceData{Amount: payload.Amount}
+
+	jobDataB, err := json.Marshal(jobData)
+	if err != nil {
+		s.logger.Error("failed to marshal %T: %v", jobData, err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	if err = s.queue.Add(&data.Job{
+		Type:        jobType,
+		RelatedType: data.JobAccount,
+		RelatedID:   id,
+		Data:        jobDataB,
+		CreatedBy:   data.JobUser,
+	}); err != nil {
+		s.logger.Error("failed to add transfer job: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
 }

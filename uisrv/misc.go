@@ -1,6 +1,7 @@
 package uisrv
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -74,6 +75,12 @@ func (s *Server) replyInvalidPayload(w http.ResponseWriter) {
 	})
 }
 
+func (s *Server) replyInvalidAction(w http.ResponseWriter) {
+	s.replyErr(w, http.StatusBadRequest, &serverError{
+		Message: "invalid action",
+	})
+}
+
 type replyEntity struct {
 	ID interface{} `json:"id"`
 }
@@ -102,4 +109,23 @@ func (s *Server) reply(w http.ResponseWriter, v interface{}) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		s.logger.Warn("failed to marshal: %v", err)
 	}
+}
+
+func (s *Server) replyNumFromQuery(w http.ResponseWriter, query, arg string) {
+	row := s.db.QueryRow(query, arg)
+	var queryRet sql.NullInt64
+	if err := row.Scan(&queryRet); err != nil {
+		s.logger.Error("failed to get usage: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	retB, err := json.Marshal(&queryRet.Int64)
+	if err != nil {
+		s.logger.Error("failed to encode usage: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+	w.Write(retB)
+	return
 }

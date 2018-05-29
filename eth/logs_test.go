@@ -110,7 +110,7 @@ func TestNormalLogsFetching(t *testing.T) {
 	fetchEventData := func(eventDigest string) ([]string, string) {
 		response, err := client.GetLogs(
 			testTruffleAPI.FetchPSCAddress(),
-			[]string{"0x" + eventDigest}, "", "")
+			TopicFilter{0: {"0x" + eventDigest}}, "", "")
 
 		failOnErr(err, "Can't call API: ", err, " Event digest: ", eventDigest)
 		if len(response.Result) == 0 {

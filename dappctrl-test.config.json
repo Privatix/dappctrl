@@ -9,6 +9,15 @@
         "ServerStartupDelay": 10
     },
 
+    "ClientBilling": {
+        "CollectPeriod":  1
+    },
+
+    "ClientBillingTest": {
+        "MonitorStartupDelay": 10,
+        "ReactionDelay": 2
+    },
+
     "BillingTest": {
         "Channel": {
             "BigDeposit":1000,
@@ -28,13 +37,10 @@
         }
     },
 
-    "ClientBilling": {
-        "CollectPeriod":  1
-    },
-
-    "ClientBillingTest": {
-        "MonitorStartupDelay": 10,
-        "ReactionDelay": 2
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
     },
 
     "DB": {

@@ -323,15 +323,35 @@ type Job struct {
 	Data        []byte    `reform:"data"`
 }
 
-// EthLog is ethereum events.
+// EthTx is an ethereum transaction
+//reform:eth_txs
+type EthTx struct {
+	ID          string    `reform:"id,pk"`
+	Hash        string    `reform:"hash"`
+	Method      string    `reform:"method"`
+	Status      string    `reform:"status"`
+	JobID       *string   `reform:"job"`
+	Issued      time.Time `reform:"issued"`
+	BlockNumber uint64    `reform:"block_number"`
+	AddrFrom    string    `reform:"addr_from"`
+	AddrTo      string    `reform:"addr_to"`
+	Nonce       *string   `reform:"nonce"`
+	GasPrice    uint64    `reform:"gas_price"`
+	Gas         uint64    `reform:"gas"`
+	TxRaw       []byte    `reform:"tx_raw"`
+}
+
+// EthLog is an ethereum log entry.
 //reform:eth_logs
 type EthLog struct {
-	ID          string `reform:"id,pk"`
-	TxHash      string `reform:"tx_hash"`
-	Status      string `reform:"status"`
-	Job         string `reform:"job"`
-	BlockNumber uint64 `reform:"block_number"`
-	Addr        string `reform:"addr"`
-	Data        string `reform:"data"`
-	Topics      []byte `reform:"topics"`
+	ID          string    `reform:"id,pk"`
+	TxHash      string    `reform:"tx_hash"`
+	TxStatus    string    `reform:"status"`
+	JobID       *string   `reform:"job"`
+	BlockNumber uint64    `reform:"block_number"`
+	Addr        string    `reform:"addr"`
+	Data        string    `reform:"data"`
+	Topics      LogTopics `reform:"topics"`
+	Failures    uint64    `reform:"failures"`
+	Ignore      bool      `reform:"ignore"`
 }

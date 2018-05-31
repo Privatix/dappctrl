@@ -2,9 +2,12 @@ package util
 
 import (
 	"errors"
+	gofmt "fmt"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/privatix/dappctrl/report"
 )
 
 // Logger to log internal events.
@@ -72,6 +75,10 @@ func (l *Logger) Log(lvl int, fmt string, v ...interface{}) {
 		return
 	}
 
+	if report.Enable && lvl > LogWarning {
+		report.Notify(gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...))
+	}
+
 	l.logger.Printf(logLevelStrs[lvl]+" "+fmt, v...)
 
 	if lvl == LogFatal {
@@ -102,4 +109,8 @@ func (l *Logger) Error(fmt string, v ...interface{}) {
 // Fatal emits a fatal message and exits with failure.
 func (l *Logger) Fatal(fmt string, v ...interface{}) {
 	l.Log(LogFatal, fmt, v...)
+}
+
+func (l *Logger) Printf(format string, v ...interface{}) {
+	l.logger.Output(2, gofmt.Sprintf(format, v...))
 }

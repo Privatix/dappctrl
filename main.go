@@ -16,6 +16,7 @@ import (
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/proc/worker"
+	"github.com/privatix/dappctrl/report"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/uisrv"
@@ -74,6 +75,8 @@ func readConfig(conf *config) {
 }
 
 func main() {
+	// TODO: treat panic
+
 	conf := newConfig()
 	readConfig(conf)
 
@@ -87,6 +90,9 @@ func main() {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	report.Enable = true
+	report.NewReporter(" 00000000-0000-0000-0000-000000000001", db, logger) // TODO: is taken from database
 
 	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {

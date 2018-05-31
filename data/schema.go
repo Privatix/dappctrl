@@ -340,6 +340,8 @@ type EthTx struct {
 	GasPrice    uint64    `reform:"gas_price"`
 	Gas         uint64    `reform:"gas"`
 	TxRaw       []byte    `reform:"tx_raw"`
+	RelatedType string    `reform:"related_type"`
+	RelatedID   string    `reform:"related_id"`
 }
 
 // EthLog is an ethereum log entry.

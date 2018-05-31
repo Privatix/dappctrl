@@ -476,9 +476,11 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	auth := bind.NewKeyedTransactor(accKey)
-	w.ethBack.RegisterServiceOffering(auth,
+	if err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
-		big.NewInt(int64(minDeposit)), offering.Supply)
+		big.NewInt(int64(minDeposit)), offering.Supply); err != nil {
+		return err
+	}
 
 	offering.Status = data.MsgBChainPublishing
 	offering.OfferStatus = data.OfferRegister

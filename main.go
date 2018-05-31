@@ -9,7 +9,6 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/monitor"
@@ -24,11 +23,10 @@ import (
 
 type ethConfig struct {
 	Contract struct {
-		PTCAddr string
-		PSCAddr string
+		PTCAddrHex string
+		PSCAddrHex string
 	}
-	GethURL       string
-	TruffleAPIURL string
+	GethURL string
 }
 
 type config struct {
@@ -65,12 +63,6 @@ func readConfig(conf *config) {
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s", err)
 	}
-	// If test truffle api is specified, pull and update contract addresses.
-	if conf.Eth.TruffleAPIURL != "" {
-		api := truffle.API(conf.Eth.TruffleAPIURL)
-		conf.Eth.Contract.PSCAddr = api.FetchPSCAddress()
-		conf.Eth.Contract.PTCAddr = api.FetchPTCAddress()
-	}
 }
 
 func main() {
@@ -93,13 +85,13 @@ func main() {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}
 
-	ptcAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PTCAddr))
+	ptcAddr := common.HexToAddress(conf.Eth.Contract.PTCAddrHex)
 	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
 	if err != nil {
 		logger.Fatal("failed to create ptc instance: %v", err)
 	}
 
-	pscAddr := common.BytesToAddress([]byte(conf.Eth.Contract.PSCAddr))
+	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
 
 	psc, err := contract.NewPrivatixServiceContract(pscAddr, gethConn)
 	if err != nil {

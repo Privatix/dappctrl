@@ -74,8 +74,8 @@
 
     "Eth": {
         "Contract" : {
-            "PTCAddr": "",
-            "PSCAddr": ""
+            "PTCAddrHex": "",
+            "PSCAddrHex": ""
         },
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": ""

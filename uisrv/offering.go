@@ -1,6 +1,7 @@
 package uisrv
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/privatix/dappctrl/data"
@@ -150,9 +151,15 @@ const (
 	DeactivateOffering = "deactivate"
 )
 
+// OfferingPutPayload offering status update payload.
+type OfferingPutPayload struct {
+	Action   string `json:"action"`
+	GasPrice uint   `json:"gasPrice"`
+}
+
 func (s *Server) handlePutOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
-	req := &ActionPayload{}
+	req := &OfferingPutPayload{}
 	if !s.parsePayload(w, r, req) {
 		return
 	}
@@ -166,12 +173,19 @@ func (s *Server) handlePutOfferingStatus(
 	}
 	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
 
+	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
+	if err != nil {
+		s.logger.Error("failed to marshal job data: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobAgentPreOfferingMsgBCPublish,
 		RelatedType: data.JobOfferring,
 		RelatedID:   id,
 		CreatedBy:   data.JobUser,
-		Data:        []byte("{}"),
+		Data:        dataJSON,
 	}); err != nil {
 		s.logger.Error("failed to add %s: %v",
 			data.JobAgentPreOfferingMsgBCPublish, err)

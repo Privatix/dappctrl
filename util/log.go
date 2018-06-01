@@ -14,6 +14,7 @@ import (
 type Logger struct {
 	logger *log.Logger
 	level  int
+	rep    report.Reporter
 }
 
 // LogConfig is a logger configuration.
@@ -64,9 +65,14 @@ func NewLogger(conf *LogConfig) (*Logger, error) {
 	}
 
 	return &Logger{
-		log.New(os.Stderr, "", log.LstdFlags),
-		lvl,
+		logger: log.New(os.Stderr, "", log.LstdFlags),
+		level:  lvl,
 	}, nil
+}
+
+// Reporter adds Reporter to the logger.
+func (l *Logger) Reporter(reporter report.Reporter) {
+	l.rep = reporter
 }
 
 // Log emits a log message.
@@ -75,19 +81,19 @@ func (l *Logger) Log(lvl int, fmt string, v ...interface{}) {
 		return
 	}
 
-	if report.Enable && lvl == LogError {
-		report.Notify(gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...),
-			false, 4)
-	}
-
 	l.logger.Printf(logLevelStrs[lvl]+" "+fmt, v...)
 
-	if lvl == LogFatal {
-		if report.Enable {
-			report.Notify(
-				gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...),
-				true, 4)
+	if l.rep != nil && l.rep.Enable() && lvl > LogWarning {
+		e := gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...)
+
+		if lvl == LogError {
+			l.rep.Notify(e, false, 4)
+			return
 		}
+		l.rep.Notify(e, true, 4)
+	}
+
+	if lvl == LogFatal {
 		os.Exit(1)
 	}
 }

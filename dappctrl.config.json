@@ -5,8 +5,6 @@
         "EthCallTimeout": 5
     },
 
-    "AppID": "00000000-0000-0000-0000-000000000001",
-
     "BlockMonitor": {
         "CollectPause": 6,
         "SchedulePause": 6,
@@ -17,7 +15,8 @@
         "Conn": {
             "user": "postgres",
             "dbname": "dappctrl",
-            "sslmode": "disable"
+            "sslmode": "disable",
+            "port": "5433"
         }
     },
 
@@ -63,5 +62,9 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"
+    },
+
+    "Report": {
+      "AppID": "00000000-0000-0000-0000-00000000000012"
     }
 }

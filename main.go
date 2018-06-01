@@ -44,6 +44,7 @@ type config struct {
 	Proc          *proc.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
+	Report        *report.Config
 }
 
 func newConfig() *config {
@@ -56,6 +57,7 @@ func newConfig() *config {
 		Proc:          proc.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
+		Report:        report.NewConfig(),
 	}
 }
 
@@ -75,7 +77,7 @@ func readConfig(conf *config) {
 }
 
 func main() {
-	// TODO: treat panic
+	defer report.PanicHunter()
 
 	conf := newConfig()
 	readConfig(conf)
@@ -91,8 +93,7 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	report.Enable = true
-	report.NewReporter(" 00000000-0000-0000-0000-000000000001", db, logger) // TODO: is taken from database
+	report.NewReporter(conf.Report, db, logger)
 
 	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {

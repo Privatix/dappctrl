@@ -75,13 +75,19 @@ func (l *Logger) Log(lvl int, fmt string, v ...interface{}) {
 		return
 	}
 
-	if report.Enable && lvl > LogWarning {
-		report.Notify(gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...))
+	if report.Enable && lvl == LogError {
+		report.Notify(gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...),
+			false, 4)
 	}
 
 	l.logger.Printf(logLevelStrs[lvl]+" "+fmt, v...)
 
 	if lvl == LogFatal {
+		if report.Enable {
+			report.Notify(
+				gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...),
+				true, 4)
+		}
 		os.Exit(1)
 	}
 }
@@ -111,6 +117,7 @@ func (l *Logger) Fatal(fmt string, v ...interface{}) {
 	l.Log(LogFatal, fmt, v...)
 }
 
+// Printf prints a log message
 func (l *Logger) Printf(format string, v ...interface{}) {
 	l.logger.Output(2, gofmt.Sprintf(format, v...))
 }

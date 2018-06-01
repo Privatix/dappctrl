@@ -191,6 +191,8 @@ func (s *Server) handlePutOfferingStatus(
 			data.JobAgentPreOfferingMsgBCPublish, err)
 		s.replyUnexpectedErr(w)
 	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleGetOfferingStatus replies with offerings status by id.

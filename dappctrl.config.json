@@ -15,8 +15,7 @@
         "Conn": {
             "user": "postgres",
             "dbname": "dappctrl",
-            "sslmode": "disable",
-            "port": "5433"
+            "sslmode": "disable"
         }
     },
 
@@ -65,6 +64,6 @@
     },
 
     "Report": {
-      "AppID": "00000000-0000-0000-0000-00000000000012"
+      "AppID": ""
     }
 }

@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	account       = "Account"
+	ethAddress    = "EthAddr"
 	currentAPIKey = "c021f92e9c199c79d870adf34365e372"
 	currentStage  = alphaStage
 	mainRepo      = "github.com/privatix/dappctrl"
@@ -24,9 +26,6 @@ const (
 	betta = "betta"
 	rc    = "rc"
 	rtm   = "rtm"
-
-	account    = "Account"
-	ethAddress = "EthAddr"
 )
 
 // Stages of application.
@@ -42,8 +41,8 @@ const (
 )
 
 var (
-	defaultAppID  = emptyUUID()
 	defaultAccEth = new(common.Address).String()
+	defaultAppID  = emptyUUID()
 
 	enable bool
 
@@ -62,8 +61,8 @@ var (
 
 // Log interface for report.
 type Log interface {
-	Printf(format string, v ...interface{})
 	Debug(fmt string, v ...interface{})
+	Printf(format string, v ...interface{})
 	Warn(fmt string, v ...interface{})
 }
 
@@ -75,10 +74,10 @@ type Config struct {
 // Client Bugsnag client object.
 type Client struct {
 	db       *reform.DB
-	lastAcc  string
 	enable   bool
-	notifier *bugsnag.Notifier
+	lastAcc  string
 	logger   Log
+	notifier *bugsnag.Notifier
 }
 
 // NewConfig generates a new default Bugsnag client Config.
@@ -100,10 +99,10 @@ func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 
 	bugsnag.Configure(bugsnag.Configuration{
 		APIKey:          currentAPIKey,
-		ReleaseStage:    stageToStr(currentStage),
-		ProjectPackages: pkgSlice,
 		Logger:          log,
 		PanicHandler:    func() {}, // we use our panic processor
+		ProjectPackages: pkgSlice,
+		ReleaseStage:    stageToStr(currentStage),
 	})
 
 	cli := new(Client)

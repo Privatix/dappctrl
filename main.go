@@ -42,9 +42,9 @@ type config struct {
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
+	Report        *bugsnag.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
-	Report        *bugsnag.Config
 }
 
 func newConfig() *config {
@@ -55,9 +55,9 @@ func newConfig() *config {
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
+		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
-		Report:        bugsnag.NewConfig(),
 	}
 }
 

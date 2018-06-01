@@ -151,7 +151,7 @@ func user(appID string) bugsnag.User {
 }
 
 func app(appID string) string {
-	if appID == "" || util.IsUUID(appID) {
+	if appID == "" || !util.IsUUID(appID) {
 		return defaultAppID
 	}
 	return appID

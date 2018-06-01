@@ -33,11 +33,25 @@ func (w *Worker) toHashArr(h string) (ret [common.HashLength]byte, err error) {
 
 func (w *Worker) balanceData(job *data.Job) (*data.JobBalanceData, error) {
 	balanceData := &data.JobBalanceData{}
-	if err := json.Unmarshal(job.Data, balanceData); err != nil {
-		return nil, fmt.Errorf("could not unmarshal data to %T: %v",
-			balanceData, err)
+	if err := w.unmarshalDataTo(job.Data, balanceData); err != nil {
+		return nil, err
 	}
 	return balanceData, nil
+}
+
+func (w *Worker) publishData(job *data.Job) (*data.JobPublishData, error) {
+	publishData := &data.JobPublishData{}
+	if err := w.unmarshalDataTo(job.Data, publishData); err != nil {
+		return nil, err
+	}
+	return publishData, nil
+}
+
+func (w *Worker) unmarshalDataTo(jobData []byte, v interface{}) error {
+	if err := json.Unmarshal(jobData, v); err != nil {
+		return fmt.Errorf("could not unmarshal data to %T: %v", v, err)
+	}
+	return nil
 }
 
 func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {

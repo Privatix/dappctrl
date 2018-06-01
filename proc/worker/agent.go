@@ -475,7 +475,13 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return fmt.Errorf("unable to parse agent's priv key: %v", err)
 	}
 
+	publishData, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
 	auth := bind.NewKeyedTransactor(accKey)
+	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 	if err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
 		big.NewInt(int64(minDeposit)), offering.Supply); err != nil {

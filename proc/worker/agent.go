@@ -482,6 +482,10 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(accKey)
 	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
+
+	// TODO: move to conf
+	auth.GasLimit = uint64(110000)
+
 	if err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
 		big.NewInt(int64(minDeposit)), offering.Supply); err != nil {

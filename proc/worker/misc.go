@@ -93,12 +93,7 @@ func (w *Worker) addJob(jType, rType, rID string) error {
 	})
 }
 
-func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
-	acc, err := w.relatedAccount(job, jobType)
-	if err != nil {
-		return err
-	}
-
+func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	agentAddr, err := data.ToAddress(acc.EthAddr)
 	if err != nil {
 		return err

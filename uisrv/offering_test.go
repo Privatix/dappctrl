@@ -3,6 +3,7 @@
 package uisrv
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -294,13 +295,10 @@ func TestGetClientOffering(t *testing.T) {
 	testGetClientOfferings(t, "", "", "US,SU", 2)
 }
 
-func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Response {
+func getOfferingStatus(t *testing.T, id string) *http.Response {
 	url := fmt.Sprintf("http://:%s@%s%s%s/status", testPassword,
 		testServer.conf.Addr, offeringsPath, id)
-	if action != "" {
-		url += "?action=" + action
-	}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		t.Fatal("failed to create a request: ", err)
 	}
@@ -312,17 +310,9 @@ func sendToOfferingStatus(t *testing.T, id, action, method string) *http.Respons
 	return res
 }
 
-func putOfferingStatus(t *testing.T, id, action string) *http.Response {
-	return sendToOfferingStatus(t, id, action, "PUT")
-}
-
-func getOfferingStatus(t *testing.T, id string) *http.Response {
-	return sendToOfferingStatus(t, id, "", "GET")
-}
-
-func sendOfferingAction(t *testing.T, id, action string) *http.Response {
+func sendOfferingAction(t *testing.T, id, action string, gasPrice uint) *http.Response {
 	path := fmt.Sprint(offeringsPath, id, "/status")
-	payload := &ActionPayload{Action: action}
+	payload := &OfferingPutPayload{Action: action, GasPrice: gasPrice}
 	return sendPayload(t, http.MethodPut, path, payload)
 }
 
@@ -331,22 +321,27 @@ func TestPutOfferingStatus(t *testing.T) {
 	defer fixture.Close()
 	defer setTestUserCredentials(t)()
 
-	testJobCreated := func(action string, jobType string) {
-		res := sendOfferingAction(t, fixture.Offering.ID, action)
-		if res.StatusCode != http.StatusOK {
-			t.Fatal("got: ", res.Status)
-		}
-		jobTerm := &data.Job{}
-		data.FindInTestDB(t, testServer.db, jobTerm, "type", jobType)
-		data.DeleteFromTestDB(t, testServer.db, jobTerm)
-	}
+	testGasPrice := uint(1)
 
-	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action")
+	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("wanted: %d, got: %v", http.StatusBadRequest, res.Status)
 	}
 
-	testJobCreated(PublishOffering, data.JobAgentPreOfferingMsgBCPublish)
+	res = sendOfferingAction(t, fixture.Offering.ID, PublishOffering, testGasPrice)
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("got: ", res.Status)
+	}
+	jobPublish := &data.Job{}
+	data.FindInTestDB(t, testServer.db, jobPublish, "related_id",
+		fixture.Offering.ID)
+	expectedData, _ := json.Marshal(&data.JobPublishData{
+		GasPrice: testGasPrice,
+	})
+	if !bytes.Equal(jobPublish.Data, expectedData) {
+		t.Fatal("job does not contain expected data")
+	}
+	data.DeleteFromTestDB(t, testServer.db, jobPublish)
 }
 
 func TestGetOfferingStatus(t *testing.T) {

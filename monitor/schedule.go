@@ -53,10 +53,9 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 	query := fmt.Sprintf(
 		`SELECT %s
-                          FROM eth_logs 
-                         WHERE job IS NULL 
-                               AND NOT ignore 
-                         ORDER BY block_number`,
+                          FROM eth_logs
+                         WHERE job IS NULL
+                               AND NOT ignore`,
 		strings.Join(columns, ","),
 	)
 
@@ -72,7 +71,7 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		args = append(args, maxRetries)
 	}
 
-	query = query + ";"
+	query = query + " ORDER BY block_number;"
 
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
@@ -284,8 +283,8 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	}
 	if haveOpenBlockNumber {
 		query = `SELECT c.id
-                           FROM channels AS c, offerings AS o 
-                          WHERE c.offering = o.id 
+                           FROM channels AS c, offerings AS o
+                          WHERE c.offering = o.id
                                 AND o.hash = $1
                                 AND c.agent = $2
                                 AND c.client = $3
@@ -293,10 +292,10 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		args = append(args, openBlockNumber)
 	} else {
 		query = `SELECT c.id
-                           FROM channels AS c, offerings AS o, eth_txs AS et 
-                          WHERE c.offering = o.id 
-                                AND o.hash = $1 
-                                AND c.agent = $2 
+                           FROM channels AS c, offerings AS o, eth_txs AS et
+                          WHERE c.offering = o.id
+                                AND o.hash = $1
+                                AND c.agent = $2
                                 AND c.client = $3
                                 AND et.hash = $4`
 		args = append(args, el.TxHash)
@@ -345,9 +344,9 @@ func (m *Monitor) scheduleAgentClientChannel(el *data.EthLog, jobType string) {
 }
 
 func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
-	query := `SELECT COUNT(*) 
-                    FROM eth_logs 
-                   WHERE topics->>0 = $1 
+	query := `SELECT COUNT(*)
+                    FROM eth_logs
+                   WHERE topics->>0 = $1
                          AND topics->>2 = $2`
 	row := m.db.QueryRow(query, "0x"+eth.EthOfferingDeleted,
 		offeringHash.Hex())

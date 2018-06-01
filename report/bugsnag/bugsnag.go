@@ -29,7 +29,7 @@ const (
 	ethAddress = "EthAddr"
 )
 
-// Stages of application
+// Stages of application.
 const (
 	alphaStage = iota
 	bettaStage
@@ -49,6 +49,7 @@ var (
 
 	notifier *bugsnag.Notifier
 
+	// TODO: [maxim] The list needs to be configured dynamically, before the application starts
 	// This slice is needed so that the full path is written to the log
 	pkgSlice = []string{"main", "agent/billing", "client/bill", "data",
 		"eth", "eth/contract", "eth/truffle", "eth/util",
@@ -59,19 +60,19 @@ var (
 		"util/srv"}
 )
 
-// Log interface for report
+// Log interface for report.
 type Log interface {
 	Printf(format string, v ...interface{})
 	Debug(fmt string, v ...interface{})
 	Warn(fmt string, v ...interface{})
 }
 
-// Config Bugsnag client config
+// Config Bugsnag client config.
 type Config struct {
 	AppID string
 }
 
-// Client Bugsnag client object
+// Client Bugsnag client object.
 type Client struct {
 	db       *reform.DB
 	lastAcc  string
@@ -85,7 +86,7 @@ func NewConfig() *Config {
 	return &Config{AppID: defaultAppID}
 }
 
-// NewClient initializing Bugsnag client
+// NewClient initializing Bugsnag client.
 func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 	if log == nil {
 		return nil
@@ -228,7 +229,7 @@ func (c *Client) allowed() bool {
 	return val
 }
 
-// PanicHunter catches panic, in case of an enabled reporter
+// PanicHunter catches panic, in case of an enabled reporter.
 func PanicHunter() {
 	if err := recover(); err != nil {
 		if enable && notifier != nil {

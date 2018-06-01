@@ -1,9 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-""" Initializer on pure Python 2.7 """
+"""
+    Initializer on pure Python 2.7
+    mode:
+    python initializer.py  -h                        get help information
+    python initializer.py                            start full install
+    python initializer.py --build                    create cmd for dapp
+    python initializer.py --vpn start                start vpn servise
+    python initializer.py --comm stop                stop common servise
+    python initializer.py --test                     srart in test mode
+"""
+
 import logging
 import sys
+import argparse
+
 from time import time, sleep
 from re import search
 from time import sleep
@@ -29,6 +41,8 @@ Exit code:
     8 - Default DB conf is empty, and no section 'DB' in dappctrl-test.config.json
     9 - Check the run of the database is negative
     10 - Problem with read dapp cmd from file
+    11 - Problem NPM
+    12 - Problem with run psql
 """
 
 log_conf = dict(
@@ -78,12 +92,20 @@ main_conf = dict(
             "user": "postgres",
             "host": "localhost",
             "port": "5432"
-            },
+        },
         'db_log': '/var/lib/container/common/var/log/postgresql/postgresql-10-main.log',
         'db_stat': 'database system is ready to accept connections',
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
         'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/dappctrl.config.json',
         'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/svc/dappvpn/dappvpn.config.json',
+        'dappctrl_conf_local': 'dappctrl.config.local.json',
+        # 'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
+        'dappctrl_search_field': 'PayAddress',
+    },
+    test={
+        'path': 'test_data.sql',
+        'sql': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/data/test_data.sql',
+        'cmd': 'psql -d dappctrl -h 127.0.0.1 -P 5433 -f {}'
     },
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
@@ -103,31 +125,40 @@ class CMD:
             self._sys_call(cmd)
         sys.exit(code)
 
-    def _file_rw(self, p, w=False, data=None, log=None):
+    def _file_rw(self, p, w=False, data=None, log=None, json_r=False):
         try:
             if log:
                 logging.info(log)
             if w:
                 f = open(p, 'w')
                 if data:
-                    f.writelines(data)
+                    if json_r:
+                        dump(data, f)
+                    else:
+                        f.writelines(data)
                 f.close()
             else:
                 f = open(p, 'r')
-                data = f.readlines()
+                if json_r:
+                    data = load(f)
+                else:
+                    data = f.readlines()
                 f.close()
                 return data
         except BaseException as rwexpt:
             logging.error('R/W File: {}'.format(rwexpt))
             return False
 
-    def _sys_call(self, cmd, sysctl=False):
+    def _sys_call(self, cmd, sysctl=False, rolback=True, s_exit=4):
         resp = Popen(cmd, shell=True, stdout=PIPE,
                      stderr=STDOUT).communicate()
-        logging.debug('Sys call: {}'.format(resp))
+        logging.debug('Sys call cmd: {}. Stdout: {}'.format(cmd, resp))
         if resp[1]:
             logging.error(resp[1])
-            self._rolback(sysctl, 4)
+            if rolback:
+                self._rolback(sysctl, s_exit)
+            else:
+                return False
         return resp[0]
 
     def _upgr_deb_pack(self, v):
@@ -225,20 +256,19 @@ class CMD:
             ignore_dicts=True
         )
 
-    def __get_url(self, link):
+    def _get_url(self, link):
         resp = urlopen(url=link)
         return self.__json_load_byteified(resp)
 
     def build_cmd(self):
         conf = main_conf['build']
 
-        json_db = self.__get_url(conf['conf_link'])
+        json_db = self._get_url(conf['conf_link'])
         db_conf = json_db.get('DB')
         if db_conf:
             conf['db_conf'].update(db_conf['Conn'])
 
-
-        templ = str(self.__get_url(conf['templ'])).replace('\'', '"')
+        templ = str(self._get_url(conf['templ'])).replace('\'', '"')
         conf['db_conf'] = str(conf['db_conf']).replace('\'', '"')
 
         conf['cmd'] = conf['cmd'].format(templ, conf['dappvpnconf_path'],
@@ -270,6 +300,23 @@ class Params(CMD):
             self._sys_call('systemctl start {}'.format(self.f_vpn), sysctl)
             sleep(2)
             self._sys_call('systemctl enable {}'.format(self.f_vpn), sysctl)
+
+    def service(self, srv, status):
+        if status not in ['start', 'stop', 'restart']:
+            logging.error('{} status must be in '
+                          '[\'start\',\'stop\',\'restart\']'.format(srv))
+            return False
+        cmd = 'systemctl {} {}'.format(status, self.f_vpn)
+        return bool(self._sys_call(cmd, rolback=False))
+
+    def get_npm(self, sysctl):
+        cmds = [
+            'curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -',
+            'sudo apt-get install -y nodejs',
+            'apt-get install -y npm'
+        ]
+        for cmd in cmds:
+            self._sys_call(cmd, sysctl=sysctl, s_exit=11)
 
     def __iptables(self):
         logging.debug('Check iptables')
@@ -467,6 +514,33 @@ class Params(CMD):
         else:
             self._rolback(sysctl, 10)
 
+    def _test_mode(self, sysctl):
+        data = urlopen(url=main_conf['test']['sql']).read()
+        self._file_rw(p=main_conf['test']['path'], w=True, data=data,
+                      log='Create file with test sql data.')
+        cmd = main_conf['test']['cmd'].format(main_conf['test']['path'])
+
+        self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=12)
+        raw_tmpl = self._get_url(main_conf['build']['templ'])
+        self._file_rw(p=main_conf['build']['dappvpnconf_path'], w=True,
+                      data=raw_tmpl, log='Create file with test sql data.')
+
+    def ip_dappctrl(self):
+        """Change ip addr in dappctrl.config.local.json"""
+        search_field = main_conf['build']['dappctrl_search_field']
+        my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')
+        path = main_conf['build']['dappctrl_conf_local']
+
+
+        data = self._file_rw(p=path, json_r=True,
+                             log='Read dappctrl.config.local.json.')
+        raw = data[search_field].split(':')
+
+        raw[1] = '//{}'.format(my_ip)
+        data[search_field] = ':'.join(raw)
+
+        self._file_rw(p=path, w=True, json_r=True, data=data, log='Rewrite dappctrl.config.local.json.')
+
 
 class Rdata(CMD):
     def __init__(self):
@@ -521,7 +595,6 @@ class Rdata(CMD):
 
 
 class Checker(Params, Rdata):
-
     def __init__(self):
         Rdata.__init__(self)
         Params.__init__(self)
@@ -529,7 +602,7 @@ class Checker(Params, Rdata):
                          debian=self._upgr_deb_pack
                          )
 
-    def init_os(self):
+    def init_os(self, args):
         if self._finalizer():
             dist_name, ver, name_ver = linux_distribution()
             upgr_pack = self.task.get(dist_name.lower(), False)
@@ -544,21 +617,47 @@ class Checker(Params, Rdata):
                 self._rw_openvpn_conf(ip, sysctl, 7)
             self._rw_unit_file(ip, intfs, sysctl, 5)
             self.clean()
+            self.ip_dappctrl()
             self.run_service(sysctl, comm=True)
             self._check_db_run(sysctl, 9)
-            self._run_dapp_cmd(sysctl)
+            if not args['test']:
+                logging.info('Test mode.')
+                self._test_mode(sysctl)
+            else:
+                logging.info('Full mode.')
+                self._run_dapp_cmd(sysctl)
+
             self.run_service(sysctl)
+            self.get_npm(sysctl)
             self._finalizer(True)
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    if args and args[0] == 'build':
-        logging.info('Build mode.')
-        CMD().build_cmd()
-    elif not args:
-        logging.info('Begin init.')
-        Checker().init_os()
-        logging.info('All done.')
-    else:
-        logging.error('Argument {} not allowed.'.format(args))
+    parser = argparse.ArgumentParser(description=' *** Installer *** ')
+    parser.add_argument("--build", nargs='?', default=True,
+                        help='')
+    parser.add_argument('--vpn', type=str, nargs='?',
+                        help='vpn status [start,stop,restart]')
+    parser.add_argument('--comm', type=str, nargs='?',
+                        help='comm status [start,stop,restart]')
+
+    parser.add_argument("--test", nargs='?', default=True,
+                        help='')
+
+    args = vars(parser.parse_args())
+    # print(args)
+    # if not args['build']:
+    #     logging.info('Build mode.')
+    #     CMD().build_cmd()
+    # elif args['vpn']:
+    #     logging.info('Vpn mode.')
+    #     Params().service('vpn', args['vpn'])
+    # elif args['comm']:
+    #     logging.info('Comm mode.')
+    #     Params().service('comm', args['comm'])
+    # else:
+    #     logging.info('Begin init.')
+    #     Checker().init_os(args)
+    #     logging.info('All done.')
+
+    Params().ip_dappctrl()

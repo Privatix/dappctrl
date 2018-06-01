@@ -1,22 +1,70 @@
 package worker
 
 import (
+	"fmt"
+	"math/big"
 	"testing"
+	"time"
+
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util"
 )
 
 func TestClientPreChannelCreate(t *testing.T) {
-	// 1. Check sufficient internal balance exists PSC.BalanceOf()
-	// 2. Check that available SO supply exists
-	// 3. Add channel to `channels` with ch_status="Pending"
-	// 5. PSC.createChannel()
-	t.Skip("TODO")
-	// fixture := newTestFixture(t, data.JobClientPreChannelCreate,
-	// 	data.JobOfferring)
-	// defer fixture.Close()
+	env := newWorkerTest(t)
+	defer env.close()
 
-	// testEthBack.balancePSC = fixture.Offering
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelCreate, data.JobOfferring)
+	defer fxt.Close()
 
-	// runJob(t, testWorker.ClientPreChannelCreate, fixture.job)
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+	fxt.setJobData(t, ClientPreChannelCreateData{
+		Account:  fxt.Account.ID,
+		Oferring: fxt.Offering.ID,
+	})
+
+	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
+		fxt.Offering.SetupPrice
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+		env.worker.ClientPreChannelCreate(fxt.job))
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+	util.TestExpectResult(t, "Job run", ErrNoSupply,
+		env.worker.ClientPreChannelCreate(fxt.job))
+
+	issued := time.Now()
+	env.ethBack.offerSupply = 1
+	runJob(t, env.worker.ClientPreChannelCreate, fxt.job)
+
+	var tx data.EthTx
+	ch := data.Channel{ID: fxt.job.RelatedID}
+	data.FindInTestDB(t, db, &tx, "related_id", ch.ID)
+	data.ReloadFromTestDB(t, db, &ch)
+	defer data.DeleteFromTestDB(t, db, &ch, &tx)
+
+	if ch.Agent != fxt.Offering.Agent ||
+		ch.Client != fxt.Account.EthAddr ||
+		ch.Offering != fxt.Offering.ID || ch.Block != 0 ||
+		ch.ChannelStatus != data.ChannelPending ||
+		ch.ServiceStatus != data.ServicePending ||
+		ch.TotalDeposit != minDeposit {
+		t.Fatalf("wrong channel content")
+	}
+
+	if tx.Method != "CreateChannel" || tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != fxt.Account.EthAddr ||
+		tx.AddrTo != fxt.Offering.Agent ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel {
+		t.Fatalf("wrong transaction content")
+	}
 }
 
 func TestClientAfterChannelCreate(t *testing.T) {

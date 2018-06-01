@@ -117,6 +117,11 @@ func parseJobData(job *data.Job, data interface{}) error {
 
 func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 	method, relatedType, relatedId, from, to string) error {
+	raw, err := tx.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
 	dtx := data.EthTx{
 		ID:          util.NewUUID(),
 		Hash:        data.FromBytes(tx.Hash().Bytes()),
@@ -124,13 +129,12 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		Status:      data.TxSent,
 		JobID:       pointer.ToString(job.ID),
 		Issued:      time.Now(),
-		BlockNumber: 0,
 		AddrFrom:    from,
 		AddrTo:      to,
 		Nonce:       pointer.ToString(fmt.Sprint(tx.Nonce())),
 		GasPrice:    tx.GasPrice().Uint64(),
 		Gas:         tx.Gas(),
-		TxRaw:       tx.Data(),
+		TxRaw:       raw,
 		RelatedType: relatedType,
 		RelatedID:   relatedId,
 	}

@@ -333,7 +333,6 @@ type EthTx struct {
 	Status      string    `reform:"status"`
 	JobID       *string   `reform:"job"`
 	Issued      time.Time `reform:"issued"`
-	BlockNumber uint64    `reform:"block_number"`
 	AddrFrom    string    `reform:"addr_from"`
 	AddrTo      string    `reform:"addr_to"`
 	Nonce       *string   `reform:"nonce"`

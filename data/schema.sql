@@ -290,8 +290,6 @@ CREATE TABLE eth_txs (
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id
     issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
-    block_number_issued bigint
-        CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
 
     addr_from eth_addr NOT NULL, -- from ethereum address
     addr_to eth_addr NOT NULL, -- to ethereum address

@@ -148,6 +148,12 @@ func (b *testEthBackend) PSCOfferingSupply(opts *bind.CallOpts,
 	return b.offerSupply, nil
 }
 
+const (
+	testTXNonce    uint64 = 1
+	testTXGasLimit uint64 = 2
+	testTXGasPrice int64  = 1
+)
+
 func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
@@ -156,5 +162,10 @@ func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
 		caller: opts.From,
 		args:   []interface{}{agent, hash, deposit},
 	})
-	return b.tx, nil
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		big.NewInt(testTXGasPrice), []byte{})
+
+	return tx, nil
 }

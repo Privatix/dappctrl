@@ -20,7 +20,7 @@ type chanStatusBlock struct {
 	ServiceStatus   string  `json:"serviceStatus"`
 	ChannelStatus   string  `json:"channelStatus"`
 	LastChanged     *string `json:"lastChanged"`
-	MaxInactiveTime *uint64 `json:"maxInactiveTime"`
+	MaxInactiveTime uint64  `json:"maxInactiveTime"`
 }
 
 type jobBlock struct {
@@ -158,11 +158,6 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 			return
 		}
 
-		// processing fields that can have a value of nil
-		if item.ChStat.MaxInactiveTime == nil {
-			item.ChStat.MaxInactiveTime = new(uint64)
-		}
-
 		if item.ChStat.LastChanged == nil {
 			item.ChStat.LastChanged = new(string)
 		}
@@ -201,7 +196,8 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 		SELECT channels.id, channels.agent, channels.client, channels.offering,
                        channels.total_deposit AS Deposit, channels.service_status,
                        channels.channel_status, channels.service_changed_time AS last_changed,
-                       offer.max_inactive_time_sec, job.id AS job_id, job.type AS job_type,
+                       COALESCE(offer.max_inactive_time_sec, 0),
+                       job.id AS job_id, job.type AS job_type,
                        job.status AS job_status, job.created_at AS job_created_at,
                        COALESCE(SUM(ses.seconds_consumed), 0) AS sec_usage,
                        COALESCE(SUM(ses.units_used), 0) AS units_usage,

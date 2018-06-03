@@ -12,52 +12,79 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-func getChannels(t *testing.T, id string, agent bool) *http.Response {
+func getChannels(t *testing.T, params map[string]string,
+	agent bool) *http.Response {
 	if agent {
-		return getResources(t, channelsPath,
-			map[string]string{"id": id})
+		return getResources(t, channelsPath, params)
 	}
-	return getResources(t, clientChannelsPath,
-		map[string]string{"id": id})
+	return getResources(t, clientChannelsPath, params)
 }
 
-func testGetChannels(t *testing.T, exp int, id string, agent bool) {
-	res := getChannels(t, id, agent)
+func testGetChannels(t *testing.T, exp int,
+	params map[string]string, agent bool) {
+	res := getChannels(t, params, agent)
 	testGetResources(t, res, exp)
+}
+
+func testParams(id, channelStatus,
+	serviceStatus string) map[string]string {
+	return map[string]string{
+		"id": id, "channelStatus": channelStatus,
+		"serviceStatus": serviceStatus}
+}
+
+func testAcc(t *testing.T, ch *data.Channel, agent bool) {
+	acc := data.NewTestAccount(testPassword)
+	if agent {
+		acc.EthAddr = ch.Agent
+	} else {
+		acc.EthAddr = genEthAddr(t)
+	}
+	insertItems(t, acc)
+}
+
+func testJob(t *testing.T, ch *data.Channel) {
+	job := data.NewTestJob(data.JobClientPreChannelCreate,
+		data.JobUser, data.JobOfferring)
+	job.RelatedID = ch.ID
+	insertItems(t, job)
 }
 
 func TestGetChannels(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
-	createAcc := func(t *testing.T, ch *data.Channel, agent bool) {
-		acc := data.NewTestAccount(testPassword)
-		if agent {
-			acc.EthAddr = ch.Agent
-		} else {
-			acc.EthAddr = genEthAddr(t)
-		}
-		insertItems(t, acc)
-	}
-
 	// Get empty list.
-	testGetChannels(t, 0, "", true)
+	testGetChannels(t, 0, testParams("", "", ""), true)
 
 	chAgent := createTestChannel(t)
 	chClient := createTestChannel(t)
 
-	createAcc(t, chAgent, true)
-	createAcc(t, nil, false)
+	testAcc(t, chAgent, true)
+	testAcc(t, nil, false)
+	testJob(t, chClient)
 
 	// Get all channels for Agent and Client.
-	testGetChannels(t, 1, "", true)
-	testGetChannels(t, 1, "", false)
+	testGetChannels(t, 1, testParams("", "", ""), true)
+	testGetChannels(t, 1, testParams("", "", ""), false)
 
 	// Get channel by id.
-	testGetChannels(t, 1, chAgent.ID, true)
-	testGetChannels(t, 1, chClient.ID, false)
-	testGetChannels(t, 0, util.NewUUID(), true)
-	testGetChannels(t, 0, util.NewUUID(), false)
+	testGetChannels(t, 1, testParams(chAgent.ID, "", ""), true)
+	testGetChannels(t, 0, testParams(util.NewUUID(), "", ""), true)
+	testGetChannels(t, 1, testParams(chClient.ID, "", ""), false)
+	testGetChannels(t, 0, testParams(util.NewUUID(), "", ""), false)
+
+	// Get channel by channel status
+	testGetChannels(t, 1, testParams("", data.ChannelActive, ""), true)
+	testGetChannels(t, 0, testParams("", data.ChannelPending, ""), true)
+	testGetChannels(t, 1, testParams("", data.ChannelActive, ""), false)
+	testGetChannels(t, 0, testParams("", data.ChannelPending, ""), false)
+
+	// Get channel by service status
+	testGetChannels(t, 1, testParams("", "", data.ServicePending), true)
+	testGetChannels(t, 0, testParams("", "", data.ServiceActive), true)
+	testGetChannels(t, 1, testParams("", "", data.ServicePending), false)
+	testGetChannels(t, 0, testParams("", "", data.ServiceActive), false)
 }
 
 func getChannelStatus(t *testing.T, id string) *http.Response {

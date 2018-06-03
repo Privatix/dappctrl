@@ -2,36 +2,22 @@ BEGIN TRANSACTION;
 
 -- Test data for integration testing of dappvpn.
 
+INSERT INTO templates (id, hash, raw, kind)
+VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
+'HGuVky1SotjobyIVpiGw4jBvFNt28MtF5uNF7OCOYdo=',
+'{"schema":{"properties":{"additionalParams":{"default":"{}","type":"string"},"agent":{"title":"agent uuid","type":"string"},"billingInterval":{"title":"billing interval","type":"number"},"billingType":{" enumNames":["prepaid","postpaid"],"enum":["prepaid","postpaid"],"title":"billing type","type":"string"},"country":{"title":"country","type":"string"},"freeUnits":{"title":"free units","type":"number"},"maxBillingUnitLag":{"title":"max billing unit lag","type":"number"},"maxSuspendTime":{"title":"max suspend time","type":"number"},"minUnits":{"title":"min units","type":"number"},"product":{"default":"1","type":"string"},"serviceName":{"title":"Name of service (e.g. VPN)","type":"string"},"setupPrice":{"title":"setup fee","type":"number"},"supply":{"title":"service supply","type":"number"},"template":{"default":"1","type":"string"},"unitName":{"title":"like megabytes, minutes, etc","type":"string"},"unitPrice":{"title":"unit price","type":"number"},"unitType":{"title":"service unit","type":"number"}},"required":["serviceName","supply","unitName","unitType","billingType","setupPrice","unitPrice","country","minUnits","billingInterval","maxBillingUnitLag","freeUnits","template","product","agent","additionalParams","maxSuspendTime"],"title":"VPN Service Offering","type":"object"},"uiSchema":{"additionalParams":{"ui:widget":"hidden"},"agent":{"ui:widget":"hidden"},"billingInterval":{"ui:help":"Specified in unit_of_service. Represent, how often Client MUST provide payment approval to Agent."},"billingType":{"ui:help":"prepaid/postpaid"},"country":{"ui:help":"Country of service endpoint in ISO 3166-1 alpha-2 format."},"freeUnits":{"ui:help":"Used to give free trial, by specifying how many intervals can be consumed without payment"},"maxBillingUnitLag":{"ui:help":"Maximum payment lag in units after, which Agent will suspend serviceusage."},"maxSuspendTime":{"ui:help":"Maximum time without service usage. Agent will consider, that Client will not use service and stop providing it. Period is specified in minutes."},"minUnits":{"ui:help":"Used to calculate minimum deposit required"},"product":{"ui:widget":"hidden"},"serviceName":{"ui:help":"enter name of service"},"setupPrice":{"ui:help":"setup fee"},"supply":{"ui:help":"Maximum supply of services according to service offerings. It represents maximum number of clients that can consumethis service offering concurrently."},"template":{"ui:widget":"hidden"},"unitName":{"ui:help":"MB/Minutes"},"unitPrice":{"ui:help":"PRIX that must be paid for unit_of_service"},"unitType":{"ui:help":"units or seconds"}}}',
+'offer');
+
+INSERT INTO templates (id, hash, raw, kind)
+VALUES ('a618dacc-a3be-45b8-bca5-15a48bff6258',
+'yEZr9Czf-n0BMmzDV9s9I714rglfVd-wnrKYTdDs_2c=',
+'{"definitions":{"host":{"pattern":"^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*:[0-9]{2,5}$","type":"string"},"uuid":{"pattern":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","type":"string"}},"properties":{"additionalParams":{"additionalProperties":{"type":"string"},"minProperties":1,"type":"object"},"password":{"type":"string"},"paymentReceiverAddress":{"$ref":"#/definitions/host"},"serviceEndpointAddress":{"type":"string"},"templateHash":{"type":"string"},"username":{"$ref":"#/definitions/uuid"}},"required":["templateHash","paymentReceiverAddress","serviceEndpointAddress","additionalParams"],"title":"Endpoint Message template","type":"object"}',
+'access');
+
 INSERT INTO products (id, name, usage_rep_type, is_server, salt, password,
     client_ident)
 VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'Test VPN service', 'total',
     true, 6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
     'by_channel_id');
-
-INSERT INTO accounts (id, eth_addr, public_key, private_key, name, ptc_balance,
-    psc_balance, eth_balance)
-VALUES ('e8b17880-8ee5-4fc1-afb2-e6900655d8d5', '', '', '', 'Test channel',
-    0, 0, '');
-
-INSERT INTO templates (id, hash, raw, kind)
-VALUES ('58fbe052-3f34-4b17-88c0-1121a8cf9336', '', '{}', 'offer');
-
-INSERT INTO offerings (id, is_local, tpl, product, hash, status, offer_status,
-    block_number_updated, agent, raw_msg, service_name, country, supply,
-    unit_name, unit_type, billing_type, setup_price, unit_price, min_units,
-    max_unit, billing_interval, max_billing_unit_lag, max_suspended_time,
-    free_units)
-VALUES ('32000ae1-f752-4d55-8d58-22d05ef08803', true,
-    '58fbe052-3f34-4b17-88c0-1121a8cf9336',
-    '4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', '', 'msg_channel_published',
-    'register', 1, '', '', 'VPN', 'US', 1, 'megabyte', 'units', 'prepaid', 1, 1,
-    1, 100, 1, 0, 0, 0);
-
-INSERT INTO channels (id, agent, client, offering, block, channel_status,
-    service_status, total_deposit, salt, password, receipt_balance,
-    receipt_signature)
-VALUES ('ae5deac9-44c3-4840-bdff-ca9de58c89f4', '', '',
-    '32000ae1-f752-4d55-8d58-22d05ef08803', 1, 'active', 'active', 1,
-    6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 1, 1);
 
 END TRANSACTION;

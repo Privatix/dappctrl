@@ -268,6 +268,7 @@ func (q *Queue) processWorker(w workerIO) {
 
 		handler, ok := q.handlers[job.Type]
 		if !ok {
+			q.logger.Error("job handler for %s not found", job.Type)
 			err = ErrHandlerNotFound
 			break
 		}

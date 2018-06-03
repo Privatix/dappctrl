@@ -26,6 +26,7 @@ type testConfig struct {
 	JobHanlderTest *struct {
 		SOMCTimeout time.Duration // In seconds.
 	}
+	Gas       *GasConf
 	Job       *job.Config
 	Log       *util.LogConfig
 	PayServer *pay.Config
@@ -51,6 +52,7 @@ type workerTest struct {
 	fakeSOMC *somc.FakeSOMC
 	somcConn *somc.Conn
 	worker   *Worker
+	gasConf  *GasConf
 }
 
 var (
@@ -76,7 +78,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(db, somcConn, ethBack,
+	worker, err := NewWorker(db, somcConn, ethBack, conf.Gas,
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
 	if err != nil {
 		fakeSOMC.Close()
@@ -91,6 +93,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 		fakeSOMC: fakeSOMC,
 		somcConn: somcConn,
 		worker:   worker,
+		gasConf:  conf.Gas,
 	}
 }
 

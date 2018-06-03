@@ -30,11 +30,14 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
-	env.ethBack.testCalled(t, "PTCIncreaseApproval", agentAddr, conf.pscAddr,
+	env.ethBack.testCalled(t, "PTCIncreaseApproval", agentAddr,
+		env.gasConf.PTC.Approve,
+		conf.pscAddr,
 		big.NewInt(transferAmount))
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, agentAddr)
+	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, 0,
+		agentAddr)
 
 	testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
 		*fixture.job)
@@ -59,7 +62,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	env.ethBack.testCalled(t, "PSCAddBalanceERC20", agentAddr,
-		big.NewInt(transferAmount))
+		env.gasConf.PSC.AddBalanceERC20, big.NewInt(transferAmount))
 
 	testCommonErrors(t, env.worker.PreAccountAddBalance, *fixture.job)
 }
@@ -86,10 +89,10 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PSCBalanceOf", noCallerAddr, agentAddr)
+	env.ethBack.testCalled(t, "PSCBalanceOf", noCallerAddr, 0, agentAddr)
 
 	env.ethBack.testCalled(t, "PSCReturnBalanceERC20", agentAddr,
-		big.NewInt(amount))
+		env.gasConf.PSC.ReturnBalanceERC20, big.NewInt(amount))
 
 	testCommonErrors(t, env.worker.PreAccountReturnBalance, *fixture.job)
 }

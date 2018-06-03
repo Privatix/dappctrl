@@ -276,7 +276,8 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr, agentAddr,
+	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+		env.gasConf.PSC.CooperativeClose, agentAddr,
 		uint32(fixture.Channel.Block),
 		[common.HashLength]byte(offeringHash), balance,
 		balanceMsgSig, closingSig)
@@ -517,6 +518,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
 
 	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,
+		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		big.NewInt(int64(minDeposit)), offering.Supply)
 

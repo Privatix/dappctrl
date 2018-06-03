@@ -14,6 +14,30 @@ import (
 	"github.com/privatix/dappctrl/somc"
 )
 
+// GasConf amounts of gas limit to use for contracts calls.
+type GasConf struct {
+	PTC struct {
+		Approve uint64
+	}
+	PSC struct {
+		AddBalanceERC20                uint64
+		RegisterServiceOffering        uint64
+		CreateChannel                  uint64
+		CooperativeClose               uint64
+		ReturnBalanceERC20             uint64
+		SetNetworkFee                  uint64
+		UncooperativeClose             uint64
+		Settle                         uint64
+		TopUp                          uint64
+		GetChannelInfo                 uint64
+		PublishServiceOfferingEndpoint uint64
+		GetKey                         uint64
+		BalanceOf                      uint64
+		PopupServiceOffering           uint64
+		RemoveServiceOffering          uint64
+	}
+}
+
 // Worker has all worker routines.
 type Worker struct {
 	abi            abi.ABI
@@ -21,6 +45,7 @@ type Worker struct {
 	decryptKeyFunc data.ToPrivateKeyFunc
 	ept            *ept.Service
 	ethBack        EthBackend
+	gasConf        *GasConf
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
@@ -29,7 +54,7 @@ type Worker struct {
 
 // NewWorker returns new instance of worker.
 func NewWorker(db *reform.DB, somc *somc.Conn,
-	ethBack EthBackend, pscAddr common.Address, payAddr string,
+	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
 
@@ -47,6 +72,7 @@ func NewWorker(db *reform.DB, somc *somc.Conn,
 		abi:            abi,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
+		gasConf:        gasConc,
 		ept:            eptService,
 		ethBack:        ethBack,
 		pscAddr:        pscAddr,

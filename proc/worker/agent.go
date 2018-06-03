@@ -244,6 +244,7 @@ func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 	}
 
 	auth := bind.NewKeyedTransactor(accKey)
+	auth.GasLimit = w.gasConf.PSC.CooperativeClose
 
 	err = w.ethBack.CooperativeClose(auth, agentAddr, uint32(channel.Block),
 		offeringHash, balance, balanceMsgSig,
@@ -482,9 +483,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(accKey)
 	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
-
-	// TODO: move to conf
-	auth.GasLimit = uint64(110000)
+	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 
 	if err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),

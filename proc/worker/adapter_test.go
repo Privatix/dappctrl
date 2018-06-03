@@ -13,6 +13,7 @@ import (
 )
 
 type testEthBackCall struct {
+	txOpts *bind.TransactOpts
 	method string
 	caller common.Address
 	args   []interface{}
@@ -39,6 +40,7 @@ func (b *testEthBackend) CooperativeClose(opts *bind.TransactOpts,
 	b.callStack = append(b.callStack, testEthBackCall{
 		method: "CooperativeClose",
 		caller: opts.From,
+		txOpts: opts,
 		args: []interface{}{agentAddr, block, offeringHash, balance,
 			balanceMsgSig, ClosingSig},
 	})
@@ -50,6 +52,7 @@ func (b *testEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
 	b.callStack = append(b.callStack, testEthBackCall{
 		method: "RegisterServiceOffering",
 		caller: opts.From,
+		txOpts: opts,
 		args:   []interface{}{offeringHash, minDeposit, maxSupply},
 	})
 	return nil
@@ -80,6 +83,7 @@ func (b *testEthBackend) PTCIncreaseApproval(opts *bind.TransactOpts,
 	b.callStack = append(b.callStack, testEthBackCall{
 		method: "PTCIncreaseApproval",
 		caller: opts.From,
+		txOpts: opts,
 		args:   []interface{}{addr, amount},
 	})
 	return nil
@@ -90,6 +94,7 @@ func (b *testEthBackend) PSCAddBalanceERC20(opts *bind.TransactOpts,
 	b.callStack = append(b.callStack, testEthBackCall{
 		method: "PSCAddBalanceERC20",
 		caller: opts.From,
+		txOpts: opts,
 		args:   []interface{}{val},
 	})
 	return nil
@@ -100,6 +105,7 @@ func (b *testEthBackend) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	b.callStack = append(b.callStack, testEthBackCall{
 		method: "PSCReturnBalanceERC20",
 		caller: opts.From,
+		txOpts: opts,
 		args:   []interface{}{val},
 	})
 	return nil
@@ -123,13 +129,14 @@ func (b *testEthBackend) GetTransactionByHash(context.Context,
 }
 
 func (b *testEthBackend) testCalled(t *testing.T, method string,
-	caller common.Address, args ...interface{}) {
+	caller common.Address, gasLimit uint64, args ...interface{}) {
 	if len(b.callStack) == 0 {
 		t.Fatalf("method %s not called. Callstack is empty", method)
 	}
 	for _, call := range b.callStack {
 		if caller == call.caller && method == call.method &&
-			reflect.DeepEqual(args, call.args) {
+			reflect.DeepEqual(args, call.args) &&
+			(call.txOpts == nil || call.txOpts.GasLimit == gasLimit) {
 			return
 		}
 	}

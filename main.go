@@ -34,6 +34,7 @@ type config struct {
 	BlockMonitor  *monitor.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
+	Gas           *worker.GasConf
 	Job           *job.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
@@ -124,15 +125,15 @@ func main() {
 
 	pwdStorage := new(data.PWDStorage)
 
-	handler, err := worker.NewWorker(db, somcConn,
-		worker.NewEthBackend(psc, ptc, gethConn),
+	worker, err := worker.NewWorker(db, somcConn,
+		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
 	if err != nil {
 		panic(err)
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
-	handler.SetQueue(queue)
+	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(worker))
+	worker.SetQueue(queue)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
 

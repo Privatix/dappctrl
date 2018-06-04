@@ -153,6 +153,10 @@ var agentSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobAgentAfterUncooperativeClose,
 	},
+	common.HexToHash(eth.EthOfferingCreated): {
+		(*Monitor).scheduleAgentOfferingCreated,
+		data.JobAgentAfterOfferingMsgBCPublish,
+	},
 }
 
 var clientSchedulers = map[common.Hash]funcAndType{
@@ -312,6 +316,34 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	}
 
 	return id
+}
+
+func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
+	jobType string) {
+	hashB64 := data.FromBytes(el.Topics[2].Bytes())
+	query := `SELECT id
+	                  FROM offerings
+	                 WHERE hash = $1`
+
+	row := m.db.QueryRow(query, hashB64)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		if err == sql.ErrNoRows {
+			m.logger.Debug("offering not found with hash %s", el.Topics[2].Hex())
+			m.ignoreEvent(el)
+			return
+		}
+		m.logger.Error("failed to scan row %s", err)
+		m.ignoreEvent(el)
+		return
+	}
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   id,
+		RelatedType: data.JobOfferring,
+	}
+
+	m.scheduleCommon(el, j)
 }
 
 func (m *Monitor) scheduleAgentChannelCreated(el *data.EthLog,

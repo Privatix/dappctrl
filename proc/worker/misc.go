@@ -69,8 +69,6 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
 
 func (w *Worker) addJob(jType, rType, rID string) error {
 	return w.queue.Add(&data.Job{
-		ID:          util.NewUUID(),
-		Status:      data.JobActive,
 		RelatedType: rType,
 		RelatedID:   rID,
 		Type:        jType,

@@ -15,7 +15,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreChannelCreate, data.JobOfferring)
+		data.JobClientPreChannelCreate, data.JobChannel)
 	defer fxt.Close()
 
 	fxt.job.RelatedType = data.JobChannel
@@ -68,10 +68,30 @@ func TestClientPreChannelCreate(t *testing.T) {
 }
 
 func TestClientAfterChannelCreate(t *testing.T) {
-	t.Skip("TODO")
-	// 1. ch_status="Active"
-	// 2. svc_status="Pending"
-	// 3. "preEndpointMsgSOMCGet"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterChannelCreate, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	data.SaveToTestDB(t, db, fxt.Channel)
+
+	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
+
+	data.ReloadFromTestDB(t, db, fxt.Channel)
+	if fxt.Channel.ServiceStatus != data.ServiceActive {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceActive, fxt.Channel.ServiceStatus)
+	}
+
+	var job data.Job
+	err := env.worker.db.SelectOneTo(&job, "WHERE id != $1", fxt.job)
+	if err != nil {
+		t.Fatalf("no new job created")
+	}
+	defer data.DeleteFromTestDB(t, db, &job)
 }
 
 func TestClientPreChannelTopUp(t *testing.T) {

@@ -118,3 +118,19 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	return w.clientPreChannelCreateSaveTX(
 		job, &acc, &offer, offerHash, deposit)
 }
+
+func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
+	var ch data.Channel
+	err := data.FindByPrimaryKeyTo(w.db, &ch, job.RelatedID)
+	if err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelActive
+	if err = data.Save(w.db, &ch); err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobClientPreEndpointMsgSOMCGet,
+		data.JobChannel, ch.ID)
+}

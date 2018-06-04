@@ -117,3 +117,11 @@ func Insert(db *reform.DB, str reform.Struct) error {
 	}
 	return nil
 }
+
+// Insert calls db.Save() returning more descriptive error.
+func Save(db *reform.DB, rec reform.Record) error {
+	if err := db.Save(rec); err != nil {
+		return fmt.Errorf("failed to save %T: %s", rec, err)
+	}
+	return nil
+}

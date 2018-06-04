@@ -9,25 +9,24 @@
     python initializer.py --build                    create cmd for dapp
     python initializer.py --vpn start                start vpn servise
     python initializer.py --comm stop                stop common servise
-    python initializer.py --test                     srart in test mode
+    python initializer.py --test                     start in test mode
+    python initializer.py --no-gui                   install without GUI
 """
 
-import logging
 import sys
-import argparse
-
-from time import time, sleep
+import logging
 from re import search
-from time import sleep
+from codecs import open
+from os import remove, mkdir
+from json import load, dump
+from time import time, sleep
 from urllib import URLopener
 from urllib2 import urlopen
-from subprocess import Popen, PIPE, STDOUT
-from platform import linux_distribution
 from os.path import isfile, isdir
-from os import remove, mkdir
+from argparse import ArgumentParser
+from platform import linux_distribution
+from subprocess import Popen, PIPE, STDOUT
 from shutil import copyfile
-from codecs import open
-from json import load, dump
 
 """
 Exit code:
@@ -98,9 +97,16 @@ main_conf = dict(
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
         'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/dappctrl.config.json',
         'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/svc/dappvpn/dappvpn.config.json',
-        'dappctrl_conf_local': 'dappctrl.config.local.json',
-        # 'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
+        'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
         'dappctrl_search_field': 'PayAddress',
+    },
+    gui={
+        'npm_inst': [
+            'curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -',
+            'sudo apt-get install -y nodejs',
+            'sudo apt-get install -y npm'
+        ],
+        'npm_pack': 'sudo npm install dappctrlgui',
     },
     test={
         'path': 'test_data.sql',
@@ -310,13 +316,12 @@ class Params(CMD):
         return bool(self._sys_call(cmd, rolback=False))
 
     def get_npm(self, sysctl):
-        cmds = [
-            'curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -',
-            'sudo apt-get install -y nodejs',
-            'apt-get install -y npm'
-        ]
+        cmds = main_conf['gui']['npm_inst']
         for cmd in cmds:
             self._sys_call(cmd, sysctl=sysctl, s_exit=11)
+        self._sys_call(main_conf['gui']['npm_pack'],
+                       sysctl=sysctl,
+                       s_exit=11)
 
     def __iptables(self):
         logging.debug('Check iptables')
@@ -531,7 +536,6 @@ class Params(CMD):
         my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')
         path = main_conf['build']['dappctrl_conf_local']
 
-
         data = self._file_rw(p=path, json_r=True,
                              log='Read dappctrl.config.local.json.')
         raw = data[search_field].split(':')
@@ -539,7 +543,8 @@ class Params(CMD):
         raw[1] = '//{}'.format(my_ip)
         data[search_field] = ':'.join(raw)
 
-        self._file_rw(p=path, w=True, json_r=True, data=data, log='Rewrite dappctrl.config.local.json.')
+        self._file_rw(p=path, w=True, json_r=True, data=data,
+                      log='Rewrite dappctrl.config.local.json.')
 
 
 class Rdata(CMD):
@@ -628,12 +633,15 @@ class Checker(Params, Rdata):
                 self._run_dapp_cmd(sysctl)
 
             self.run_service(sysctl)
-            self.get_npm(sysctl)
+            if not args['no_gui']:
+                logging.info('Install GUI.')
+                sleep(1.5)
+                self.get_npm(sysctl)
             self._finalizer(True)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=' *** Installer *** ')
+    parser = ArgumentParser(description=' *** Installer *** ')
     parser.add_argument("--build", nargs='?', default=True,
                         help='')
     parser.add_argument('--vpn', type=str, nargs='?',
@@ -644,20 +652,20 @@ if __name__ == '__main__':
     parser.add_argument("--test", nargs='?', default=True,
                         help='')
 
-    args = vars(parser.parse_args())
-    # print(args)
-    # if not args['build']:
-    #     logging.info('Build mode.')
-    #     CMD().build_cmd()
-    # elif args['vpn']:
-    #     logging.info('Vpn mode.')
-    #     Params().service('vpn', args['vpn'])
-    # elif args['comm']:
-    #     logging.info('Comm mode.')
-    #     Params().service('comm', args['comm'])
-    # else:
-    #     logging.info('Begin init.')
-    #     Checker().init_os(args)
-    #     logging.info('All done.')
+    parser.add_argument("--no-gui", nargs='?', default=True,
+                        help='')
 
-    Params().ip_dappctrl()
+    args = vars(parser.parse_args())
+    if not args['build']:
+        logging.info('Build mode.')
+        CMD().build_cmd()
+    elif args['vpn']:
+        logging.info('Vpn mode.')
+        Params().service('vpn', args['vpn'])
+    elif args['comm']:
+        logging.info('Comm mode.')
+        Params().service('comm', args['comm'])
+    else:
+        logging.info('Begin init.')
+        Checker().init_os(args)
+        logging.info('All done.')

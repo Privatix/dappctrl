@@ -12,8 +12,8 @@
     },
 
     "Pusher": {
-        "CaCertPath": "",
-        "ConfigPath": "",
+        "CaCertPath": "/etc/openvpn/config/ca.crt",
+        "ConfigPath": "/etc/openvpn/config/server.conf",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo"],
         "TimeOut": 120

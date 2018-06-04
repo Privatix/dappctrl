@@ -45,6 +45,7 @@ type usage struct {
 	costUnits   uint64
 }
 
+// RespGetClientChan handleGetClientChannels response structure
 type RespGetClientChan struct {
 	ID       string `json:"id"`
 	Agent    string `json:"agent"`
@@ -201,10 +202,10 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
                        job.status AS job_status, job.created_at AS job_created_at,
                        COALESCE(SUM(ses.seconds_consumed), 0) AS sec_usage,
                        COALESCE(SUM(ses.units_used), 0) AS units_usage,
-                       COALESCE(((channels.total_deposit - offer.setup_price) / offer.unit_price), 0) AS max_usage,
+                       GREATEST(COALESCE(((channels.total_deposit - offer.setup_price) / offer.unit_price), 0), 0) AS max_usage,
                        offer.unit_type, offer.unit_name,
-                       COALESCE(offer.setup_price + COALESCE(SUM(ses.seconds_consumed), 0) * offer.unit_price) AS cost_seconds,
-                       COALESCE(offer.setup_price + coalesce(sum(ses.units_used), 0) * offer.unit_price) AS cost_units
+                       GREATEST(COALESCE(offer.setup_price + COALESCE(SUM(ses.seconds_consumed), 0) * offer.unit_price, 0), 0) AS cost_seconds,
+                       GREATEST(COALESCE(offer.setup_price + COALESCE(SUM(ses.units_used), 0) * offer.unit_price, 0), 0) AS cost_units
                   FROM channels
                        LEFT JOIN sessions ses
                        ON channels.id = ses.channel

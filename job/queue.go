@@ -332,7 +332,7 @@ func (q *Queue) processJob(job *data.Job, handler Handler) {
 	}
 
 	job.TryCount++
-	if job.TryCount >= tconf.TryLimit {
+	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
 		q.logger.Error("job %s is failed", job.ID)
 	} else {

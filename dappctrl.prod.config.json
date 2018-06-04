@@ -61,6 +61,10 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "addCheckBalance": {
+                "TryLimit": 0,
+                "TryPeriod": 60000
             }
         }
     },

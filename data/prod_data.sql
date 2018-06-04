@@ -1,7 +1,5 @@
 BEGIN TRANSACTION;
 
--- Test data for integration testing of dappvpn.
-
 INSERT INTO templates (id, hash, raw, kind)
 VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
 'HGuVky1SotjobyIVpiGw4jBvFNt28MtF5uNF7OCOYdo=',
@@ -14,11 +12,12 @@ VALUES ('a618dacc-a3be-45b8-bca5-15a48bff6258',
 '{"definitions":{"host":{"pattern":"^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*:[0-9]{2,5}$","type":"string"},"uuid":{"pattern":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","type":"string"}},"properties":{"additionalParams":{"additionalProperties":{"type":"string"},"minProperties":1,"type":"object"},"password":{"type":"string"},"paymentReceiverAddress":{"$ref":"#/definitions/host"},"serviceEndpointAddress":{"type":"string"},"templateHash":{"type":"string"},"username":{"$ref":"#/definitions/uuid"}},"required":["templateHash","paymentReceiverAddress","serviceEndpointAddress","additionalParams"],"title":"Endpoint Message template","type":"object"}',
 'access');
 
-INSERT INTO products (id, name, usage_rep_type, is_server, salt, password,
-    client_ident)
-VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'Test VPN service', 'total',
-    true, 6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
-    'by_channel_id');
+INSERT INTO products (id, name, offer_tpl_id, offer_access_id, usage_rep_type,
+is_server, salt, password, client_ident)
+VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'Test VPN service',
+    'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'a618dacc-a3be-45b8-bca5-15a48bff6258',
+    'total', true, 6012867121110302348,
+    'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp','by_channel_id');
 
 INSERT INTO settings (key, value, description, name)
 VALUES ('eth.min.confirmations',

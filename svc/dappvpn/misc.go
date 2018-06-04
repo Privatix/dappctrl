@@ -19,8 +19,12 @@ func encode(s string) string {
 	return base64.URLEncoding.EncodeToString([]byte(s))
 }
 
+func commonNameOrEmpty() string {
+	return os.Getenv("common_name")
+}
+
 func commonName() string {
-	cn := os.Getenv("common_name")
+	cn := commonNameOrEmpty()
 	if len(cn) == 0 {
 		logger.Fatal("empty common_name")
 	}

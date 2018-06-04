@@ -81,7 +81,9 @@ func handleAuth() {
 		logger.Fatal("failed to auth: %s", err)
 	}
 
-	storeChannel(commonName(), user)
+	if cn := commonNameOrEmpty(); len(cn) != 0 {
+		storeChannel(cn, user)
+	}
 	storeChannel(user, user) // Needed when using username-as-common-name.
 }
 

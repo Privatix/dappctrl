@@ -82,6 +82,7 @@ main_conf = dict(
         }
 
     ),
+
     build={
         'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{}\' -dappvpnconf={} -connstr=\'{}\'',
         'cmd_path': '.dapp_cmd',
@@ -95,8 +96,8 @@ main_conf = dict(
         'db_log': '/var/lib/container/common/var/log/postgresql/postgresql-10-main.log',
         'db_stat': 'database system is ready to accept connections',
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
-        'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/dappctrl.config.json',
-        'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/svc/dappvpn/dappvpn.config.json',
+        'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/dappctrl.config.json',
+        'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/svc/dappvpn/dappvpn.config.json',
         'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
         'dappctrl_search_field': 'PayAddress',
     },

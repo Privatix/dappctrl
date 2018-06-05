@@ -48,7 +48,7 @@ var (
 
 	notifier *bugsnag.Notifier
 
-	// TODO: [maxim] The list needs to be configured dynamically, before the application starts
+	// TODO(maxim) The list needs to be configured dynamically, before the application starts
 	// This slice is needed so that the full path is written to the log
 	pkgSlice = []string{"main", "agent/billing", "client/bill", "data",
 		"eth", "eth/contract", "eth/truffle", "eth/util",

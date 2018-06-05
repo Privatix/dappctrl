@@ -518,6 +518,10 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 		td.offering[0].Hash, // offering hash
 		minDepositVal,       // min deposit
 	)
+	comment := "wanted " + data.JobAgentAfterOfferingMsgBCPublish
+	queue.expect(comment, func(j *data.Job) bool {
+		return j.Type == data.JobAgentAfterOfferingMsgBCPublish
+	})
 	// offering events containing agent address should be ignored
 
 	insertEvent(t, db, nextBlock(), 0,

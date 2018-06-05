@@ -15,7 +15,7 @@
 
     "ClientBillingTest": {
         "MonitorStartupDelay": 10,
-        "ReactionDelay": 10
+        "ReactionDelay": 100
     },
 
     "BillingTest": {

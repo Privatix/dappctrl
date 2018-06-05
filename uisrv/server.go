@@ -86,7 +86,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(authPath, s.handleAuth)
 	mux.HandleFunc(channelsPath, basicAuthMiddleware(s, s.handleChannels))
 	mux.HandleFunc(clientChannelsPath,
-		basicAuthMiddleware(s, s.handleGetClientChannels))
+		basicAuthMiddleware(s, s.handleClientChannels))
 	mux.HandleFunc(clientOfferingsPath,
 		basicAuthMiddleware(s, s.handleGetClientOfferings))
 	mux.HandleFunc(clientProductsPath,

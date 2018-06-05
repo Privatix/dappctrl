@@ -17,7 +17,7 @@ import (
 const (
 	errFieldVal = "The field in the response" +
 		" does not match the value in the database"
-	timeFormat = "2006-01-02T15:04:05.999999+07:00"
+	testTimeFormat = "2006-01-02T15:04:05.999+07:00"
 )
 
 func getChannels(t *testing.T, params map[string]string,
@@ -35,7 +35,7 @@ func testGetChannels(t *testing.T, exp int,
 }
 
 func getCliChannels(t *testing.T, params map[string]string,
-	agent bool) (chs []RespGetClientChan) {
+	agent bool) (chs []respGetClientChan) {
 	resp := getChannels(t, params, agent)
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -83,41 +83,70 @@ func testSess(t *testing.T, chID string, usage, quantity uint64) {
 	}
 }
 
-func checkCliChan(t *testing.T, resp RespGetClientChan, ch data.Channel) {
+// lower the accuracy of time
+func timeLowAccuracy(val time.Time) string {
+	return val.Format(testTimeFormat)
+}
+
+// lower the accuracy of time
+func timeStrLowAccuracy(t *testing.T, val string) string {
+	ti, err := time.Parse(timeFormat, val)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return timeLowAccuracy(ti)
+}
+
+func checkCliChan(t *testing.T, resp respGetClientChan, ch data.Channel) {
 	if ch.ID != resp.ID {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			ch.ID, resp.ID)
 	}
 
 	if ethAddrFromBase64(ch.Agent) != resp.Agent {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			ethAddrFromBase64(ch.Agent), resp.Agent)
 	}
 
 	if ethAddrFromBase64(ch.Client) != resp.Client {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			ethAddrFromBase64(ch.Client), resp.Client)
 	}
 
 	if ch.Offering != resp.Offering {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			ch.Offering, resp.Offering)
 	}
 
 	if ch.TotalDeposit != resp.Deposit {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %d, got: %d",
+			ch.TotalDeposit, resp.Deposit)
 	}
 }
 
 func checkCliChanStatus(t *testing.T, resp chanStatusBlock,
 	ch data.Channel, offer data.Offering) {
 	if ch.ServiceStatus != resp.ServiceStatus {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			ch.ServiceStatus, resp.ServiceStatus)
 	}
 
 	if ch.ChannelStatus != resp.ChannelStatus {
+		t.Fatalf("expected %s, got: %s",
+			ch.ChannelStatus, resp.ChannelStatus)
+	}
+
+	if ch.ServiceChangedTime == nil || resp.LastChanged == nil {
 		t.Fatal(errFieldVal)
 	}
 
-	if ch.ServiceChangedTime == nil || resp.LastChanged == nil ||
-		ch.ServiceChangedTime.Format(timeFormat) != *resp.LastChanged {
-		t.Fatal(errFieldVal)
+	// Sometimes there is an error of several nanoseconds.
+	// We need to reduce the accuracy of time
+	expectedTime := timeLowAccuracy(*ch.ServiceChangedTime)
+	gotTime := timeStrLowAccuracy(t, *resp.LastChanged)
+	if expectedTime != gotTime {
+		t.Fatalf("expected %s, got: %s",
+			expectedTime, gotTime)
 	}
 
 	if offer.MaxInactiveTimeSec == nil ||
@@ -128,19 +157,24 @@ func checkCliChanStatus(t *testing.T, resp chanStatusBlock,
 
 func checkCliChanJob(t *testing.T, resp jobBlock, job data.Job) {
 	if job.ID != resp.ID {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			job.ID, resp.ID)
 	}
 
 	if job.Type != resp.Type {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			job.Type, resp.Type)
 	}
 
 	if job.Status != resp.Status {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			job.Status, resp.Status)
 	}
 
 	if job.CreatedAt.Format(timeFormat) != resp.CreatedAt {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %s, got: %s",
+			job.CreatedAt.Format(timeFormat),
+			resp.CreatedAt)
 	}
 }
 
@@ -266,9 +300,16 @@ func TestGetChannels(t *testing.T) {
 	checkRespGetCliChan(t, chClient.ID)
 }
 
-func getChannelStatus(t *testing.T, id string) *http.Response {
+func getChannelStatus(t *testing.T, id string, agent bool) *http.Response {
+	var path string
+	if agent {
+		path = channelsPath
+	} else {
+		path = clientChannelsPath
+	}
+
 	url := fmt.Sprintf("http://:%s@%s/%s%s/status", testPassword,
-		testServer.conf.Addr, channelsPath, id)
+		testServer.conf.Addr, path, id)
 	r, err := http.Get(url)
 	if err != nil {
 		t.Fatal("failed to get channels: ", err)
@@ -276,26 +317,62 @@ func getChannelStatus(t *testing.T, id string) *http.Response {
 	return r
 }
 
-func TestGetChannelStatus(t *testing.T) {
+func checkStatusCode(t *testing.T, resp *http.Response, code int, errFormat string) {
+	if resp.StatusCode != code {
+		t.Fatalf(errFormat, resp.StatusCode)
+	}
+}
+
+func TestGetAgentChannelStatus(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
 	ch := createTestChannel(t)
+	testAcc(t, ch, true)
+
 	// get channel status with a match.
-	res := getChannelStatus(t, ch.ID)
+	res := getChannelStatus(t, ch.ID, true)
 	reply := &statusReply{}
 	json.NewDecoder(res.Body).Decode(reply)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("failed to get channel status: %d", res.StatusCode)
-	}
+	checkStatusCode(t, res, http.StatusOK,
+		"failed to get channel status: %d")
+
 	if ch.ChannelStatus != reply.Status {
-		t.Fatalf("expected %s, got: %s", ch.ChannelStatus, reply.Status)
+		t.Fatalf("expected %s, got: %s",
+			ch.ChannelStatus, reply.Status)
 	}
+
 	// get channel status without a match.
-	res = getChannelStatus(t, util.NewUUID())
-	if res.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected not found, got: %d", res.StatusCode)
+	res = getChannelStatus(t, util.NewUUID(), true)
+	checkStatusCode(t, res, http.StatusNotFound,
+		"expected not found, got: %d")
+}
+
+func TestGetClientChannelStatus(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	ch := createTestChannel(t)
+	testAcc(t, nil, false)
+
+	var offer data.Offering
+	if err := testServer.db.FindByPrimaryKeyTo(&offer,
+		ch.Offering); err != nil {
+		t.Fatal(err)
 	}
+
+	resp := getChannelStatus(t, ch.ID, false)
+	result := new(chanStatusBlock)
+	json.NewDecoder(resp.Body).Decode(result)
+	checkStatusCode(t, resp, http.StatusOK,
+		"failed to get channel status: %d")
+
+	checkCliChanStatus(t, *result, *ch, offer)
+
+	// get channel status without a match.
+	resp = getChannelStatus(t, util.NewUUID(), false)
+	checkStatusCode(t, resp, http.StatusNotFound,
+		"expected not found, got: %d")
 }
 
 func sendChannelAction(t *testing.T, id, action string) *http.Response {

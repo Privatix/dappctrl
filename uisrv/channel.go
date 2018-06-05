@@ -1,20 +1,45 @@
 package uisrv
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
 )
 
-var channelsGetParams = []queryParam{
-	{Name: "id", Field: "id"},
-	{Name: "channelStatus", Field: "channel_status"},
-	{Name: "serviceStatus", Field: "service_status"},
-}
+const timeFormat = "2006-01-02T15:04:05.999999+07:00"
+
+const (
+	channelTerminate = "terminate"
+	channelPause     = "pause"
+	channelResume    = "resume"
+)
+
+var (
+	channelsGetParams = []queryParam{
+		{Name: "id", Field: "id"},
+		{Name: "channelStatus", Field: "channel_status"},
+		{Name: "serviceStatus", Field: "service_status"},
+	}
+
+	AgentJobTypes = map[string]string{
+		channelTerminate: data.JobAgentPreServiceTerminate,
+		channelPause:     data.JobAgentPreServiceSuspend,
+		channelResume:    data.JobAgentPreServiceUnsuspend,
+	}
+
+	ClientJobTypes = map[string]string{
+		channelTerminate: data.JobClientPreServiceTerminate,
+		// channelPause:     data.JobClientPreServiceSuspend, // TODO(maxim) This is Job not yet implemented
+		// channelResume:    data.JobClientPreServiceUnsuspend, // TODO(maxim) This is Job not yet implemented
+	}
+
+	clientStatusFilter = `WHERE id = '%s' AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
+)
 
 type chanStatusBlock struct {
 	ServiceStatus   string  `json:"serviceStatus"`
@@ -46,7 +71,7 @@ type usage struct {
 }
 
 // RespGetClientChan handleGetClientChannels response structure
-type RespGetClientChan struct {
+type respGetClientChan struct {
 	ID       string `json:"id"`
 	Agent    string `json:"agent"`
 	Client   string `json:"client"`
@@ -131,8 +156,8 @@ func ethAddrFromBase64(addr string) string {
 }
 
 func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
-	args []interface{}) (resp []*RespGetClientChan, err error) {
-	resp = []*RespGetClientChan{}
+	args []interface{}) (resp []*respGetClientChan, err error) {
+	resp = []*respGetClientChan{}
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
@@ -143,7 +168,7 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 	defer rows.Close()
 
 	for rows.Next() {
-		item := new(RespGetClientChan)
+		item := new(respGetClientChan)
 		i := new(usage)
 
 		if err = rows.Scan(&item.ID, &item.Agent, &item.Client,
@@ -186,7 +211,7 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 	return resp, nil
 }
 
-// handleGetChannels replies with all channels or a channel by id
+// handleGetClientChannels replies with all client channels or a channel by id
 // available to the client.
 func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 	r *http.Request) {
@@ -204,8 +229,8 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
                        COALESCE(SUM(ses.units_used), 0) AS units_usage,
                        GREATEST(COALESCE(((channels.total_deposit - offer.setup_price) / offer.unit_price), 0), 0) AS max_usage,
                        offer.unit_type, offer.unit_name,
-                       GREATEST(COALESCE(offer.setup_price + COALESCE(SUM(ses.seconds_consumed), 0) * offer.unit_price, 0), 0) AS cost_seconds,
-                       GREATEST(COALESCE(offer.setup_price + COALESCE(SUM(ses.units_used), 0) * offer.unit_price, 0), 0) AS cost_units
+                       COALESCE(offer.setup_price + COALESCE(SUM(ses.seconds_consumed), 0) * offer.unit_price, 0) AS cost_seconds,
+                       COALESCE(offer.setup_price + COALESCE(SUM(ses.units_used), 0) * offer.unit_price, 0) AS cost_units
                   FROM channels
                        LEFT JOIN sessions ses
                        ON channels.id = ses.channel
@@ -221,7 +246,7 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
                  WHERE channels.agent NOT IN (SELECT eth_addr FROM accounts)
                        AND channels.id = job.related_id
 		`
-	queryFutter := `
+	queryFooter := `
 		 GROUP BY channels.id, job.id, offer.setup_price, offer.unit_price,
                        offer.unit_type, offer.unit_name, offer.max_inactive_time_sec
 		`
@@ -230,9 +255,7 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 		Params: channelsGetParams,
 	})
 
-	constraints := s.filter(conds)
-
-	query := queryHeader + constraints + queryFutter
+	query := queryHeader + s.filter(conds) + queryFooter
 
 	resp, err := s.getClientChannelsItems(w, query, args)
 	if err != nil {
@@ -251,37 +274,75 @@ func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, 
 	s.replyStatus(w, channel.ChannelStatus)
 }
 
-func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+// handleGetClientChannelStatus replies with client channels status by id.
+func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
+	r *http.Request, id string) {
+	channel := new(data.Channel)
+	if err := s.selectOneTo(w, channel,
+		fmt.Sprintf(clientStatusFilter, id)); err != nil {
+		return
+	}
+
+	offer := new(data.Offering)
+	if !s.findTo(w, offer, channel.Offering) {
+		return
+	}
+
+	resp := new(chanStatusBlock)
+
+	if offer.MaxInactiveTimeSec == nil {
+		offer.MaxInactiveTimeSec = new(uint64)
+	} else {
+		resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
+	}
+
+	if channel.ServiceChangedTime == nil {
+		resp.LastChanged = new(string)
+	} else {
+		resp.LastChanged = pointer.ToString(
+			channel.ServiceChangedTime.Format(timeFormat))
+	}
+	resp.ChannelStatus = channel.ChannelStatus
+	resp.ServiceStatus = channel.ServiceStatus
+	resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
+
+	s.reply(w, &resp)
 }
 
-const (
-	channelTerminate = "terminate"
-	channelPause     = "pause"
-	channelResume    = "resume"
-)
-
-func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
+	id string, agent bool) {
 	payload := &ActionPayload{}
 	if !s.parsePayload(w, r, payload) {
 		return
 	}
 
-	s.logger.Info("action ( %v )  request for channel with id: %v recieved.", payload.Action, id)
+	s.logger.Info("action ( %v )  request for channel with id: %v recieved.",
+		payload.Action, id)
 
-	jobTypes := map[string]string{
-		channelTerminate: data.JobAgentPreServiceTerminate,
-		channelPause:     data.JobAgentPreServiceSuspend,
-		channelResume:    data.JobAgentPreServiceUnsuspend,
+	var jobType string
+	var ok bool
+
+	if agent {
+		jobType, ok = AgentJobTypes[payload.Action]
+
+	} else {
+		jobType, ok = ClientJobTypes[payload.Action]
 	}
 
-	jobType, ok := jobTypes[payload.Action]
 	if !ok {
 		s.replyInvalidAction(w)
 		return
 	}
 
-	if !s.findTo(w, &data.Channel{}, id) {
-		return
+	if agent {
+		if !s.findTo(w, &data.Channel{}, id) {
+			return
+		}
+	} else {
+		if err := s.selectOneTo(w, &data.Channel{},
+			fmt.Sprintf(clientStatusFilter, id)); err != nil {
+			return
+		}
 	}
 
 	if err := s.queue.Add(&data.Job{
@@ -296,6 +357,10 @@ func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
+func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+	s.putChannelStatus(w, r, id, true)
+}
+
 func (s *Server) handlePutClientChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
-	log.Printf("id: %s", id)
+	s.putChannelStatus(w, r, id, false)
 }

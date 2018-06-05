@@ -12,10 +12,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
@@ -198,6 +201,21 @@ func (e *workerTest) newTestFixture(t *testing.T,
 	e.ethBack.callStack = []testEthBackCall{}
 
 	return &workerTestFixture{f, job}
+}
+
+func (e *workerTest) setOfferingHash(t *testing.T, fixture *workerTestFixture) {
+	msg := offer.OfferingMessage(fixture.Account, fixture.TemplateOffer,
+		fixture.Offering)
+	msgBytes, _ := json.Marshal(msg)
+
+	agentKey, _ := e.worker.decryptKeyFunc(fixture.Account.PrivateKey,
+		data.TestPassword)
+
+	packed, _ := messages.PackWithSignature(msgBytes, agentKey)
+
+	fixture.Offering.RawMsg = data.FromBytes(packed)
+	fixture.Offering.Hash = data.FromBytes(ethcrypto.Keccak256(packed))
+	e.updateInTestDB(t, fixture.Offering)
 }
 
 func (f *workerTestFixture) close() {

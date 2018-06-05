@@ -466,27 +466,45 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
 
-	offeringHash, err := data.ToHash(offering.Hash)
-	if err != nil {
-		return fmt.Errorf("unable to parse offering's hash: %v", err)
-	}
-
 	agent, err := w.account(offering.Agent)
 	if err != nil {
 		return fmt.Errorf("could not find offering's agent: %v", err)
 	}
 
-	accKey, err := w.key(agent.PrivateKey)
+	agentKey, err := w.key(agent.PrivateKey)
 	if err != nil {
 		return fmt.Errorf("unable to parse agent's priv key: %v", err)
 	}
+
+	template, err := w.template(offering.Template)
+	if err != nil {
+		return fmt.Errorf("could not find offering's template: %v", err)
+	}
+
+	msg := offer.OfferingMessage(agent, template, offering)
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal offering msg: %v", err)
+	}
+
+	packed, err := messages.PackWithSignature(msgBytes, agentKey)
+	if err != nil {
+		return fmt.Errorf("failed to pack msg with signature: %v", err)
+	}
+
+	offering.RawMsg = data.FromBytes(packed)
+
+	offeringHash := common.BytesToHash(crypto.Keccak256(packed))
+
+	offering.Hash = data.FromBytes(offeringHash.Bytes())
 
 	publishData, err := w.publishData(job)
 	if err != nil {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(accKey)
+	auth := bind.NewKeyedTransactor(agentKey)
 	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 
@@ -533,44 +551,18 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	agent, err := w.account(offering.Agent)
-	if err != nil {
-		return fmt.Errorf("could not find offering's agent: %v", err)
-	}
-
-	template, err := w.template(offering.Template)
-	if err != nil {
-		return fmt.Errorf("could not find offering's template: %v", err)
-	}
-
-	msg := offer.OfferingMessage(agent, template, offering)
-
-	msgBytes, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal offering msg: %v", err)
-	}
-
-	agentKey, err := w.key(agent.PrivateKey)
-	if err != nil {
-		return fmt.Errorf("unable to parse agent's priv key: %v", err)
-	}
-
-	packed, err := messages.PackWithSignature(msgBytes, agentKey)
-	if err != nil {
-		return fmt.Errorf("failed to pack msg with signature: %v", err)
-	}
-
-	offering.RawMsg = data.FromBytes(packed)
-
-	offering.Hash = data.FromBytes(crypto.Keccak256(packed))
-
 	offering.Status = data.MsgChPublished
 
 	if err = w.db.Update(offering); err != nil {
 		return fmt.Errorf("could not update %T: %v", offering, err)
 	}
 
-	if err = w.somc.PublishOffering(packed); err != nil {
+	packedMsgBytes, err := data.ToBytes(offering.RawMsg)
+	if err != nil {
+		return fmt.Errorf("failed to decode offering's raw msg: %v", err)
+	}
+
+	if err = w.somc.PublishOffering(packedMsgBytes); err != nil {
 		return fmt.Errorf("could not publish offering: %v", err)
 	}
 

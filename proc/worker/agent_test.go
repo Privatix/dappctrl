@@ -250,6 +250,9 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	// Test eth transaction was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
 	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
@@ -284,9 +287,6 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 
 	// Test agent pre service terminate job created.
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
-
-	// Test eth transaction was recorder.
-	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
@@ -502,6 +502,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	// Test ethTx was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
 	jobData := &data.JobPublishData{GasPrice: 10}
 	jobDataB, err := json.Marshal(jobData)
 	if err != nil {
@@ -514,7 +517,16 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 
-	offering := fixture.Offering
+	offering := &data.Offering{}
+	env.findTo(t, offering, fixture.Offering.ID)
+
+	if offering.RawMsg == fixture.Offering.RawMsg {
+		t.Fatal("raw msg was not set")
+	}
+
+	if offering.Hash == fixture.Offering.Hash {
+		t.Fatal("hash was not set")
+	}
 
 	offeringHash := data.TestToHash(t, offering.Hash)
 
@@ -535,9 +547,6 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		t.Fatalf("wrong offering status, wanted: %s, got: %s",
 			data.OfferRegister, offering.OfferStatus)
 	}
-
-	// Test ethTx was recorder.
-	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.AgentPreOfferingMsgBCPublish,
 		*fixture.job)
@@ -575,6 +584,8 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
 		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
+
+	env.setOfferingHash(t, fixture)
 	defer env.close()
 	defer fixture.close()
 
@@ -594,12 +605,6 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 
 	select {
 	case ret := <-somcOfferingsChan:
-		if offering.RawMsg == "" {
-			t.Fatal("offerring message is not filled")
-		}
-		if offering.Hash == "" {
-			t.Fatal("offering hash is not filled")
-		}
 		if ret.Data != offering.RawMsg {
 			t.Fatal("wrong offering published")
 		}

@@ -193,21 +193,24 @@ func checkCliChanUsage(t *testing.T, resp usageBlock, ch data.Channel,
 			usage += ses.SecondsConsumed
 		}
 	default:
-		t.Fatal(errFieldVal)
+		t.Fatal("unsupported unit type")
 	}
 
 	if resp.Current != usage {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %d, got: %d",
+			usage, resp.Current)
 	}
 
 	cost += usage * offer.UnitPrice
 	if resp.Cost != cost {
-		t.Fatal(errFieldVal)
+		t.Fatalf("expected %d, got: %d",
+			cost, resp.Cost)
 	}
 
-	if resp.MaxUsage != (ch.TotalDeposit-offer.SetupPrice)/
-		offer.UnitPrice {
-		t.Fatal(errFieldVal)
+	deposit := (ch.TotalDeposit - offer.SetupPrice) /
+		offer.UnitPrice
+	if resp.MaxUsage != deposit {
+		t.Fatalf("expected %d, got: %d", deposit, resp.MaxUsage)
 	}
 }
 
@@ -317,7 +320,8 @@ func getChannelStatus(t *testing.T, id string, agent bool) *http.Response {
 	return r
 }
 
-func checkStatusCode(t *testing.T, resp *http.Response, code int, errFormat string) {
+func checkStatusCode(t *testing.T, resp *http.Response,
+	code int, errFormat string) {
 	if resp.StatusCode != code {
 		t.Fatalf(errFormat, resp.StatusCode)
 	}

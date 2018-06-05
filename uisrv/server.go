@@ -67,7 +67,7 @@ const (
 	authPath            = "/auth"
 	channelsPath        = "/channels/"
 	clientChannelsPath  = "/client/channels/"
-	clientOfferingsPath = "/client/offerings"
+	clientOfferingsPath = "/client/offerings/"
 	clientProductsPath  = "/client/products"
 	endpointsPath       = "/endpoints"
 	incomePath          = "/income"
@@ -88,7 +88,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(clientChannelsPath,
 		basicAuthMiddleware(s, s.handleClientChannels))
 	mux.HandleFunc(clientOfferingsPath,
-		basicAuthMiddleware(s, s.handleGetClientOfferings))
+		basicAuthMiddleware(s, s.handleClientOfferings))
 	mux.HandleFunc(clientProductsPath,
 		basicAuthMiddleware(s, s.handleGetClientProducts))
 	mux.HandleFunc(endpointsPath, basicAuthMiddleware(s, s.handleGetEndpoints))

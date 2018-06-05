@@ -26,13 +26,13 @@ var (
 		{Name: "serviceStatus", Field: "service_status"},
 	}
 
-	AgentJobTypes = map[string]string{
+	agentJobTypes = map[string]string{
 		channelTerminate: data.JobAgentPreServiceTerminate,
 		channelPause:     data.JobAgentPreServiceSuspend,
 		channelResume:    data.JobAgentPreServiceUnsuspend,
 	}
 
-	ClientJobTypes = map[string]string{
+	clientJobTypes = map[string]string{
 		channelTerminate: data.JobClientPreServiceTerminate,
 		// channelPause:     data.JobClientPreServiceSuspend, // TODO(maxim) This is Job not yet implemented
 		// channelResume:    data.JobClientPreServiceUnsuspend, // TODO(maxim) This is Job not yet implemented
@@ -70,7 +70,6 @@ type usage struct {
 	costUnits   uint64
 }
 
-// RespGetClientChan handleGetClientChannels response structure
 type respGetClientChan struct {
 	ID       string `json:"id"`
 	Agent    string `json:"agent"`
@@ -103,6 +102,7 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
+// handleChannels calls appropriate handler by scanning incoming request.
 func (s *Server) handleClientChannels(w http.ResponseWriter, r *http.Request) {
 	if id := idFromStatusPath(clientChannelsPath, r.URL.Path); id != "" {
 		if r.Method == "GET" {
@@ -316,23 +316,23 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	s.logger.Info("action ( %v )  request for channel with id: %v recieved.",
-		payload.Action, id)
-
 	var jobType string
 	var ok bool
 
 	if agent {
-		jobType, ok = AgentJobTypes[payload.Action]
+		jobType, ok = agentJobTypes[payload.Action]
 
 	} else {
-		jobType, ok = ClientJobTypes[payload.Action]
+		jobType, ok = clientJobTypes[payload.Action]
 	}
 
 	if !ok {
 		s.replyInvalidAction(w)
 		return
 	}
+
+	s.logger.Info("action ( %v )  request for channel with id:"+
+		" %v received.", payload.Action, id)
 
 	if agent {
 		if !s.findTo(w, &data.Channel{}, id) {

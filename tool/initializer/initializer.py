@@ -166,6 +166,11 @@ class CMD:
                 self._rolback(sysctl, s_exit)
             else:
                 return False
+        if 'The following packages have unmet dependencies:' in resp[0]:
+            if rolback:
+                self._rolback(sysctl, s_exit)
+            exit(s_exit)
+
         return resp[0]
 
     def _upgr_deb_pack(self, v):
@@ -500,10 +505,13 @@ class Params(CMD):
                             log='Read DB log')
         t_start = time()
         t_wait = 600
-        while True:
+        mark = True
+        while mark:
+            logging.info('Wait DB.')
             for i in raw:
                 if main_conf['build']['db_stat'] in i:
                     logging.info('DB was run.')
+                    mark = False
                     break
             if time() - t_start > t_wait:
                 logging.error(

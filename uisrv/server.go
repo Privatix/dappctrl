@@ -76,6 +76,7 @@ const (
 	sessionsPath        = "/sessions"
 	settingsPath        = "/settings"
 	templatePath        = "/templates"
+	transactionsPath    = "/transactions"
 	usagePath           = "/usage"
 )
 
@@ -98,6 +99,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(sessionsPath, basicAuthMiddleware(s, s.handleGetSessions))
 	mux.HandleFunc(settingsPath, basicAuthMiddleware(s, s.handleSettings))
 	mux.HandleFunc(templatePath, basicAuthMiddleware(s, s.handleTempaltes))
+	mux.HandleFunc(transactionsPath, basicAuthMiddleware(s, s.handleTransactions))
 	mux.HandleFunc(usagePath, basicAuthMiddleware(s, s.handleGetUsage))
 	mux.HandleFunc("/", s.pageNotFound)
 

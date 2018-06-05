@@ -91,7 +91,7 @@ main_conf = dict(
             "sslmode": "disable",
             "user": "postgres",
             "host": "localhost",
-            "port": "5432"
+            "port": "5433"
         },
         'db_log': '/var/lib/container/common/var/log/postgresql/postgresql-10-main.log',
         'db_stat': 'database system is ready to accept connections',

@@ -166,6 +166,11 @@ class CMD:
                 self._rolback(sysctl, s_exit)
             else:
                 return False
+        if 'The following packages have unmet dependencies:' in resp[0]:
+            if rolback:
+                self._rolback(sysctl, s_exit)
+            exit(s_exit)
+
         return resp[0]
 
     def _upgr_deb_pack(self, v):

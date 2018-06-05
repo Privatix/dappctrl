@@ -60,7 +60,7 @@ TODOs should include the string TODO in all caps, followed by the name, e-mail a
 Example:
 
 ```
-//TODO(drew2a) Add todo convention to CONTRIBUTING.md
+// TODO(drew2a) Add todo convention to CONTRIBUTING.md
 ```
 
 

@@ -505,10 +505,13 @@ class Params(CMD):
                             log='Read DB log')
         t_start = time()
         t_wait = 600
-        while True:
+        mark = True
+        while mark:
+            logging.info('Wait DB.')
             for i in raw:
                 if main_conf['build']['db_stat'] in i:
                     logging.info('DB was run.')
+                    mark = False
                     break
             if time() - t_start > t_wait:
                 logging.error(

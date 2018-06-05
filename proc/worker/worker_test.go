@@ -23,8 +23,9 @@ import (
 
 type testConfig struct {
 	DB             *data.DBConfig
-	JobHanlderTest *struct {
-		SOMCTimeout time.Duration // In seconds.
+	JobHandlerTest *struct {
+		SOMCTimeout   time.Duration // In seconds.
+		ReactionDelay time.Duration // In milliseconds.
 	}
 	Job       *job.Config
 	Log       *util.LogConfig
@@ -76,7 +77,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(db, somcConn, ethBack,
+	worker, err := NewWorker(logger, db, somcConn, ethBack,
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
 	if err != nil {
 		fakeSOMC.Close()

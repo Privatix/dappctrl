@@ -79,15 +79,19 @@ func TestClientAfterChannelCreate(t *testing.T) {
 	data.SaveToTestDB(t, db, fxt.Channel)
 
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
+	env.fakeSOMC.WriteWaitForEndpoint(t, fxt.Channel.ID, nil)
+	time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 
 	data.ReloadFromTestDB(t, db, fxt.Channel)
-	if fxt.Channel.ServiceStatus != data.ServiceActive {
+	if fxt.Channel.ChannelStatus != data.ChannelActive {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceActive, fxt.Channel.ServiceStatus)
+			data.ChannelActive, fxt.Channel.ChannelStatus)
 	}
 
 	var job data.Job
-	err := env.worker.db.SelectOneTo(&job, "WHERE id != $1", fxt.job)
+	err := env.worker.db.SelectOneTo(&job,
+		"WHERE related_id = $1 AND id != $2",
+		fxt.Channel.ID, fxt.job.ID)
 	if err != nil {
 		t.Fatalf("no new job created")
 	}

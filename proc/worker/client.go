@@ -119,6 +119,7 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		job, &acc, &offer, offerHash, deposit)
 }
 
+// ClientAfterChannelCreate activates channel and triggers endpoint retrieval.
 func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 	var ch data.Channel
 	err := data.FindByPrimaryKeyTo(w.db, &ch, job.RelatedID)
@@ -131,6 +132,25 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(data.JobClientPreEndpointMsgSOMCGet,
-		data.JobChannel, ch.ID)
+	go func() {
+		ep, err := w.somc.WaitForEndpoint(job.RelatedID)
+		if err != nil {
+			w.logger.Error("failed to get endpoint for chan %s: %s",
+				ch.ID, err)
+			return
+		}
+
+		err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
+			data.JobChannel, ch.ID, ep)
+		if err != nil {
+			w.logger.Error("failed to add "+
+				"JobClientPreEndpointMsgSOMCGet job: %s", err)
+		}
+	}()
+
+	return nil
+}
+
+func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
+	return nil
 }

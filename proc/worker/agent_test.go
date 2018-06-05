@@ -435,7 +435,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 		if !bytes.Equal(msgBytes, ret.Endpoint) {
 			t.Fatal("wrong endpoint sent to somc")
 		}
-	case <-time.After(conf.JobHanlderTest.SOMCTimeout * time.Second):
+	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
 		t.Fatal("timeout")
 	}
 
@@ -589,7 +589,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		if ret.Hash != offering.Hash {
 			t.Fatal("wrong hash stored")
 		}
-	case <-time.After(conf.JobHanlderTest.SOMCTimeout * time.Second):
+	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
 		t.Fatal("timeout")
 	}
 

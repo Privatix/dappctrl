@@ -132,7 +132,7 @@ func main() {
 
 	pwdStorage := new(data.PWDStorage)
 
-	handler, err := worker.NewWorker(db, somcConn,
+	handler, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn),
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
 	if err != nil {

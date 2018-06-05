@@ -12,11 +12,13 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/somc"
+	"github.com/privatix/dappctrl/util"
 )
 
 // Worker has all worker routines.
 type Worker struct {
 	abi            abi.ABI
+	logger         *util.Logger
 	db             *reform.DB
 	decryptKeyFunc data.ToPrivateKeyFunc
 	ept            *ept.Service
@@ -28,7 +30,7 @@ type Worker struct {
 }
 
 // NewWorker returns new instance of worker.
-func NewWorker(db *reform.DB, somc *somc.Conn,
+func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
@@ -45,6 +47,7 @@ func NewWorker(db *reform.DB, somc *somc.Conn,
 
 	return &Worker{
 		abi:            abi,
+		logger:         logger,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
 		ept:            eptService,

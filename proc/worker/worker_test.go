@@ -79,7 +79,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(db, somcConn, ethBack, conf.Gas,
-		conf.pscAddr, conf.PayServer.Addr, pwdStorage, data.TestToPrivateKey)
+		conf.pscAddr, conf.PayServer.Addr,
+		pwdStorage, data.TestToPrivateKey)
 	if err != nil {
 		fakeSOMC.Close()
 		somcConn.Close()
@@ -154,6 +155,15 @@ func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 		t.Fatalf("%s job expected (%s)", jobType, util.Caller())
 	}
 	e.deleteFromTestDB(t, job)
+}
+
+func (e *workerTest) deleteEthTx(t *testing.T, jobID string) {
+	ethTx := &data.EthTx{}
+	if err := e.db.FindOneTo(ethTx, "job", jobID); err != nil {
+		t.Fatalf("EthTx for job expected, got: %v (%s)", err,
+			util.Caller())
+	}
+	e.deleteFromTestDB(t, ethTx)
 }
 
 func runJob(t *testing.T, workerF func(*data.Job) error, job *data.Job) {

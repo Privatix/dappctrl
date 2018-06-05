@@ -54,8 +54,9 @@ type Worker struct {
 
 // NewWorker returns new instance of worker.
 func NewWorker(db *reform.DB, somc *somc.Conn,
-	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address, payAddr string,
-	pwdGetter data.PWDGetter,
+	ethBack EthBackend, gasConc *GasConf,
+	pscAddr common.Address,
+	payAddr string, pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
 
 	abi, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))

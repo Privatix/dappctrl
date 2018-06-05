@@ -338,13 +338,14 @@ type EthTx struct {
 	Status      string    `reform:"status"`
 	JobID       *string   `reform:"job"`
 	Issued      time.Time `reform:"issued"`
-	BlockNumber uint64    `reform:"block_number"`
 	AddrFrom    string    `reform:"addr_from"`
 	AddrTo      string    `reform:"addr_to"`
 	Nonce       *string   `reform:"nonce"`
 	GasPrice    uint64    `reform:"gas_price"`
 	Gas         uint64    `reform:"gas"`
 	TxRaw       []byte    `reform:"tx_raw"`
+	RelatedType string    `reform:"related_type"`
+	RelatedID   string    `reform:"related_id"`
 }
 
 // EthLog is an ethereum log entry.

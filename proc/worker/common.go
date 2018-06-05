@@ -45,13 +45,14 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PTC.Approve
-	err = w.ethBack.PTCIncreaseApproval(auth,
+	tx, err := w.ethBack.PTCIncreaseApproval(auth,
 		w.pscAddr, big.NewInt(int64(jobData.Amount)))
 	if err != nil {
 		return fmt.Errorf("could not ptc increase approve: %v", err)
 	}
 
-	return nil
+	return w.saveEthTX(job, tx, "PTCIncreaseApproval", job.RelatedType,
+		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
 
 // PreAccountAddBalance adds balance to psc.
@@ -73,12 +74,13 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
-	err = w.ethBack.PSCAddBalanceERC20(auth, big.NewInt(int64(jobData.Amount)))
+	tx, err := w.ethBack.PSCAddBalanceERC20(auth, big.NewInt(int64(jobData.Amount)))
 	if err != nil {
 		return fmt.Errorf("could not add balance to psc: %v", err)
 	}
 
-	return nil
+	return w.saveEthTX(job, tx, "PSCAddBalanceERC20", job.RelatedType,
+		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
@@ -120,13 +122,14 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	}
 
 	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
-	err = w.ethBack.PSCReturnBalanceERC20(auth,
+	tx, err := w.ethBack.PSCReturnBalanceERC20(auth,
 		big.NewInt(int64(jobData.Amount)))
 	if err != nil {
 		return fmt.Errorf("could not return balance from psc: %v", err)
 	}
 
-	return nil
+	return w.saveEthTX(job, tx, "PSCReturnBalanceERC20", job.RelatedType,
+		job.RelatedID, data.FromBytes(w.pscAddr.Bytes()), acc.EthAddr)
 }
 
 // AfterAccountReturnBalance updates psc and ptc balance of an account.

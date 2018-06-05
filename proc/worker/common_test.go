@@ -39,6 +39,9 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, 0,
 		agentAddr)
 
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
+
 	testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
 		*fixture.job)
 }
@@ -63,6 +66,9 @@ func TestPreAccountAddBalance(t *testing.T) {
 
 	env.ethBack.testCalled(t, "PSCAddBalanceERC20", agentAddr,
 		env.gasConf.PSC.AddBalanceERC20, big.NewInt(transferAmount))
+
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.PreAccountAddBalance, *fixture.job)
 }
@@ -93,6 +99,9 @@ func TestPreAccountReturnBalance(t *testing.T) {
 
 	env.ethBack.testCalled(t, "PSCReturnBalanceERC20", agentAddr,
 		env.gasConf.PSC.ReturnBalanceERC20, big.NewInt(amount))
+
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.PreAccountReturnBalance, *fixture.job)
 }

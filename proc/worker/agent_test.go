@@ -285,6 +285,9 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 	// Test agent pre service terminate job created.
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
 
+	// Test eth transaction was recorder.
+	env.deleteEthTx(t, fixture.job.ID)
+
 	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
 
@@ -532,6 +535,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		t.Fatalf("wrong offering status, wanted: %s, got: %s",
 			data.OfferRegister, offering.OfferStatus)
 	}
+
+	// Test ethTx was recorder.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.AgentPreOfferingMsgBCPublish,
 		*fixture.job)

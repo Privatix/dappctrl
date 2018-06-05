@@ -246,15 +246,20 @@ func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 	auth := bind.NewKeyedTransactor(accKey)
 	auth.GasLimit = w.gasConf.PSC.CooperativeClose
 
-	err = w.ethBack.CooperativeClose(auth, agentAddr, uint32(channel.Block),
-		offeringHash, balance, balanceMsgSig,
+	tx, err := w.ethBack.CooperativeClose(auth, agentAddr,
+		uint32(channel.Block), offeringHash, balance, balanceMsgSig,
 		closingSig)
 	if err != nil {
 		return fmt.Errorf("could not cooperative close: %v", err)
 	}
 
-	return w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID)
+	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
+		channel.ID); err != nil {
+		return fmt.Errorf("could not add job: %v", err)
+	}
+
+	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
+		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterCooperativeClose marks channel as closed coop.
@@ -485,15 +490,21 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 
-	if err := w.ethBack.RegisterServiceOffering(auth,
+	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
-		big.NewInt(int64(minDeposit)), offering.Supply); err != nil {
+		big.NewInt(int64(minDeposit)), offering.Supply)
+	if err != nil {
 		return err
 	}
 
 	offering.Status = data.MsgBChainPublishing
 	offering.OfferStatus = data.OfferRegister
-	return w.db.Update(offering)
+	if err = w.db.Update(offering); err != nil {
+		return fmt.Errorf("failed to update offering: %v", err)
+	}
+
+	return w.saveEthTX(job, tx, "RegisterServiceOffering", job.RelatedType,
+		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates

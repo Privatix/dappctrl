@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -114,4 +115,31 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	acc.PSCBalance = amount.Uint64()
 
 	return w.db.Update(acc)
+}
+
+func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
+	method, relatedType, relatedID, from, to string) error {
+	raw, err := tx.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	dtx := data.EthTx{
+		ID:          util.NewUUID(),
+		Hash:        data.FromBytes(tx.Hash().Bytes()),
+		Method:      method,
+		Status:      data.TxSent,
+		JobID:       pointer.ToString(job.ID),
+		Issued:      time.Now(),
+		AddrFrom:    from,
+		AddrTo:      to,
+		Nonce:       pointer.ToString(fmt.Sprint(tx.Nonce())),
+		GasPrice:    tx.GasPrice().Uint64(),
+		Gas:         tx.Gas(),
+		TxRaw:       raw,
+		RelatedType: relatedType,
+		RelatedID:   relatedID,
+	}
+
+	return w.db.Insert(&dtx)
 }

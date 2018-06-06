@@ -1,12 +1,19 @@
 package worker
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/big"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/statik"
+	"github.com/privatix/dappctrl/util"
 )
 
 func (w *Worker) clientPreChannelCreateCheckDeposit(
@@ -151,6 +158,89 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 	return nil
 }
 
+func (w *Worker) decodeEndpoint(
+	ch *data.Channel, sealed []byte) (*ept.Message, error) {
+	var client data.Account
+	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
+		return nil, err
+	}
+
+	var agent data.User
+	if err := db.FindOneTo(&agent, "eth_addr", ch.Agent); err != nil {
+		return nil, err
+	}
+
+	pub, err := data.ToBytes(agent.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := w.key(client.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	mdata, err := messages.ClientOpen(sealed, pub, key)
+	if err != nil {
+		return nil, err
+	}
+
+	schema, err := statik.ReadFile(statik.EndpointJSONSchema)
+	if err != nil {
+		return nil, err
+	}
+
+	if !util.ValidateJSON(schema, mdata) {
+		return nil, fmt.Errorf(
+			"failed to validate endpoint for chan %s", ch.ID)
+	}
+
+	var msg ept.Message
+	json.Unmarshal(mdata, &msg)
+
+	return &msg, nil
+}
+
 func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
-	return nil
+	var sealed []byte
+	if err := parseJobData(job, &sealed); err != nil {
+		return err
+	}
+
+	var ch data.Channel
+	err := data.FindByPrimaryKeyTo(w.db, &ch, job.RelatedID)
+	if err != nil {
+		return err
+	}
+
+	msg, err := w.decodeEndpoint(&ch, sealed)
+	if err != nil {
+		return err
+	}
+
+	var offer data.Offering
+	err = data.FindByPrimaryKeyTo(w.db, &offer, ch.Offering)
+	if err != nil {
+		return err
+	}
+
+	endp := data.Endpoint{
+		ID:                     util.NewUUID(),
+		Template:               offer.Template,
+		Channel:                ch.ID,
+		Hash:                   msg.TemplateHash,
+		RawMsg:                 data.FromBytes(sealed),
+		Status:                 data.MsgUnpublished,
+		PaymentReceiverAddress: pointer.ToString(msg.PaymentReceiverAddress),
+		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
+		Username:               pointer.ToString(msg.Username),
+		Password:               pointer.ToString(msg.Password),
+		AdditionalParams:       []byte("{}"),
+	}
+	if err = w.db.Save(&endp); err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobClientAfterEndpointMsgSOMCGet,
+		data.JobEndpoint, endp.ID)
 }

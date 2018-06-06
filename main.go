@@ -16,6 +16,7 @@ import (
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/proc/worker"
+	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/uisrv"
@@ -41,6 +42,7 @@ type config struct {
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
+	Report        *bugsnag.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 }
@@ -53,6 +55,7 @@ func newConfig() *config {
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
+		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 	}
@@ -74,6 +77,8 @@ func readConfig(conf *config) {
 }
 
 func main() {
+	defer bugsnag.PanicHunter()
+
 	conf := newConfig()
 	readConfig(conf)
 
@@ -87,6 +92,9 @@ func main() {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	reporter := bugsnag.NewClient(conf.Report, db, logger)
+	logger.Reporter(reporter)
 
 	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {

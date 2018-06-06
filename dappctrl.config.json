@@ -61,5 +61,9 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"
+    },
+
+    "Report": {
+      "AppID": ""
     }
 }

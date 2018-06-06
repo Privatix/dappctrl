@@ -21,10 +21,10 @@
 
     "Eth": {
         "Contract" : {
-            "PTCAddrHex": "0xcA9a5951628486fAf8B9f58dB565E33ef9673394",
-            "PSCAddrHex": "0xa396e36ca7c36d7b74580f4ab6943704b8f2ee2e"
+            "PTCAddrHex": "0x902297646C44444f3308cC8B0F5B2d782a3A3553",
+            "PSCAddrHex": "0x0983a048b6005efdec2f8d9fcbbd19cda2cd08e7"
         },
-        "GethURL": "https://rinkeby.infura.io/2B6KNL16rwlqe4fjM7BB"
+        "GethURL": "https://ropsten.infura.io/2B6KNL16rwlqe4fjM7BB"
     },
 
     "Gas": {

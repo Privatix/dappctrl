@@ -36,7 +36,8 @@ var (
 		// channelResume:    data.JobClientPreServiceUnsuspend, // TODO(maxim) This is Job not yet implemented
 	}
 
-	clientStatusFilter = `WHERE id = '%s' AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
+	clientStatusFilter   = `WHERE id = '%s' AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
+	clientChannelsFilter = `WHERE channels.agent NOT IN (SELECT eth_addr FROM accounts)`
 )
 
 type chanStatusBlock struct {
@@ -274,6 +275,108 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 
 	s.reply(w, &resp)
 }
+
+// TODO(maxim) After the implementation of pagination, it is better to use this method for handleGetClientChannels.
+// I specifically did not do the decomposition
+/*
+// handleGetClientChannels replies with all client channels or a channel by id
+// available to the client.
+func (s *Server) handleGetClientChannels(w http.ResponseWriter,
+	r *http.Request) {
+	resp := []*respGetClientChan{}
+
+	conds, args := s.formatConditions(r, &getConf{
+		Params: channelsGetParams,
+	})
+
+	tail := clientChannelsFilter + s.filter(conds)
+
+	chs, err := s.db.SelectAllFrom(data.ChannelTable, tail, args...)
+	if err != nil {
+		s.logger.Warn("failed to select channels: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	for _, v := range chs {
+		ch := v.(*data.Channel)
+
+		var offer data.Offering
+		var job data.Job
+
+		if err := s.db.FindByPrimaryKeyTo(&offer,
+			ch.Offering); err != nil {
+			s.logger.Warn("failed to select offering: %v", err)
+			s.replyUnexpectedErr(w)
+			return
+		}
+
+		if err := s.db.FindOneTo(&job,
+			"related_id", ch.ID); err != nil {
+			s.logger.Warn("failed to select job: %v", err)
+			s.replyUnexpectedErr(w)
+			return
+		}
+
+		sessSlice, err := s.db.FindAllFrom(data.SessionTable,
+			"channel", ch.ID)
+		if err != nil {
+			s.logger.Warn("failed to select channel: %v", err)
+			s.replyUnexpectedErr(w)
+		}
+
+		var sess []*data.Session
+
+		for _, v := range sessSlice {
+			sess = append(sess, v.(*data.Session))
+		}
+
+		result := new(respGetClientChan)
+		result.ID = ch.ID
+		result.Agent = ethAddrFromBase64(ch.Agent)
+		result.Client = ethAddrFromBase64(ch.Client)
+		result.Offering = ch.Offering
+		result.Deposit = ch.TotalDeposit
+		result.ChStat.ChannelStatus = ch.ChannelStatus
+		result.ChStat.ServiceStatus = ch.ServiceStatus
+		result.ChStat.LastChanged = pointer.ToString(
+			singleTimeFormat(*ch.ServiceChangedTime))
+		if offer.MaxInactiveTimeSec != nil {
+			result.ChStat.MaxInactiveTime = *offer.MaxInactiveTimeSec
+		}
+
+		result.Job.ID = job.ID
+		result.Job.Type = job.Type
+		result.Job.Status = job.Status
+		result.Job.CreatedAt = singleTimeFormat(job.CreatedAt)
+
+		var usage uint64
+		var cost = offer.SetupPrice
+
+		if offer.UnitType == data.UnitScalar {
+			for _, ses := range sess {
+				usage += ses.UnitsUsed
+			}
+		} else if offer.UnitType == data.UnitSeconds {
+			for _, ses := range sess {
+				usage += ses.SecondsConsumed
+			}
+		}
+		cost += usage * offer.UnitPrice
+
+		deposit := (ch.TotalDeposit - offer.SetupPrice) /
+			offer.UnitPrice
+
+		result.Usage.Cost = cost
+		result.Usage.Current = usage
+		result.Usage.MaxUsage = deposit
+		result.Usage.Unit = offer.UnitType
+
+		resp = append(resp, result)
+	}
+	s.reply(w, &resp)
+}
+*/
 
 // handleGetChannelStatus replies with channels status by id.
 func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, id string) {

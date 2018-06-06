@@ -17,7 +17,6 @@ import (
 const (
 	errFieldVal = "The field in the response" +
 		" does not match the value in the database"
-	testTimeFormat = "2006-01-02T15:04:05.999+07:00"
 )
 
 func getChannels(t *testing.T, params map[string]string,
@@ -83,20 +82,6 @@ func testSess(t *testing.T, chID string, usage, quantity uint64) {
 	}
 }
 
-// lower the accuracy of time
-func timeLowAccuracy(val time.Time) string {
-	return val.Format(testTimeFormat)
-}
-
-// lower the accuracy of time
-func timeStrLowAccuracy(t *testing.T, val string) string {
-	ti, err := time.Parse(timeFormat, val)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return timeLowAccuracy(ti)
-}
-
 func checkCliChan(t *testing.T, resp respGetClientChan, ch data.Channel) {
 	if ch.ID != resp.ID {
 		t.Fatalf("expected %s, got: %s",
@@ -140,13 +125,10 @@ func checkCliChanStatus(t *testing.T, resp chanStatusBlock,
 		t.Fatal(errFieldVal)
 	}
 
-	// Sometimes there is an error of several nanoseconds.
-	// We need to reduce the accuracy of time
-	expectedTime := timeLowAccuracy(*ch.ServiceChangedTime)
-	gotTime := timeStrLowAccuracy(t, *resp.LastChanged)
-	if expectedTime != gotTime {
+	expectedTime := singleTimeFormat(*ch.ServiceChangedTime)
+	if expectedTime != *resp.LastChanged {
 		t.Fatalf("expected %s, got: %s",
-			expectedTime, gotTime)
+			expectedTime, *resp.LastChanged)
 	}
 
 	if offer.MaxInactiveTimeSec == nil ||
@@ -171,9 +153,9 @@ func checkCliChanJob(t *testing.T, resp jobBlock, job data.Job) {
 			job.Status, resp.Status)
 	}
 
-	if job.CreatedAt.Format(timeFormat) != resp.CreatedAt {
+	if singleTimeFormat(job.CreatedAt) != resp.CreatedAt {
 		t.Fatalf("expected %s, got: %s",
-			job.CreatedAt.Format(timeFormat),
+			singleTimeFormat(job.CreatedAt),
 			resp.CreatedAt)
 	}
 }

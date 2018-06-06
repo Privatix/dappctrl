@@ -11,8 +11,6 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
-const timeFormat = "2006-01-02T15:04:05.999999+07:00"
-
 const (
 	channelTerminate = "terminate"
 	channelPause     = "pause"
@@ -186,6 +184,15 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 
 		if item.ChStat.LastChanged == nil {
 			item.ChStat.LastChanged = new(string)
+		} else {
+			item.ChStat.LastChanged = pointer.ToString(
+				singleTimeFormatFromStr(
+					*item.ChStat.LastChanged))
+		}
+
+		if item.Job.CreatedAt != "" {
+			item.Job.CreatedAt = singleTimeFormatFromStr(
+				item.Job.CreatedAt)
 		}
 
 		// client ETH address conversion
@@ -300,7 +307,7 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 		resp.LastChanged = new(string)
 	} else {
 		resp.LastChanged = pointer.ToString(
-			channel.ServiceChangedTime.Format(timeFormat))
+			singleTimeFormat(*channel.ServiceChangedTime))
 	}
 	resp.ChannelStatus = channel.ChannelStatus
 	resp.ServiceStatus = channel.ServiceStatus

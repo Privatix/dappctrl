@@ -153,6 +153,24 @@ func ethAddrFromBase64(addr string) string {
 	return ethAddr.String()
 }
 
+func formatTimeStr(tm *string) *string {
+	if tm != nil && *tm != "" {
+		*tm = singleTimeFormatFromStr(*tm)
+		return tm
+	}
+	return new(string)
+}
+
+func usageCalc(u *usageBlock, params *usage) {
+	if params.unitType == data.UnitScalar {
+		u.Cost = params.costUnits
+		u.Current = params.unitsUsage
+	} else if params.unitType == data.UnitSeconds {
+		u.Cost = params.costSeconds
+		u.Current = params.secUsage
+	}
+}
+
 func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 	args []interface{}) (resp []*respGetClientChan, err error) {
 	resp = []*respGetClientChan{}
@@ -182,31 +200,16 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 			return
 		}
 
-		if item.ChStat.LastChanged == nil {
-			item.ChStat.LastChanged = new(string)
-		} else {
-			item.ChStat.LastChanged = pointer.ToString(
-				singleTimeFormatFromStr(
-					*item.ChStat.LastChanged))
-		}
-
-		if item.Job.CreatedAt != "" {
-			item.Job.CreatedAt = singleTimeFormatFromStr(
-				item.Job.CreatedAt)
-		}
+		// time formatting
+		item.ChStat.LastChanged = formatTimeStr(item.ChStat.LastChanged)
+		formatTimeStr(&item.Job.CreatedAt)
 
 		// client ETH address conversion
 		item.Client = ethAddrFromBase64(item.Client)
 		item.Agent = ethAddrFromBase64(item.Agent)
 
-		// choosing the right type of channel
-		if i.unitType == data.UnitScalar {
-			item.Usage.Cost = i.costUnits
-			item.Usage.Current = i.unitsUsage
-		} else if i.unitType == data.UnitSeconds {
-			item.Usage.Cost = i.costSeconds
-			item.Usage.Current = i.secUsage
-		}
+		// usage calculation
+		usageCalc(&item.Usage, i)
 
 		resp = append(resp, item)
 	}

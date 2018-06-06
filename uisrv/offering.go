@@ -242,11 +242,9 @@ func (s *Server) handlePutOfferingStatus(
 func (s *Server) handlePutClientOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
 	req := new(OfferingPutPayload)
-
 	if !s.parsePayload(w, r, req) {
 		return
 	}
-
 	if req.Action != AcceptOffering {
 		s.replyInvalidAction(w)
 		return
@@ -259,7 +257,6 @@ func (s *Server) handlePutClientOfferingStatus(
 		"WHERE "+clientGetOfferFilter); err != nil {
 		return
 	}
-
 	if !s.findTo(w, acc, req.Account) {
 		return
 	}
@@ -274,7 +271,6 @@ func (s *Server) handlePutClientOfferingStatus(
 		s.replyUnexpectedErr(w)
 		return
 	}
-
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobClientPreChannelCreate,
 		RelatedType: data.JobOfferring,

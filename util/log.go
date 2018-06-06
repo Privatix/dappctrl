@@ -123,7 +123,7 @@ func (l *Logger) Fatal(fmt string, v ...interface{}) {
 	l.Log(LogFatal, fmt, v...)
 }
 
-// Printf prints a log message
+// Printf prints a log message.
 func (l *Logger) Printf(format string, v ...interface{}) {
 	l.logger.Output(2, gofmt.Sprintf(format, v...))
 }

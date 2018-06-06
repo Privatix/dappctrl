@@ -23,7 +23,7 @@ const (
 	mainRepo      = "github.com/privatix/dappctrl"
 
 	alpha = "alpha"
-	betta = "betta"
+	beta  = "beta"
 	rc    = "rc"
 	rtm   = "rtm"
 )
@@ -31,7 +31,7 @@ const (
 // Stages of application.
 const (
 	alphaStage = iota
-	bettaStage
+	betaStage
 	rcStage
 	rtmStage
 )
@@ -86,6 +86,11 @@ func NewConfig() *Config {
 }
 
 // NewClient initializing Bugsnag client.
+// Bugsnag client that automatic error sender to remote server.
+// We use this service to collect anonymous information
+// about the error and panic.
+// Service is activated if exist entry key = "error.sendremote"
+// and value = true in the database settings table.
 func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 	if log == nil {
 		return nil
@@ -163,8 +168,8 @@ func stageToStr(stage int) string {
 	switch stage {
 	case alphaStage:
 		result = alpha
-	case bettaStage:
-		result = betta
+	case betaStage:
+		result = beta
 	case rcStage:
 		result = rc
 	case rtmStage:
@@ -201,7 +206,7 @@ func (c *Client) notify(err error, sync bool, skip int) {
 	}
 }
 
-// Enable client is enabled?
+// Enable returns true if client is enabled.
 func (c *Client) Enable() bool {
 	return c.enable
 }

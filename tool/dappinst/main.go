@@ -1,56 +1,21 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"log"
-	"strings"
+	"math/big"
 
-	"github.com/AlekSi/pointer"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"github.com/sethvargo/go-password/password"
 )
 
 const (
-	jsoffer = `{
-	    "title": "Person",
-	        "type": "object",
-	        "properties": {
-	            "firstName": {"type": "string"},
-	            "lastName": {"type": "string"},
-	            "age": {
-	                "description": "Age in years",
-	                "type": "integer",
-	                "minimum": 0
-	            }
-	    },
-	    "required": ["firstName", "lastName"]
-	}`
-
-	jsendp = `{
-	    "title": "Person",
-	        "type": "object",
-	        "properties": {
-	            "firstName": {"type": "string"},
-	            "lastName": {"type": "string"},
-	            "age": {
-	                "description": "Age in years",
-	                "type": "integer",
-	                "minimum": 0
-	            }
-	    },
-	    "required": ["firstName", "lastName"]
-	}`
-
-	jsconf = `{}`
-
-	hash = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-	salt         = 6012867121110302348
-	passwordHash = "JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp"
-	password     = "secret"
+	defaultVPNServiceID = "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532"
 
 	jsonIdent = "    "
 )
@@ -76,69 +41,73 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	id := insertProduct(logger, db)
-	createDappvpnConfig(logger, id, *dappvpnconftpl, *dappvpnconf)
+	id, pass := customiseProduct(logger, db, defaultVPNServiceID)
+	createDappvpnConfig(logger, id, pass, *dappvpnconftpl, *dappvpnconf)
 }
 
-func minifyJSON(json string) []byte {
-	for _, v := range []string{"\t", " ", "\n"} {
-		json = strings.Replace(json, v, "", -1)
+func randPass() string {
+	n, _ := rand.Int(rand.Reader, big.NewInt(10))
+	pass, _ := password.Generate(12, int(n.Int64()), 0, false, false)
+	return pass
+}
+
+func customiseProduct(logger *util.Logger,
+	db *reform.DB, oldID string) (string, string) {
+	prod := new(data.Product)
+	if err := db.FindByPrimaryKeyTo(
+		prod, oldID); err != nil {
+		logger.Fatal("failed to select"+
+			" Vpn Service product: %v", err)
 	}
-	return []byte(json)
-}
 
-func insertProduct(logger *util.Logger, db *reform.DB) string {
+	prod.ID = util.NewUUID()
+
+	salt, err := rand.Int(rand.Reader, big.NewInt(9*1e18))
+	if err != nil {
+		logger.Fatal("failed to generate salt: %v", err)
+	}
+
+	pass := randPass()
+
+	passwordHash, err := data.HashPassword(pass, string(salt.Uint64()))
+	if err != nil {
+		logger.Fatal("failed to generate password hash: %v", err)
+	}
+
+	prod.Password = passwordHash
+	prod.Salt = salt.Uint64()
+
 	tx, err := db.Begin()
 	if err != nil {
 		logger.Fatal("failed to begin transaction: %s", err)
 	}
 	defer tx.Rollback()
 
-	offer := data.Template{
-		ID:   util.NewUUID(),
-		Hash: hash,
-		Raw:  minifyJSON(jsoffer),
-		Kind: data.TemplateOffer,
-	}
-	if err := tx.Insert(&offer); err != nil {
-		logger.Fatal("failed to insert offer template: %s", err)
-	}
-
-	access := data.Template{
-		ID:   util.NewUUID(),
-		Hash: hash,
-		Raw:  minifyJSON(jsendp),
-		Kind: data.TemplateAccess,
-	}
-	if err := tx.Insert(&access); err != nil {
-		logger.Fatal("failed to insert access template: %s", err)
+	// update product id
+	if _, err := tx.Exec(`
+			UPDATE products
+			   SET id = $1
+			 WHERE id = $2;`,
+		prod.ID, oldID); err != nil {
+		logger.Fatal("failed to update"+
+			" Vpn Service product ID: %v", err)
 	}
 
-	prod := data.Product{
-		ID:            util.NewUUID(),
-		Name:          "OpenVPN server",
-		OfferTplID:    pointer.ToString(offer.ID),
-		OfferAccessID: pointer.ToString(access.ID),
-		UsageRepType:  data.ProductUsageTotal,
-		IsServer:      true,
-		Salt:          salt,
-		Password:      passwordHash,
-		ClientIdent:   data.ClientIdentByChannelID,
-		Config:        minifyJSON(jsconf),
-	}
-	if err := tx.Insert(&prod); err != nil {
-		logger.Fatal("failed to insert product: %s", err)
+	// update product
+	if err := tx.Update(prod); err != nil {
+		logger.Fatal("failed to update"+
+			" Vpn Service product: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
 		logger.Fatal("failed to commit transaction: %s", err)
 	}
 
-	return prod.ID
+	return prod.ID, pass
 }
 
 func createDappvpnConfig(logger *util.Logger,
-	username, dappvpnconftpl, dappvpnconf string) {
+	username, password, dappvpnconftpl, dappvpnconf string) {
 	var conf map[string]interface{}
 	if err := json.Unmarshal([]byte(dappvpnconftpl), &conf); err != nil {
 		logger.Fatal("failed to parse dappvpn config template: %s", err)
@@ -150,6 +119,7 @@ func createDappvpnConfig(logger *util.Logger,
 	}
 
 	srv.(map[string]interface{})["Username"] = username
+	srv.(map[string]interface{})["Password"] = password
 
 	if err := util.WriteJSONFile(
 		dappvpnconf, "", jsonIdent, &conf); err != nil {

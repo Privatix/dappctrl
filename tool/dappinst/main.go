@@ -83,20 +83,14 @@ func customiseProduct(logger *util.Logger,
 	}
 	defer tx.Rollback()
 
-	// update product id
+	// update product
 	if _, err := tx.Exec(`
 			UPDATE products
-			   SET id = $1
-			 WHERE id = $2;`,
-		prod.ID, oldID); err != nil {
+			   SET id = $1, salt = $2, password = $3
+			 WHERE id = $4;`,
+		prod.ID, prod.Salt, prod.Password, oldID); err != nil {
 		logger.Fatal("failed to update"+
 			" Vpn Service product ID: %v", err)
-	}
-
-	// update product
-	if err := tx.Update(prod); err != nil {
-		logger.Fatal("failed to update"+
-			" Vpn Service product: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {

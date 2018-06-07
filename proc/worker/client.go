@@ -161,12 +161,13 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 func (w *Worker) decodeEndpoint(
 	ch *data.Channel, sealed []byte) (*ept.Message, error) {
 	var client data.Account
-	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
+	err := data.FindOneTo(db, &client, "eth_addr", ch.Client)
+	if err != nil {
 		return nil, err
 	}
 
 	var agent data.User
-	if err := db.FindOneTo(&agent, "eth_addr", ch.Agent); err != nil {
+	if err := data.FindOneTo(db, &agent, "eth_addr", ch.Agent); err != nil {
 		return nil, err
 	}
 
@@ -224,6 +225,8 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 		return err
 	}
 
+	params, _ := json.Marshal(msg.AdditionalParams)
+
 	endp := data.Endpoint{
 		ID:                     util.NewUUID(),
 		Template:               offer.Template,
@@ -235,9 +238,9 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
 		Username:               pointer.ToString(msg.Username),
 		Password:               pointer.ToString(msg.Password),
-		AdditionalParams:       []byte("{}"),
+		AdditionalParams:       params,
 	}
-	if err = w.db.Save(&endp); err != nil {
+	if err = w.db.Insert(&endp); err != nil {
 		return err
 	}
 

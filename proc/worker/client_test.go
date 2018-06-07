@@ -1,12 +1,16 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -98,6 +102,79 @@ func TestClientAfterChannelCreate(t *testing.T) {
 	defer data.DeleteFromTestDB(t, db, &job)
 }
 
+func swapAgentWithClient(t *testing.T, fxt *workerTestFixture) {
+	addr := fxt.Channel.Client
+	fxt.Channel.Client = fxt.Channel.Agent
+	fxt.Channel.Agent = addr
+
+	fxt.User.PublicKey = fxt.Account.PublicKey
+
+	data.SaveToTestDB(t, db, fxt.Channel, fxt.User)
+}
+
+func sealMessage(t *testing.T, env *workerTest,
+	fxt *workerTestFixture, msg *ept.Message) []byte {
+	mdata, _ := json.Marshal(&msg)
+
+	pub, err := data.ToBytes(fxt.User.PublicKey)
+	util.TestExpectResult(t, "Decode pub", nil, err)
+
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
+
+	sealed, err := messages.AgentSeal(mdata, pub, key)
+	util.TestExpectResult(t, "AgentSeal", nil, err)
+
+	return sealed
+}
+
+func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreEndpointMsgSOMCGet, data.JobChannel)
+	defer fxt.Close()
+
+	swapAgentWithClient(t, fxt)
+
+	msg := ept.Message{
+		TemplateHash:           "test-hash",
+		Username:               util.NewUUID(),
+		Password:               "test-password",
+		PaymentReceiverAddress: "1.2.3.4:5678",
+		ServiceEndpointAddress: "test-endpoint-addr",
+		AdditionalParams: map[string]string{
+			"test-key": "test-value",
+		},
+	}
+	sealed := sealMessage(t, env, fxt, &msg)
+
+	fxt.setJobData(t, sealed)
+	runJob(t, env.worker.ClientPreEndpointMsgSOMCGet, fxt.job)
+
+	var endp data.Endpoint
+	data.SelectOneFromTestDBTo(t, db, &endp,
+		"WHERE channel = $1 AND id != $2",
+		fxt.Channel.ID, fxt.Endpoint.ID)
+	defer data.DeleteFromTestDB(t, db, &endp)
+
+	params, _ := json.Marshal(msg.AdditionalParams)
+	if endp.Template != fxt.Offering.Template ||
+		strings.Trim(endp.Hash, " ") != msg.TemplateHash ||
+		endp.RawMsg != data.FromBytes(sealed) ||
+		endp.Status != data.MsgUnpublished ||
+		endp.PaymentReceiverAddress == nil ||
+		*endp.PaymentReceiverAddress != msg.PaymentReceiverAddress ||
+		endp.ServiceEndpointAddress == nil ||
+		*endp.ServiceEndpointAddress != msg.ServiceEndpointAddress ||
+		endp.Username == nil || *endp.Username != msg.Username ||
+		endp.Password == nil || *endp.Password != msg.Password ||
+		string(endp.AdditionalParams) != string(params) {
+		t.Fatalf("bad endpoint content")
+	}
+}
+
 func TestClientPreChannelTopUp(t *testing.T) {
 	t.Skip("TODO")
 	// 1. Check sufficient internal balance exists PSC.BalanceOf()
@@ -143,13 +220,6 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 func TestClientPreServiceTerminate(t *testing.T) {
 	t.Skip("TODO")
 	// 1. svc_status="Terminated"
-}
-
-func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Get EndpointMessage from SOMC
-	// 2. set msg_status="msg_channel_published"
-	// 3. svc_status="Active"
 }
 
 func TestClientAfterOfferingMsgBCPublish(t *testing.T) {

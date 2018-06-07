@@ -125,3 +125,13 @@ func Save(db *reform.DB, rec reform.Record) error {
 	}
 	return nil
 }
+
+// FindOneTo calls db.FindOneTo() returning more descriptive error.
+func FindOneTo(db *reform.DB,
+	str reform.Struct, column string, arg interface{}) error {
+	if err := db.FindOneTo(str, column, arg); err != nil {
+		return fmt.Errorf("failed to find %T by '%s' column: %s",
+			str, column, err)
+	}
+	return nil
+}

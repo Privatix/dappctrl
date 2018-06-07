@@ -72,6 +72,14 @@ func TestAdd(t *testing.T) {
 	defer db.Delete(job)
 
 	job = createJob()
+	job.RelatedID = rid
+	oldConf := queue.conf.Types[job.Type]
+	queue.conf.Types[job.Type] = TypeConfig{Duplicated: true}
+	add(t, queue, job, nil)
+	defer db.Delete(job)
+	queue.conf.Types[job.Type] = oldConf
+
+	job = createJob()
 	job.Type = data.JobClientAfterChannelCreate
 	add(t, queue, job, nil)
 	defer db.Delete(job)

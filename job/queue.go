@@ -29,8 +29,9 @@ type HandlerMap map[string]Handler
 
 // TypeConfig is a configuration for specific job type.
 type TypeConfig struct {
-	TryLimit  uint8 // Default number of tries to complete job.
-	TryPeriod uint  // Default retry period, in milliseconds.
+	TryLimit   uint8 // Default number of tries to complete job.
+	TryPeriod  uint  // Default retry period, in milliseconds.
+	Duplicated bool  // Whether do or do not check for duplicates.
 }
 
 // Config is a job queue configuration.
@@ -115,8 +116,10 @@ func (q *Queue) checkDuplicated(j *data.Job) error {
 
 // Add adds a new job to the job queue.
 func (q *Queue) Add(j *data.Job) error {
-	if err := q.checkDuplicated(j); err != nil {
-		return err
+	if !q.typeConfig(j).Duplicated {
+		if err := q.checkDuplicated(j); err != nil {
+			return err
+		}
 	}
 
 	j.ID = util.NewUUID()
@@ -317,10 +320,7 @@ func (q *Queue) processWorker(w workerIO) {
 }
 
 func (q *Queue) processJob(job *data.Job, handler Handler) {
-	tconf := q.conf.TypeConfig
-	if conf, ok := q.conf.Types[job.Type]; ok {
-		tconf = conf
-	}
+	tconf := q.typeConfig(job)
 
 	q.logger.Info("processing job %s", job.ID)
 	err := handler(job)
@@ -344,4 +344,12 @@ func (q *Queue) processJob(job *data.Job, handler Handler) {
 		q.logger.Warn("retry for job %s scheduled to %s: %s",
 			job.ID, job.NotBefore.Format(time.RFC3339), err)
 	}
+}
+
+func (q *Queue) typeConfig(job *data.Job) TypeConfig {
+	tconf := q.conf.TypeConfig
+	if conf, ok := q.conf.Types[job.Type]; ok {
+		tconf = conf
+	}
+	return tconf
 }

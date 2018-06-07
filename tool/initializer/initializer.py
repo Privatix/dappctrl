@@ -15,9 +15,9 @@
 
 import sys
 import logging
-from re import search
+from re import search, sub
 from codecs import open
-from os import remove, mkdir
+from os import remove, mkdir, path
 from json import load, dump
 from time import time, sleep
 from urllib import URLopener
@@ -84,7 +84,7 @@ main_conf = dict(
     ),
 
     build={
-        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{}\' -dappvpnconf={} -connstr=\'{}\'',
+        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{}\' -dappvpnconf={} -connstr=\"{}\"',
         'cmd_path': '.dapp_cmd',
         'db_conf': {
             "dbname": "dappctrl",
@@ -102,12 +102,14 @@ main_conf = dict(
         'dappctrl_search_field': 'PayAddress',
     },
     gui={
+        'npm_tmp_file': 'tmp_nodesource',
+        'npm_url': 'https://deb.nodesource.com/setup_9.x',
+        'npm_tmp_file_call': 'sudo -E bash ',
         'npm_inst': [
-            'curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -',
             'sudo apt-get install -y nodejs',
-            'sudo apt-get install -y npm'
+            'sudo apt-get install -y npm',
+            # 'sudo npm install dappctrlgui'
         ],
-        'npm_pack': 'sudo npm install dappctrlgui',
     },
     test={
         'path': 'test_data.sql',
@@ -123,6 +125,10 @@ main_conf = dict(
 class CMD:
     recursion = 0
 
+    def _reletive_path(self, name):
+        dirname = path.dirname(__file__)
+        return path.join(dirname, name)
+
     def _rolback(self, sysctl, code):
 
         # Rolback net.ipv4.ip_forward
@@ -135,7 +141,8 @@ class CMD:
     def _file_rw(self, p, w=False, data=None, log=None, json_r=False):
         try:
             if log:
-                logging.info(log)
+                logging.debug('{}. Path: {}'.format(log, p))
+
             if w:
                 f = open(p, 'w')
                 if data:
@@ -178,7 +185,7 @@ class CMD:
 
         cmd = 'echo deb http://http.debian.net/debian jessie-backports main ' \
               '> /etc/apt/sources.list.d/jessie-backports.list'
-        logging.info('Add jessie-backports.list')
+        logging.debug('Add jessie-backports.list')
         self._sys_call(cmd)
         self._sys_call(cmd='apt-get install lshw -y')
 
@@ -268,9 +275,12 @@ class CMD:
             ignore_dicts=True
         )
 
-    def _get_url(self, link):
+    def _get_url(self, link, to_json=True):
         resp = urlopen(url=link)
-        return self.__json_load_byteified(resp)
+        if to_json:
+            return self.__json_load_byteified(resp)
+        else:
+            return resp.read()
 
     def build_cmd(self):
         conf = main_conf['build']
@@ -280,13 +290,19 @@ class CMD:
         if db_conf:
             conf['db_conf'].update(db_conf['Conn'])
 
-        templ = str(self._get_url(conf['templ'])).replace('\'', '"')
-        conf['db_conf'] = str(conf['db_conf']).replace('\'', '"')
+        # templ = str(self._get_url(conf['templ'])).replace('\'', '"')
+        templ = self._get_url(link=conf['templ'], to_json=False).replace('\n','')
+
+        conf['db_conf'] = (sub("'|{|}", "", str(conf['db_conf']))).replace(': ','=').replace(',','')
 
         conf['cmd'] = conf['cmd'].format(templ, conf['dappvpnconf_path'],
                                          conf['db_conf'])
-        self._file_rw(p=conf['cmd_path'], w=True, data=conf['cmd'],
-                      log='Create file with dapp cmd')
+        logging.debug('Build cmd: {}'.format(conf['cmd']))
+        self._file_rw(
+            p=self._reletive_path(conf['cmd_path']),
+            w=True,
+            data=conf['cmd'],
+            log='Create file with dapp cmd')
 
 
 class Params(CMD):
@@ -322,12 +338,20 @@ class Params(CMD):
         return bool(self._sys_call(cmd, rolback=False))
 
     def get_npm(self, sysctl):
+        npm_path = self._reletive_path(main_conf['gui']['npm_tmp_file'])
+        self._file_rw(
+            p=npm_path,
+            w=True,
+            data=urlopen(main_conf['gui']['npm_url']),
+            log='Download nodesource'
+        )
+
+        cmd = main_conf['gui']['npm_tmp_file_call'] + npm_path
+        self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
+
         cmds = main_conf['gui']['npm_inst']
         for cmd in cmds:
             self._sys_call(cmd, sysctl=sysctl, s_exit=11)
-        self._sys_call(main_conf['gui']['npm_pack'],
-                       sysctl=sysctl,
-                       s_exit=11)
 
     def __iptables(self):
         logging.debug('Check iptables')
@@ -386,9 +410,9 @@ class Params(CMD):
                 break
             return addr
 
-        addr = main_conf['addr'] + main_conf['mask'][0]
+        addr = main_conf['addr']
         for i in arr:
-            if addr in i:
+            if main_conf['addr'] + main_conf['mask'][0] in i:
                 logging.info('Addres {} is busy,'
                              'please enter free address.'.format(addr))
 
@@ -421,7 +445,7 @@ class Params(CMD):
         return True
 
     def _rw_unit_file(self, ip, intfs, sysctl, code):
-        logging.debug('Preparation unit file')
+        logging.debug('Preparation unit file: {},{}'.format(ip, intfs))
         addr = ip + main_conf['mask'][0]
         try:
             # read a list of lines into data
@@ -501,13 +525,15 @@ class Params(CMD):
 
     def _check_db_run(self, sysctl, code):
         # wait 't_wait' sec until the DB starts, if not started, exit.
-        raw = self._file_rw(p=main_conf['build']['db_log'],
-                            log='Read DB log')
+
         t_start = time()
-        t_wait = 600
+        t_wait = 300
         mark = True
+        logging.info('Waiting for the launch of the DB.')
         while mark:
-            logging.info('Wait DB.')
+            logging.debug('Wait.')
+            raw = self._file_rw(p=main_conf['build']['db_log'],
+                                log='Read DB log')
             for i in raw:
                 if main_conf['build']['db_stat'] in i:
                     logging.info('DB was run.')
@@ -517,11 +543,17 @@ class Params(CMD):
                 logging.error(
                     'DB after {} sec does not run.'.format(t_wait))
                 self._rolback(sysctl, code)
-            sleep(1)
+            sleep(4)
+
+    def _clear_db_log(self):
+        self._file_rw(p=main_conf['build']['db_log'],
+                      w=True,
+                      log='Clear DB log')
 
     def _run_dapp_cmd(self, sysctl):
-        cmd = self._file_rw(p=main_conf['build']['cmd_path'],
+        cmd = self._file_rw(p=self._reletive_path(main_conf['build']['cmd_path']),
                             log='Read dapp cmd')
+
         if cmd:
             self._sys_call(cmd=cmd[0], sysctl=sysctl)
             sleep(1)
@@ -631,6 +663,7 @@ class Checker(Params, Rdata):
                 self._rw_openvpn_conf(ip, sysctl, 7)
             self._rw_unit_file(ip, intfs, sysctl, 5)
             self.clean()
+            self._clear_db_log()
             self.ip_dappctrl()
             self.run_service(sysctl, comm=True)
             self._check_db_run(sysctl, 9)
@@ -642,20 +675,19 @@ class Checker(Params, Rdata):
                 self._run_dapp_cmd(sysctl)
 
             self.run_service(sysctl)
-            if not args['no_gui']:
+            if args['no_gui']:
                 logging.info('Install GUI.')
-                sleep(1.5)
                 self.get_npm(sysctl)
             self._finalizer(True)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=' *** Installer *** ')
-    parser.add_argument("--build", nargs='?', default=True,
+    parser.add_argument("--build",nargs='?', default=True,
                         help='')
-    parser.add_argument('--vpn', type=str, nargs='?',
+    parser.add_argument('--vpn', type=str, default=True,
                         help='vpn status [start,stop,restart]')
-    parser.add_argument('--comm', type=str, nargs='?',
+    parser.add_argument('--comm', type=str, default=True,
                         help='comm status [start,stop,restart]')
 
     parser.add_argument("--test", nargs='?', default=True,
@@ -668,10 +700,10 @@ if __name__ == '__main__':
     if not args['build']:
         logging.info('Build mode.')
         CMD().build_cmd()
-    elif args['vpn']:
+    elif not args['vpn']:
         logging.info('Vpn mode.')
         Params().service('vpn', args['vpn'])
-    elif args['comm']:
+    elif not args['comm']:
         logging.info('Comm mode.')
         Params().service('comm', args['comm'])
     else:

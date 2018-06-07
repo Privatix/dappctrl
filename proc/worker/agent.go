@@ -505,6 +505,17 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	auth := bind.NewKeyedTransactor(agentKey)
+
+	pscBalance, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
+
+	if err != nil {
+		return fmt.Errorf("failed to get psc balance: %v", err)
+	}
+
+	if pscBalance.Uint64() < pscBalance.Uint64() {
+		return fmt.Errorf("failed to publish: insufficient psc balance")
+	}
+
 	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 

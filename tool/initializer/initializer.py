@@ -107,7 +107,7 @@ main_conf = dict(
         'npm_tmp_file_call': 'sudo -E bash ',
         'npm_inst': [
             'sudo apt-get install -y nodejs',
-            'sudo apt-get install -y npm',
+            # 'sudo apt-get install -y npm',
             # 'sudo npm install dappctrlgui'
         ],
     },

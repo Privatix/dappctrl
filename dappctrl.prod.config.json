@@ -13,9 +13,11 @@
 
     "DB": {
         "Conn": {
-            "user": "postgres",
             "dbname": "dappctrl",
-            "sslmode": "disable"
+            "sslmode": "disable",
+            "user": "postgres",
+            "host": "localhost",
+            "port": "5432"
         }
     },
 
@@ -61,6 +63,21 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true
             },
             "addCheckBalance": {
                 "TryLimit": 0,

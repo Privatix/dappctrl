@@ -119,6 +119,24 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 1
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "addCheckBalance": {
+                "Duplicated": true
             }
         }
     },

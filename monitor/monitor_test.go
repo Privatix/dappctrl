@@ -48,6 +48,8 @@ var (
 
 	pscAddr = common.HexToAddress(
 		"0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")
+	ptcAddr = common.HexToAddress(
+		"0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec")
 
 	someAddress = common.HexToAddress(someAddressStr)
 	someHash    = common.HexToHash(someHashStr)
@@ -337,7 +339,7 @@ func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
 	client := newMockClient()
 
 	mon, err := NewMonitor(conf.BlockMonitor, logger, db,
-		queue, client, pscAddr)
+		queue, client, pscAddr, ptcAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,6 +382,7 @@ func TestMonitorLogCollect(t *testing.T) {
 
 	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
 	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
+	eventAboutToken := common.HexToHash(eth.EthTokenApproval)
 
 	var block uint64 = 10
 
@@ -398,6 +401,7 @@ func TestMonitorLogCollect(t *testing.T) {
 		// ----- 6 confirmations
 		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
 		{eventAboutChannel, someAddress, someAddress},   // 0 no match
+		{eventAboutToken, someAddress, someAddress},     // 0 no match
 		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
 		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
 		// ----- 2 confirmations
@@ -428,7 +432,7 @@ func TestMonitorLogCollect(t *testing.T) {
 		freshnum      uint64
 		lognum        int
 	}{
-		{6, 2, 1}, // freshnum = 2: will skip the first offering event
+		{6, 2, 2}, // freshnum = 2: will skip the first offering event
 		{2, 0, 4}, // freshnum = 0: will include the second offering event
 		{0, 2, 6},
 	}
@@ -513,13 +517,42 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	}
 
 	insertEvent(t, db, nextBlock(), 0,
+		eth.EthTokenApproval,
+		td.addr[0],
+		pscAddr,
+		123)
+
+	queue.expect(data.JobPreAccountAddBalance, func(j *data.Job) bool {
+		return j.Type == data.JobPreAccountAddBalance
+	})
+
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthTokenTransfer,
+		td.addr[0],
+		someAddress,
+		123)
+
+	queue.expect(data.JobAfterAccountAddBalance, func(j *data.Job) bool {
+		return j.Type == data.JobAfterAccountAddBalance
+	})
+
+	insertEvent(t, db, nextBlock(), 0,
+		eth.EthTokenTransfer,
+		someAddress,
+		td.addr[0],
+		123)
+
+	queue.expect(data.JobAfterAccountAddBalance, func(j *data.Job) bool {
+		return j.Type == data.JobAfterAccountAddBalance
+	})
+
+	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingCreated,
 		td.addr[0],          // agent
 		td.offering[0].Hash, // offering hash
 		minDepositVal,       // min deposit
 	)
-	comment := "wanted " + data.JobAgentAfterOfferingMsgBCPublish
-	queue.expect(comment, func(j *data.Job) bool {
+	queue.expect(data.JobAgentAfterOfferingMsgBCPublish, func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterOfferingMsgBCPublish
 	})
 	// offering events containing agent address should be ignored

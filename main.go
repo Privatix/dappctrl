@@ -143,7 +143,8 @@ func main() {
 	}()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		gethConn, pscAddr)
+		gethConn, pscAddr, ptcAddr)
+
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)

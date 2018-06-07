@@ -98,8 +98,14 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		switch {
 		case forAgent:
 			scheduler, found = agentSchedulers[eventHash]
+			if !found {
+				scheduler, found = accountSchedulers[eventHash]
+			}
 		case forClient:
 			scheduler, found = clientSchedulers[eventHash]
+			if !found {
+				scheduler, found = accountSchedulers[eventHash]
+			}
 		case isOfferingRelated(&el):
 			scheduler, found = offeringSchedulers[eventHash]
 		}
@@ -130,6 +136,17 @@ type scheduleFunc func(*Monitor, *data.EthLog, string)
 type funcAndType struct {
 	f scheduleFunc
 	t string
+}
+
+var accountSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthTokenApproval): {
+		(*Monitor).scheduleTokenApprove,
+		data.JobPreAccountAddBalance,
+	},
+	common.HexToHash(eth.EthTokenTransfer): {
+		(*Monitor).scheduleTokenTransfer,
+		data.JobAfterAccountAddBalance,
+	},
 }
 
 var agentSchedulers = map[common.Hash]funcAndType{
@@ -318,6 +335,58 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	return id
 }
 
+func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
+	addr := common.BytesToAddress(el.Topics[topic1].Bytes())
+	addrHash := data.FromBytes(addr.Bytes())
+	acc := &data.Account{}
+	if err := m.db.FindOneTo(acc, "eth_addr", addrHash); err != nil {
+		if err == sql.ErrNoRows {
+			m.logger.Debug("account not found for addr %s",
+				el.Topics[1].Hex())
+			m.ignoreEvent(el)
+			return
+		}
+		m.logger.Error("failed to find account: %v", err)
+		m.ignoreEvent(el)
+		return
+	}
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   acc.ID,
+		RelatedType: data.JobAccount,
+	}
+
+	m.scheduleCommon(el, j)
+}
+
+func (m *Monitor) scheduleTokenTransfer(el *data.EthLog, jobType string) {
+	addr1 := common.BytesToAddress(el.Topics[topic1].Bytes())
+	addr1Hash := data.FromBytes(addr1.Bytes())
+	addr2 := common.BytesToAddress(el.Topics[topic2].Bytes())
+	addr2Hash := data.FromBytes(addr2.Bytes())
+
+	acc := &data.Account{}
+	if err := m.db.SelectOneTo(acc, "where eth_addr=$1 or eth_addr=$2", addr1Hash,
+		addr2Hash); err != nil {
+		if err == sql.ErrNoRows {
+			m.logger.Info("account not found for addr %s",
+				el.Topics[1].Hex())
+			m.ignoreEvent(el)
+			return
+		}
+		m.logger.Info("failed to find account: %v", err)
+		m.ignoreEvent(el)
+		return
+	}
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   acc.ID,
+		RelatedType: data.JobAccount,
+	}
+
+	m.scheduleCommon(el, j)
+}
+
 func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
 	jobType string) {
 	hashB64 := data.FromBytes(el.Topics[2].Bytes())
@@ -329,7 +398,8 @@ func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
 	var id string
 	if err := row.Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
-			m.logger.Debug("offering not found with hash %s", el.Topics[2].Hex())
+			m.logger.Debug("offering not found with hash %s",
+				el.Topics[2].Hex())
 			m.ignoreEvent(el)
 			return
 		}

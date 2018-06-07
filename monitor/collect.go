@@ -45,6 +45,8 @@ var clientRelatedEvents = hexesToHashes(
 	eth.EthOfferingEndpoint,
 	eth.EthCooperativeChannelClose,
 	eth.EthUncooperativeChannelClose,
+	eth.EthTokenApproval,
+	eth.EthTokenTransfer,
 )
 
 var offeringRelatedEvents = hexesToHashes(
@@ -61,7 +63,6 @@ func (m *Monitor) collect(ctx context.Context, timeout int64,
 		time.Duration(timeout)*time.Second)
 	defer cancel()
 
-	pscAddr := []common.Address{m.pscAddr}
 	firstBlock, freshBlock, lastBlock, err := m.getRangeOfInterest(ctx)
 	if err != nil {
 		m.errWrapper(ctx, err)
@@ -89,7 +90,7 @@ func (m *Monitor) collect(ctx context.Context, timeout int64,
 	)
 
 	agentQ := ethereum.FilterQuery{
-		Addresses: pscAddr,
+		Addresses: []common.Address{m.pscAddr, m.ptcAddr},
 		FromBlock: new(big.Int).SetUint64(firstBlock),
 		ToBlock:   new(big.Int).SetUint64(lastBlock),
 		Topics:    [][]common.Hash{nil, addresses},

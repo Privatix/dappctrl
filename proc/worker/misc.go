@@ -147,5 +147,5 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		RelatedID:   relatedId,
 	}
 
-	return data.Insert(w.db, &dtx)
+	return data.Insert(w.db.Querier, &dtx)
 }

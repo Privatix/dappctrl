@@ -11,9 +11,12 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
+
+type deployConfigFunc func(db *reform.DB, endpoint string) error
 
 // Worker has all worker routines.
 type Worker struct {
@@ -27,6 +30,7 @@ type Worker struct {
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
 	queue          *job.Queue
+	deployConfig   deployConfigFunc
 }
 
 // NewWorker returns new instance of worker.
@@ -55,6 +59,7 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
+		deployConfig:   config.DeployConfig,
 	}, nil
 }
 

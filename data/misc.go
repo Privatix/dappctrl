@@ -101,7 +101,7 @@ func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
 
 // FindByPrimaryKeyTo calls db.FindByPrimaryKeyTo() returning more descriptive
 // error.
-func FindByPrimaryKeyTo(db *reform.DB,
+func FindByPrimaryKeyTo(db *reform.Querier,
 	rec reform.Record, key interface{}) error {
 	if err := db.FindByPrimaryKeyTo(rec, key); err != nil {
 		return fmt.Errorf("failed to find %T by primary key: %s",
@@ -111,7 +111,7 @@ func FindByPrimaryKeyTo(db *reform.DB,
 }
 
 // Insert calls db.Insert() returning more descriptive error.
-func Insert(db *reform.DB, str reform.Struct) error {
+func Insert(db *reform.Querier, str reform.Struct) error {
 	if err := db.Insert(str); err != nil {
 		return fmt.Errorf("failed to insert %T: %s", str, err)
 	}
@@ -119,7 +119,7 @@ func Insert(db *reform.DB, str reform.Struct) error {
 }
 
 // Insert calls db.Save() returning more descriptive error.
-func Save(db *reform.DB, rec reform.Record) error {
+func Save(db *reform.Querier, rec reform.Record) error {
 	if err := db.Save(rec); err != nil {
 		return fmt.Errorf("failed to save %T: %s", rec, err)
 	}
@@ -127,7 +127,7 @@ func Save(db *reform.DB, rec reform.Record) error {
 }
 
 // FindOneTo calls db.FindOneTo() returning more descriptive error.
-func FindOneTo(db *reform.DB,
+func FindOneTo(db *reform.Querier,
 	str reform.Struct, column string, arg interface{}) error {
 	if err := db.FindOneTo(str, column, arg); err != nil {
 		return fmt.Errorf("failed to find %T by '%s' column: %s",

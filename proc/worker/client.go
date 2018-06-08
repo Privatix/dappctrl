@@ -8,6 +8,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
@@ -63,7 +64,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(
 		ServiceStatus: data.ServicePending,
 		TotalDeposit:  deposit,
 	}
-	if err := data.Insert(w.db, &ch); err != nil {
+	if err := data.Insert(w.db.Querier, &ch); err != nil {
 		return err
 	}
 
@@ -96,13 +97,13 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	}
 
 	var acc data.Account
-	err := data.FindByPrimaryKeyTo(w.db, &acc, jdata.Account)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &acc, jdata.Account)
 	if err != nil {
 		return err
 	}
 
 	var offer data.Offering
-	err = data.FindByPrimaryKeyTo(w.db, &offer, jdata.Oferring)
+	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, jdata.Oferring)
 	if err != nil {
 		return err
 	}
@@ -129,13 +130,13 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 // ClientAfterChannelCreate activates channel and triggers endpoint retrieval.
 func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 	var ch data.Channel
-	err := data.FindByPrimaryKeyTo(w.db, &ch, job.RelatedID)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &ch, job.RelatedID)
 	if err != nil {
 		return err
 	}
 
 	ch.ChannelStatus = data.ChannelActive
-	if err = data.Save(w.db, &ch); err != nil {
+	if err = data.Save(w.db.Querier, &ch); err != nil {
 		return err
 	}
 
@@ -161,13 +162,14 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 func (w *Worker) decodeEndpoint(
 	ch *data.Channel, sealed []byte) (*ept.Message, error) {
 	var client data.Account
-	err := data.FindOneTo(db, &client, "eth_addr", ch.Client)
+	err := data.FindOneTo(w.db.Querier, &client, "eth_addr", ch.Client)
 	if err != nil {
 		return nil, err
 	}
 
 	var agent data.User
-	if err := data.FindOneTo(db, &agent, "eth_addr", ch.Agent); err != nil {
+	err = data.FindOneTo(w.db.Querier, &agent, "eth_addr", ch.Agent)
+	if err != nil {
 		return nil, err
 	}
 
@@ -202,6 +204,8 @@ func (w *Worker) decodeEndpoint(
 	return &msg, nil
 }
 
+// ClientPreEndpointMsgSOMCGet decodes endpoint message, saves it in the DB and
+// triggers product configuration.
 func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 	var sealed []byte
 	if err := parseJobData(job, &sealed); err != nil {
@@ -209,7 +213,7 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 	}
 
 	var ch data.Channel
-	err := data.FindByPrimaryKeyTo(w.db, &ch, job.RelatedID)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &ch, job.RelatedID)
 	if err != nil {
 		return err
 	}
@@ -220,7 +224,7 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 	}
 
 	var offer data.Offering
-	err = data.FindByPrimaryKeyTo(w.db, &offer, ch.Offering)
+	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, ch.Offering)
 	if err != nil {
 		return err
 	}
@@ -246,4 +250,33 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 
 	return w.addJob(data.JobClientAfterEndpointMsgSOMCGet,
 		data.JobEndpoint, endp.ID)
+}
+
+// ClientAfterEndpointMsgSOMCGet cofigures a product.
+func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
+	var endp data.Endpoint
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, job.RelatedID)
+	if err != nil {
+		return err
+	}
+
+	if err := w.deployConfig(w.db, job.RelatedID); err != nil {
+		return err
+	}
+
+	return w.db.InTransaction(func(tx *reform.TX) error {
+		endp.Status = data.MsgChPublished
+		if err := data.Save(tx.Querier, &endp); err != nil {
+			return err
+		}
+
+		var ch data.Channel
+		err = data.FindByPrimaryKeyTo(w.db.Querier, &ch, endp.Channel)
+		if err != nil {
+			return err
+		}
+
+		ch.ServiceStatus = data.ServiceSuspended
+		return data.Save(tx.Querier, &ch)
+	})
 }

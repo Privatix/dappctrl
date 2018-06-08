@@ -151,7 +151,8 @@ CREATE TABLE products (
     salt bigint NOT NULL, -- password salt
     password bcrypt_hash NOT NULL,
     client_ident client_ident_type NOT NULL,
-    config json  -- Store configuration of product --
+    config json,  -- Store configuration of product --
+    service_endpoint_address varchar(106) -- address ("hostname") of service endpoint. Can be dns or IP.
 );
 
 -- Service offerings.

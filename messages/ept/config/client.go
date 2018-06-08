@@ -25,15 +25,8 @@ const (
 	filePerm         = 0644
 	pathPerm         = 0755
 
-	nameCipher       = "cipher"
-	nameConnectRetry = "connect-retry"
-	nameCompLZO      = "comp-lzo"
-	namePing         = "ping"
-	namePingRestart  = "ping-restart"
-	nameProto        = "proto"
-)
+	nameCompLZO = "comp-lzo"
 
-const (
 	defaultCipher        = "AES-256-CBC"
 	defaultConnectRetry  = "2 120"
 	defaultPing          = "10"
@@ -43,18 +36,15 @@ const (
 	defaultServerPort    = "443"
 )
 
-var defaultConfig = &cConf{
-	Cipher:        defaultCipher,
-	ConnectRetry:  defaultConnectRetry,
-	Ping:          defaultPing,
-	PingRestart:   defaultPingRestart,
-	Port:          defaultServerPort,
-	Proto:         defaultProto,
-	ServerAddress: defaultServerAddress,
+var defaultConfig = newVpnConfig()
+
+// Config is a configuration for VPN client.
+type Config struct {
+	ConfigDir string
 }
 
-// cConf OpenVpn client model config
-type cConf struct {
+// vpnConf OpenVpn client model config
+type vpnConf struct {
 	Ca            string `json:"caData"`
 	Cipher        string `json:"cipher"`
 	ConnectRetry  string `json:"connect-retry"`
@@ -66,56 +56,54 @@ type cConf struct {
 	ServerAddress string
 }
 
-// DeployConfig is to be done my @maxim.
-func DeployConfig(db *reform.DB, endpoint string) error {
-	return nil
+func newVpnConfig() *vpnConf {
+	return &vpnConf{
+		Cipher:        defaultCipher,
+		ConnectRetry:  defaultConnectRetry,
+		Ping:          defaultPing,
+		PingRestart:   defaultPingRestart,
+		Port:          defaultServerPort,
+		Proto:         defaultProto,
+		ServerAddress: defaultServerAddress,
+	}
 }
 
-// Deploy creates target directory, the name is equivalent to channel.ID or
-// endpoint.Channel. In target directory, two files are created ("client.ovpn",
-// "access.ovpn"): 1) "client.ovpn" - the file is filled with
-// parameters from "srvAddr" (server host or ip address) and params (OpenVpn
+// NewConfig creates a default VPN client configuration.
+func NewConfig() *Config {
+	return &Config{"/etc/openvpn/config"}
+}
+
+// DeployConfig creates target directory, the name is equivalent
+// to endpoint.Channel. In target directory, two files are created
+// ("client.ovpn", "access.ovpn"): 1) "client.ovpn" - the file is filled with
+// parameters from endpoint.ServiceEndpointAddress (server host or ip address)
+// and endpoint.AdditionalParams (OpenVpn
 // server configuration parameters) 2) "access.ovpn" - the file is filled
-// "login" and "pass" parameters.
-// rootDir - information about the location of the directory in which
+// endpoint.Channel and endpoint.Password parameters.
+// dir - information about the location of the directory in which
 // the directories with configuration files are stored.
-func Deploy(record reform.Record, rootDir, srvAddr string,
-	login, pass string, params []byte) (string, error) {
-	var target string
+func DeployConfig(db *reform.DB, endpoint, dir string) error {
+	e := new(data.Endpoint)
 
-	if record == nil || !isHost(srvAddr) || login == "" ||
-		pass == "" || len(params) == 0 {
-		return "", ErrInput
+	if err := db.FindByPrimaryKeyTo(e, endpoint); err != nil {
+		return ErrEndpoint
 	}
 
-	switch r := record.(type) {
-	case *data.Channel:
-		if r.ID == "" {
-			return "", ErrInput
-		}
+	target := filepath.Join(dir, e.Channel)
 
-		target = filepath.Join(rootDir, r.ID)
-		if err := createPath(target); err != nil {
-			return "", err
-		}
-	case *data.Endpoint:
-		if r.Channel == "" {
-			return "", ErrInput
-		}
-
-		target = filepath.Join(rootDir, r.Channel)
-		if err := createPath(target); err != nil {
-			return "", err
-		}
-	default:
-		return "", ErrInput
+	if err := createPath(target); err != nil {
+		return err
 	}
 
-	if err := deploy(target, srvAddr, login, pass, params); err != nil {
-		return "", err
+	save := func(str *string) string {
+		if str != nil {
+			return *str
+		}
+		return ""
 	}
 
-	return target, nil
+	return deploy(target, save(e.ServiceEndpointAddress),
+		save(e.Username), save(e.Password), e.AdditionalParams)
 }
 
 func deploy(targetDir, srvAddr string,
@@ -161,7 +149,7 @@ func checkParam(key string, data []byte) bool {
 }
 
 // generate injects config values into custom template
-func (c *cConf) generate(tpl string) (string, error) {
+func (c *vpnConf) generate(tpl string) (string, error) {
 	t := template.New(clientTpl)
 
 	t, err := t.Funcs(
@@ -180,7 +168,7 @@ func (c *cConf) generate(tpl string) (string, error) {
 
 // saveToFile reads clientConfig template
 // and writes result to destination file
-func (c *cConf) saveToFile(destPath string) error {
+func (c *vpnConf) saveToFile(destPath string) error {
 	statikFS, err := fs.New()
 	if err != nil {
 		return err
@@ -207,7 +195,7 @@ func (c *cConf) saveToFile(destPath string) error {
 
 // clientConfig returns config object
 func clientConfig(srvAddr string,
-	additionalParams []byte) (*cConf, error) {
+	additionalParams []byte) (*vpnConf, error) {
 	if !isHost(srvAddr) {
 		return nil, ErrInput
 	}

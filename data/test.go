@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
+	"github.com/AlekSi/pointer"
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/util"
 )
@@ -390,6 +391,11 @@ type TestFixture struct {
 	Endpoint       *Endpoint
 }
 
+// Test service addresses.
+const (
+	TestServiceEndpointAddress = "localhost"
+)
+
 // NewTestFixture creates a new test fixture.
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod := NewTestProduct()
@@ -401,6 +407,7 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 		acc.EthAddr, user.EthAddr, off.ID, 0, 0, ChannelActive)
 	endpTmpl := NewTestTemplate(TemplateAccess)
 	prod.OfferAccessID = &endpTmpl.ID
+	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
 	InsertToTestDB(t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)

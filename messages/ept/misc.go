@@ -19,11 +19,15 @@ func validMsg(schema []byte, msg Message) bool {
 	return true
 }
 
-func fillMsg(o *obj, paymentReceiverAddress, serviceEndpointAddress string,
+func fillMsg(o *obj, paymentReceiverAddress string,
 	conf map[string]string) (*Message, error) {
 
 	if o.prod.OfferAccessID == nil {
 		return nil, ErrProdOfferAccessID
+	}
+
+	if o.prod.ServiceEndpointAddress == nil {
+		return nil, ErrProdEndAddress
 	}
 
 	return &Message{
@@ -31,7 +35,7 @@ func fillMsg(o *obj, paymentReceiverAddress, serviceEndpointAddress string,
 		Username:               o.ch.ID,
 		Password:               genPass(),
 		PaymentReceiverAddress: paymentReceiverAddress,
-		ServiceEndpointAddress: serviceEndpointAddress,
+		ServiceEndpointAddress: *o.prod.ServiceEndpointAddress,
 		AdditionalParams:       conf,
 	}, nil
 }

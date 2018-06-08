@@ -65,5 +65,9 @@
 
     "Report": {
       "AppID": ""
+    },
+
+    "VPNClient" : {
+        "ConfigDir" : "/etc/openvpn/config"
     }
 }

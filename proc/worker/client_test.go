@@ -186,7 +186,7 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 	defer fxt.Close()
 
 	err := fmt.Errorf("some error")
-	env.worker.deployConfig = func(db *reform.DB, endpoint string) error {
+	env.worker.deployConfig = func(db *reform.DB, endpoint, dir string) error {
 		return err
 	}
 

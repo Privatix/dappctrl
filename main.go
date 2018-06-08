@@ -42,6 +42,7 @@ type config struct {
 	Proc          *proc.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
+	StaticPasword string
 }
 
 func newConfig() *config {
@@ -64,6 +65,14 @@ func readConfig(conf *config) {
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s", err)
 	}
+}
+
+func getPWDStorage(conf *config) data.PWDGetSetter {
+	if conf.StaticPasword == "" {
+		return new(data.PWDStorage)
+	}
+	storage := data.StaticPWDStorage(conf.StaticPasword)
+	return &storage
 }
 
 func main() {
@@ -123,7 +132,7 @@ func main() {
 		panic(err)
 	}
 
-	pwdStorage := new(data.PWDStorage)
+	pwdStorage := getPWDStorage(conf)
 
 	worker, err := worker.NewWorker(db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,

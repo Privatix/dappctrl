@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -113,6 +114,17 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	}
 
 	acc.PSCBalance = amount.Uint64()
+
+	// TODO: move timeout to conf
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	amount, err := w.ethBack.EthBalanceAt(ctx, agentAddr)
+	if err != nil {
+		return fmt.Errorf("could not get eth balance: %v", err)
+	}
+
+	acc.EthBalance = data.B64BigInt(amount)
 
 	return w.db.Update(acc)
 }

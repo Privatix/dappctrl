@@ -322,12 +322,12 @@ func (q *Queue) processWorker(w workerIO) {
 func (q *Queue) processJob(job *data.Job, handler Handler) {
 	tconf := q.typeConfig(job)
 
-	q.logger.Info("processing job %s", job.ID)
+	q.logger.Info("processing job %s(%s)", job.ID, job.Type)
 	err := handler(job)
 
 	if err == nil {
 		job.Status = data.JobDone
-		q.logger.Info("job %s is done", job.ID)
+		q.logger.Info("job %s(%s) is done", job.ID, job.Type)
 		return
 	}
 
@@ -337,12 +337,13 @@ func (q *Queue) processJob(job *data.Job, handler Handler) {
 
 	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
-		q.logger.Error("job %s is failed", job.ID)
+		q.logger.Error("job %s(%s) is failed", job.ID, job.Type)
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn("retry for job %s scheduled to %s: %s",
-			job.ID, job.NotBefore.Format(time.RFC3339), err)
+		q.logger.Warn("retry for job %s(%s) scheduled to %s: %s",
+			job.ID, job.Type,
+			job.NotBefore.Format(time.RFC3339), err)
 	}
 }
 

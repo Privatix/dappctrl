@@ -147,7 +147,7 @@ class CMD:
                 f = open(p, 'w')
                 if data:
                     if json_r:
-                        dump(data, f)
+                        dump(data, f, indent=4)
                     else:
                         f.writelines(data)
                 f.close()

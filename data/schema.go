@@ -301,12 +301,17 @@ const (
 	JobAfterAccountAddBalance               = "afterAccountAddBalance"
 	JobPreAccountReturnBalance              = "preAccountReturnBalance"
 	JobAfterAccountReturnBalance            = "afterAccountReturnBalance"
-	JobAccountBalancesUpdate                = "accountBalancesUpdate"
+	JobAccountAddCheckBalance               = "addCheckBalance"
 )
 
-// JobBalanceData is data required for transfer jobs.
+// JobBalanceData is a data required for transfer jobs.
 type JobBalanceData struct {
 	Amount uint
+}
+
+// JobPublishData is a data required for blockchain publish jobs.
+type JobPublishData struct {
+	GasPrice uint
 }
 
 // Job is a task within persistent queue.

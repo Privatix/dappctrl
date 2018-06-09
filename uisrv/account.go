@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -152,6 +153,21 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.db.Insert(acc); err != nil {
 		s.logger.Warn("could not insert account: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	if err := s.queue.Add(&data.Job{
+		ID:          util.NewUUID(),
+		Status:      data.JobActive,
+		RelatedType: data.JobAccount,
+		RelatedID:   acc.ID,
+		Type:        data.JobAccountAddCheckBalance,
+		CreatedAt:   time.Now(),
+		CreatedBy:   data.JobUser,
+		Data:        []byte("{}"),
+	}); err != nil {
+		s.logger.Error("could not add %s job", data.JobAccountAddCheckBalance)
 		s.replyUnexpectedErr(w)
 		return
 	}

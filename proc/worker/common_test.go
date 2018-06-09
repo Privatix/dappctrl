@@ -106,20 +106,23 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 	// Test update balance in DB.accounts.psc_balance
 	env := newWorkerTest(t)
 	defer env.close()
-	testAccountBalancesUpdate(t, env, env.worker.AfterAccountReturnBalance,
+	testAccountBalancesUpdate(t, env,
+		env.worker.AfterAccountReturnBalance,
 		data.JobAfterAccountReturnBalance)
 }
 
-func TestAccountBalancesUpdate(t *testing.T) {
-	env := newWorkerTest(t)
-	defer env.close()
-	testAccountBalancesUpdate(t, env, env.worker.AccountBalancesUpdate,
-		data.JobAccountBalancesUpdate)
+func TestAccountAddCheckBalancee(t *testing.T) {
+	t.Skip("TODO")
+	// env := newWorkerTest(t)
+	// defer env.close()
+	// testAccountBalancesUpdate(t, env, env.worker.AccountAddCheckBalance,
+	// 	data.JobAccountAddCheckBalance)
 }
 
 func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	worker func(*data.Job) error, jobType string) {
 	// update balances in DB.accounts.psc_balance and DB.account.ptc_balance
+
 	fixture := env.newTestFixture(t, jobType, data.JobAccount)
 	defer fixture.close()
 

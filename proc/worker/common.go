@@ -1,8 +1,10 @@
 package worker
 
 import (
+	"database/sql"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -79,7 +81,12 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
 func (w *Worker) AfterAccountAddBalance(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAfterAccountAddBalance)
+	acc, err := w.relatedAccount(job, data.JobAfterAccountAddBalance)
+	if err != nil {
+		return err
+	}
+
+	return w.updateAccountBalances(acc)
 }
 
 // PreAccountReturnBalance returns from psc to ptc.
@@ -121,10 +128,30 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 
 // AfterAccountReturnBalance updates psc and ptc balance of an account.
 func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
+	acc, err := w.relatedAccount(job, data.JobAfterAccountReturnBalance)
+	if err != nil {
+		return err
+	}
+
+	return w.updateAccountBalances(acc)
 }
 
-// AccountBalancesUpdate updates ptc, psc and eth balance values.
-func (w *Worker) AccountBalancesUpdate(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAccountBalancesUpdate)
+// AccountAddCheckBalance updates ptc, psc and eth balance values.
+func (w *Worker) AccountAddCheckBalance(job *data.Job) error {
+	acc, err := w.relatedAccount(job, data.JobAccountAddCheckBalance)
+	if err != nil {
+		// Account was deleted, stop updating.
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+
+	if err = w.updateAccountBalances(acc); err != nil {
+		return err
+	}
+
+	// HACK: return error to repeat job after a minute.
+	job.NotBefore = time.Now().Add(time.Minute)
+	return fmt.Errorf("repeating job")
 }

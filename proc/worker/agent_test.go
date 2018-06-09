@@ -2,6 +2,7 @@ package worker
 
 import (
 	"bytes"
+	"encoding/json"
 	"math/big"
 	"testing"
 	"time"
@@ -496,6 +497,14 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		data.JobOfferring)
 	defer env.close()
 	defer fixture.close()
+
+	jobData := &data.JobPublishData{GasPrice: 10}
+	jobDataB, err := json.Marshal(jobData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.job.Data = jobDataB
+	env.updateInTestDB(t, fixture.job)
 
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 

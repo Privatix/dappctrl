@@ -1,0 +1,65 @@
+{
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null,
+        "EthCallTimeout": 5
+    },
+
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
+    },
+
+    "DB": {
+        "Conn": {
+            "user": "postgres",
+            "dbname": "dappctrl",
+            "sslmode": "disable"
+        }
+    },
+
+    "Eth": {
+        "Contract" : {
+            "PTCAddrHex": "0xcA9a5951628486fAf8B9f58dB565E33ef9673394",
+            "PSCAddrHex": "0xa396e36ca7c36d7b74580f4ab6943704b8f2ee2e"
+        },
+        "GethURL": "https://rinkeby.infura.io/2B6KNL16rwlqe4fjM7BB"
+    },
+
+    "Job": {
+        "CollectJobs": 100,
+        "CollectPeriod": 1000,
+        "WorkerBufLen": 10,
+        "Workers": 0,
+        "TryLimit": 3,
+        "TryPeriod": 60000,
+        "Types": {
+            "clientPreChannelCreate": {
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            }
+        }
+    },
+
+    "Log": {
+        "Level": "info"
+    },
+
+    "PayAddress": "http://localhost:9000/v1/pmtChannel/pay",
+
+    "PayServer": {
+        "Addr": "localhost:9000",
+        "TLS": null
+    },
+
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+
+    "SOMC": {
+        "ReconnPeriod": 5000,
+        "URL": "ws://89.38.96.53:8080"
+    }
+}

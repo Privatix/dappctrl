@@ -148,7 +148,7 @@ func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 		relID, data.JobTask)
 	if err != nil {
 		t.Log(err)
-		t.Fatalf("%s job expected", jobType)
+		t.Fatalf("%s job expected (%s)", jobType, util.Caller())
 	}
 	e.deleteFromTestDB(t, job)
 }

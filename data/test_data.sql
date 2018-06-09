@@ -3,10 +3,10 @@ BEGIN TRANSACTION;
 -- Test data for integration testing of dappvpn.
 
 INSERT INTO products (id, name, usage_rep_type, is_server, salt, password,
-    client_ident)
+    client_ident, service_endpoint_address)
 VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'Test VPN service', 'total',
     true, 6012867121110302348, 'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
-    'by_channel_id');
+    'by_channel_id', 'localhost');
 
 INSERT INTO accounts (id, eth_addr, public_key, private_key, name, ptc_balance,
     psc_balance, eth_balance)

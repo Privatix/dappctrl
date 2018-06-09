@@ -15,6 +15,9 @@ import (
 
 // EthBackend adapter to communicate with contract.
 type EthBackend interface {
+	// TODO(maxim) task BV-363
+	/*LatestBlockNumber(ctx context.Context) (*big.Int, error)*/
+
 	CooperativeClose(*bind.TransactOpts, common.Address, uint32,
 		[common.HashLength]byte, *big.Int, []byte, []byte) error
 
@@ -33,12 +36,32 @@ type EthBackend interface {
 
 	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) error
 
+	// TODO(maxim) task BV-363
+	/*	PSCGetChannelInfo(opts *bind.CallOpts,
+		client common.Address, agent common.Address,
+		blockNumber uint32,
+		hash [common.HashLength]byte) ([common.HashLength]byte,
+		*big.Int, uint32, *big.Int, error)*/
+
 	PSCOfferingSupply(opts *bind.CallOpts,
 		hash [common.HashLength]byte) (uint16, error)
 
 	PSCCreateChannel(opts *bind.TransactOpts,
 		agent common.Address, hash [common.HashLength]byte,
 		deposit *big.Int) (*types.Transaction, error)
+
+	PSCTopUpChannel(opts *bind.TransactOpts, agent common.Address,
+		blockNumber uint32, hash [common.HashLength]byte,
+		deposit *big.Int) (*types.Transaction, error)
+
+	PSCUncooperativeClose(opts *bind.TransactOpts, agent common.Address,
+		blockNumber uint32, hash [common.HashLength]byte,
+		balance *big.Int) (*types.Transaction, error)
+
+	// TODO(maxim) task BV-363
+	/*	PSCSettle(opts *bind.TransactOpts,
+		agent common.Address, blockNumber uint32,
+		hash [common.HashLength]byte) (*types.Transaction, error)*/
 }
 
 type ethBackendInstance struct {
@@ -52,6 +75,17 @@ func NewEthBackend(psc *contract.PrivatixServiceContract,
 	ptc *contract.PrivatixTokenContract, conn *ethclient.Client) EthBackend {
 	return &ethBackendInstance{psc, ptc, conn}
 }
+
+// TODO(maxim) task BV-363
+/*func (b *ethBackendInstance) LatestBlockNumber(ctx context.Context) (*big.Int,
+	error) {
+	block, err := b.conn.BlockByNumber(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get"+
+			" latest block: %s", err)
+	}
+	return block.Number(), err
+}*/
 
 func (b *ethBackendInstance) CooperativeClose(opts *bind.TransactOpts,
 	agent common.Address, block uint32, offeringHash [common.HashLength]byte,
@@ -135,6 +169,15 @@ func (b *ethBackendInstance) PSCOfferingSupply(
 	return supply, err
 }
 
+// TODO(maxim) task BV-363
+/*func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
+	client common.Address, agent common.Address,
+	blockNumber uint32,
+	hash [common.HashLength]byte) ([common.HashLength]byte,
+	*big.Int, uint32, *big.Int, error) {
+	return b.psc.GetChannelInfo(opts, client, agent, blockNumber, hash)
+}*/
+
 func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
@@ -146,3 +189,37 @@ func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	}
 	return tx, err
 }
+
+func (b *ethBackendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	tx, err := b.psc.TopUpChannel(opts, agent, blockNumber, hash, deposit)
+	if err != nil {
+		err = fmt.Errorf("failed to top up PSC channel: %s", err)
+	}
+	return tx, err
+}
+
+func (b *ethBackendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	balance *big.Int) (*types.Transaction, error) {
+	tx, err := b.psc.UncooperativeClose(opts, agent,
+		blockNumber, hash, balance)
+	if err != nil {
+		err = fmt.Errorf("failed to uncooperative close"+
+			" PSC channel: %s", err)
+	}
+	return tx, err
+}
+
+// TODO(maxim) task BV-363
+/*func (b *ethBackendInstance) PSCSettle(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	tx, err := b.psc.Settle(opts, agent, blockNumber, hash)
+	if err != nil {
+		err = fmt.Errorf("failed to settle"+
+			" PSC channel: %s", err)
+	}
+	return tx, err
+}*/

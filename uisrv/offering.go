@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -35,12 +36,6 @@ const (
                                       FROM accounts 
                                      WHERE eth_addr = offerings.agent)`
 )
-
-type clientPreChannelCreateData struct {
-	Account  string `json:"account"`
-	Offering string `json:"offering"`
-	GasPrice uint   `json:"gasPrice"`
-}
 
 // handleOfferings calls appropriate handler by scanning incoming request.
 func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
@@ -264,7 +259,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	s.logger.Info("action ( %v )  request for offering with id:"+
 		" %v received.", req.Action, id)
 
-	dataJSON, err := json.Marshal(&clientPreChannelCreateData{
+	dataJSON, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID})
 	if err != nil {
 		s.logger.Error("failed to marshal job data: %v", err)

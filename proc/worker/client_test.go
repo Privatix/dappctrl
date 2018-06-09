@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
@@ -26,7 +28,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 	fxt.job.RelatedID = util.NewUUID()
 	fxt.setJobData(t, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
-		Oferring: fxt.Offering.ID,
+		Offering: fxt.Offering.ID,
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
@@ -175,28 +177,234 @@ func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
 	}
 }
 
+func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterEndpointMsgSOMCGet, data.JobEndpoint)
+	defer fxt.Close()
+
+	err := fmt.Errorf("some error")
+	env.worker.deployConfig = func(db *reform.DB, endpoint, dir string) error {
+		return err
+	}
+
+	util.TestExpectResult(t, "run job", err,
+		env.worker.ClientAfterEndpointMsgSOMCGet(fxt.job))
+
+	err = nil
+	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
+
+	var endp data.Endpoint
+	data.FindInTestDB(t, db, &endp, "id", fxt.Endpoint.ID)
+
+	var ch data.Channel
+	data.FindInTestDB(t, db, &ch, "id", fxt.Channel.ID)
+
+	if endp.Status != data.MsgChPublished ||
+		ch.ServiceStatus != data.ServiceSuspended {
+		t.Fatalf("bad endpoint or channel status")
+	}
+}
+
 func TestClientPreChannelTopUp(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Check sufficient internal balance exists PSC.BalanceOf()
-	// 2. PSC.topUpChannel()
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelTopUp, data.JobChannel)
+	defer fxt.Close()
+
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	if err := data.Save(db.Querier, client); err != nil {
+		t.Fatal(err)
+	}
+
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+
+	fxt.setJobData(t, ClientPreChannelTopUpData{
+		Channel:  fxt.Channel.ID,
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
+		fxt.Offering.SetupPrice
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+		env.worker.ClientPreChannelTopUp(fxt.job))
+
+	issued := time.Now()
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+
+	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
+
+	var tx data.EthTx
+
+	data.FindInTestDB(t, db, &tx, "related_id", fxt.Channel.ID)
+	defer data.DeleteFromTestDB(t, db, &tx)
+
+	if tx.Method != "TopUpChannel" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != client.EthAddr ||
+		tx.AddrTo != fxt.Offering.Agent ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
 }
 
 func TestClientAfterChannelTopUp(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Add deposit to channels.total_deposit
+	testAfterChannelTopUp(t, false)
+}
+
+func clientPreUncooperativeCloseRequestNormFlow(t *testing.T, env *workerTest,
+	fxt *workerTestFixture) {
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	if err := data.Save(db.Querier, client); err != nil {
+		t.Fatal(err)
+	}
+
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+
+	fxt.setJobData(t, ClientPreUncooperativeCloseRequestData{
+		Channel:  fxt.Channel.ID,
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	fxt.Channel.TotalDeposit = 1
+	fxt.Channel.ReceiptBalance = 1
+	if err := data.Save(db.Querier, fxt.Channel); err != nil {
+		t.Fatal(err)
+	}
+
+	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
+
+	checkChanStatus(t, env.db.Querier, fxt.Channel.ID,
+		data.ChannelWaitChallenge)
+}
+
+func checkChanStatus(t *testing.T, db *reform.Querier, channel string,
+	status string) {
+	var ch data.Channel
+	if err := data.FindOneTo(db, &ch, "id", channel); err != nil {
+		t.Fatal(err)
+	}
+	if ch.ChannelStatus != status {
+		t.Fatal("channel status is wrong")
+	}
 }
 
 func TestClientPreUncooperativeCloseRequest(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PSC.uncooperativeClose
-	// 2. set ch_status="wait_challenge"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelTopUp, data.JobChannel)
+	defer fxt.Close()
+
+	issued := time.Now()
+
+	clientPreUncooperativeCloseRequestNormFlow(t, env, fxt)
+
+	var tx data.EthTx
+
+	data.FindInTestDB(t, db, &tx, "related_id", fxt.Channel.ID)
+	defer data.DeleteFromTestDB(t, db, &tx)
+
+	if tx.Method != "UncooperativeClose" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != fxt.Channel.Client ||
+		tx.AddrTo != fxt.Offering.Agent ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
+
+	badChStatus := []string{data.ChannelClosedCoop,
+		data.ChannelClosedUncoop, data.ChannelWaitUncoop,
+		data.ChannelWaitCoop, data.ChannelWaitChallenge,
+		data.ChannelInChallenge}
+
+	badServiceStatus := []string{data.ServiceTerminated}
+
+	fxt.Channel.ReceiptBalance = 2
+	if err := data.Save(db.Querier, fxt.Channel); err != nil {
+		t.Fatal(err)
+	}
+
+	util.TestExpectResult(t, "Job run", ErrChReceiptBalance,
+		env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+
+	for _, status := range badServiceStatus {
+		fxt.Channel.ServiceStatus = status
+		if err := data.Save(db.Querier, fxt.Channel); err != nil {
+			t.Fatal(err)
+		}
+		util.TestExpectResult(t, "Job run", ErrInvalidServiceStatus,
+			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+	}
+
+	for _, status := range badChStatus {
+		fxt.Channel.ChannelStatus = status
+		if err := data.Save(db.Querier, fxt.Channel); err != nil {
+			t.Fatal(err)
+		}
+		util.TestExpectResult(t, "Job run", ErrInvalidChStatus,
+			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+	}
 }
 
 func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
-	t.Skip("TODO")
-	// 1. set ch_status="in_challenge"
-	// 2. "preUncooperativeClose" with delay
-	// 3. "preServiceTerminate"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
+	defer fxt.Close()
+
+	runJob(t, env.worker.ClientAfterUncooperativeCloseRequest, fxt.job)
+
+	ch := new(data.Channel)
+	data.FindByPrimaryKeyTo(env.db.Querier, ch, fxt.Channel.ID)
+
+	if ch.ChannelStatus != data.ChannelInChallenge {
+		t.Fatal("channel status is wrong")
+	}
+
+	j, err := env.db.FindAllFrom(data.JobTable, "related_id",
+		fxt.Channel.ID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var jobs []*data.Job
+
+	for _, v := range j {
+		if job, ok := v.(*data.Job); ok {
+			jobs = append(jobs, job)
+		}
+	}
+
+	if len(jobs) != 3 {
+		t.Fatal("not all jobs are in the database")
+	}
 }
 
 func TestClientPreUncooperativeClose(t *testing.T) {

@@ -133,7 +133,7 @@ func parseJobData(job *data.Job, data interface{}) error {
 }
 
 func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
-	method, relatedType, relatedId, from, to string) error {
+	method, relatedType, relatedID, from, to string) error {
 	raw, err := tx.MarshalJSON()
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		Gas:         tx.Gas(),
 		TxRaw:       raw,
 		RelatedType: relatedType,
-		RelatedID:   relatedId,
+		RelatedID:   relatedID,
 	}
 
 	return data.Insert(w.db.Querier, &dtx)

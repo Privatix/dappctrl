@@ -16,7 +16,7 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type deployConfigFunc func(db *reform.DB, endpoint string) error
+type deployConfigFunc func(db *reform.DB, endpoint, dir string) error
 
 // Worker has all worker routines.
 type Worker struct {
@@ -30,6 +30,7 @@ type Worker struct {
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
 	queue          *job.Queue
+	clientVPN      *config.Config
 	deployConfig   deployConfigFunc
 }
 
@@ -37,7 +38,7 @@ type Worker struct {
 func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter,
-	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
+	decryptKeyFunc data.ToPrivateKeyFunc, clientVPN *config.Config) (*Worker, error) {
 
 	abi, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -60,10 +61,11 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		deployConfig:   config.DeployConfig,
+		clientVPN:      clientVPN,
 	}, nil
 }
 
 // SetQueue sets queue for handlers.
-func (h *Worker) SetQueue(queue *job.Queue) {
-	h.queue = queue
+func (w *Worker) SetQueue(queue *job.Queue) {
+	w.queue = queue
 }

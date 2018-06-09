@@ -118,7 +118,7 @@ func Insert(db *reform.Querier, str reform.Struct) error {
 	return nil
 }
 
-// Insert calls db.Save() returning more descriptive error.
+// Save calls db.Save() returning more descriptive error.
 func Save(db *reform.Querier, rec reform.Record) error {
 	if err := db.Save(rec); err != nil {
 		return fmt.Errorf("failed to save %T: %s", rec, err)

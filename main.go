@@ -11,6 +11,7 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
+	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
@@ -43,6 +44,7 @@ type config struct {
 	Report        *bugsnag.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
+	VPNClient     *vpncli.Config
 }
 
 func newConfig() *config {
@@ -56,6 +58,7 @@ func newConfig() *config {
 		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
+		VPNClient:     vpncli.NewConfig(),
 	}
 }
 
@@ -134,7 +137,8 @@ func main() {
 
 	handler, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn),
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
+		pscAddr, conf.PayAddress, pwdStorage,
+		data.ToPrivateKey, conf.VPNClient)
 	if err != nil {
 		panic(err)
 	}

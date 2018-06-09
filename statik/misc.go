@@ -25,7 +25,7 @@ func ReadFile(name string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open statik file: %s", err)
 	}
-	file.Close()
+	defer file.Close()
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {

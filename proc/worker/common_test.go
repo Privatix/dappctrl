@@ -144,3 +144,66 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 
 	testCommonErrors(t, worker, *fixture.job)
 }
+
+func testAfterChannelTopUp(t *testing.T, agent bool) {
+	var jobType string
+
+	if agent {
+		jobType = data.JobAgentAfterChannelTopUp
+	} else {
+		jobType = data.JobClientAfterChannelTopUp
+	}
+
+	// Add deposit to channels.total_deposit
+	env := newWorkerTest(t)
+	fixture := env.newTestFixture(t, jobType,
+		data.JobChannel)
+	defer env.close()
+	defer fixture.close()
+
+	block := fixture.Channel.Block
+	addedDeposit := big.NewInt(1)
+
+	eventData, err := logChannelTopUpDataArguments.Pack(block, addedDeposit)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
+	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
+	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
+	topics := data.LogTopics{
+		common.BytesToHash(agentAddr.Bytes()),
+		common.BytesToHash(clientAddr.Bytes()),
+		offeringHash,
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fixture.job.ID
+	ethLog.Data = data.FromBytes(eventData)
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	var job func(*data.Job) error
+
+	if agent {
+		job = env.worker.AgentAfterChannelTopUp
+	} else {
+		job = env.worker.ClientAfterChannelTopUp
+	}
+	runJob(t, job, fixture.job)
+
+	channel := new(data.Channel)
+	env.findTo(t, channel, fixture.Channel.ID)
+
+	diff := channel.TotalDeposit - fixture.Channel.TotalDeposit
+	if diff != addedDeposit.Uint64() {
+		t.Fatal("total deposit not updated")
+	}
+
+	testCommonErrors(t, job, *fixture.job)
+}

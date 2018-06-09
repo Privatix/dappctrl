@@ -8,6 +8,7 @@ var (
 	ErrTimeOut           = errors.New("timeout")
 	ErrInvalidFormat     = errors.New("invalid endpoint message format")
 	ErrProdOfferAccessID = errors.New("OfferAccessID from product is null")
+	ErrProdEndAddress    = errors.New("ServiceEndpointAddress from product is null")
 )
 
 func errWrapper(err error, msg string) error {

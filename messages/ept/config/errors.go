@@ -4,6 +4,7 @@ import "github.com/pkg/errors"
 
 // Config errors
 var (
+	ErrEndpoint        = errors.New("failed to select endpoint")
 	ErrInput           = errors.New("one or more input parameters is wrong")
 	ErrFilePathIsEmpty = errors.New("filePath is empty")
 	ErrCertNotExist    = errors.New("certificate doesn't exist in the config file")

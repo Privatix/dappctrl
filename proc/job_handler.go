@@ -28,8 +28,10 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentPreOfferingMsgSOMCPublish:      worker.AgentPreOfferingMsgSOMCPublish,
 
 		// Client jobs.
-		data.JobClientPreChannelCreate:   worker.ClientPreChannelCreate,
-		data.JobClientAfterChannelCreate: worker.ClientAfterChannelCreate,
+		data.JobClientPreChannelCreate:        worker.ClientPreChannelCreate,
+		data.JobClientAfterChannelCreate:      worker.ClientAfterChannelCreate,
+		data.JobClientPreEndpointMsgSOMCGet:   worker.ClientPreEndpointMsgSOMCGet,
+		data.JobClientAfterEndpointMsgSOMCGet: worker.ClientAfterEndpointMsgSOMCGet,
 
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,

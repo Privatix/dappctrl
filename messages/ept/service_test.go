@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,7 @@ type testFixture struct {
 
 type eptTestConfig struct {
 	ServerConfig map[string]string
+	ValidHost    []string
 }
 
 func newFixture(t *testing.T) *testFixture {
@@ -118,7 +120,10 @@ func newChan(offer string) *data.Channel {
 }
 
 func newEptTestConfig() *eptTestConfig {
-	return &eptTestConfig{}
+	return &eptTestConfig{
+		ServerConfig: make(map[string]string),
+		ValidHost:    []string{"localhost"},
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -141,6 +146,17 @@ func TestMain(m *testing.M) {
 func TestValidEndpointMessage(t *testing.T) {
 	fxt := newFixture(t)
 	defer fxt.clean()
+
+	if conf.EptTest.ValidHost == nil {
+		t.Fatal("test data is incorrect")
+	}
+
+	fxt.product.ServiceEndpointAddress = &strings.Split(
+		conf.EptTest.ValidHost[0], ":")[0]
+
+	if err := testDB.Update(fxt.product); err != nil {
+		t.Fatal(err)
+	}
 
 	s, err := New(testDB, conf.PayServer.Addr)
 	if err != nil {

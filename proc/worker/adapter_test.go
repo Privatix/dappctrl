@@ -34,6 +34,11 @@ func newTestEthBackend(pscAddr common.Address) *testEthBackend {
 	return b
 }
 
+// TODO(maxim) task BV-363
+/*func (b *testEthBackend) LatestBlockNumber(ctx context.Context) (*big.Int, error) {
+	return nil, nil
+}*/
+
 func (b *testEthBackend) CooperativeClose(opts *bind.TransactOpts,
 	agentAddr common.Address, block uint32, offeringHash [32]byte,
 	balance *big.Int, balanceMsgSig []byte, ClosingSig []byte) error {
@@ -106,6 +111,15 @@ func (b *testEthBackend) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	return nil
 }
 
+// TODO(maxim) task BV-363
+/*func (b *testEthBackend) PSCGetChannelInfo(opts *bind.CallOpts,
+	client common.Address, agent common.Address,
+	blockNumber uint32,
+	hash [common.HashLength]byte) ([common.HashLength]byte,
+	*big.Int, uint32, *big.Int, error) {
+	return [32]byte{}, nil, 0, nil, nil
+}*/
+
 func (b *testEthBackend) setTransaction(t *testing.T,
 	opts *bind.TransactOpts, input []byte) {
 	rawTx := types.NewTransaction(1, b.pscAddr, nil, 0, nil, input)
@@ -169,3 +183,42 @@ func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
 
 	return tx, nil
 }
+
+func (b *testEthBackend) PSCTopUpChannel(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "TopUpChannel",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, deposit},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCUncooperativeClose(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	balance *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "UncooperativeClose",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, balance},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, balance, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}
+
+// TODO(maxim) task BV-363
+/*func (b *testEthBackend) PSCSettle(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	return nil, nil
+}*/

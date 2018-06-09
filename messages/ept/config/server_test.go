@@ -113,10 +113,7 @@ func validParams(out map[string]string) bool {
 
 	delete(out, caData)
 
-	if len(out) != 0 {
-		return false
-	}
-	return true
+	return len(out) == 0
 }
 
 func joinFile(path, file string) string {

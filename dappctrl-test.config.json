@@ -81,8 +81,9 @@
         "TruffleAPIURL": ""
     },
 
-    "JobHanlderTest": {
-        "SOMCTimeout": 10
+    "JobHandlerTest": {
+        "SOMCTimeout": 10,
+        "ReactionDelay": 10
     },
 
     "Job": {

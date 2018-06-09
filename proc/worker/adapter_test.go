@@ -19,12 +19,13 @@ type testEthBackCall struct {
 }
 
 type testEthBackend struct {
-	callStack  []testEthBackCall
-	balancePSC *big.Int
-	balancePTC *big.Int
-	abi        abi.ABI
-	pscAddr    common.Address
-	tx         *types.Transaction
+	callStack   []testEthBackCall
+	balancePSC  *big.Int
+	balancePTC  *big.Int
+	abi         abi.ABI
+	pscAddr     common.Address
+	offerSupply uint16
+	tx          *types.Transaction
 }
 
 func newTestEthBackend(pscAddr common.Address) *testEthBackend {
@@ -135,4 +136,36 @@ func (b *testEthBackend) testCalled(t *testing.T, method string,
 	}
 	t.Logf("%+v\n", b.callStack)
 	t.Fatalf("no call of %s from %v with args: %v", method, caller, args)
+}
+
+func (b *testEthBackend) PSCOfferingSupply(opts *bind.CallOpts,
+	hash [common.HashLength]byte) (uint16, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "PSCOfferingSupply",
+		caller: opts.From,
+		args:   []interface{}{hash},
+	})
+	return b.offerSupply, nil
+}
+
+const (
+	testTXNonce    uint64 = 1
+	testTXGasLimit uint64 = 2
+	testTXGasPrice int64  = 1
+)
+
+func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
+	agent common.Address, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "PSCCreateChannel",
+		caller: opts.From,
+		args:   []interface{}{agent, hash, deposit},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		big.NewInt(testTXGasPrice), []byte{})
+
+	return tx, nil
 }

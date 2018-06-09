@@ -26,15 +26,19 @@ func FromBytes(src []byte) string {
 // ToHash returns the ethereum's hash represented by the base64 string s.
 func ToHash(h string) (common.Hash, error) {
 	hashBytes, err := ToBytes(h)
-	ret := common.BytesToHash(hashBytes)
-	return ret, err
+	if err != nil {
+		err = fmt.Errorf("unable to parse ethereum hash: %s", err)
+	}
+	return common.BytesToHash(hashBytes), err
 }
 
 // ToAddress returns ethereum's address from base 64 encoded string.
 func ToAddress(addr string) (common.Address, error) {
 	addrBytes, err := ToBytes(addr)
-	ret := common.BytesToAddress(addrBytes)
-	return ret, err
+	if err != nil {
+		err = fmt.Errorf("unable to parse ethereum addr: %s", err)
+	}
+	return common.BytesToAddress(addrBytes), err
 }
 
 // BytesToUint32 using big endian.
@@ -93,4 +97,41 @@ func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
 
 	return value, nil
 
+}
+
+// FindByPrimaryKeyTo calls db.FindByPrimaryKeyTo() returning more descriptive
+// error.
+func FindByPrimaryKeyTo(db *reform.Querier,
+	rec reform.Record, key interface{}) error {
+	if err := db.FindByPrimaryKeyTo(rec, key); err != nil {
+		return fmt.Errorf("failed to find %T by primary key: %s",
+			rec, err)
+	}
+	return nil
+}
+
+// Insert calls db.Insert() returning more descriptive error.
+func Insert(db *reform.Querier, str reform.Struct) error {
+	if err := db.Insert(str); err != nil {
+		return fmt.Errorf("failed to insert %T: %s", str, err)
+	}
+	return nil
+}
+
+// Insert calls db.Save() returning more descriptive error.
+func Save(db *reform.Querier, rec reform.Record) error {
+	if err := db.Save(rec); err != nil {
+		return fmt.Errorf("failed to save %T: %s", rec, err)
+	}
+	return nil
+}
+
+// FindOneTo calls db.FindOneTo() returning more descriptive error.
+func FindOneTo(db *reform.Querier,
+	str reform.Struct, column string, arg interface{}) error {
+	if err := db.FindOneTo(str, column, arg); err != nil {
+		return fmt.Errorf("failed to find %T by '%s' column: %s",
+			str, column, err)
+	}
+	return nil
 }

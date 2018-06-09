@@ -289,10 +289,18 @@ func RollbackTestTX(t *testing.T, tx *reform.TX) {
 	}
 }
 
-// FindInTestDB selects a record from test db
+// FindInTestDB selects a record from test DB.
 func FindInTestDB(t *testing.T, db *reform.DB,
 	str reform.Struct, column string, arg interface{}) {
 	if err := db.FindOneTo(str, column, arg); err != nil {
+		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
+	}
+}
+
+// SelectOneFromTestDBTo selects a record from test DB using a given query tail.
+func SelectOneFromTestDBTo(t *testing.T, db *reform.DB,
+	str reform.Struct, tail string, args ...interface{}) {
+	if err := db.SelectOneTo(str, tail, args...); err != nil {
 		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
 	}
 }

@@ -3,6 +3,7 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
@@ -185,6 +186,7 @@ func (s *Server) handlePutOfferingStatus(
 		RelatedType: data.JobOfferring,
 		RelatedID:   id,
 		CreatedBy:   data.JobUser,
+		CreatedAt:   time.Now(),
 		Data:        dataJSON,
 	}); err != nil {
 		s.logger.Error("failed to add %s: %v",

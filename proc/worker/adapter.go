@@ -31,6 +31,8 @@ type EthBackend interface {
 	PSCAddBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
 
 	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
+
+	EthBalanceAt(context.Context, common.Address) (*big.Int, error)
 }
 
 type ethBackendInstance struct {
@@ -87,4 +89,9 @@ func (b *ethBackendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
 func (b *ethBackendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	amount *big.Int) (*types.Transaction, error) {
 	return b.psc.ReturnBalanceERC20(opts, amount)
+}
+
+func (b *ethBackendInstance) EthBalanceAt(ctx context.Context,
+	owner common.Address) (*big.Int, error) {
+	return b.conn.BalanceAt(ctx, owner, nil)
 }

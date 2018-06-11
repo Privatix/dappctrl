@@ -2,6 +2,7 @@ package worker
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -138,6 +139,7 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	fixture := env.newTestFixture(t, jobType, data.JobAccount)
 	defer fixture.close()
 
+	env.ethBack.balanceEth = big.NewInt(2)
 	env.ethBack.balancePTC = big.NewInt(100)
 	env.ethBack.balancePSC = big.NewInt(200)
 
@@ -152,6 +154,12 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	if account.PSCBalance != 200 {
 		t.Fatalf("wrong psc balance, wanted: %v, got: %v", 200,
 			account.PSCBalance)
+	}
+	if strings.TrimSpace(string(account.EthBalance)) !=
+		data.FromBytes(env.ethBack.balanceEth.Bytes()) {
+		t.Logf("%v!=%v", string(account.EthBalance),
+			data.FromBytes(env.ethBack.balanceEth.Bytes()))
+		t.Fatal("wrong eth balance")
 	}
 
 	testCommonErrors(t, worker, *fixture.job)

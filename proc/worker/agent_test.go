@@ -513,6 +513,12 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	fixture.job.Data = jobDataB
 	env.updateInTestDB(t, fixture.job)
 
+	minDeposit := fixture.Offering.MinUnits*fixture.Offering.UnitPrice +
+		fixture.Offering.SetupPrice
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit*
+		uint64(fixture.Offering.Supply) + 1))
+
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
@@ -529,8 +535,6 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	}
 
 	offeringHash := data.TestToHash(t, offering.Hash)
-
-	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
 
 	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,

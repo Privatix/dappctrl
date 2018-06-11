@@ -21,6 +21,7 @@ type testEthBackCall struct {
 
 type testEthBackend struct {
 	callStack  []testEthBackCall
+	balanceEth *big.Int
 	balancePSC *big.Int
 	balancePTC *big.Int
 	abi        abi.ABI
@@ -58,6 +59,15 @@ func (b *testEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
 	})
 	tx := types.NewTransaction(0, common.Address{}, big.NewInt(1), 1, big.NewInt(1), nil)
 	return tx, nil
+}
+
+func (b *testEthBackend) EthBalanceAt(_ context.Context,
+	addr common.Address) (*big.Int, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "EthBalanceAt",
+		args:   []interface{}{addr},
+	})
+	return b.balanceEth, nil
 }
 
 func (b *testEthBackend) PTCBalanceOf(opts *bind.CallOpts,

@@ -512,7 +512,8 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return fmt.Errorf("failed to get psc balance: %v", err)
 	}
 
-	if pscBalance.Uint64() < pscBalance.Uint64() {
+	totalDeposit := minDeposit * uint64(offering.Supply)
+	if pscBalance.Uint64() < totalDeposit {
 		return fmt.Errorf("failed to publish: insufficient psc balance")
 	}
 

@@ -43,6 +43,13 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return fmt.Errorf("failed to get eth balance: %v", err)
 	}
 
+	wantedEthBalance := w.gasConf.PTC.Approve * jobData.GasPrice
+
+	if wantedEthBalance > amount.Uint64() {
+		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
+			wantedEthBalance, amount.Uint64())
+	}
+
 	key, err := w.key(acc.PrivateKey)
 	if err != nil {
 		return fmt.Errorf("unable to parse account's priv key: %v", err)
@@ -50,6 +57,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PTC.Approve
+	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
 	tx, err := w.ethBack.PTCIncreaseApproval(auth,
 		w.pscAddr, big.NewInt(int64(jobData.Amount)))
 	if err != nil {

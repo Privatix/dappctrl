@@ -26,6 +26,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 	})
 
 	env.ethBack.balancePTC = big.NewInt(transferAmount)
+	env.ethBack.balanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
 

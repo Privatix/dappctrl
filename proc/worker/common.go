@@ -134,7 +134,21 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return fmt.Errorf("insufficient psc balance")
 	}
 
+	amount, err = w.ethBalance(auth.From)
+	if err != nil {
+		return fmt.Errorf("failed to get eth balance: %v", err)
+	}
+
+	wantedEthBalance := w.gasConf.PSC.ReturnBalanceERC20 * jobData.GasPrice
+
+	if wantedEthBalance > amount.Uint64() {
+		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
+			wantedEthBalance, amount.Uint64())
+	}
+
 	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
+	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
+
 	tx, err := w.ethBack.PSCReturnBalanceERC20(auth,
 		big.NewInt(int64(jobData.Amount)))
 	if err != nil {

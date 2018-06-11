@@ -91,6 +91,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	})
 
 	env.ethBack.balancePSC = big.NewInt(amount)
+	env.ethBack.balanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountReturnBalance, fixture.job)
 

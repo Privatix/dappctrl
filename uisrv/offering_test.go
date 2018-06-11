@@ -310,7 +310,7 @@ func getOfferingStatus(t *testing.T, id string) *http.Response {
 	return res
 }
 
-func sendOfferingAction(t *testing.T, id, action string, gasPrice uint) *http.Response {
+func sendOfferingAction(t *testing.T, id, action string, gasPrice uint64) *http.Response {
 	path := fmt.Sprint(offeringsPath, id, "/status")
 	payload := &OfferingPutPayload{Action: action, GasPrice: gasPrice}
 	return sendPayload(t, http.MethodPut, path, payload)
@@ -321,7 +321,7 @@ func TestPutOfferingStatus(t *testing.T) {
 	defer fixture.Close()
 	defer setTestUserCredentials(t)()
 
-	testGasPrice := uint(1)
+	testGasPrice := uint64(1)
 
 	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
 	if res.StatusCode != http.StatusBadRequest {

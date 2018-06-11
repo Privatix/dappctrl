@@ -522,7 +522,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return fmt.Errorf("failed to publish: %v", err)
 	}
 
-	wantedEthBalance := auth.GasLimit * uint64(publishData.GasPrice)
+	wantedEthBalance := auth.GasLimit * publishData.GasPrice
 	if wantedEthBalance > ethAmount.Uint64() {
 		return fmt.Errorf("failed to publish: insufficient"+
 			"eth balance, wanted %v, got: %v", wantedEthBalance,

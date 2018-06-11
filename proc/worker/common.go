@@ -35,7 +35,12 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	}
 
 	if amount.Uint64() < uint64(jobData.Amount) {
-		return fmt.Errorf("not enough balance at ptc")
+		return fmt.Errorf("insufficient ptc balance")
+	}
+
+	amount, err = w.ethBalance(addr)
+	if err != nil {
+		return fmt.Errorf("failed to get eth balance: %v", err)
 	}
 
 	key, err := w.key(acc.PrivateKey)
@@ -118,7 +123,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	}
 
 	if amount.Uint64() > uint64(jobData.Amount) {
-		return fmt.Errorf("not enough psc balance")
+		return fmt.Errorf("insufficient psc balance")
 	}
 
 	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20

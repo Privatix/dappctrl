@@ -154,7 +154,7 @@ const (
 // OfferingPutPayload offering status update payload.
 type OfferingPutPayload struct {
 	Action   string `json:"action"`
-	GasPrice uint   `json:"gasPrice"`
+	GasPrice uint64 `json:"gasPrice"`
 }
 
 func (s *Server) handlePutOfferingStatus(

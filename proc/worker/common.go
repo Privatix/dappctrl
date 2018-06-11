@@ -118,6 +118,11 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return fmt.Errorf("unable to parse account's priv key: %v", err)
 	}
 
+	jobData, err := w.balanceData(job)
+	if err != nil {
+		return fmt.Errorf("failed to parse job data: %v", err)
+	}
+
 	auth := bind.NewKeyedTransactor(key)
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
@@ -125,12 +130,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return fmt.Errorf("could not get account's psc balance: %v", err)
 	}
 
-	jobData, err := w.balanceData(job)
-	if err != nil {
-		return fmt.Errorf("failed to parse job data: %v", err)
-	}
-
-	if amount.Uint64() > uint64(jobData.Amount) {
+	if amount.Uint64() < uint64(jobData.Amount) {
 		return fmt.Errorf("insufficient psc balance")
 	}
 

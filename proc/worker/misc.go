@@ -119,12 +119,12 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	amount, err := w.ethBack.EthBalanceAt(ctx, agentAddr)
+	amount, err = w.ethBack.EthBalanceAt(ctx, agentAddr)
 	if err != nil {
 		return fmt.Errorf("could not get eth balance: %v", err)
 	}
 
-	acc.EthBalance = data.B64BigInt(amount)
+	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
 	return w.db.Update(acc)
 }

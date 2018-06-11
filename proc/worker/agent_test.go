@@ -518,6 +518,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit*
 		uint64(fixture.Offering.Supply) + 1))
+	env.ethBack.balanceEth = big.NewInt(99999)
 
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 

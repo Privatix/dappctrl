@@ -3,7 +3,9 @@ package monitor
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -101,16 +103,16 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 			if !found {
 				scheduler, found = accountSchedulers[eventHash]
 			}
-// TODO: uncomment when client jobs will be implemented
-/*
-		case forClient:
-			scheduler, found = clientSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
-			}
-		case isOfferingRelated(&el):
-			scheduler, found = offeringSchedulers[eventHash]
-*/
+			// TODO: uncomment when client jobs will be implemented
+			/*
+				case forClient:
+					scheduler, found = clientSchedulers[eventHash]
+					if !found {
+						scheduler, found = accountSchedulers[eventHash]
+					}
+				case isOfferingRelated(&el):
+					scheduler, found = offeringSchedulers[eventHash]
+			*/
 		}
 
 		if !found {
@@ -150,6 +152,7 @@ var accountSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleTokenTransfer,
 		data.JobAfterAccountAddBalance,
 	},
+	// TODO: return balance schedulers
 }
 
 var agentSchedulers = map[common.Hash]funcAndType{
@@ -353,10 +356,26 @@ func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 		m.ignoreEvent(el)
 		return
 	}
+	amountBytes, err := data.ToBytes(el.Data)
+	if err != nil {
+		m.logger.Error("failed to decode eth log data: %v", err)
+		m.ignoreEvent(el)
+		return
+	}
+	balanceData := &data.JobBalanceData{
+		Amount: uint(big.NewInt(0).SetBytes(amountBytes).Uint64()),
+	}
+	dataEncoded, err := json.Marshal(balanceData)
+	if err != nil {
+		m.logger.Error("failed to marshal balance data: %v", err)
+		m.ignoreEvent(el)
+		return
+	}
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   acc.ID,
 		RelatedType: data.JobAccount,
+		Data:        dataEncoded,
 	}
 
 	m.scheduleCommon(el, j)
@@ -499,7 +518,9 @@ func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string
 func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
 	j.CreatedAt = time.Now()
-	j.Data = []byte("{}")
+	if j.Data == nil {
+		j.Data = []byte("{}")
+	}
 	err := m.queue.Add(j)
 	switch err {
 	case nil:

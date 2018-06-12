@@ -66,6 +66,11 @@ type cConf struct {
 	ServerAddress string
 }
 
+// DeployConfig is to be done my @maxim.
+func DeployConfig(db *reform.DB, endpoint string) error {
+	return nil
+}
+
 // Deploy creates target directory, the name is equivalent to channel.ID or
 // endpoint.Channel. In target directory, two files are created ("client.ovpn",
 // "access.ovpn"): 1) "client.ovpn" - the file is filled with

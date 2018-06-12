@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -80,17 +81,25 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
 	}, nil
 }
 
-func (w *Worker) addJob(jType, rType, rID string) error {
+func (w *Worker) addJobWithData(
+	jType, rType, rID string, jData interface{}) error {
+	data2, err := json.Marshal(jData)
+	if err != nil {
+		return err
+	}
+
 	return w.queue.Add(&data.Job{
-		ID:          util.NewUUID(),
-		Status:      data.JobActive,
 		RelatedType: rType,
 		RelatedID:   rID,
 		Type:        jType,
 		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobTask,
-		Data:        []byte("{}"),
+		Data:        data2,
 	})
+}
+
+func (w *Worker) addJob(jType, rType, rID string) error {
+	return w.addJobWithData(jType, rType, rID, &struct{}{})
 }
 
 func (w *Worker) updateAccountBalances(acc *data.Account) error {
@@ -114,4 +123,38 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	acc.PSCBalance = amount.Uint64()
 
 	return w.db.Update(acc)
+}
+
+func parseJobData(job *data.Job, data interface{}) error {
+	if err := json.Unmarshal(job.Data, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal job data: %s", err)
+	}
+	return nil
+}
+
+func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
+	method, relatedType, relatedID, from, to string) error {
+	raw, err := tx.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	dtx := data.EthTx{
+		ID:          util.NewUUID(),
+		Hash:        data.FromBytes(tx.Hash().Bytes()),
+		Method:      method,
+		Status:      data.TxSent,
+		JobID:       pointer.ToString(job.ID),
+		Issued:      time.Now(),
+		AddrFrom:    from,
+		AddrTo:      to,
+		Nonce:       pointer.ToString(fmt.Sprint(tx.Nonce())),
+		GasPrice:    tx.GasPrice().Uint64(),
+		Gas:         tx.Gas(),
+		TxRaw:       raw,
+		RelatedType: relatedType,
+		RelatedID:   relatedID,
+	}
+
+	return data.Insert(w.db.Querier, &dtx)
 }

@@ -11,12 +11,17 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/somc"
+	"github.com/privatix/dappctrl/util"
 )
+
+type deployConfigFunc func(db *reform.DB, endpoint string) error
 
 // Worker has all worker routines.
 type Worker struct {
 	abi            abi.ABI
+	logger         *util.Logger
 	db             *reform.DB
 	decryptKeyFunc data.ToPrivateKeyFunc
 	ept            *ept.Service
@@ -25,10 +30,11 @@ type Worker struct {
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
 	queue          *job.Queue
+	deployConfig   deployConfigFunc
 }
 
 // NewWorker returns new instance of worker.
-func NewWorker(db *reform.DB, somc *somc.Conn,
+func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc) (*Worker, error) {
@@ -45,6 +51,7 @@ func NewWorker(db *reform.DB, somc *somc.Conn,
 
 	return &Worker{
 		abi:            abi,
+		logger:         logger,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
 		ept:            eptService,
@@ -52,6 +59,7 @@ func NewWorker(db *reform.DB, somc *somc.Conn,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
+		deployConfig:   config.DeployConfig,
 	}, nil
 }
 

@@ -217,6 +217,7 @@ func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Reque
 
 	if err = s.queue.Add(&data.Job{
 		Type:        jobType,
+		CreatedAt:   time.Now(),
 		RelatedType: data.JobAccount,
 		RelatedID:   id,
 		Data:        jobDataB,

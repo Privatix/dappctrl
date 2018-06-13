@@ -2,6 +2,7 @@ package worker
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,16 +26,23 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 	})
 
 	env.ethBack.balancePTC = big.NewInt(transferAmount)
+	env.ethBack.balanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
-	env.ethBack.testCalled(t, "PTCIncreaseApproval", agentAddr, conf.pscAddr,
+	env.ethBack.testCalled(t, "PTCIncreaseApproval", agentAddr,
+		env.gasConf.PTC.Approve,
+		conf.pscAddr,
 		big.NewInt(transferAmount))
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, agentAddr)
+	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, 0,
+		agentAddr)
+
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
 		*fixture.job)
@@ -59,7 +67,10 @@ func TestPreAccountAddBalance(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	env.ethBack.testCalled(t, "PSCAddBalanceERC20", agentAddr,
-		big.NewInt(transferAmount))
+		env.gasConf.PSC.AddBalanceERC20, big.NewInt(transferAmount))
+
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.PreAccountAddBalance, *fixture.job)
 }
@@ -80,16 +91,20 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	})
 
 	env.ethBack.balancePSC = big.NewInt(amount)
+	env.ethBack.balanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountReturnBalance, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PSCBalanceOf", noCallerAddr, agentAddr)
+	env.ethBack.testCalled(t, "PSCBalanceOf", noCallerAddr, 0, agentAddr)
 
 	env.ethBack.testCalled(t, "PSCReturnBalanceERC20", agentAddr,
-		big.NewInt(amount))
+		env.gasConf.PSC.ReturnBalanceERC20, big.NewInt(amount))
+
+	// Test eth transaction was recorded.
+	env.deleteEthTx(t, fixture.job.ID)
 
 	testCommonErrors(t, env.worker.PreAccountReturnBalance, *fixture.job)
 }
@@ -126,6 +141,7 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	fixture := env.newTestFixture(t, jobType, data.JobAccount)
 	defer fixture.close()
 
+	env.ethBack.balanceEth = big.NewInt(2)
 	env.ethBack.balancePTC = big.NewInt(100)
 	env.ethBack.balancePSC = big.NewInt(200)
 
@@ -140,6 +156,12 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	if account.PSCBalance != 200 {
 		t.Fatalf("wrong psc balance, wanted: %v, got: %v", 200,
 			account.PSCBalance)
+	}
+	if strings.TrimSpace(string(account.EthBalance)) !=
+		data.FromBytes(env.ethBack.balanceEth.Bytes()) {
+		t.Logf("%v!=%v", string(account.EthBalance),
+			data.FromBytes(env.ethBack.balanceEth.Bytes()))
+		t.Fatal("wrong eth balance")
 	}
 
 	testCommonErrors(t, worker, *fixture.job)

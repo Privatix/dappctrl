@@ -15,7 +15,7 @@
 
     "ClientBillingTest": {
         "MonitorStartupDelay": 10,
-        "ReactionDelay": 10
+        "ReactionDelay": 100
     },
 
     "BillingTest": {
@@ -77,7 +77,30 @@
         "TruffleAPIURL": ""
     },
 
-    "JobHandlerTest": {
+    "Gas": {
+        "PTC": {
+            "Approve": 45375
+        },
+        "PSC": {
+            "AddBalanceERC20": 49412,
+            "RegisterServiceOffering": 95625,
+            "CreateChannel": 76797,
+            "CooperativeClose": 97566,
+            "ReturnBalanceERC20": 43417,
+            "SetNetworkFee": 27400,
+            "UncooperativeClose": 56612,
+            "Settle": 41828,
+            "TopUp": 42065,
+            "GetChannelInfo": 29066,
+            "PublishServiceOfferingEndpoint": 30528,
+            "GetKey": 27310,
+            "BalanceOf": 23655,
+            "PopupServiceOffering": 32674,
+            "RemoveServiceOffering": 39238
+        }
+    },
+
+    "JobHanlderTest": {
         "SOMCTimeout": 10,
         "ReactionDelay": 10
     },
@@ -93,6 +116,24 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 1
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "addCheckBalance": {
+                "Duplicated": true
             }
         }
     },

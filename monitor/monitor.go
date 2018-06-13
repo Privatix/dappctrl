@@ -47,6 +47,7 @@ type Monitor struct {
 	eth     Client
 	pscAddr common.Address
 	pscABI  abi.ABI
+	ptcAddr common.Address
 
 	mu                 sync.Mutex
 	lastProcessedBlock uint64
@@ -67,7 +68,8 @@ func NewConfig() *Config {
 
 // NewMonitor creates a Monitor with specified settings.
 func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
-	queue Queue, eth Client, pscAddr common.Address) (*Monitor, error) {
+	queue Queue, eth Client, pscAddr common.Address,
+	ptcAddr common.Address) (*Monitor, error) {
 	if logger == nil || db == nil || queue == nil || eth == nil ||
 		cfg.CollectPause <= 0 || cfg.SchedulePause <= 0 ||
 		cfg.Timeout <= 0 || !common.IsHexAddress(pscAddr.String()) {
@@ -87,6 +89,7 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 		eth:     eth,
 		pscAddr: pscAddr,
 		pscABI:  pscABI,
+		ptcAddr: ptcAddr,
 		mu:      sync.Mutex{},
 		errors:  make(chan error),
 	}, nil

@@ -178,6 +178,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 type accountBalancePayload struct {
 	Amount      uint   `json:"amount"`
 	Destination string `json:"destination"`
+	GasPrice    uint64 `json:"gasPrice"`
 }
 
 func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Request, id string) {
@@ -202,7 +203,10 @@ func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Reque
 		jobType = data.JobPreAccountReturnBalance
 	}
 
-	jobData := &data.JobBalanceData{Amount: payload.Amount}
+	jobData := &data.JobBalanceData{
+		Amount:   payload.Amount,
+		GasPrice: payload.GasPrice,
+	}
 
 	jobDataB, err := json.Marshal(jobData)
 	if err != nil {

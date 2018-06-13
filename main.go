@@ -36,6 +36,7 @@ type config struct {
 	BlockMonitor  *monitor.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
+	Gas           *worker.GasConf
 	Job           *job.Config
 	Log           *util.LogConfig
 	PayServer     *pay.Config
@@ -44,6 +45,7 @@ type config struct {
 	Report        *bugsnag.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
+	StaticPasword string
 	VPNClient     *vpncli.Config
 }
 
@@ -69,6 +71,14 @@ func readConfig(conf *config) {
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s", err)
 	}
+}
+
+func getPWDStorage(conf *config) data.PWDGetSetter {
+	if conf.StaticPasword == "" {
+		return new(data.PWDStorage)
+	}
+	storage := data.StaticPWDStorage(conf.StaticPasword)
+	return &storage
 }
 
 func main() {
@@ -133,18 +143,18 @@ func main() {
 		panic(err)
 	}
 
-	pwdStorage := new(data.PWDStorage)
+	pwdStorage := getPWDStorage(conf)
 
-	handler, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, gethConn),
-		pscAddr, conf.PayAddress, pwdStorage,
-		data.ToPrivateKey, conf.VPNClient)
+	worker, err := worker.NewWorker(logger, db, somcConn,
+		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
+		conf.VPNClient)
 	if err != nil {
 		panic(err)
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(handler))
-	handler.SetQueue(queue)
+	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(worker))
+	worker.SetQueue(queue)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
 
@@ -154,7 +164,8 @@ func main() {
 	}()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		gethConn, pscAddr)
+		gethConn, pscAddr, ptcAddr)
+
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)

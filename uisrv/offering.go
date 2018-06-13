@@ -24,7 +24,7 @@ const (
 const (
 	clientGetOfferFilter = `offer_status = 'register'
                                 AND status = 'msg_channel_published'
-                                AND NOT is_local 
+                                AND NOT is_local
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
                                    FROM accounts)`
@@ -32,14 +32,14 @@ const (
                                (SELECT eth_addr
                                   FROM accounts)
                                AND (SELECT in_use
-                                      FROM accounts 
+                                      FROM accounts
                                      WHERE eth_addr = offerings.agent)`
 )
 
 type clientPreChannelCreateData struct {
 	Account  string `json:"account"`
 	Offering string `json:"offering"`
-	GasPrice uint   `json:"gasPrice"`
+	GasPrice uint64 `json:"gasPrice"`
 }
 
 // handleOfferings calls appropriate handler by scanning incoming request.
@@ -198,7 +198,7 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 type OfferingPutPayload struct {
 	Action   string `json:"action"`
 	Account  string `json:"account"`
-	GasPrice uint   `json:"gasPrice"`
+	GasPrice uint64 `json:"gasPrice"`
 }
 
 func (s *Server) handlePutOfferingStatus(

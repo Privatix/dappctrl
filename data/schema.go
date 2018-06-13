@@ -308,12 +308,13 @@ const (
 
 // JobBalanceData is a data required for transfer jobs.
 type JobBalanceData struct {
-	Amount uint
+	GasPrice uint64
+	Amount   uint
 }
 
 // JobPublishData is a data required for blockchain publish jobs.
 type JobPublishData struct {
-	GasPrice uint
+	GasPrice uint64
 }
 
 // Job is a task within persistent queue.
@@ -334,20 +335,20 @@ type Job struct {
 // EthTx is an ethereum transaction
 //reform:eth_txs
 type EthTx struct {
-	ID          string    `reform:"id,pk"`
-	Hash        string    `reform:"hash"`
-	Method      string    `reform:"method"`
-	Status      string    `reform:"status"`
-	JobID       *string   `reform:"job"`
-	Issued      time.Time `reform:"issued"`
-	AddrFrom    string    `reform:"addr_from"`
-	AddrTo      string    `reform:"addr_to"`
-	Nonce       *string   `reform:"nonce"`
-	GasPrice    uint64    `reform:"gas_price"`
-	Gas         uint64    `reform:"gas"`
-	TxRaw       []byte    `reform:"tx_raw"`
-	RelatedType string    `reform:"related_type"`
-	RelatedID   string    `reform:"related_id"`
+	ID          string    `reform:"id,pk" json:"id"`
+	Hash        string    `reform:"hash" json:"hash"`
+	Method      string    `reform:"method" json:"method"`
+	Status      string    `reform:"status" json:"status"`
+	JobID       *string   `reform:"job" json:"jobID"`
+	Issued      time.Time `reform:"issued" json:"issued"`
+	AddrFrom    string    `reform:"addr_from" json:"addrFrom"`
+	AddrTo      string    `reform:"addr_to" json:"addrTo"`
+	Nonce       *string   `reform:"nonce" json:"nonce"`
+	GasPrice    uint64    `reform:"gas_price" json:"gasPrice"`
+	Gas         uint64    `reform:"gas" json:"gas"`
+	TxRaw       []byte    `reform:"tx_raw" json:"txRaw"`
+	RelatedType string    `reform:"related_type" json:"relatedType"`
+	RelatedID   string    `reform:"related_id" json:"relatedID"`
 }
 
 // EthLog is an ethereum log entry.

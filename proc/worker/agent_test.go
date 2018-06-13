@@ -57,6 +57,8 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 	topics := data.LogTopics{
+		// Don't know what the first topic is, but it appears in real logs.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
@@ -250,6 +252,9 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	// Test eth transaction was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
 	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
@@ -276,7 +281,8 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr, agentAddr,
+	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+		env.gasConf.PSC.CooperativeClose, agentAddr,
 		uint32(fixture.Channel.Block),
 		[common.HashLength]byte(offeringHash), balance,
 		balanceMsgSig, closingSig)
@@ -498,6 +504,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	// Test ethTx was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
 	jobData := &data.JobPublishData{GasPrice: 10}
 	jobDataB, err := json.Marshal(jobData)
 	if err != nil {
@@ -506,17 +515,32 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	fixture.job.Data = jobDataB
 	env.updateInTestDB(t, fixture.job)
 
+	minDeposit := fixture.Offering.MinUnits*fixture.Offering.UnitPrice +
+		fixture.Offering.SetupPrice
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit*
+		uint64(fixture.Offering.Supply) + 1))
+	env.ethBack.balanceEth = big.NewInt(99999)
+
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 
-	offering := fixture.Offering
+	offering := &data.Offering{}
+	env.findTo(t, offering, fixture.Offering.ID)
+
+	if offering.RawMsg == fixture.Offering.RawMsg {
+		t.Fatal("raw msg was not set")
+	}
+
+	if offering.Hash == fixture.Offering.Hash {
+		t.Fatal("hash was not set")
+	}
 
 	offeringHash := data.TestToHash(t, offering.Hash)
 
-	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
-
 	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,
+		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		big.NewInt(int64(minDeposit)), offering.Supply)
 
@@ -567,6 +591,8 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
 		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
+
+	env.setOfferingHash(t, fixture)
 	defer env.close()
 	defer fixture.close()
 
@@ -586,12 +612,6 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 
 	select {
 	case ret := <-somcOfferingsChan:
-		if offering.RawMsg == "" {
-			t.Fatal("offerring message is not filled")
-		}
-		if offering.Hash == "" {
-			t.Fatal("offering hash is not filled")
-		}
 		if ret.Data != offering.RawMsg {
 			t.Fatal("wrong offering published")
 		}

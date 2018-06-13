@@ -1,9 +1,11 @@
 package worker
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -122,6 +124,13 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 
 	acc.PSCBalance = amount.Uint64()
 
+	amount, err = w.ethBalance(agentAddr)
+	if err != nil {
+		return err
+	}
+
+	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
+
 	return w.db.Update(acc)
 }
 
@@ -130,6 +139,19 @@ func parseJobData(job *data.Job, data interface{}) error {
 		return fmt.Errorf("failed to unmarshal job data: %s", err)
 	}
 	return nil
+}
+
+func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
+	// TODO: move timeout to conf
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	amount, err := w.ethBack.EthBalanceAt(ctx, addr)
+	if err != nil {
+		return nil, fmt.Errorf("could not get eth balance: %v", err)
+	}
+
+	return amount, nil
 }
 
 func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,

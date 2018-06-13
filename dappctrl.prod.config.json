@@ -13,18 +13,43 @@
 
     "DB": {
         "Conn": {
-            "user": "postgres",
             "dbname": "dappctrl",
-            "sslmode": "disable"
+            "sslmode": "disable",
+            "user": "postgres",
+            "host": "localhost",
+            "port": "5432"
         }
     },
 
     "Eth": {
         "Contract" : {
-            "PTCAddrHex": "0xcA9a5951628486fAf8B9f58dB565E33ef9673394",
-            "PSCAddrHex": "0xa396e36ca7c36d7b74580f4ab6943704b8f2ee2e"
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
+            "PSCAddrHex": "0x81baa1d7de419c42f9fe4799afb6be324a867da4"
         },
-        "GethURL": "https://rinkeby.infura.io/2B6KNL16rwlqe4fjM7BB"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+    },
+
+    "Gas": {
+        "PTC": {
+            "Approve": 100000
+        },
+        "PSC": {
+            "AddBalanceERC20": 100000,
+            "RegisterServiceOffering": 200000,
+            "CreateChannel": 200000,
+            "CooperativeClose": 200000,
+            "ReturnBalanceERC20": 100000,
+            "SetNetworkFee": 100000,
+            "UncooperativeClose": 100000,
+            "Settle": 100000,
+            "TopUp": 100000,
+            "GetChannelInfo": 100000,
+            "PublishServiceOfferingEndpoint": 100000,
+            "GetKey": 100000,
+            "BalanceOf": 100000,
+            "PopupServiceOffering": 100000,
+            "RemoveServiceOffering": 100000
+        }
     },
 
     "Job": {
@@ -38,6 +63,35 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "addCheckBalance": {
+                "TryLimit": 0,
+                "TryPeriod": 60000
             }
         }
     },
@@ -46,10 +100,10 @@
         "Level": "info"
     },
 
-    "PayAddress": "http://localhost:9000/v1/pmtChannel/pay",
+    "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
 
     "PayServer": {
-        "Addr": "localhost:9000",
+        "Addr": "0.0.0.0:9000",
         "TLS": null
     },
 
@@ -61,5 +115,7 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://89.38.96.53:8080"
-    }
+    },
+
+    "StaticPassword": ""
 }

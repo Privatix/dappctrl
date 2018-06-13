@@ -257,6 +257,7 @@ func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 func (m *Monitor) processEachChannel(query string,
 	processor func(string) error) error {
 	rows, err := m.db.Query(query)
+	defer rows.Close()
 	if err != nil {
 		return err
 	}

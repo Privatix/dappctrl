@@ -312,14 +312,14 @@ func getOfferingStatus(t *testing.T, id string) *http.Response {
 }
 
 func sendOfferingAction(t *testing.T, id, action string,
-	gasPrice uint) *http.Response {
+	gasPrice uint64) *http.Response {
 	path := offeringsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
 		&OfferingPutPayload{Action: action, GasPrice: gasPrice})
 }
 
 func sendClientOfferingAction(t *testing.T, id, action,
-	account string, gasPrice uint) *http.Response {
+	account string, gasPrice uint64) *http.Response {
 	path := clientOfferingsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
 		&OfferingPutPayload{Action: action, Account: account,
@@ -331,10 +331,9 @@ func TestPutOfferingStatus(t *testing.T) {
 	defer fixture.Close()
 	defer setTestUserCredentials(t)()
 
-	testGasPrice := uint(1)
+	testGasPrice := uint64(1)
 
-	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action",
-		testGasPrice)
+	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("wanted: %d, got: %v",
 			http.StatusBadRequest, res.Status)
@@ -363,7 +362,7 @@ func TestPutClientOfferingStatus(t *testing.T) {
 	setTestUserCredentials(t)
 	createOfferingFixtures(t)
 
-	testGasPrice := uint(1)
+	testGasPrice := uint64(1)
 
 	offer := data.NewTestOffering(genEthAddr(t),
 		testProd.ID, testTpl.ID)

@@ -215,11 +215,11 @@ VALUES ('d0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
         'access');
 
 INSERT INTO products (id, name, offer_tpl_id, offer_access_id, usage_rep_type,
-                      is_server, salt, password, client_ident, config)
+                      is_server, salt, password, client_ident, config, service_endpoint_address)
 VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN service',
         'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
         'total', TRUE, 6012867121110302348,
-        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 'by_channel_id', '{"somekey": "somevalue"}');
+        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 'by_channel_id', '{"somekey": "somevalue"}', 'localhost');
 
 INSERT INTO settings (key, value, description, name)
 VALUES ('eth.min.confirmations',

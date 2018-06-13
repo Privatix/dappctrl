@@ -61,16 +61,17 @@ const (
 // Product stores billing and action related settings.
 //reform:products
 type Product struct {
-	ID            string  `json:"id" reform:"id,pk"`
-	Name          string  `json:"name" reform:"name"`
-	OfferTplID    *string `json:"offerTplID" reform:"offer_tpl_id"`
-	OfferAccessID *string `json:"offerAccessID" reform:"offer_access_id"`
-	UsageRepType  string  `json:"usageRepType" reform:"usage_rep_type"`
-	IsServer      bool    `json:"isServer" reform:"is_server"`
-	Salt          uint64  `json:"-" reform:"salt"`
-	Password      string  `json:"-" reform:"password"`
-	ClientIdent   string  `json:"clientIdent" reform:"client_ident"`
-	Config        []byte  `json:"config" reform:"config"`
+	ID                     string  `json:"id" reform:"id,pk"`
+	Name                   string  `json:"name" reform:"name"`
+	OfferTplID             *string `json:"offerTplID" reform:"offer_tpl_id"`
+	OfferAccessID          *string `json:"offerAccessID" reform:"offer_access_id"`
+	UsageRepType           string  `json:"usageRepType" reform:"usage_rep_type"`
+	IsServer               bool    `json:"isServer" reform:"is_server"`
+	Salt                   uint64  `json:"-" reform:"salt"`
+	Password               string  `json:"-" reform:"password"`
+	ClientIdent            string  `json:"clientIdent" reform:"client_ident"`
+	Config                 []byte  `json:"config" reform:"config"`
+	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 }
 
 // Unit used for billing calculation.

@@ -134,13 +134,15 @@ func extractLogChannelCreated(log *data.EthLog) (*logChannelCreatedInput, error)
 		return nil, fmt.Errorf("could not parse authentication hash")
 	}
 
-	if len(log.Topics) != 3 {
-		return nil, fmt.Errorf("wrong number of topics")
+	if len(log.Topics) != 4 {
+		return nil, fmt.Errorf(
+			"wrong number of topics, wanted: %v, got: %v",
+			4, len(log.Topics))
 	}
 
-	agentAddr := common.BytesToAddress(log.Topics[0].Bytes())
-	clientAddr := common.BytesToAddress(log.Topics[1].Bytes())
-	offeringHash := log.Topics[2]
+	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	clientAddr := common.BytesToAddress(log.Topics[2].Bytes())
+	offeringHash := log.Topics[3]
 
 	return &logChannelCreatedInput{
 		agentAddr:          agentAddr,

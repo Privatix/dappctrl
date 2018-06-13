@@ -65,19 +65,29 @@
                 "TryPeriod": 60000
             },
             "preAccountAddBalanceApprove": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "preAccountAddBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "afterAccountAddBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "preAccountReturnBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "afterAccountReturnBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "addCheckBalance": {
                 "TryLimit": 0,

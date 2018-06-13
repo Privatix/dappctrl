@@ -124,6 +124,7 @@ func (q *Queue) Add(j *data.Job) error {
 
 	j.ID = util.NewUUID()
 	j.Status = data.JobActive
+	j.CreatedAt = time.Now()
 
 	return q.db.Insert(j)
 }

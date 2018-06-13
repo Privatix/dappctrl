@@ -9,26 +9,38 @@
         "ServerStartupDelay": 10
     },
 
+    "ClientBilling": {
+        "CollectPeriod":  1
+    },
+
+    "ClientBillingTest": {
+        "MonitorStartupDelay": 10,
+        "ReactionDelay": 100
+    },
+
     "BillingTest": {
+        "Channel": {
+            "BigDeposit":1000,
+            "MidDeposit":100,
+            "SmallDeposit":1
+        },
         "Offer": {
-            "MaxUnit": 900,
-            "MaxInactiveTimeSec": 10,
-            "UnitPrice": 1,
             "BigLag": 10000,
-            "SmallLag": 1
+            "MaxInactiveTimeSec": 10,
+            "MaxUnit": 900,
+            "SmallLag": 1,
+            "UnitPrice": 1
         },
         "Session": {
-            "UnitsUsed": 300,
-            "EmptyUnitsUsed":0,
             "SecondsConsumed": 300,
-            "EmptySecondsConsumed":0
-        },
-        "Channel": {
-            "SmallDeposit":1,
-            "MidDeposit":100,
-            "BigDeposit":1000,
-            "EmptyBalance":0
+            "UnitsUsed": 300
         }
+    },
+
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
     },
 
     "DB": {
@@ -42,32 +54,58 @@
     },
 
     "EptTest": {
+        "Ca": "crt.valid",
+        "ConfInvalid": "conf.invalid",
+        "ConfValidCaEmpty": "conf.valid.ca.empty",
+        "ConfValidCaInvalid": "conf.valid.ca.invalid",
+        "ConfValidCaNotExist": "conf.valid.ca.notexist",
+        "ConfValidCaValid": "conf.valid.ca.valid",
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "ValidHash": [
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1",
-            "89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b1"],
-        "InvalidHash": [
-            "",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38b11",
-            "0x89f45a588f06d542b16020dd657486c7d163db03a2d599e4a606f8eb459e38g1"],
+        "RetrySec": [ 0, 1, 2 ],
+        "SessSrvStartTimeout": [0, 1, 2 ],
+        "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
         "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
-        "InvalidHost": ["privatix.io:44C", "priv#tix.io:443", "privatix.io%443"],
-        "ConfValidCaValid": "conf.valid.ca.valid",
-        "ConfInvalid": "conf.invalid",
-        "ConfValidCaInvalid": "conf.valid.ca.invalid",
-        "ConfValidCaEmpty": "conf.valid.ca.empty",
-        "ConfValidCaNotExist": "conf.valid.ca.notexist"
+        "VPNConfig": {
+            "Login": "!login!",
+            "Pass": "test-pass"
+        }
     },
 
     "Eth": {
         "Contract" : {
-            "PTCAddr": "",
-            "PSCAddr": ""
+            "PTCAddrHex": "",
+            "PSCAddrHex": ""
         },
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": ""
+    },
+
+    "Gas": {
+        "PTC": {
+            "Approve": 45375
+        },
+        "PSC": {
+            "AddBalanceERC20": 49412,
+            "RegisterServiceOffering": 95625,
+            "CreateChannel": 76797,
+            "CooperativeClose": 97566,
+            "ReturnBalanceERC20": 43417,
+            "SetNetworkFee": 27400,
+            "UncooperativeClose": 56612,
+            "Settle": 41828,
+            "TopUp": 42065,
+            "GetChannelInfo": 29066,
+            "PublishServiceOfferingEndpoint": 30528,
+            "GetKey": 27310,
+            "BalanceOf": 23655,
+            "PopupServiceOffering": 32674,
+            "RemoveServiceOffering": 39238
+        }
+    },
+
+    "JobHanlderTest": {
+        "SOMCTimeout": 10
     },
 
     "Job": {
@@ -81,6 +119,24 @@
             "clientPreChannelCreate": {
                 "TryLimit": 3,
                 "TryPeriod": 1
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true
+            },
+            "addCheckBalance": {
+                "Duplicated": true
             }
         }
     },
@@ -118,6 +174,12 @@
 
     "SOMCTest": {
         "ServerStartupDelay": 10
+    },
+
+    "VPNConfigPusher": {
+        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
+            "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "TimeOut": 120
     },
 
     "VPNMonitor": {

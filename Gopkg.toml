@@ -1,0 +1,7 @@
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  revision = "d6ed2f67a8cdb07ce7b4eaea93452afb0cdbaa23"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  branch = "master"

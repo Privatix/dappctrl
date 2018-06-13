@@ -1,5 +1,3 @@
-// +build !noagentuisrvtest
-
 package truffle
 
 import (
@@ -8,12 +6,6 @@ import (
 	"log"
 	"net/http"
 )
-
-// TestAccount is a test account created by truffle.
-type TestAccount struct {
-	Account    string `json:"account"`
-	PrivateKey string `json:"privateKey"`
-}
 
 // API communicates with truffle test api.
 type API string

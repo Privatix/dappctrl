@@ -1,0 +1,121 @@
+{
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null,
+        "EthCallTimeout": 5
+    },
+
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
+    },
+
+    "DB": {
+        "Conn": {
+            "dbname": "dappctrl",
+            "sslmode": "disable",
+            "user": "postgres",
+            "host": "localhost",
+            "port": "5432"
+        }
+    },
+
+    "Eth": {
+        "Contract" : {
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
+            "PSCAddrHex": "0x81baa1d7de419c42f9fe4799afb6be324a867da4"
+        },
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+    },
+
+    "Gas": {
+        "PTC": {
+            "Approve": 100000
+        },
+        "PSC": {
+            "AddBalanceERC20": 100000,
+            "RegisterServiceOffering": 200000,
+            "CreateChannel": 200000,
+            "CooperativeClose": 200000,
+            "ReturnBalanceERC20": 100000,
+            "SetNetworkFee": 100000,
+            "UncooperativeClose": 100000,
+            "Settle": 100000,
+            "TopUp": 100000,
+            "GetChannelInfo": 100000,
+            "PublishServiceOfferingEndpoint": 100000,
+            "GetKey": 100000,
+            "BalanceOf": 100000,
+            "PopupServiceOffering": 100000,
+            "RemoveServiceOffering": 100000
+        }
+    },
+
+    "Job": {
+        "CollectJobs": 100,
+        "CollectPeriod": 1000,
+        "WorkerBufLen": 10,
+        "Workers": 0,
+        "TryLimit": 3,
+        "TryPeriod": 60000,
+        "Types": {
+            "clientPreChannelCreate": {
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "addCheckBalance": {
+                "TryLimit": 0,
+                "TryPeriod": 60000
+            }
+        }
+    },
+
+    "Log": {
+        "Level": "info"
+    },
+
+    "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
+
+    "PayServer": {
+        "Addr": "0.0.0.0:9000",
+        "TLS": null
+    },
+
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+
+    "SOMC": {
+        "ReconnPeriod": 5000,
+        "URL": "ws://89.38.96.53:8080"
+    },
+
+    "StaticPassword": ""
+}

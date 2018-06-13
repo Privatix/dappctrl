@@ -7,3 +7,6 @@
 
 dappctrl.config.local.json
 dappctrl-test.config.local.json
+
+statik/statik.go
+vendor

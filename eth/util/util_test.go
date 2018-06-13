@@ -2,9 +2,11 @@ package util
 
 import (
 	"bytes"
+	"math/big"
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -24,20 +26,19 @@ func TestRecoverPublicKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hash := crypto.Keccak256([]byte("test-data"))
+	auth := bind.NewKeyedTransactor(key)
 
-	signature, err := crypto.Sign(hash, key)
+	tx := types.NewTransaction(0, common.HexToAddress("0x11"), big.NewInt(1),
+		0, big.NewInt(1), []byte{})
+
+	signer := &types.HomesteadSigner{}
+
+	signedTx, err := auth.Signer(signer, auth.From, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	signer := types.HomesteadSigner{}
-	r, s, v, err := signer.SignatureValues(nil, signature)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pubk, err := RecoverPubKey(common.BytesToHash(hash), s, r, v)
+	pubk, err := RecoverPubKey(signer, signedTx)
 	if err != nil {
 		t.Fatal("failed to recover: ", err)
 	}

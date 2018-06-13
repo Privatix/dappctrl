@@ -17,9 +17,9 @@ type publishOfferingParams struct {
 
 // PublishOffering publishes a given offering JSON in SOMC.
 func (c *Conn) PublishOffering(o []byte) error {
-	hash := crypto.Keccak256Hash(o)
+	hash := crypto.Keccak256(o)
 	params := publishOfferingParams{
-		Hash: data.FromBytes(hash.Bytes()),
+		Hash: data.FromBytes(hash),
 		Data: data.FromBytes(o),
 	}
 

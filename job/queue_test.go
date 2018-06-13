@@ -15,12 +15,12 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type jobTestConfig struct {
+type testConfig struct {
 	StressJobs uint
 }
 
-func newJobTestConfig() *jobTestConfig {
-	return &jobTestConfig{
+func newTestConfig() *testConfig {
+	return &testConfig{
 		StressJobs: 100,
 	}
 }
@@ -29,7 +29,7 @@ var (
 	conf struct {
 		DB      *data.DBConfig
 		Job     *Config
-		JobTest *jobTestConfig
+		JobTest *testConfig
 		Log     *util.LogConfig
 	}
 
@@ -53,6 +53,7 @@ func createJob() *data.Job {
 		RelatedType: data.JobChannel,
 		CreatedBy:   data.JobUser,
 		CreatedAt:   time.Now(),
+		Data:        []byte("{}"),
 	}
 }
 
@@ -69,6 +70,14 @@ func TestAdd(t *testing.T) {
 	job.RelatedID = rid
 	add(t, queue, job, ErrDuplicatedJob)
 	defer db.Delete(job)
+
+	job = createJob()
+	job.RelatedID = rid
+	oldConf := queue.conf.Types[job.Type]
+	queue.conf.Types[job.Type] = TypeConfig{Duplicated: true}
+	add(t, queue, job, nil)
+	defer db.Delete(job)
+	queue.conf.Types[job.Type] = oldConf
 
 	job = createJob()
 	job.Type = data.JobClientAfterChannelCreate
@@ -105,6 +114,8 @@ func waitForJob(queue *Queue, job *data.Job, ch chan<- error) {
 }
 
 func TestFailure(t *testing.T) {
+	data.CleanTestTable(t, db, data.JobTable)
+
 	makeHandler := func(limit uint8) Handler {
 		return func(j *data.Job) error {
 			if j.TryCount+1 < limit {
@@ -125,7 +136,9 @@ func TestFailure(t *testing.T) {
 
 	ch := make(chan error)
 	go waitForJob(queue, job, ch)
+	logger.Info("-1")
 	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	logger.Info("-2")
 	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobDone {
 		t.Fatalf("job status is not done: %s", job.Status)
@@ -138,7 +151,9 @@ func TestFailure(t *testing.T) {
 	util.TestExpectResult(t, "Save", nil, db.Save(job))
 
 	go waitForJob(queue, job, ch)
+	logger.Info("1")
 	util.TestExpectResult(t, "Process", ErrQueueClosed, queue.Process())
+	logger.Info("2")
 	util.TestExpectResult(t, "waitForJob", nil, <-ch)
 	if job.Status != data.JobFailed {
 		t.Fatalf("job status is not failed: %s", job.Status)
@@ -146,7 +161,8 @@ func TestFailure(t *testing.T) {
 }
 
 func TestStress(t *testing.T) {
-	started := time.Now()
+	data.CleanTestTable(t, db, data.JobTable)
+
 	numStressJobs := int(conf.JobTest.StressJobs)
 
 	ch := make(chan struct{})
@@ -159,10 +175,7 @@ func TestStress(t *testing.T) {
 			return errors.New("some error")
 		}
 
-		// Ignore stale jobs not to deadlock the test.
-		if j.CreatedAt.After(started) {
-			ch <- struct{}{}
-		}
+		ch <- struct{}{}
 
 		return nil
 	}
@@ -190,10 +203,10 @@ func TestStress(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.Job = NewConfig()
-	conf.Log = util.NewLogConfig()
-	conf.JobTest = newJobTestConfig()
 	conf.DB = data.NewDBConfig()
+	conf.Job = NewConfig()
+	conf.JobTest = newTestConfig()
+	conf.Log = util.NewLogConfig()
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)

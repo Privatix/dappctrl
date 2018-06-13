@@ -10,7 +10,7 @@ import (
 func (s *Server) authProduct(username, password string) bool {
 	var prod data.Product
 	if s.db.FindByPrimaryKeyTo(&prod, username) != nil ||
-		!data.ValidatePassword(password, prod.Password, prod.Salt) {
+		data.ValidatePassword(prod.Password, password, string(prod.Salt)) != nil {
 		return false
 	}
 	return true

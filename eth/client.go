@@ -21,6 +21,11 @@ import (
 	"time"
 )
 
+// Block labels.
+const (
+	BlockLatest = "latest"
+)
+
 // EthereumClient implementation of client logic for the ethereum geth node.
 // Uses JSON RPC API of geth for communication with remote node.
 type EthereumClient struct {
@@ -62,7 +67,7 @@ type apiResponse struct {
 //
 // Tests: this is a base method for all raw API calls
 // so, it is automatically covered by the all tests of all low-level methods,
-// for example, GetBlockNumber(), or GetLogs().
+// for example, GetBlockNumber()
 func (e *EthereumClient) fetch(method, params string, result interface{}) error {
 	body := fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[%s]}`, method, params)
 	httpResponse, err := e.client.Post(e.GethURL, "application/json", strings.NewReader(body))
@@ -88,4 +93,19 @@ func (e *EthereumClient) fetch(method, params string, result interface{}) error 
 	}
 
 	return nil
+}
+
+// BlockNumberAPIResponse implements wrapper for ethereum JSON RPC API response.
+// Please see corresponding web3.js method for the details.
+type BlockNumberAPIResponse struct {
+	apiResponse
+	Result string `json:"result"`
+}
+
+// GetBlockNumber returns the number of most recent block in blockchain.
+// For the details, please, refer to:
+// https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html#eth_blocknumber
+func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
+	response := &BlockNumberAPIResponse{}
+	return response, e.fetch("eth_blockNumber", "", response)
 }

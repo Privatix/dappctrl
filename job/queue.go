@@ -29,8 +29,9 @@ type HandlerMap map[string]Handler
 
 // TypeConfig is a configuration for specific job type.
 type TypeConfig struct {
-	TryLimit  uint8 // Default number of tries to complete job.
-	TryPeriod uint  // Default retry period, in milliseconds.
+	TryLimit   uint8 // Default number of tries to complete job.
+	TryPeriod  uint  // Default retry period, in milliseconds.
+	Duplicated bool  // Whether do or do not check for duplicates.
 }
 
 // Config is a job queue configuration.
@@ -115,12 +116,15 @@ func (q *Queue) checkDuplicated(j *data.Job) error {
 
 // Add adds a new job to the job queue.
 func (q *Queue) Add(j *data.Job) error {
-	if err := q.checkDuplicated(j); err != nil {
-		return err
+	if !q.typeConfig(j).Duplicated {
+		if err := q.checkDuplicated(j); err != nil {
+			return err
+		}
 	}
 
 	j.ID = util.NewUUID()
 	j.Status = data.JobActive
+	j.CreatedAt = time.Now()
 
 	return q.db.Insert(j)
 }
@@ -218,18 +222,19 @@ func (q *Queue) processMain() error {
 		started := time.Now()
 
 		rows, err := q.db.Query(`
-			SELECT id, related_id FROM (
-			  SELECT DISTINCT ON (related_id) *
-			    FROM jobs
-			   WHERE status = $1
-			   ORDER BY related_id, created_at) AS ordered
-			 WHERE not_before <= $2
+			SELECT id, related_id FROM jobs
+			 WHERE status = $1 AND not_before <= $2
+			 ORDER BY related_id, created_at
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err
 		}
 
 		for rows.Next() {
+			if q.checkExit() {
+				return ErrQueueClosed
+			}
+
 			var job, related string
 			if err = rows.Scan(&job, &related); err != nil {
 				return err
@@ -264,6 +269,7 @@ func (q *Queue) processWorker(w workerIO) {
 
 		handler, ok := q.handlers[job.Type]
 		if !ok {
+			q.logger.Error("job handler for %s not found", job.Type)
 			err = ErrHandlerNotFound
 			break
 		}
@@ -312,28 +318,37 @@ func (q *Queue) processWorker(w workerIO) {
 }
 
 func (q *Queue) processJob(job *data.Job, handler Handler) {
-	tconf := q.conf.TypeConfig
-	if conf, ok := q.conf.Types[job.Type]; ok {
-		tconf = conf
-	}
+	tconf := q.typeConfig(job)
 
-	q.logger.Info("processing job %s", job.ID)
+	q.logger.Info("processing job %s(%s)", job.ID, job.Type)
 	err := handler(job)
 
 	if err == nil {
 		job.Status = data.JobDone
-		q.logger.Info("job %s is done", job.ID)
+		q.logger.Info("job %s(%s) is done", job.ID, job.Type)
 		return
 	}
 
-	job.TryCount++
-	if job.TryCount >= tconf.TryLimit {
+	if tconf.TryLimit != 0 {
+		job.TryCount++
+	}
+
+	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
-		q.logger.Error("job %s is failed", job.ID)
+		q.logger.Error("job %s(%s) is failed", job.ID, job.Type)
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn("retry for job %s scheduled to %s: %s",
-			job.ID, job.NotBefore.Format(time.RFC3339), err)
+		q.logger.Warn("retry for job %s(%s) scheduled to %s: %s",
+			job.ID, job.Type,
+			job.NotBefore.Format(time.RFC3339), err)
 	}
+}
+
+func (q *Queue) typeConfig(job *data.Job) TypeConfig {
+	tconf := q.conf.TypeConfig
+	if conf, ok := q.conf.Types[job.Type]; ok {
+		tconf = conf
+	}
+	return tconf
 }

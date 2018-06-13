@@ -2,14 +2,15 @@ package util
 
 import (
 	"crypto/ecdsa"
-	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // RecoverPubKey recover public key from signature values.
-func RecoverPubKey(hash common.Hash, S, R, V *big.Int) (*ecdsa.PublicKey, error) {
+func RecoverPubKey(signer types.Signer, tx *types.Transaction) (*ecdsa.PublicKey, error) {
+	V, R, S := tx.RawSignatureValues()
+	hash := signer.Hash(tx)
 	r, s := R.Bytes(), S.Bytes()
 	sig := make([]byte, 65)
 	copy(sig[32-len(r):32], r)

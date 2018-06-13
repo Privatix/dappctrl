@@ -42,7 +42,9 @@ mkdir -p $DAPPCTRL_DIR
 git clone git@github.com:Privatix/dappctrl.git $DAPPCTRL_DIR
 go get -d $DAPPCTRL/...
 go get -u gopkg.in/reform.v1/reform
+go get -u github.com/rakyll/statik
 go get github.com/ethereum/go-ethereum/cmd/abigen
+
 go generate $DAPPCTRL/...
 go install -tags=notest $DAPPCTRL
 ```
@@ -66,11 +68,11 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
 ```
 
-Build `OpenVPN` service adapter:
+More information about `dappctrl.config.json`: [config fields description](https://github.com/Privatix/dappctrl/wiki/dappctrl.config.json-description).
 
-```bash
-go install $DAPPCTRL/svc/dappvpn
-```
+## Building and configuring service adapters
+
+* **OpenVPN** - please read `svc/dappvpn/README.md`.
 
 ## Using docker
 

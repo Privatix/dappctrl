@@ -9,18 +9,30 @@ import (
 	"path/filepath"
 )
 
-const chanPerm = 0644
+const (
+	chanPerm = 0644
+
+	jsonIdent = "    "
+)
+
+func encode(s string) string {
+	return base64.URLEncoding.EncodeToString([]byte(s))
+}
+
+func commonNameOrEmpty() string {
+	return os.Getenv("common_name")
+}
 
 func commonName() string {
-	cn := os.Getenv("common_name")
+	cn := commonNameOrEmpty()
 	if len(cn) == 0 {
 		logger.Fatal("empty common_name")
 	}
-	return base64.URLEncoding.EncodeToString([]byte(cn))
+	return cn
 }
 
-func storeChannel(ch string) {
-	name := filepath.Join(conf.ChannelDir, commonName())
+func storeChannel(cn, ch string) {
+	name := filepath.Join(conf.ChannelDir, encode(cn))
 	err := ioutil.WriteFile(name, []byte(ch), chanPerm)
 	if err != nil {
 		logger.Fatal("failed to store channel: %s", err)
@@ -28,7 +40,7 @@ func storeChannel(ch string) {
 }
 
 func loadChannel() string {
-	name := filepath.Join(conf.ChannelDir, commonName())
+	name := filepath.Join(conf.ChannelDir, encode(commonName()))
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
 		logger.Fatal("failed to load channel: %s", err)

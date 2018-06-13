@@ -3,13 +3,11 @@
 package eth
 
 import (
-	"encoding/hex"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/privatix/dappctrl/eth/contract"
@@ -56,13 +54,5 @@ func getPTC(t *testing.T) *contract.PrivatixTokenContract {
 }
 
 func getTransactorForAccount(t *testing.T, acc *truffle.TestAccount) *bind.TransactOpts {
-	key, err := hex.DecodeString(acc.PrivateKey)
-	if err != nil {
-		t.Fatal("failed to decode key hex: ", err)
-	}
-	prvKey, err := crypto.ToECDSA(key)
-	if err != nil {
-		t.Fatal("failed to make ecdsa key: ", err)
-	}
-	return bind.NewKeyedTransactor(prvKey)
+	return bind.NewKeyedTransactor(acc.PrivateKey)
 }

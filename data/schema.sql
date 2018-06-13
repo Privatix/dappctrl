@@ -4,7 +4,7 @@ BEGIN TRANSACTION;
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
 
 -- Templates kinds.
-CREATE TYPE tpl_kind AS ENUM ('offer', 'auth', 'access');
+CREATE TYPE tpl_kind AS ENUM ('offer', 'access');
 
 -- Billing types.
 CREATE TYPE bill_type AS ENUM ('prepaid','postpaid');
@@ -20,6 +20,9 @@ CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
+
+-- bcrypt hash in base64 (RFC-4648).
+CREATE DOMAIN bcrypt_hash AS char(80);
 
 -- Etehereum address
 CREATE DOMAIN eth_addr AS char(28);
@@ -87,7 +90,8 @@ CREATE TYPE job_status AS ENUM (
 CREATE TYPE related_type AS ENUM (
     'offering', -- service offering
     'channel', -- state channel
-    'endpoint' -- service endpoint
+    'endpoint', -- service endpoint
+    'account' -- for transfer and approve jobs
 );
 
 CREATE TABLE settings (
@@ -109,10 +113,13 @@ CREATE TABLE accounts (
     in_use boolean NOT NULL DEFAULT TRUE, -- this account is in use or not
     name varchar(30) NOT NULL -- display name
         CONSTRAINT unique_account_name UNIQUE,
+
     ptc_balance bigint NOT NULL -- PTC balance
         CONSTRAINT positive_ptc_balance CHECK (accounts.ptc_balance >= 0),
+
     psc_balance bigint NOT NULL -- PSC balance
         CONSTRAINT positive_psc_balance CHECK (accounts.psc_balance >= 0),
+
     eth_balance char(32) NOT NULL, -- ethereum balance up to 99999 ETH in WEI. Ethereum's uint192 in base64 (RFC-4648).
     last_balance_check timestamp with time zone -- time when balance was checked
 );
@@ -138,14 +145,14 @@ CREATE TABLE products (
     id uuid PRIMARY KEY,
     name varchar(64) NOT NULL,
     offer_tpl_id uuid REFERENCES templates(id), -- enables product specific billing and actions support for Client
-    -- offer_auth_id uuid REFERENCES templates(id), -- currently not in use. for future use.
     offer_access_id uuid REFERENCES templates(id), -- allows to identify endpoint message relation
     usage_rep_type usage_rep_type NOT NULL, -- for billing logic. Reporter provides increment or total usage
     is_server boolean NOT NULL, -- product is defined as server (Agent) or client (Client)
     salt bigint NOT NULL, -- password salt
-    password sha3_256 NOT NULL,
+    password bcrypt_hash NOT NULL,
     client_ident client_ident_type NOT NULL,
-    config json  -- Store configuration of product --
+    config json,  -- Store configuration of product --
+    service_endpoint_address varchar(106) -- address ("hostname") of service endpoint. Can be dns or IP.
 );
 
 -- Service offerings.
@@ -161,7 +168,7 @@ CREATE TABLE offerings (
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
 
     agent eth_addr NOT NULL,
-    signature text NOT NULL, -- agent's signature
+    raw_msg text NOT NULL,
     service_name varchar(64) NOT NULL, -- name of service
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
@@ -176,6 +183,7 @@ CREATE TABLE offerings (
 
     max_unit bigint -- optional. If specified automatic termination can be invoked
         CONSTRAINT positive_max_unit CHECK (offerings.max_unit >= 0),
+        CONSTRAINT valid_units_number CHECK ((offerings.max_unit > 0 AND offerings.max_unit >= offerings.min_units) OR offerings.max_unit = 0),
 
     billing_interval int NOT NULL -- every unit numbers, that should be paid, after free units consumed
         CONSTRAINT positive_billing_interval CHECK (offerings.billing_interval > 0),
@@ -191,31 +199,32 @@ CREATE TABLE offerings (
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
+
     additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 );
 
 -- State channels.
 CREATE TABLE channels (
     id uuid PRIMARY KEY,
-    is_local boolean NOT NULL, -- created locally (by this Client) or retreived (by this Agent)
     agent eth_addr NOT NULL,
     client eth_addr NOT NULL,
     offering uuid NOT NULL REFERENCES offerings(id),
     block int NOT NULL -- block number, when state channel created
-        CONSTRAINT positive_block CHECK (channels.block > 0),
+        CONSTRAINT positive_block CHECK (channels.block >= 0),
 
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
     total_deposit bigint NOT NULL -- total deposit after all top-ups
         CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
-    salt bigint NOT NULL, -- password salt
+
+    salt bigint, -- password salt
     username varchar(100), -- optional username, that can identify service instead of state channel id
-    password sha3_256 NOT NULL,
-    -- TODO change to bigint
+    password bcrypt_hash,
     receipt_balance bigint NOT NULL -- last payment amount received
         CONSTRAINT positive_receipt_balance CHECK (channels.receipt_balance >= 0),
-    receipt_signature text NOT NULL -- signature corresponding to last payment
+
+    receipt_signature text -- signature corresponding to last payment
 );
 
 -- Client sessions.
@@ -252,12 +261,12 @@ CREATE TABLE endpoints (
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash sha3_256 NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
-    signature text NOT NULL, -- agent's signature
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
     username varchar(100),
     password varchar(48),
-    additional_params json -- all additional parameters stored as JSON
+    additional_params json, -- all additional parameters stored as JSON
+    raw_msg text NOT NULL -- raw message in base64 (RFC-4648)
 );
 
 -- Job queue.
@@ -270,7 +279,8 @@ CREATE TABLE jobs (
     created_at timestamp with time zone NOT NULL, -- timestamp, when job was created
     not_before timestamp with time zone NOT NULL, -- timestamp, used to create deffered job
     created_by job_creator NOT NULL, -- job creator
-    try_count smallint NOT NULL -- number of tries performed
+    try_count smallint NOT NULL, -- number of tries performed
+    data json -- information required for standalone jobs like token transfers
 );
 
 -- Ethereum transactions.
@@ -281,8 +291,6 @@ CREATE TABLE eth_txs (
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id
     issued timestamp with time zone NOT NULL, -- timestamp, when tx was sent
-    block_number_issued bigint
-        CONSTRAINT positive_block_number_issued CHECK (eth_txs.block_number_issued > 0), -- block number, when tx was sent to the network
 
     addr_from eth_addr NOT NULL, -- from ethereum address
     addr_to eth_addr NOT NULL, -- to ethereum address
@@ -293,7 +301,9 @@ CREATE TABLE eth_txs (
     gas bigint
         CONSTRAINT positive_gas CHECK (eth_txs.gas > 0), -- tx gas field
 
-    tx_raw jsonb -- raw tx as was sent
+    tx_raw jsonb, -- raw tx as was sent
+    related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
+    related_id uuid NOT NULL -- related object (offering, channel, endpoint, etc.)
 );
 
 -- Ethereum events.
@@ -307,7 +317,9 @@ CREATE TABLE eth_logs (
 
     addr eth_addr NOT NULL, -- address of contract from which this log originated
     data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
-    topics jsonb -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    topics jsonb, -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
+    failures int NOT NULL DEFAULT 0, -- how many times we failed to schedule a job
+    ignore boolean NOT NULL DEFAULT FALSE
 );
 
 END TRANSACTION;

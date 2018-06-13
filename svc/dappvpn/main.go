@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
+	"github.com/privatix/dappctrl/svc/dappvpn/pusher"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -22,6 +24,7 @@ type config struct {
 	ChannelDir string // Directory for common-name -> channel mappings.
 	Log        *util.LogConfig
 	Monitor    *mon.Config
+	Pusher     *pusher.Config
 	Server     *serverConfig
 }
 
@@ -30,6 +33,7 @@ func newConfig() *config {
 		ChannelDir: ".",
 		Log:        util.NewLogConfig(),
 		Monitor:    mon.NewConfig(),
+		Pusher:     pusher.NewConfig(),
 		Server:     &serverConfig{Config: srv.NewConfig()},
 	}
 }
@@ -63,7 +67,7 @@ func main() {
 	case "client-disconnect":
 		handleDisconnect()
 	default:
-		handleMonitor()
+		handleMonitor(*fconfig)
 	}
 }
 
@@ -77,7 +81,10 @@ func handleAuth() {
 		logger.Fatal("failed to auth: %s", err)
 	}
 
-	storeChannel(user)
+	if cn := commonNameOrEmpty(); len(cn) != 0 {
+		storeChannel(cn, user)
+	}
+	storeChannel(user, user) // Needed when using username-as-common-name.
 }
 
 func handleConnect() {
@@ -122,7 +129,7 @@ func handleDisconnect() {
 	}
 }
 
-func handleMonitor() {
+func handleMonitor(confFile string) {
 	handleByteCount := func(ch string, up, down uint64) bool {
 		args := sesssrv.UpdateArgs{
 			ClientID: ch,
@@ -139,6 +146,22 @@ func handleMonitor() {
 		}
 
 		return true
+	}
+
+	if !conf.Pusher.Pushed {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			c := pusher.NewCollect(conf.Pusher, conf.Server.Config,
+				conf.Server.Username, conf.Server.Password,
+				logger)
+
+			if err := pusher.PushConfig(ctx, c); err != nil {
+				logger.Error("failed to send OpenVpn"+
+					" server configuration: %s\n", err)
+			}
+		}()
 	}
 
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleByteCount)

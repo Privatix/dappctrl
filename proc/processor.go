@@ -34,5 +34,5 @@ func NewProcessor(
 var (
 	ErrBadServiceStatus = errors.New("bad service status")
 	ErrActiveJobsExist  = errors.New("active jobs exist")
-	ErrSameJobExists    = errors.New("same jobs exists")
+	ErrSameJobExists    = errors.New("same job exists")
 )

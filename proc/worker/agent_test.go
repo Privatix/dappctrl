@@ -57,6 +57,8 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 	topics := data.LogTopics{
+		// Don't know what the first topic is, but it appears in real logs.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),

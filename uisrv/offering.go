@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -264,7 +265,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	s.logger.Info("action ( %v )  request for offering with id:"+
 		" %v received.", req.Action, id)
 
-	dataJSON, err := json.Marshal(&clientPreChannelCreateData{
+	dataJSON, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID})
 	if err != nil {
 		s.logger.Error("failed to marshal job data: %v", err)

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -390,7 +391,7 @@ func TestPutClientOfferingStatus(t *testing.T) {
 	data.FindInTestDB(t, testServer.db, job, "related_id",
 		offer.ID)
 
-	expectedData, err := json.Marshal(&clientPreChannelCreateData{
+	expectedData, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: testGasPrice, Offering: offer.ID,
 		Account: testAgent.ID})
 	if err != nil {

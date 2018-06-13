@@ -188,3 +188,55 @@ func (w *Worker) AccountAddCheckBalance(job *data.Job) error {
 	job.NotBefore = time.Now().Add(time.Minute)
 	return fmt.Errorf("repeating job")
 }
+
+func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
+	channel, err := w.relatedChannel(job, jobType)
+	if err != nil {
+		return err
+	}
+
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return err
+	}
+
+	logInput, err := extractLogChannelToppedUp(ethLog)
+	if err != nil {
+		return fmt.Errorf("could not parse log: %v", err)
+	}
+
+	agentAddr, err := data.ToAddress(channel.Agent)
+	if err != nil {
+		return fmt.Errorf("failed to parse agent addr: %v", err)
+	}
+
+	clientAddr, err := data.ToAddress(channel.Client)
+	if err != nil {
+		return fmt.Errorf("failed to parse client addr: %v", err)
+	}
+
+	offering, err := w.offering(channel.Offering)
+	if err != nil {
+		return err
+	}
+
+	offeringHash, err := w.toHashArr(offering.Hash)
+	if err != nil {
+		return fmt.Errorf("could not parse offering hash: %v", err)
+	}
+
+	if agentAddr != logInput.agentAddr ||
+		clientAddr != logInput.clientAddr ||
+		offeringHash != logInput.offeringHash ||
+		channel.Block != logInput.openBlockNum {
+		return fmt.Errorf("related channel does" +
+			" not correspond to log input")
+	}
+
+	channel.TotalDeposit += logInput.addedDeposit.Uint64()
+	if err = w.db.Update(channel); err != nil {
+		return fmt.Errorf("could not update channels deposit: %v", err)
+	}
+
+	return nil
+}

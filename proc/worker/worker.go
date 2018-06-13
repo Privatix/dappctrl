@@ -94,8 +94,8 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 }
 
 // SetQueue sets queue for handlers.
-func (h *Worker) SetQueue(queue *job.Queue) {
-	h.queue = queue
+func (w *Worker) SetQueue(queue *job.Queue) {
+	w.queue = queue
 }
 
 // SetProcessor sets processor.

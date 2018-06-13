@@ -47,6 +47,14 @@ type EthBackend interface {
 		agent common.Address, hash [common.HashLength]byte,
 		deposit *big.Int) (*types.Transaction, error)
 
+	PSCTopUpChannel(opts *bind.TransactOpts, agent common.Address,
+		blockNumber uint32, hash [common.HashLength]byte,
+		deposit *big.Int) (*types.Transaction, error)
+
+	PSCUncooperativeClose(opts *bind.TransactOpts, agent common.Address,
+		blockNumber uint32, hash [common.HashLength]byte,
+		balance *big.Int) (*types.Transaction, error)
+
 	EthBalanceAt(context.Context, common.Address) (*big.Int, error)
 
 	PSCSettle(opts *bind.TransactOpts,
@@ -169,6 +177,28 @@ func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit, authHash)
 	if err != nil {
 		err = fmt.Errorf("failed to create PSC channel: %s", err)
+	}
+	return tx, err
+}
+
+func (b *ethBackendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	tx, err := b.psc.TopUpChannel(opts, agent, blockNumber, hash, deposit)
+	if err != nil {
+		err = fmt.Errorf("failed to top up PSC channel: %s", err)
+	}
+	return tx, err
+}
+
+func (b *ethBackendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	balance *big.Int) (*types.Transaction, error) {
+	tx, err := b.psc.UncooperativeClose(opts, agent,
+		blockNumber, hash, balance)
+	if err != nil {
+		err = fmt.Errorf("failed to uncooperative close"+
+			" PSC channel: %s", err)
 	}
 	return tx, err
 }

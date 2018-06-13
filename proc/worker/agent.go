@@ -86,54 +86,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 
 // AgentAfterChannelTopUp updates deposit of a channel.
 func (w *Worker) AgentAfterChannelTopUp(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentAfterChannelTopUp)
-	if err != nil {
-		return err
-	}
-
-	ethLog, err := w.ethLog(job)
-	if err != nil {
-		return err
-	}
-
-	logInput, err := extractLogChannelToppedUp(ethLog)
-	if err != nil {
-		return fmt.Errorf("could not parse log: %v", err)
-	}
-
-	agentAddr, err := data.ToAddress(channel.Agent)
-	if err != nil {
-		return fmt.Errorf("failed to parse agent addr: %v", err)
-	}
-
-	clientAddr, err := data.ToAddress(channel.Client)
-	if err != nil {
-		return fmt.Errorf("failed to parse client addr: %v", err)
-	}
-
-	offering, err := w.offering(channel.Offering)
-	if err != nil {
-		return err
-	}
-
-	offeringHash, err := w.toHashArr(offering.Hash)
-	if err != nil {
-		return fmt.Errorf("could not parse offering hash: %v", err)
-	}
-
-	if agentAddr != logInput.agentAddr ||
-		clientAddr != logInput.clientAddr ||
-		offeringHash != logInput.offeringHash ||
-		channel.Block != logInput.openBlockNum {
-		return fmt.Errorf("related channel does not correspond to log input")
-	}
-
-	channel.TotalDeposit += logInput.addedDeposit.Uint64()
-	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update channels deposit: %v", err)
-	}
-
-	return nil
+	return w.afterChannelTopUp(job, data.JobAgentAfterChannelTopUp)
 }
 
 // AgentAfterUncooperativeCloseRequest sets channel's status to challenge period.

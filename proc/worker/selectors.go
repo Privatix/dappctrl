@@ -56,6 +56,15 @@ func (w *Worker) ethLog(job *data.Job) (*data.EthLog, error) {
 	return log, nil
 }
 
+func (w *Worker) channel(pk string) (*data.Channel, error) {
+	channel := &data.Channel{}
+	err := w.db.FindByPrimaryKeyTo(channel, pk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find %T: %v", channel, err)
+	}
+	return channel, nil
+}
+
 func (w *Worker) endpoint(channel string) (*data.Endpoint, error) {
 	endpoint := &data.Endpoint{}
 	err := w.db.FindOneTo(endpoint, "channel", channel)

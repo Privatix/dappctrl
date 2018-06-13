@@ -217,7 +217,7 @@ VALUES ('d0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
 INSERT INTO products (id, name, offer_tpl_id, offer_access_id, usage_rep_type,
                       is_server, salt, password, client_ident, config)
 VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN service',
-        'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'a618dacc-a3be-45b8-bca5-15a48bff6258',
+        'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
         'total', TRUE, 6012867121110302348,
         'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 'by_channel_id', '{"somekey": "somevalue"}');
 

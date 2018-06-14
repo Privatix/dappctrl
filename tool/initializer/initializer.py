@@ -713,8 +713,6 @@ class Params(CMD):
         self._file_rw(p=path, w=True, json_r=True, data=data,
                       log='Rewrite dappctrl.config.local.json.')
 
-        self._file_rw(p=path, w=True, json_r=True, data=data, log='Rewrite dappctrl.config.local.json.')
-
 class Rdata(CMD):
         self.url = main_conf['iptables']['link_download']
         self.files = main_conf['iptables']['file_download']
@@ -809,19 +807,6 @@ class Checker(Params, Rdata):
 if __name__ == '__main__':
             self.get_npm(sysctl)
             self._finalizer(True)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=' *** Installer *** ')
-    parser.add_argument("--build", nargs='?', default=True,
-                        help='')
-    parser.add_argument('--vpn', type=str, nargs='?',
-                        help='vpn status [start,stop,restart]')
-    parser.add_argument('--comm', type=str, nargs='?',
-            if args['no_gui']:
-                logging.info('Install GUI.')
-                self.get_npm(sysctl)
-            self._finalizer(True, sysctl)
 
 
 if __name__ == '__main__':

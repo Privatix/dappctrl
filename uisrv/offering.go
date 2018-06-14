@@ -201,12 +201,6 @@ type OfferingPutPayload struct {
 	GasPrice uint64 `json:"gasPrice"`
 }
 
-// OfferingPutPayload offering status update payload.
-type OfferingPutPayload struct {
-	Action   string `json:"action"`
-	GasPrice uint64 `json:"gasPrice"`
-}
-
 func (s *Server) handlePutOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
 	req := &OfferingPutPayload{}

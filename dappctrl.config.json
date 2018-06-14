@@ -103,5 +103,13 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://89.38.96.53:8080"
+    },
+
+    "Report": {
+      "AppID": ""
+    },
+
+    "VPNClient" : {
+        "ConfigDir" : "/etc/openvpn/config"
     }
 }

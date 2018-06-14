@@ -54,6 +54,16 @@ SQL style guide: http://www.sqlstyle.guide/
 
 As is described at [Documentation/SubmittingPatches in the Git repo](https://git.kernel.org/pub/scm/git/git.git/tree/Documentation/SubmittingPatches?id=HEAD#n133)
 
+## TODO Comments
+TODOs should include the string TODO in all caps, followed by the name, e-mail address, or other identifier of the person who can best provide context about the problem referenced by the TODO, in parentheses.
+
+Example:
+
+```
+// TODO(drew2a) Add todo convention to CONTRIBUTING.md
+```
+
+
 ## Tests
 
 For any new programmatic functionality, we like unit tests when possible, so if you can keep your code cleanly isolated, please do add a test file to the tests folder.

@@ -2,15 +2,19 @@ package util
 
 import (
 	"errors"
+	gofmt "fmt"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/privatix/dappctrl/report"
 )
 
 // Logger to log internal events.
 type Logger struct {
 	logger *log.Logger
 	level  int
+	rep    report.Reporter
 }
 
 // LogConfig is a logger configuration.
@@ -61,9 +65,14 @@ func NewLogger(conf *LogConfig) (*Logger, error) {
 	}
 
 	return &Logger{
-		log.New(os.Stderr, "", log.LstdFlags),
-		lvl,
+		logger: log.New(os.Stderr, "", log.LstdFlags),
+		level:  lvl,
 	}, nil
+}
+
+// Reporter adds Reporter to the logger.
+func (l *Logger) Reporter(reporter report.Reporter) {
+	l.rep = reporter
 }
 
 // Log emits a log message.
@@ -73,6 +82,16 @@ func (l *Logger) Log(lvl int, fmt string, v ...interface{}) {
 	}
 
 	l.logger.Printf(logLevelStrs[lvl]+" "+fmt, v...)
+
+	if l.rep != nil && l.rep.Enable() && lvl > LogWarning {
+		e := gofmt.Errorf(logLevelStrs[lvl]+" "+fmt, v...)
+
+		if lvl == LogError {
+			l.rep.Notify(e, false, 4)
+			return
+		}
+		l.rep.Notify(e, true, 4)
+	}
 
 	if lvl == LogFatal {
 		os.Exit(1)
@@ -102,4 +121,9 @@ func (l *Logger) Error(fmt string, v ...interface{}) {
 // Fatal emits a fatal message and exits with failure.
 func (l *Logger) Fatal(fmt string, v ...interface{}) {
 	l.Log(LogFatal, fmt, v...)
+}
+
+// Printf prints a log message.
+func (l *Logger) Printf(format string, v ...interface{}) {
+	l.logger.Output(2, gofmt.Sprintf(format, v...))
 }

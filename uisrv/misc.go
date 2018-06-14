@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	validator "gopkg.in/go-playground/validator.v9"
 )
+
+const timeFormat = "2006-01-02T15:04:05.999Z"
 
 var (
 	validate = validator.New()
@@ -128,4 +131,16 @@ func (s *Server) replyNumFromQuery(w http.ResponseWriter, query, arg string) {
 	}
 	w.Write(retB)
 	return
+}
+
+func singleTimeFormat(tm time.Time) string {
+	return tm.Format(timeFormat)
+}
+
+func singleTimeFormatFromStr(ti string) string {
+	tm, err := time.Parse(time.RFC3339Nano, ti)
+	if err != nil {
+		return ""
+	}
+	return singleTimeFormat(tm)
 }

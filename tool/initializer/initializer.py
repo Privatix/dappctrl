@@ -37,16 +37,16 @@ Exit code:
     2 - If version of Ubuntu lower than 16
     3 - If sysctl net.ipv4.ip_forward = 0 after sysctl -w net.ipv4.ip_forward=1
     4 - Problem when call system command from subprocess
-    5 - Problem with operation R/W unit file 
-    6 - Problem with operation download file 
-    7 - Problem with operation R/W server.conf 
+    5 - Problem with operation R/W unit file
+    6 - Problem with operation download file
+    7 - Problem with operation R/W server.conf
     8 - Default DB conf is empty, and no section 'DB' in dappctrl-test.config.json
     9 - Check the run of the database is negative
     10 - Problem with read dapp cmd from file
     11 - Problem NPM
     12 - Problem with run psql
-    13 - Problem with ready Vpn 
-    14 - Problem with ready Common 
+    13 - Problem with ready Vpn
+    14 - Problem with ready Common
 """
 
 log_conf = dict(
@@ -127,7 +127,6 @@ main_conf = dict(
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
-)
 
 
 class CMD:
@@ -428,6 +427,23 @@ class Params(CMD):
         main_conf['final']['vpn_port'] = port
         return port
 
+    def service(self, srv, status):
+        if status not in ['start', 'stop', 'restart']:
+            logging.error('{} status must be in '
+                          '[\'start\',\'stop\',\'restart\']'.format(srv))
+            return False
+        cmd = 'systemctl {} {}'.format(status, self.f_vpn)
+        return bool(self._sys_call(cmd, rolback=False))
+
+    def get_npm(self, sysctl):
+        cmds = [
+            'curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -',
+            'sudo apt-get install -y nodejs',
+            'apt-get install -y npm'
+        ]
+        for cmd in cmds:
+            self._sys_call(cmd, sysctl=sysctl, s_exit=11)
+
     def __iptables(self):
         logging.debug('Check iptables')
 
@@ -697,9 +713,9 @@ class Params(CMD):
         self._file_rw(p=path, w=True, json_r=True, data=data,
                       log='Rewrite dappctrl.config.local.json.')
 
+        self._file_rw(p=path, w=True, json_r=True, data=data, log='Rewrite dappctrl.config.local.json.')
 
 class Rdata(CMD):
-    def __init__(self):
         self.url = main_conf['iptables']['link_download']
         self.files = main_conf['iptables']['file_download']
         self.p_dwld = main_conf['iptables']['path_download']
@@ -791,6 +807,24 @@ class Checker(Params, Rdata):
 
 
 if __name__ == '__main__':
+            self.get_npm(sysctl)
+            self._finalizer(True)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=' *** Installer *** ')
+    parser.add_argument("--build", nargs='?', default=True,
+                        help='')
+    parser.add_argument('--vpn', type=str, nargs='?',
+                        help='vpn status [start,stop,restart]')
+    parser.add_argument('--comm', type=str, nargs='?',
+            if args['no_gui']:
+                logging.info('Install GUI.')
+                self.get_npm(sysctl)
+            self._finalizer(True, sysctl)
+
+
+if __name__ == '__main__':
     parser = ArgumentParser(description=' *** Installer *** ')
     parser.add_argument("--build", nargs='?', default=True,
                         help='')
@@ -802,6 +836,23 @@ if __name__ == '__main__':
     parser.add_argument("--test", nargs='?', default=True,
                         help='')
 
+    args = vars(parser.parse_args())
+    # print(args)
+    # if not args['build']:
+    #     logging.info('Build mode.')
+    #     CMD().build_cmd()
+    # elif args['vpn']:
+    #     logging.info('Vpn mode.')
+    #     Params().service('vpn', args['vpn'])
+    # elif args['comm']:
+    #     logging.info('Comm mode.')
+    #     Params().service('comm', args['comm'])
+    # else:
+    #     logging.info('Begin init.')
+    #     Checker().init_os(args)
+    #     logging.info('All done.')
+
+    Params().ip_dappctrl()
     parser.add_argument("--no-gui", nargs='?', default=True,
                         help='')
 

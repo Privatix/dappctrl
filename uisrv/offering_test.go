@@ -226,7 +226,8 @@ func TestGetOffering(t *testing.T) {
 	testGetOfferings(t, "", "", data.OfferEmpty, 1)
 }
 
-func testGetClientOfferings(t *testing.T, minp, maxp, country string, exp int) {
+func testGetClientOfferings(t *testing.T, minp, maxp,
+	country string, exp int) {
 	res := getResources(t, clientOfferingsPath,
 		map[string]string{
 			"minUnitPrice": minp,
@@ -310,10 +311,19 @@ func getOfferingStatus(t *testing.T, id string) *http.Response {
 	return res
 }
 
-func sendOfferingAction(t *testing.T, id, action string, gasPrice uint64) *http.Response {
-	path := fmt.Sprint(offeringsPath, id, "/status")
-	payload := &OfferingPutPayload{Action: action, GasPrice: gasPrice}
-	return sendPayload(t, http.MethodPut, path, payload)
+func sendOfferingAction(t *testing.T, id, action string,
+	gasPrice uint64) *http.Response {
+	path := offeringsPath + id + "/status"
+	return sendPayload(t, http.MethodPut, path,
+		&OfferingPutPayload{Action: action, GasPrice: gasPrice})
+}
+
+func sendClientOfferingAction(t *testing.T, id, action,
+	account string, gasPrice uint64) *http.Response {
+	path := clientOfferingsPath + id + "/status"
+	return sendPayload(t, http.MethodPut, path,
+		&OfferingPutPayload{Action: action, Account: account,
+			GasPrice: gasPrice})
 }
 
 func TestPutOfferingStatus(t *testing.T) {
@@ -325,10 +335,12 @@ func TestPutOfferingStatus(t *testing.T) {
 
 	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
 	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("wanted: %d, got: %v", http.StatusBadRequest, res.Status)
+		t.Fatalf("wanted: %d, got: %v",
+			http.StatusBadRequest, res.Status)
 	}
 
-	res = sendOfferingAction(t, fixture.Offering.ID, PublishOffering, testGasPrice)
+	res = sendOfferingAction(t, fixture.Offering.ID, PublishOffering,
+		testGasPrice)
 	if res.StatusCode != http.StatusOK {
 		t.Fatal("got: ", res.Status)
 	}
@@ -342,6 +354,54 @@ func TestPutOfferingStatus(t *testing.T) {
 		t.Fatal("job does not contain expected data")
 	}
 	data.DeleteFromTestDB(t, testServer.db, jobPublish)
+}
+
+func TestPutClientOfferingStatus(t *testing.T) {
+	defer cleanDB(t)
+
+	setTestUserCredentials(t)
+	createOfferingFixtures(t)
+
+	testGasPrice := uint64(1)
+
+	offer := data.NewTestOffering(genEthAddr(t),
+		testProd.ID, testTpl.ID)
+	offer.OfferStatus = data.OfferRegister
+	offer.Status = data.MsgChPublished
+	offer.IsLocal = false
+	offer.Country = "US"
+
+	insertItems(t, offer)
+
+	res := sendClientOfferingAction(t, offer.ID, "wrong-action",
+		testAgent.ID, testGasPrice)
+
+	checkStatusCode(t, res, http.StatusBadRequest,
+		"failed to put offering status: %d")
+
+	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
+		testAgent.ID, testGasPrice)
+
+	checkStatusCode(t, res, http.StatusOK,
+		"failed to put offering status: %d")
+
+	job := new(data.Job)
+
+	data.FindInTestDB(t, testServer.db, job, "related_id",
+		offer.ID)
+
+	expectedData, err := json.Marshal(&clientPreChannelCreateData{
+		GasPrice: testGasPrice, Offering: offer.ID,
+		Account: testAgent.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(job.Data, expectedData) {
+		t.Fatal("job does not contain expected data")
+	}
+
+	data.DeleteFromTestDB(t, testServer.db, job)
 }
 
 func TestGetOfferingStatus(t *testing.T) {

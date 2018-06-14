@@ -83,17 +83,25 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
 	}, nil
 }
 
-func (w *Worker) addJob(jType, rType, rID string) error {
+func (w *Worker) addJobWithData(
+	jType, rType, rID string, jData interface{}) error {
+	data2, err := json.Marshal(jData)
+	if err != nil {
+		return err
+	}
+
 	return w.queue.Add(&data.Job{
-		ID:          util.NewUUID(),
-		Status:      data.JobActive,
 		RelatedType: rType,
 		RelatedID:   rID,
 		Type:        jType,
 		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobTask,
-		Data:        []byte("{}"),
+		Data:        data2,
 	})
+}
+
+func (w *Worker) addJob(jType, rType, rID string) error {
+	return w.addJobWithData(jType, rType, rID, &struct{}{})
 }
 
 func (w *Worker) updateAccountBalances(acc *data.Account) error {
@@ -124,6 +132,13 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
 	return w.db.Update(acc)
+}
+
+func parseJobData(job *data.Job, data interface{}) error {
+	if err := json.Unmarshal(job.Data, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal job data: %s", err)
+	}
+	return nil
 }
 
 func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
@@ -163,5 +178,5 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		RelatedID:   relatedID,
 	}
 
-	return w.db.Insert(&dtx)
+	return data.Insert(w.db.Querier, &dtx)
 }

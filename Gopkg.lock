@@ -11,17 +11,17 @@
   branch = "master"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
-  revision = "59652c8de980f3fef4d4f996665828d89574dbef"
+  revision = "59944ff78bc1de686b0aba1444dfd380f48f03d4"
 
 [[projects]]
   branch = "master"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
-  revision = "bc0944904505aab55e089371a892be2f87883161"
+  revision = "86fed781132ac890ee03e906e4ecd5d6fa180c64"
 
 [[projects]]
   name = "github.com/ethereum/go-ethereum"
-  packages = [".","accounts","accounts/abi","accounts/abi/bind","accounts/keystore","common","common/hexutil","common/math","common/mclock","common/number","core/types","crypto","crypto/ecies","crypto/randentropy","crypto/secp256k1","crypto/sha3","ethclient","ethdb","event","log","metrics","p2p/netutil","params","rlp","rpc","trie"]
+  packages = [".","accounts","accounts/abi","accounts/abi/bind","accounts/keystore","common","common/hexutil","common/math","common/mclock","core/types","crypto","crypto/ecies","crypto/randentropy","crypto/secp256k1","crypto/sha3","ethclient","ethdb","event","log","metrics","p2p/netutil","params","rlp","rpc","trie"]
   revision = "d6ed2f67a8cdb07ce7b4eaea93452afb0cdbaa23"
 
 [[projects]]
@@ -98,9 +98,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/sethvargo/go-password"
+  packages = ["password"]
+  revision = "5e68a1664a916642585547c10af910927627055a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/syndtr/goleveldb"
   packages = ["leveldb","leveldb/cache","leveldb/comparer","leveldb/errors","leveldb/filter","leveldb/iterator","leveldb/journal","leveldb/memdb","leveldb/opt","leveldb/storage","leveldb/table","leveldb/util"]
-  revision = "5d6fca44a948d2be89a9702de7717f0168403d3d"
+  revision = "e2150783cd35f5b607daca48afd8c57ec54cc995"
 
 [[projects]]
   branch = "master"
@@ -123,26 +129,26 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["bcrypt","blowfish","pbkdf2","scrypt","sha3"]
-  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
+  packages = ["bcrypt","blowfish","pbkdf2","scrypt"]
+  revision = "37a17fe027db43f76fd88b056ddf588563fc8722"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["websocket"]
-  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
+  revision = "8883426083c04a2627e6e59d84d5f6fb63d16c91"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports","internal/fastwalk"]
-  revision = "a5b4c53f6e8bdcafa95a94671bf2d1203365858b"
+  revision = "c995a088887b4ae00a4c85a984117cbc8d86ca3d"
 
 [[projects]]
   name = "gopkg.in/fatih/set.v0"
@@ -177,6 +183,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "932da73e3c1e2ffc33b9a26417882c86176e2cccd262e64f7f53652196b53d0d"
+  inputs-digest = "30e748f8d2a8505fbce7eb9bd2d088d4a9701a796a9c1c22e9446518b1b514be"
   solver-name = "gps-cdcl"
   solver-version = 1

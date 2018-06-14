@@ -557,39 +557,39 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	})
 	// offering events containing agent address should be ignored
 
-// TODO: uncomment, when client job handler are completed
-/*
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthOfferingCreated,
-		someAddress,         // agent
-		td.offering[2].Hash, // offering hash
-		minDepositVal,       // min deposit
-	)
-	queue.expect(unrelatedOfferingCreated, func(j *data.Job) bool {
-		return j.Type == data.JobClientAfterOfferingMsgBCPublish
-	})
+	// TODO: uncomment, when client job handler are completed
+	/*
+		insertEvent(t, db, nextBlock(), 0,
+			eth.EthOfferingCreated,
+			someAddress,         // agent
+			td.offering[2].Hash, // offering hash
+			minDepositVal,       // min deposit
+		)
+		queue.expect(unrelatedOfferingCreated, func(j *data.Job) bool {
+			return j.Type == data.JobClientAfterOfferingMsgBCPublish
+		})
 
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthOfferingPoppedUp,
-		someAddress,         // agent
-		td.offering[2].Hash, // offering hash
-	)
-	queue.expect(clientOfferingPoppedUp, func(j *data.Job) bool {
-		return j.Type == data.JobClientAfterOfferingMsgBCPublish
-	})
+		insertEvent(t, db, nextBlock(), 0,
+			eth.EthOfferingPoppedUp,
+			someAddress,         // agent
+			td.offering[2].Hash, // offering hash
+		)
+		queue.expect(clientOfferingPoppedUp, func(j *data.Job) bool {
+			return j.Type == data.JobClientAfterOfferingMsgBCPublish
+		})
 
-	// Tick here on purpose, so that not all events are ignored because
-	// the offering's been deleted.
-	ticker.tick()
-	queue.awaitCompletion(time.Second)
+		// Tick here on purpose, so that not all events are ignored because
+		// the offering's been deleted.
+		ticker.tick()
+		queue.awaitCompletion(time.Second)
 
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthOfferingDeleted,
-		someAddress,         // agent
-		td.offering[2].Hash, // offering hash
-	)
-	// should ignore the deletion event
-*/
+		insertEvent(t, db, nextBlock(), 0,
+			eth.EthOfferingDeleted,
+			someAddress,         // agent
+			td.offering[2].Hash, // offering hash
+		)
+		// should ignore the deletion event
+	*/
 	insertEvent(t, db, nextBlock(), 0,
 		eth.EthOfferingPoppedUp,
 		someAddress,         // agent
@@ -606,52 +606,52 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	queue.expect(agentAfterChannelCreated, func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterChannelCreate
 	})
-// TODO: uncomment, when client job handler are completed
-/*
-	el := insertEvent(t, db, nextBlock(), 0,
-		eth.EthDigestChannelToppedUp,
-		td.addr[0],          // agent
-		someAddress,         // client
-		td.offering[1].Hash, // offering
-	)
-	bs, err := mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-		uint32(td.channel[1].Block),
-		new(big.Int),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	el.Data = data.FromBytes(bs)
-	if err := db.Save(el); err != nil {
-		t.Fatal(err)
-	}
-	// channel does not exist, thus event ignored
+	// TODO: uncomment, when client job handler are completed
+	/*
+		el := insertEvent(t, db, nextBlock(), 0,
+			eth.EthDigestChannelToppedUp,
+			td.addr[0],          // agent
+			someAddress,         // client
+			td.offering[1].Hash, // offering
+		)
+		bs, err := mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
+			uint32(td.channel[1].Block),
+			new(big.Int),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		el.Data = data.FromBytes(bs)
+		if err := db.Save(el); err != nil {
+			t.Fatal(err)
+		}
+		// channel does not exist, thus event ignored
 
-	el = insertEvent(t, db, nextBlock(), 0,
-		eth.EthDigestChannelToppedUp,
-		someAddress,         // agent
-		td.addr[1],          // client
-		td.offering[1].Hash, // offering
-	)
+		el = insertEvent(t, db, nextBlock(), 0,
+			eth.EthDigestChannelToppedUp,
+			someAddress,         // agent
+			td.addr[1],          // client
+			td.offering[1].Hash, // offering
+		)
 
-	bs, err = mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-		uint32(td.channel[1].Block),
-		new(big.Int),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	el.Data = data.FromBytes(bs)
-	if err := db.Save(el); err != nil {
-		t.Fatal(err)
-	}
-	queue.expect(clientAfterChannelTopUp, func(j *data.Job) bool {
-		return j.Type == data.JobClientAfterChannelTopUp
-	})
+		bs, err = mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
+			uint32(td.channel[1].Block),
+			new(big.Int),
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		el.Data = data.FromBytes(bs)
+		if err := db.Save(el); err != nil {
+			t.Fatal(err)
+		}
+		queue.expect(clientAfterChannelTopUp, func(j *data.Job) bool {
+			return j.Type == data.JobClientAfterChannelTopUp
+		})
 
-	ticker.tick()
-	queue.awaitCompletion(time.Second)
-*/
+		ticker.tick()
+		queue.awaitCompletion(time.Second)
+	*/
 }
 
 func TestMonitorSchedule(t *testing.T) {

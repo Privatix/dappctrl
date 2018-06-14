@@ -233,10 +233,46 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 }
 
 func TestClientPreUncooperativeClose(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Check challenge_period ended.
-	// 2. PSC.settle()
-	// 3. set ch_status="wait_uncoop"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreUncooperativeClose, data.JobChannel)
+	defer fxt.Close()
+
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	if err := data.Save(db.Querier, client); err != nil {
+		t.Fatal(err)
+	}
+
+	issued := time.Now()
+
+	runJob(t, env.worker.ClientPreUncooperativeClose, fxt.job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+	if ch.ChannelStatus != data.ChannelWaitUncoop {
+		t.Fatal("bad channel status")
+	}
+
+	var tx data.EthTx
+	env.selectOneTo(t, &tx, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteEthTx(t, fxt.job.ID)
+
+	if tx.Method != "Settle" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != client.EthAddr ||
+		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
 }
 
 func TestClientAfterUncooperativeClose(t *testing.T) {

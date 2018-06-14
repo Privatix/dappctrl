@@ -15,6 +15,7 @@ import (
 
 // EthBackend adapter to communicate with contract.
 type EthBackend interface {
+	LatestBlockNumber(ctx context.Context) (*big.Int, error)
 	CooperativeClose(*bind.TransactOpts, common.Address, uint32,
 		[common.HashLength]byte, *big.Int, []byte, []byte) (*types.Transaction, error)
 
@@ -31,6 +32,12 @@ type EthBackend interface {
 
 	PSCAddBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
 
+	PSCGetChannelInfo(opts *bind.CallOpts,
+		client common.Address, agent common.Address,
+		blockNumber uint32,
+		hash [common.HashLength]byte) ([common.HashLength]byte,
+		*big.Int, uint32, *big.Int, error)
+
 	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
 
 	PSCOfferingSupply(opts *bind.CallOpts,
@@ -41,6 +48,10 @@ type EthBackend interface {
 		deposit *big.Int) (*types.Transaction, error)
 
 	EthBalanceAt(context.Context, common.Address) (*big.Int, error)
+
+	PSCSettle(opts *bind.TransactOpts,
+		agent common.Address, blockNumber uint32,
+		hash [common.HashLength]byte) (*types.Transaction, error)
 }
 
 type ethBackendInstance struct {
@@ -53,6 +64,16 @@ type ethBackendInstance struct {
 func NewEthBackend(psc *contract.PrivatixServiceContract,
 	ptc *contract.PrivatixTokenContract, conn *ethclient.Client) EthBackend {
 	return &ethBackendInstance{psc, ptc, conn}
+}
+
+func (b *ethBackendInstance) LatestBlockNumber(ctx context.Context) (*big.Int,
+	error) {
+	header, err := b.conn.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get"+
+			" latest block: %s", err)
+	}
+	return header.Number, err
 }
 
 func (b *ethBackendInstance) CooperativeClose(opts *bind.TransactOpts,
@@ -132,6 +153,14 @@ func (b *ethBackendInstance) PSCOfferingSupply(
 	return supply, err
 }
 
+func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
+	client common.Address, agent common.Address,
+	blockNumber uint32,
+	hash [common.HashLength]byte) ([common.HashLength]byte,
+	*big.Int, uint32, *big.Int, error) {
+	return b.psc.GetChannelInfo(opts, client, agent, blockNumber, hash)
+}
+
 func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
@@ -156,4 +185,15 @@ func (b *ethBackendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 func (b *ethBackendInstance) EthBalanceAt(ctx context.Context,
 	owner common.Address) (*big.Int, error) {
 	return b.conn.BalanceAt(ctx, owner, nil)
+}
+
+func (b *ethBackendInstance) PSCSettle(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	tx, err := b.psc.Settle(opts, agent, blockNumber, hash)
+	if err != nil {
+		err = fmt.Errorf("failed to settle"+
+			" PSC channel: %s", err)
+	}
+	return tx, err
 }

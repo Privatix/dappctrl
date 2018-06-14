@@ -24,6 +24,7 @@ type testEthBackend struct {
 	balanceEth  *big.Int
 	balancePSC  *big.Int
 	balancePTC  *big.Int
+	blockNumber *big.Int
 	abi         abi.ABI
 	pscAddr     common.Address
 	offerSupply uint16
@@ -33,7 +34,14 @@ type testEthBackend struct {
 func newTestEthBackend(pscAddr common.Address) *testEthBackend {
 	b := &testEthBackend{}
 	b.pscAddr = pscAddr
+	b.blockNumber = big.NewInt(1)
 	return b
+}
+
+func (b *testEthBackend) LatestBlockNumber(ctx context.Context) (*big.Int, error) {
+	block := b.blockNumber
+	b.blockNumber = new(big.Int).Add(b.blockNumber, big.NewInt(1))
+	return block, nil
 }
 
 func (b *testEthBackend) CooperativeClose(opts *bind.TransactOpts,
@@ -127,6 +135,16 @@ func (b *testEthBackend) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	return tx, nil
 }
 
+func (b *testEthBackend) PSCGetChannelInfo(opts *bind.CallOpts,
+	client common.Address, agent common.Address,
+	blockNumber uint32,
+	hash [common.HashLength]byte) ([common.HashLength]byte,
+	*big.Int, uint32, *big.Int, error) {
+	settleBlock, _ := b.LatestBlockNumber(context.Background())
+
+	return [32]byte{}, nil, uint32(settleBlock.Uint64()), nil, nil
+}
+
 // setTransaction mocks return value for GetTransactionByHash.
 func (b *testEthBackend) setTransaction(t *testing.T,
 	opts *bind.TransactOpts, input []byte) {
@@ -188,6 +206,22 @@ func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
 
 	tx := types.NewTransaction(
 		testTXNonce, agent, deposit, testTXGasLimit,
+		big.NewInt(testTXGasPrice), []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCSettle(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "Settle",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, new(big.Int), testTXGasLimit,
 		big.NewInt(testTXGasPrice), []byte{})
 
 	return tx, nil

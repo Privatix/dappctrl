@@ -40,7 +40,8 @@ DAPPCTRL=github.com/privatix/dappctrl
 DAPPCTRL_DIR=$HOME/go/src/$DAPPCTRL
 mkdir -p $DAPPCTRL_DIR
 git clone https://github.com/Privatix/dappctrl.git $DAPPCTRL_DIR
-go get -d $DAPPCTRL/...
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+dep ensure
 go get -u gopkg.in/reform.v1/reform
 go get -u github.com/rakyll/statik
 go get github.com/ethereum/go-ethereum/cmd/abigen

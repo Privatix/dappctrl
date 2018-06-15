@@ -133,3 +133,34 @@ func (s *FakeSOMC) ReadPublishOfferings(t *testing.T) TestOfferingParams {
 	s.Write(t, &repl)
 	return TestOfferingParams(params)
 }
+
+// WriteWaitForEndpoint verifies a passed channel ID and sends a given raw
+// endpoint message.
+func (s *FakeSOMC) WriteWaitForEndpoint(
+	t *testing.T, channel string, rawEndpoint []byte) {
+	req := s.Read(t, waitForEndpointMethod)
+	params := endpointParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
+	}
+
+	if params.Channel != channel {
+		t.Fatalf("FakeSOMC: expected channel %s, but actual is %s",
+			channel, params.Channel)
+	}
+
+	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
+	s.Write(t, &repl)
+
+	time.Sleep(time.Millisecond)
+
+	params.Endpoint = rawEndpoint
+	data, _ := json.Marshal(&params)
+
+	repl = JSONRPCMessage{
+		ID:     100,
+		Method: publishEndpointMethod,
+		Params: data,
+	}
+	s.Write(t, &repl)
+}

@@ -247,7 +247,7 @@ func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
 		return
 	}
 
-	msg, err := fillMsg(o, s.payAddr, "", conf)
+	msg, err := fillMsg(o, s.payAddr, conf)
 	if err != nil {
 		select {
 		case <-done:

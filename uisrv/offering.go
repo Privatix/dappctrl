@@ -3,10 +3,44 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
+
+// Actions for Agent that change offerings state.
+const (
+	PublishOffering    = "publish"
+	PopupOffering      = "popup"
+	DeactivateOffering = "deactivate"
+)
+
+// Actions for Client that change offerings state.
+const (
+	AcceptOffering = "accept"
+)
+
+const (
+	clientGetOfferFilter = `offer_status = 'register'
+                                AND status = 'msg_channel_published'
+                                AND NOT is_local
+                                AND offerings.agent NOT IN
+                                (SELECT eth_addr
+                                   FROM accounts)`
+	agentGetOfferFilter = `offerings.agent IN
+                               (SELECT eth_addr
+                                  FROM accounts)
+                               AND (SELECT in_use
+                                      FROM accounts
+                                     WHERE eth_addr = offerings.agent)`
+)
+
+type clientPreChannelCreateData struct {
+	Account  string `json:"account"`
+	Offering string `json:"offering"`
+	GasPrice uint64 `json:"gasPrice"`
+}
 
 // handleOfferings calls appropriate handler by scanning incoming request.
 func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
@@ -30,6 +64,22 @@ func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
 		}
 		if r.Method == http.MethodGet {
 			s.handleGetOfferings(w, r)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+// handleOfferings calls appropriate handler by scanning incoming request.
+func (s *Server) handleClientOfferings(w http.ResponseWriter, r *http.Request) {
+	if id := idFromStatusPath(clientOfferingsPath, r.URL.Path); id != "" {
+		if r.Method == http.MethodPut {
+			s.handlePutClientOfferingStatus(w, r, id)
+			return
+		}
+	} else {
+		if r.Method == http.MethodGet {
+			s.handleGetClientOfferings(w, r)
 			return
 		}
 	}
@@ -126,7 +176,7 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 			{Name: "country", Field: "country", Op: "in"},
 		},
 		View:         data.OfferingTable,
-		FilteringSQL: `offer_status = 'register' AND status = 'msg_channel_published' AND NOT is_local AND offerings.agent NOT IN (SELECT eth_addr FROM accounts)`,
+		FilteringSQL: clientGetOfferFilter,
 	})
 }
 
@@ -140,20 +190,14 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 			{Name: "offerStatus", Field: "offer_status"},
 		},
 		View:         data.OfferingTable,
-		FilteringSQL: `offerings.agent IN (SELECT eth_addr FROM accounts) AND (SELECT in_use FROM accounts WHERE eth_addr = offerings.agent)`,
+		FilteringSQL: agentGetOfferFilter,
 	})
 }
-
-// Actions that change offerings state.
-const (
-	PublishOffering    = "publish"
-	PopupOffering      = "popup"
-	DeactivateOffering = "deactivate"
-)
 
 // OfferingPutPayload offering status update payload.
 type OfferingPutPayload struct {
 	Action   string `json:"action"`
+	Account  string `json:"account"`
 	GasPrice uint64 `json:"gasPrice"`
 }
 
@@ -189,6 +233,54 @@ func (s *Server) handlePutOfferingStatus(
 	}); err != nil {
 		s.logger.Error("failed to add %s: %v",
 			data.JobAgentPreOfferingMsgBCPublish, err)
+		s.replyUnexpectedErr(w)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handlePutClientOfferingStatus(
+	w http.ResponseWriter, r *http.Request, id string) {
+	req := new(OfferingPutPayload)
+	if !s.parsePayload(w, r, req) {
+		return
+	}
+	if req.Action != AcceptOffering {
+		s.replyInvalidAction(w)
+		return
+	}
+
+	offer := new(data.Offering)
+	acc := new(data.Account)
+
+	if err := s.selectOneTo(w, offer,
+		"WHERE "+clientGetOfferFilter); err != nil {
+		return
+	}
+	if !s.findTo(w, acc, req.Account) {
+		return
+	}
+
+	s.logger.Info("action ( %v )  request for offering with id:"+
+		" %v received.", req.Action, id)
+
+	dataJSON, err := json.Marshal(&clientPreChannelCreateData{
+		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID})
+	if err != nil {
+		s.logger.Error("failed to marshal job data: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+	if err := s.queue.Add(&data.Job{
+		Type:        data.JobClientPreChannelCreate,
+		RelatedType: data.JobOfferring,
+		RelatedID:   id,
+		CreatedAt:   time.Now(),
+		CreatedBy:   data.JobUser,
+		Data:        dataJSON,
+	}); err != nil {
+		s.logger.Error("failed to add %s: %v",
+			data.JobClientPreChannelCreate, err)
 		s.replyUnexpectedErr(w)
 	}
 

@@ -11,10 +11,12 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
+	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/proc/worker"
+	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/uisrv"
@@ -40,9 +42,11 @@ type config struct {
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
+	Report        *bugsnag.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
+	VPNClient     *vpncli.Config
 }
 
 func newConfig() *config {
@@ -53,8 +57,10 @@ func newConfig() *config {
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
+		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
+		VPNClient:     vpncli.NewConfig(),
 	}
 }
 
@@ -76,6 +82,8 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func main() {
+	defer bugsnag.PanicHunter()
+
 	conf := newConfig()
 	readConfig(conf)
 
@@ -89,6 +97,9 @@ func main() {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	reporter := bugsnag.NewClient(conf.Report, db, logger)
+	logger.Reporter(reporter)
 
 	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {
@@ -134,9 +145,10 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(db, somcConn,
+	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
+		conf.VPNClient)
 	if err != nil {
 		panic(err)
 	}

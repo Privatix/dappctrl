@@ -2,19 +2,10 @@ BEGIN TRANSACTION;
 
 -- Test data for integration testing of dappvpn.
 
-INSERT INTO products (id, name, usage_rep_type, is_server, salt, password,
-    client_ident)
-VALUES ('d0dfbbb2-dd07-423a-8ce0-1e74ce50105b', 'Test VPN service', 'total',
-    true, 6012867121110302348, '7U9gC4AZsSZ9E8NabVkw8nHRlFCJe0o_Yh9qMlIaGAg=',
-    'by_channel_id');
-
 INSERT INTO accounts (id, eth_addr, public_key, private_key, name, ptc_balance,
     psc_balance, eth_balance)
 VALUES ('e8b17880-8ee5-4fc1-afb2-e6900655d8d5', '', '', '', 'Test channel',
     0, 0, '');
-
-INSERT INTO templates (id, hash, raw, kind)
-VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523', '', '{}', 'offer');
 
 INSERT INTO offerings (id, is_local, tpl, product, hash, status, offer_status,
     block_number_updated, agent, raw_msg, service_name, country, supply,

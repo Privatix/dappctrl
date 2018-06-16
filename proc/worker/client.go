@@ -290,3 +290,15 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		return data.Save(tx.Querier, &ch)
 	})
 }
+
+// ClientAfterUncooperativeClose changed channel status
+// to closed uncooperative.
+func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientAfterUncooperativeClose)
+	if err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelClosedUncoop
+	return data.Save(w.db.Querier, ch)
+}

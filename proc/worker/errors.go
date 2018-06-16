@@ -12,4 +12,5 @@ var (
 	ErrInvalidServiceStatus = errors.New("can not be applied to a channel with" +
 		" the current service status")
 	ErrNoSupply = errors.New("no supply")
+	ErrBadServiceStatus = errors.New("bad service status")
 )

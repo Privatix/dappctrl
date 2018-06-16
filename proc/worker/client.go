@@ -644,5 +644,19 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 
 // ClientPreServiceTerminate terminates service.
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
-	return nil
+	ch, err := w.relatedChannel(job, data.JobClientPreServiceTerminate)
+	if err != nil {
+		return err
+	}
+
+	switch ch.ServiceStatus {
+	case data.ServicePending, data.ServiceActive, data.ServiceSuspended:
+	default:
+		return ErrBadServiceStatus
+	}
+
+	// TODO(maxim) Stop OpenVPN client via dappvpn
+
+	ch.ServiceStatus = data.ServiceTerminated
+	return data.Save(w.db.Querier, ch)
 }

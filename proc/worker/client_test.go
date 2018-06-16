@@ -514,9 +514,63 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	}
 }
 
+func validServiceStatusToTerminate(status string) bool {
+	switch status {
+	case data.ServicePending, data.ServiceActive, data.ServiceSuspended:
+		return true
+	}
+	return false
+}
+
 func TestClientPreServiceTerminate(t *testing.T) {
-	t.Skip("TODO")
-	// 1. svc_status="Terminated"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceTerminate, data.JobChannel)
+	defer fxt.Close()
+
+	var job data.Job
+	if err := env.worker.db.SelectOneTo(&job, "WHERE related_id = $1",
+		fxt.Channel.ID); err != nil {
+		t.Fatal(err)
+	}
+	defer data.DeleteFromTestDB(t, db, &job)
+
+	goodStatuses := []string{data.ServicePending, data.ServiceActive,
+		data.ServiceSuspended}
+
+	badStatuses := []string{data.ServiceTerminated}
+
+	for _, status := range goodStatuses {
+		if !validServiceStatusToTerminate(status) {
+			t.Fatalf("service with %s status must be valid",
+				status)
+		}
+	}
+
+	for _, status := range badStatuses {
+		if validServiceStatusToTerminate(status) {
+			t.Fatalf("service with %s status must be invalid",
+				status)
+		}
+	}
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, db, fxt.Channel)
+
+	runJob(t, env.worker.ClientPreServiceTerminate, fxt.job)
+
+	var ch data.Channel
+	if err := data.FindByPrimaryKeyTo(db.Querier, &ch,
+		fxt.Channel.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if ch.ServiceStatus != data.ServiceTerminated {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+	}
 }
 
 func TestClientAfterOfferingMsgBCPublish(t *testing.T) {

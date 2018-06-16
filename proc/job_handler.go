@@ -39,6 +39,7 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobClientAfterChannelTopUp:              worker.ClientAfterChannelTopUp,
 		data.JobClientPreUncooperativeCloseRequest:   worker.ClientPreUncooperativeCloseRequest,
 		data.JobClientAfterUncooperativeCloseRequest: worker.ClientAfterUncooperativeCloseRequest,
+		data.JobClientPreServiceTerminate:     worker.ClientPreServiceTerminate,
 
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,

@@ -108,21 +108,53 @@ func (p *Processor) alterServiceStatus(id, jobCreator, jobType,
 }
 
 // SuspendChannel tries to suspend a given channel.
-func (p *Processor) SuspendChannel(id, jobCreator string) (string, error) {
+func (p *Processor) SuspendChannel(id, jobCreator,
+	userType string)	(string, error) {
+	var jobType string
+	switch userType {
+	case "client":
+		jobType = data.JobClientPreServiceSuspend
+	case "agent":
+		jobType = data.JobAgentPreServiceSuspend
+	default:
+		panic("unsupported user type: " + userType)
+	}
+
 	return p.alterServiceStatus(id, jobCreator,
-		data.JobAgentPreServiceSuspend, "", suspendTransitions, false)
+		jobType, "", suspendTransitions, false)
 }
 
 // ActivateChannel tries to activate a given channel.
-func (p *Processor) ActivateChannel(id, jobCreator string) (string, error) {
+func (p *Processor) ActivateChannel(id, jobCreator,
+	userType string) (string, error) {
+	var jobType string
+	switch userType {
+	case "client":
+		jobType = data.JobClientPreServiceUnsuspend
+	case "agent":
+		jobType = data.JobAgentPreServiceUnsuspend
+	default:
+		panic("unsupported user type: " + userType)
+	}
+
 	return p.alterServiceStatus(id, jobCreator,
-		data.JobAgentPreServiceUnsuspend, "", activateTransitions,
+		jobType, "", activateTransitions,
 		false)
 }
 
 // TerminateChannel tries to terminate a given channel.
-func (p *Processor) TerminateChannel(id, jobCreator string) (string, error) {
+func (p *Processor) TerminateChannel(id, jobCreator,
+	userType string)	(string, error) {
+	var jobType string
+	switch userType {
+	case "client":
+		jobType = data.JobClientPreServiceTerminate
+	case "agent":
+		jobType = data.JobAgentPreServiceTerminate
+	default:
+		panic("unsupported user type: " + userType)
+	}
+
 	return p.alterServiceStatus(id, jobCreator,
-		data.JobAgentPreServiceTerminate,
-		data.JobAgentPreServiceTerminate, terminateTransitions, true)
+		jobType, jobType, terminateTransitions, true)
 }

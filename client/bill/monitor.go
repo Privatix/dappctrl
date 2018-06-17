@@ -133,7 +133,7 @@ func (m *Monitor) Close() {
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
 	if ch.ReceiptBalance == ch.TotalDeposit {
-		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker)
+		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, "client")
 		if err != nil {
 			if err != proc.ErrSameJobExists {
 				return err

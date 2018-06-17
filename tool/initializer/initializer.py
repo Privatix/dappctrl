@@ -118,8 +118,8 @@ main_conf = dict(
         'npm_tmp_file_call': 'sudo -E bash ',
         'npm_inst': [
             'sudo apt-get install -y nodejs',
-            # 'sudo apt-get install -y npm',
-            # 'sudo npm install dappctrlgui'
+            'chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
+            'sudo su - $USER -c \'cd /opt/privatix/gui && npm install dappctrlgui\''
         ],
     },
     test={

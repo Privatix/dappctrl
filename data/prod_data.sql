@@ -102,7 +102,7 @@ VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
                     "additionalParams",
                     "maxSuspendTime"
                 ],
-                "title": "VPN Service Offering",
+                "title": "Privatix VPN offering",
                 "type": "object"
             },
             "uiSchema": {
@@ -209,17 +209,26 @@ VALUES ('d0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
                 "serviceEndpointAddress",
                 "additionalParams"
             ],
-            "title": "Endpoint Message template",
+            "title": "Privatix VPN access",
             "type": "object"
 	    }',
         'access');
 
 INSERT INTO products (id, name, offer_tpl_id, offer_access_id, usage_rep_type,
                       is_server, salt, password, client_ident, config, service_endpoint_address)
-VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN service',
+VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN server',
         'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
         'total', TRUE, 6012867121110302348,
-        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 'by_channel_id', '{"somekey": "somevalue"}', 'localhost');
+        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
+        'by_channel_id', '{"somekey": "somevalue"}', '127.0.0.1');
+
+INSERT INTO products(	id, name, offer_tpl_id, offer_access_id, usage_rep_type,
+                      is_server, salt, password, client_ident, config, service_endpoint_address)
+	VALUES ('37fa14e4-51da-4021-8ea9-9e725229e8aa', 'VPN client',
+     'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
+     'total', false, 6012867121110302348,
+     'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
+     'by_channel_id', '{"somekey": "somevalue"}', '127.0.0.1');
 
 INSERT INTO settings (key, value, description, name)
 VALUES ('eth.min.confirmations',

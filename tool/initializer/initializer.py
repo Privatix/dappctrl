@@ -13,6 +13,8 @@
     python initializer.py --test                           start in test mode
     python initializer.py --no-gui                         install without GUI
     python initializer.py --update                         update all contaiter without GUI
+    python initializer.py --mass-update                    update all contaiter with GUI
+    python initializer.py --update-gui                     update only GUI
 """
 
 import sys
@@ -23,7 +25,8 @@ from contextlib import closing
 from shutil import rmtree
 from re import search, sub, findall
 from codecs import open
-from os import remove, mkdir, path
+from stat import S_IEXEC, S_IXUSR, S_IXGRP, S_IXOTH
+from os import remove, mkdir, path, environ, stat, chmod
 from json import load, dump
 from time import time, sleep
 from urllib import URLopener
@@ -33,6 +36,7 @@ from argparse import ArgumentParser
 from platform import linux_distribution
 from subprocess import Popen, PIPE, STDOUT
 from shutil import copyfile
+from ConfigParser import ConfigParser
 
 """
 Exit code:
@@ -53,7 +57,7 @@ Exit code:
 """
 
 log_conf = dict(
-    filename='initializer.log',
+    filename='/var/log/initializer.log',
     datefmt='%m/%d %H:%M:%S',
     format='%(levelname)7s [%(lineno)3s] %(message)s')
 log_conf.update(level='DEBUG')
@@ -96,6 +100,7 @@ main_conf = dict(
     build={
         'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{}\' -dappvpnconf={} -connstr=\"{}\"',
         'cmd_path': '.dapp_cmd',
+
         'db_conf': {
             "dbname": "dappctrl",
             "sslmode": "disable",
@@ -105,28 +110,54 @@ main_conf = dict(
         },
         'db_log': '/var/lib/container/common/var/log/postgresql/postgresql-10-main.log',
         'db_stat': 'database system is ready to accept connections',
+
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
         'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/dappctrl.config.json',
         'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/svc/dappvpn/dappvpn.config.json',
         'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
         'dappctrl_search_field': 'PayAddress',
     },
+
     final={'dapp_port': [], 'vpn_port': 443},
+
     gui={
-        'npm_tmp_file': 'tmp_nodesource',
+        'gui_path': '/opt/privatix/gui/',
+
+        'icon_tmpl_f': '{}/Desktop/privatix-dappgui.desktop'.format(
+            environ['HOME']),
+        'icon_tmpl': {
+            'section': 'Desktop Entry',
+            'Version': '0.6',
+            'Type': 'Application',
+            'Name': 'Privatix Dapp',
+            'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
+            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/',
+            'Icon': '/opt/privatix/gui/node_modules/dappctrlgui/icon_64.png',
+            'Terminal': 'false',
+        },
+
+        'prvtx_run_f': '{}/privatix_runner.sh'.format(environ['HOME']),
+        'prvtx_run_cmd': 'sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/',
+
+        'npm_tmp_f': 'tmp_nodesource',
         'npm_url': 'https://deb.nodesource.com/setup_9.x',
         'npm_tmp_file_call': 'sudo -E bash ',
-        'npm_inst': [
-            'sudo apt-get install -y nodejs',
-            'sudo chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
+        'npm_node': 'sudo apt-get install -y nodejs',
+
+        'gui_inst': [
+            'chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
             'sudo su - $USER -c \'cd /opt/privatix/gui && npm install dappctrlgui\''
+            # 'sudo apt-get install -y npm',
+            # 'sudo npm install dappctrlgui'
         ],
     },
+
     test={
         'path': 'test_data.sql',
         'sql': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/data/test_data.sql',
         'cmd': 'psql -d dappctrl -h 127.0.0.1 -P 5433 -f {}'
     },
+
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
@@ -296,7 +327,7 @@ class CMD:
                 return False
 
     def _cycle_ask(self, p, status):
-        logging.debug('Ask port: {}, status: {}'.format(p,status))
+        logging.debug('Ask port: {}, status: {}'.format(p, status))
         ts = time()
         tw = 350
 
@@ -434,9 +465,12 @@ class Params(CMD):
 
     def service(self, srv, status, port, reverse=False):
         logging.debug(
-            'Service:{}, port:{},status:{},reverse:{}'.format(srv, port, status, reverse))
+            'Service:{}, port:{},status:{},reverse:{}'.format(srv, port,
+                                                              status,
+                                                              reverse))
         tmpl = ['systemctl {} {} && sleep 0.5']
-        rmpl_rest = ['systemctl stop {1} && sleep 0.5', 'systemctl start {1} && sleep 0.5']
+        rmpl_rest = ['systemctl stop {1} && sleep 0.5',
+                     'systemctl start {1} && sleep 0.5']
         rmpl_stat = ['systemctl is-active {1}']
 
         scroll = {'start': tmpl, 'stop': tmpl,
@@ -469,27 +503,24 @@ class Params(CMD):
             else:
                 check_stat = status
 
-
             if 'failed' in res or not self._checker_port(port, check_stat):
                 return False
             raw_res.append(True)
         return all(raw_res)
 
-    def get_npm(self, sysctl):
-        npm_path = self._reletive_path(main_conf['gui']['npm_tmp_file'])
-        self.file_rw(
-            p=npm_path,
-            w=True,
-            data=urlopen(main_conf['gui']['npm_url']),
-            log='Download nodesource'
-        )
+    def clear_contr(self):
+        self.service('vpn', 'stop', port['vpn_port'])
+        self.service('comm', 'stop', port['dapp_port'])
 
-        cmd = main_conf['gui']['npm_tmp_file_call'] + npm_path
-        self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
-
-        cmds = main_conf['gui']['npm_inst']
-        for cmd in cmds:
-            self._sys_call(cmd, sysctl=sysctl, s_exit=11)
+        if not self.service('vpn', 'status', port['vpn_port'], True) and \
+                not self.service('comm', 'status', port['dapp_port'], True):
+            p_dowld = main_conf['iptables']['path_download']
+            rmtree(p_dowld + main_conf['iptables']['path_vpn'],
+                   ignore_errors=True)
+            rmtree(p_dowld + main_conf['iptables']['path_com'],
+                   ignore_errors=True)
+            return True
+        return False
 
     def check_port(self):
         port = main_conf['iptables']['openvpn_port']
@@ -837,8 +868,66 @@ class Rdata(CMD):
             remove(self.p_dwld + f)
 
 
-class Checker(Params, Rdata):
+class GUI(CMD):
     def __init__(self):
+        self.gui = main_conf['gui']
+
+    def create_icon(self):
+        config = ConfigParser()
+        tmpl_file = self.gui['icon_tmpl_f']
+        tmpl = self.gui['icon_tmpl']
+        section = tmpl['section']
+
+        logging.debug('Create icon file: {}'.format(tmpl_file))
+
+        with open(tmpl_file, 'w') as icon:
+            config.add_section(section)
+            [config.set(section, k, v) for k, v in tmpl.items()]
+            config.write(icon)
+
+        logging.debug('Create icon file done')
+        chmod(tmpl_file,
+              stat(tmpl_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
+        logging.debug('Chmod icon file done')
+
+    def create_runner_file(self):
+        file = self.gui['prvtx_run_f']
+        cmd = self.gui['prvtx_run_cmd']
+        self.file_rw(p=file, w=True, data=cmd, log='Create runner file.')
+        chmod(file, 0755)
+
+    def _get_gui(self, sysctl=False):
+        cmds = self.gui['gui_inst']
+        for cmd in cmds:
+            self._sys_call(cmd, sysctl=sysctl, s_exit=11)
+
+    def get_npm(self, sysctl):
+        npm_path = self._reletive_path(self.gui['npm_tmp_f'])
+        self.file_rw(
+            p=npm_path,
+            w=True,
+            data=urlopen(self.gui['npm_url']),
+            log='Download nodesource'
+        )
+
+        cmd = self.gui['npm_tmp_file_call'] + npm_path
+        self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
+
+        cmd = self.gui['npm_node']
+        self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
+        self._get_gui(sysctl)
+
+    def update_gui(self):
+        p = self.gui['gui_path']
+        st = stat(p)
+        rmtree(p, ignore_errors=True)
+        mkdir(p)
+        self._get_gui()
+
+
+class Checker(Params, Rdata, GUI):
+    def __init__(self):
+        GUI.__init__(self)
         Rdata.__init__(self)
         Params.__init__(self)
         self.task = dict(ubuntu=self._upgr_ub_pack,
@@ -873,7 +962,12 @@ class Checker(Params, Rdata):
             self.run_service(sysctl)
             if args['no_gui']:
                 logging.info('Install GUI.')
-                self.get_npm(sysctl)
+                if pass_check:
+                    self.update_gui()
+                else:
+                    self.get_npm(sysctl)
+                self.create_runner_file()
+                self.create_icon()
             self._finalizer(rw=True, sysctl=sysctl)
 
 
@@ -884,6 +978,12 @@ if __name__ == '__main__':
 
     parser.add_argument("--update", nargs='?', default=True,
                         help='Update containers and rerun initializer')
+
+    parser.add_argument("--update-gui", nargs='?', default=True,
+                        help='Update GUI')
+
+    parser.add_argument("--mass-update", nargs='?', default=True,
+                        help='Update All')
 
     parser.add_argument('--vpn', type=str, default=False,
                         help='[start,stop,restart,status]')
@@ -909,34 +1009,38 @@ if __name__ == '__main__':
     if not args['build']:
         logging.debug('Build mode.')
         check.build_cmd()
+
     elif args['vpn']:
-        logging.debug('Vpn mode.')
+        logging.info('Vpn mode.')
         sys.stdout.write(
             str(check.service('vpn', args['vpn'], port['vpn_port'])))
+
     elif args['comm']:
-        logging.debug('Comm mode.')
+        logging.info('Comm mode.')
         sys.stdout.write(
             str(check.service('comm', args['comm'], port['dapp_port'])))
+
+    elif not args['update']:
+        logging.info('Update containers mode.')
+        if check.clear_contr():
+            args['no_gui'] = False
+            check.init_os(args, True)
+
     elif args['mass']:
         logging.debug('Mass mode.')
         comm_stat = check.service('comm', args['mass'], port['dapp_port'])
         vpn_stat = check.service('vpn', args['mass'], port['vpn_port'])
         sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
-    elif not args['update']:
-        logging.debug('Update mode.')
 
-        check.service('vpn', 'stop', port['vpn_port'])
-        check.service('comm', 'stop', port['dapp_port'])
-        if not check.service('vpn', 'status', port['vpn_port'], True) and \
-                not check.service('comm', 'status', port['dapp_port'], True):
-            p_dowld = main_conf['iptables']['path_download']
-            rmtree(p_dowld + main_conf['iptables']['path_vpn'],
-                   ignore_errors=True)
-            rmtree(p_dowld + main_conf['iptables']['path_com'],
-                   ignore_errors=True)
+    elif not args['update_gui']:
+        logging.info('Update GUI mode.')
+        check.update_gui()
 
-            args['no_gui'] = False
+    elif not args['mass_update']:
+        logging.info('Update All mode.')
+        if check.clear_contr():
             check.init_os(args, True)
+
     else:
         logging.info('Begin init.')
         check.init_os(args)

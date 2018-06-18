@@ -34,6 +34,7 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobClientAfterEndpointMsgSOMCGet: worker.ClientAfterEndpointMsgSOMCGet,
 		data.JobClientAfterUncooperativeClose: worker.ClientAfterUncooperativeClose,
 		data.JobClientAfterCooperativeClose:   worker.ClientAfterCooperativeClose,
+		data.JobClientPreUncooperativeClose:   worker.ClientPreUncooperativeClose,
 
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,

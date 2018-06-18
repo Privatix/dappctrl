@@ -1,13 +1,16 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -289,6 +292,107 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		ch.ServiceStatus = data.ServiceSuspended
 		return data.Save(tx.Querier, &ch)
 	})
+}
+
+func (w *Worker) waitSettlePeriod(ctx context.Context, client,
+	agent common.Address, block uint32,
+	hash [common.HashLength]byte) error {
+	_, _, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
+		&bind.CallOpts{}, client, agent, block, hash)
+	if err != nil {
+		return err
+	}
+
+	for {
+		block, err := w.ethBack.LatestBlockNumber(ctx)
+		if err != nil {
+			return err
+		}
+
+		if block.Uint64() >= uint64(settleBlock) {
+			break
+		}
+
+		// TODO(maxim) hardcoded timeout
+		time.Sleep(time.Second * 10)
+	}
+	return nil
+}
+
+func (w *Worker) settle(ctx context.Context, acc *data.Account,
+	agent common.Address, block uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := bind.NewKeyedTransactor(key)
+	opts.Context = ctx
+
+	return w.ethBack.PSCSettle(opts, agent, block, hash)
+}
+
+// ClientPreUncooperativeClose waiting for until the challenge
+// period is over. Then deletes the channel and settles
+// by transferring the balance to the Agent and the rest
+// of the deposit back to the Client.
+func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
+	ch, err := w.relatedChannel(job,
+		data.JobClientPreUncooperativeClose)
+	if err != nil {
+		return err
+	}
+
+	agent, err := data.ToAddress(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	client, err := data.ToAddress(ch.Client)
+	if err != nil {
+		return err
+	}
+
+	var acc data.Account
+	if err := data.FindOneTo(w.db.Querier, &acc,
+		"eth_addr", ch.Client); err != nil {
+		return err
+	}
+
+	var offer data.Offering
+	if err := data.FindByPrimaryKeyTo(w.db.Querier, &offer,
+		ch.Offering); err != nil {
+		return err
+	}
+
+	offerHash, err := data.ToHash(offer.Hash)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := w.waitSettlePeriod(ctx, client, agent, ch.Block,
+		offerHash); err != nil {
+		return err
+	}
+
+	tx, err := w.settle(ctx, &acc, agent, ch.Block, offerHash)
+	if err != nil {
+		return err
+	}
+
+	if err := w.saveEthTX(job, tx, "Settle",
+		data.JobChannel, ch.ID, acc.EthAddr,
+		data.FromBytes(w.pscAddr.Bytes())); err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelWaitUncoop
+
+	return data.Save(w.db.Querier, ch)
 }
 
 // ClientAfterUncooperativeClose changed channel status

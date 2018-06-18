@@ -302,3 +302,21 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 	ch.ChannelStatus = data.ChannelClosedUncoop
 	return data.Save(w.db.Querier, ch)
 }
+
+// ClientAfterCooperativeClose changed channel status
+// to closed cooperative and launches of terminate service procedure.
+func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
+	var ch data.Channel
+	if err := data.FindByPrimaryKeyTo(w.db.Querier, &ch,
+		job.RelatedID); err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelClosedCoop
+	if err := data.Save(w.db.Querier, &ch); err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobClientPreServiceTerminate,
+		data.JobChannel, ch.ID)
+}

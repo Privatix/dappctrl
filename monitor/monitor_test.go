@@ -557,7 +557,7 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	})
 	// offering events containing agent address should be ignored
 
-	// TODO: uncomment, when client job handler are completed
+	// TODO: uncomment, when client job handlers are completed
 	/*
 		insertEvent(t, db, nextBlock(), 0,
 			eth.EthOfferingCreated,
@@ -606,7 +606,7 @@ func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	queue.expect(agentAfterChannelCreated, func(j *data.Job) bool {
 		return j.Type == data.JobAgentAfterChannelCreate
 	})
-	// TODO: uncomment, when client job handler are completed
+	// TODO: uncomment, when client job handlers are completed
 	/*
 		el := insertEvent(t, db, nextBlock(), 0,
 			eth.EthDigestChannelToppedUp,

@@ -12,7 +12,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/ept/config"
-	"github.com/privatix/dappctrl/proc/processor"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
@@ -58,7 +58,7 @@ type Worker struct {
 	queue          *job.Queue
 	clientVPN      *config.Config
 	deployConfig   deployConfigFunc
-	processor      processor.Processor
+	processor      *proc.Processor
 }
 
 // NewWorker returns new instance of worker.
@@ -99,6 +99,6 @@ func (w *Worker) SetQueue(queue *job.Queue) {
 }
 
 // SetProcessor sets processor.
-func (h *Worker) SetProcessor(processor processor.Processor) {
-	h.processor = processor
+func (w *Worker) SetProcessor(processor *proc.Processor) {
+	w.processor = processor
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/handlers"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
@@ -153,8 +154,9 @@ func main() {
 		panic(err)
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(worker))
+	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	worker.SetQueue(queue)
+	worker.SetProcessor(proc.NewProcessor(conf.Proc, queue))
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
 

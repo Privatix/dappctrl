@@ -13,7 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -21,6 +21,7 @@ import (
 	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
@@ -93,7 +94,9 @@ func newWorkerTest(t *testing.T) *workerTest {
 		somcConn.Close()
 		panic(err)
 	}
+
 	worker.SetQueue(jobQueue)
+	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), jobQueue))
 
 	return &workerTest{
 		db:       db,

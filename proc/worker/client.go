@@ -316,6 +316,74 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 	})
 }
 
+// ClientAfterUncooperativeClose changed channel status
+// to closed uncooperative.
+func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientAfterUncooperativeClose)
+	if err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelClosedUncoop
+	return data.Save(w.db.Querier, ch)
+}
+
+// ClientAfterCooperativeClose changed channel status
+// to closed cooperative and launches of terminate service procedure.
+func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientAfterCooperativeClose)
+	if err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelClosedCoop
+	if err := data.Save(w.db.Querier, ch); err != nil {
+		return err
+	}
+
+	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+	return err
+}
+
+// ClientPreServiceTerminate terminates service.
+func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientPreServiceTerminate)
+	if err != nil {
+		return err
+	}
+
+	// TODO(maxim) Stop OpenVPN client via dappvpn.
+
+	ch.ServiceStatus = data.ServiceTerminated
+	return data.Save(w.db.Querier, ch)
+}
+
+// ClientPreServiceSuspend suspends service.
+func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientPreServiceSuspend)
+	if err != nil {
+		return err
+	}
+
+	// TODO(maxim) Stop OpenVPN client via dappvpn (check & kill).
+
+	ch.ServiceStatus = data.ServiceSuspended
+	return data.Save(w.db.Querier, ch)
+}
+
+// ClientPreServiceUnsuspend activates service.
+func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
+	ch, err := w.relatedChannel(job, data.JobClientPreServiceUnsuspend)
+	if err != nil {
+		return err
+	}
+
+	// TODO(maxim) Start OpenVPN client via dappvpn.
+
+	ch.ServiceStatus = data.ServiceActive
+	return data.Save(w.db.Querier, ch)
+}
+
 func (w *Worker) waitSettlePeriod(ctx context.Context, client,
 	agent common.Address, block uint32,
 	hash [common.HashLength]byte) error {
@@ -415,36 +483,6 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 	ch.ChannelStatus = data.ChannelWaitUncoop
 
 	return data.Save(w.db.Querier, ch)
-}
-
-// ClientAfterUncooperativeClose changed channel status
-// to closed uncooperative.
-func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientAfterUncooperativeClose)
-	if err != nil {
-		return err
-	}
-
-	ch.ChannelStatus = data.ChannelClosedUncoop
-	return data.Save(w.db.Querier, ch)
-}
-
-// ClientAfterCooperativeClose changed channel status
-// to closed cooperative and launches of terminate service procedure.
-func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
-	var ch data.Channel
-	if err := data.FindByPrimaryKeyTo(w.db.Querier, &ch,
-		job.RelatedID); err != nil {
-		return err
-	}
-
-	ch.ChannelStatus = data.ChannelClosedCoop
-	if err := data.Save(w.db.Querier, &ch); err != nil {
-		return err
-	}
-
-	return w.addJob(data.JobClientPreServiceTerminate,
-		data.JobChannel, ch.ID)
 }
 
 // ClientPreChannelTopUpData is a job data for ClientPreChannelTopUp.
@@ -638,25 +676,6 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(data.JobClientPreServiceTerminate,
-		data.JobChannel, ch.ID)
-}
-
-// ClientPreServiceTerminate terminates service.
-func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientPreServiceTerminate)
-	if err != nil {
-		return err
-	}
-
-	switch ch.ServiceStatus {
-	case data.ServicePending, data.ServiceActive, data.ServiceSuspended:
-	default:
-		return ErrBadServiceStatus
-	}
-
-	// TODO(maxim) Stop OpenVPN client via dappvpn
-
-	ch.ServiceStatus = data.ServiceTerminated
-	return data.Save(w.db.Querier, ch)
+	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+	return err
 }

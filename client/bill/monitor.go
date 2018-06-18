@@ -116,7 +116,7 @@ L:
 	m.exit = nil
 	m.mtx.Unlock()
 
-	logger.Info("%s", ret)
+	m.logger.Info("%s", ret)
 	return ret
 }
 
@@ -133,7 +133,7 @@ func (m *Monitor) Close() {
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
 	if ch.ReceiptBalance == ch.TotalDeposit {
-		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker)
+		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, false)
 		if err != nil {
 			if err != proc.ErrSameJobExists {
 				return err

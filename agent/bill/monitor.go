@@ -227,17 +227,17 @@ func (m *Monitor) processRound() error {
 }
 
 func (m *Monitor) suspendService(uuid string) error {
-	_, err := m.pr.SuspendChannel(uuid, jobCreator)
+	_, err := m.pr.SuspendChannel(uuid, jobCreator, true)
 	return err
 }
 
 func (m *Monitor) terminateService(uuid string) error {
-	_, err := m.pr.TerminateChannel(uuid, jobCreator)
+	_, err := m.pr.TerminateChannel(uuid, jobCreator, true)
 	return err
 }
 
 func (m *Monitor) unsuspendService(uuid string) error {
-	_, err := m.pr.ActivateChannel(uuid, jobCreator)
+	_, err := m.pr.ActivateChannel(uuid, jobCreator, true)
 	return err
 }
 

@@ -277,6 +277,8 @@ const (
 	JobClientPreUncooperativeClose          = "clientPreUncooperativeClose"
 	JobClientAfterUncooperativeClose        = "clientAfterUncooperativeClose"
 	JobClientAfterCooperativeClose          = "clientAfterCooperativeClose"
+	JobClientPreServiceSuspend              = "clientPreServiceSuspend"
+	JobClientPreServiceUnsuspend            = "clientPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
 	JobClientAfterServiceTerminate          = "clientAfterServiceTerminate"
 	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"

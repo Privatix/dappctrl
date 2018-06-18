@@ -240,8 +240,35 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 }
 
 func TestClientAfterUncooperativeClose(t *testing.T) {
-	t.Skip("TODO")
-	// 1. set ch_status="closed_uncoop"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterUncooperativeClose, data.JobChannel)
+	defer fxt.Close()
+
+	var job data.Job
+	if err := env.worker.db.SelectOneTo(&job, "WHERE related_id = $1",
+		fxt.Channel.ID); err != nil {
+		t.Fatal(err)
+	}
+	defer data.DeleteFromTestDB(t, db, &job)
+
+	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
+	data.SaveToTestDB(t, db, fxt.Channel)
+
+	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
+
+	var ch data.Channel
+	if err := data.FindByPrimaryKeyTo(db.Querier, &ch,
+		fxt.Channel.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if ch.ChannelStatus != data.ChannelClosedUncoop {
+		t.Fatalf("expected %s channel status, but got %s",
+			data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+	}
 }
 
 func TestClientAfterCooperativeClose(t *testing.T) {

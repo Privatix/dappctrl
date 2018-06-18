@@ -77,6 +77,11 @@
         "TruffleAPIURL": ""
     },
 
+    "JobHandlerTest": {
+        "SOMCTimeout": 10,
+        "ReactionDelay": 10
+    },
+
     "Gas": {
         "PTC": {
             "Approve": 45375

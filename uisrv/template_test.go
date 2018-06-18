@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
@@ -60,11 +61,11 @@ func TestPostTemplateSuccess(t *testing.T) {
 	for _, payload := range []data.Template{
 		{
 			Kind: data.TemplateOffer,
-			Raw:  []byte("{}"),
+			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
 		},
 		{
 			Kind: data.TemplateAccess,
-			Raw:  []byte("{}"),
+			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
 		},
 	} {
 		res := postTemplate(t, &payload)
@@ -102,17 +103,20 @@ func TestGetTemplate(t *testing.T) {
 		{
 			ID:   util.NewUUID(),
 			Kind: data.TemplateOffer,
-			Raw:  []byte("{}"),
+			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
+			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 		{
 			ID:   util.NewUUID(),
 			Kind: data.TemplateOffer,
-			Raw:  []byte("{}"),
+			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
+			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 		{
 			ID:   util.NewUUID(),
 			Kind: data.TemplateAccess,
-			Raw:  []byte("{}"),
+			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
+			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 	}
 	insertItems(t, records[0], records[1], records[2])

@@ -15,7 +15,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"gopkg.in/reform.v1"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -77,6 +77,7 @@ func createTestChannel(t *testing.T) *data.Channel {
 	client := data.NewTestUser()
 	product := data.NewTestProduct()
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
+	fmt.Printf("New tpl offer hash: %v", tplOffer.Hash)
 	offering := data.NewTestOffering(agent.EthAddr, product.ID, tplOffer.ID)
 	offering.MaxInactiveTimeSec = pointer.ToUint64(10)
 	offering.UnitName = "megabytes"
@@ -94,8 +95,8 @@ func createTestChannel(t *testing.T) *data.Channel {
 	insertItems(t,
 		agent,
 		client,
-		product,
 		tplOffer,
+		product,
 		offering,
 		ch)
 	return ch

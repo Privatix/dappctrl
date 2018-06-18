@@ -226,3 +226,35 @@ func (b *testEthBackend) PSCSettle(opts *bind.TransactOpts,
 
 	return tx, nil
 }
+
+func (b *testEthBackend) PSCTopUpChannel(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "TopUpChannel",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, deposit},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCUncooperativeClose(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	balance *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "UncooperativeClose",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, balance},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, balance, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}

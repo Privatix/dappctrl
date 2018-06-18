@@ -6,5 +6,10 @@ import "errors"
 var (
 	ErrInvalidJob       = errors.New("unexpected job type or job related type")
 	ErrNotEnoughBalance = errors.New("not enough PSC balance for offering")
-	ErrNoSupply         = errors.New("no supply")
+	ErrChReceiptBalance = errors.New("receipt balance is greater than a deposit")
+	ErrInvalidChStatus  = errors.New("can not be applied to a channel with" +
+		" the current channel status")
+	ErrInvalidServiceStatus = errors.New("can not be applied to a channel with" +
+		" the current service status")
+	ErrNoSupply = errors.New("no supply")
 )

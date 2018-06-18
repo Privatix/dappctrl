@@ -28,13 +28,17 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentPreOfferingMsgSOMCPublish:      worker.AgentPreOfferingMsgSOMCPublish,
 
 		// Client jobs.
-		data.JobClientPreChannelCreate:        worker.ClientPreChannelCreate,
-		data.JobClientAfterChannelCreate:      worker.ClientAfterChannelCreate,
-		data.JobClientPreEndpointMsgSOMCGet:   worker.ClientPreEndpointMsgSOMCGet,
-		data.JobClientAfterEndpointMsgSOMCGet: worker.ClientAfterEndpointMsgSOMCGet,
-		data.JobClientAfterUncooperativeClose: worker.ClientAfterUncooperativeClose,
-		data.JobClientAfterCooperativeClose:   worker.ClientAfterCooperativeClose,
-		data.JobClientPreUncooperativeClose:   worker.ClientPreUncooperativeClose,
+		data.JobClientPreChannelCreate:               worker.ClientPreChannelCreate,
+		data.JobClientAfterChannelCreate:             worker.ClientAfterChannelCreate,
+		data.JobClientPreEndpointMsgSOMCGet:          worker.ClientPreEndpointMsgSOMCGet,
+		data.JobClientAfterEndpointMsgSOMCGet:        worker.ClientAfterEndpointMsgSOMCGet,
+		data.JobClientAfterUncooperativeClose:        worker.ClientAfterUncooperativeClose,
+		data.JobClientAfterCooperativeClose:          worker.ClientAfterCooperativeClose,
+		data.JobClientPreUncooperativeClose:          worker.ClientPreUncooperativeClose,
+		data.JobClientPreChannelTopUp:                worker.ClientPreChannelTopUp,
+		data.JobClientAfterChannelTopUp:              worker.ClientAfterChannelTopUp,
+		data.JobClientPreUncooperativeCloseRequest:   worker.ClientPreUncooperativeCloseRequest,
+		data.JobClientAfterUncooperativeCloseRequest: worker.ClientAfterUncooperativeCloseRequest,
 
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,

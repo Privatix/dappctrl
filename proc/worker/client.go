@@ -20,8 +20,8 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-func (w *Worker) clientPreChannelCreateCheckDeposit(
-	acc *data.Account, offer *data.Offering) (uint64, error) {
+func (w *Worker) checkDeposit(acc *data.Account,
+	offer *data.Offering) (uint64, error) {
 	addr, err := data.ToAddress(acc.EthAddr)
 	if err != nil {
 		return 0, err
@@ -38,6 +38,27 @@ func (w *Worker) clientPreChannelCreateCheckDeposit(
 	}
 
 	return deposit, nil
+}
+
+func (w *Worker) clientPreUncooperativeCloseRequestCheckChannel(
+	ch *data.Channel) error {
+	// check channel status
+	if ch.ChannelStatus != data.ChannelActive &&
+		ch.ChannelStatus != data.ChannelPending {
+		return ErrInvalidChStatus
+	}
+
+	// check service status
+	if ch.ServiceStatus == data.ServiceTerminated {
+		return ErrInvalidServiceStatus
+	}
+
+	// check receipt balance
+	if ch.ReceiptBalance > ch.TotalDeposit {
+		return ErrChReceiptBalance
+	}
+
+	return nil
 }
 
 func (w *Worker) clientPreChannelCreateCheckSupply(
@@ -95,7 +116,8 @@ func (w *Worker) clientPreChannelCreateSaveTX(
 // ClientPreChannelCreateData is a job data for ClientPreChannelCreate.
 type ClientPreChannelCreateData struct {
 	Account  string `json:"account"`
-	Oferring string `json:"offering"`
+	Offering string `json:"offering"`
+	GasPrice uint64 `json:"gasPrice"`
 }
 
 // ClientPreChannelCreate triggers a channel creation.
@@ -112,12 +134,12 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	}
 
 	var offer data.Offering
-	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, jdata.Oferring)
+	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, jdata.Offering)
 	if err != nil {
 		return err
 	}
 
-	deposit, err := w.clientPreChannelCreateCheckDeposit(&acc, &offer)
+	deposit, err := w.checkDeposit(&acc, &offer)
 	if err != nil {
 		return err
 	}
@@ -423,4 +445,204 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 
 	return w.addJob(data.JobClientPreServiceTerminate,
 		data.JobChannel, ch.ID)
+}
+
+// ClientPreChannelTopUpData is a job data for ClientPreChannelTopUp.
+type ClientPreChannelTopUpData struct {
+	Channel  string `json:"channel"`
+	GasPrice uint64 `json:"gasPrice"`
+}
+
+func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
+	acc *data.Account, offer *data.Offering, gasPrice uint64,
+	deposit *big.Int) error {
+	agent, err := data.ToAddress(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	offerHash, err := data.ToHash(offer.Hash)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	opts := bind.NewKeyedTransactor(key)
+	opts.Context = ctx
+	if gasPrice != 0 {
+		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	}
+	if w.gasConf.PSC.TopUp != 0 {
+		opts.GasLimit = w.gasConf.PSC.TopUp
+	}
+
+	tx, err := w.ethBack.PSCTopUpChannel(opts, agent, ch.Block,
+		offerHash, deposit)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "TopUpChannel",
+		data.JobChannel, ch.ID, acc.EthAddr,
+		data.FromBytes(w.pscAddr.Bytes()))
+}
+
+// ClientPreChannelTopUp checks client balance and creates transaction
+// for increase the channel deposit.
+func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
+	var jdata ClientPreChannelTopUpData
+	if err := parseJobData(job, &jdata); err != nil {
+		return err
+	}
+
+	ch, err := w.channel(jdata.Channel)
+	if err != nil {
+		return err
+	}
+
+	offer, err := w.offering(ch.Offering)
+	if err != nil {
+		return err
+	}
+
+	acc, err := w.account(ch.Client)
+	if err != nil {
+		return err
+	}
+
+	deposit, err := w.checkDeposit(acc, offer)
+	if err != nil {
+		return err
+	}
+
+	return w.clientPreChannelTopUpSaveTx(job, ch, acc, offer,
+		jdata.GasPrice, new(big.Int).SetUint64(deposit))
+}
+
+// ClientAfterChannelTopUp updates deposit of a channel.
+func (w *Worker) ClientAfterChannelTopUp(job *data.Job) error {
+	return w.afterChannelTopUp(job, data.JobClientAfterChannelTopUp)
+}
+
+func (w *Worker) clientPreUncooperativeCloseRequestSaveTx(job *data.Job,
+	ch *data.Channel, acc *data.Account, offer *data.Offering,
+	gasPrice uint64) error {
+	agent, err := data.ToAddress(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	opts := bind.NewKeyedTransactor(key)
+	opts.Context = ctx
+	if gasPrice != 0 {
+		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	}
+
+	offerHash, err := data.ToHash(offer.Hash)
+	if err != nil {
+		return err
+	}
+
+	if w.gasConf.PSC.UncooperativeClose != 0 {
+		opts.GasLimit = w.gasConf.PSC.UncooperativeClose
+	}
+
+	tx, err := w.ethBack.PSCUncooperativeClose(opts, agent, ch.Block,
+		offerHash, new(big.Int).SetUint64(ch.ReceiptBalance))
+	if err != nil {
+		return err
+	}
+
+	if err := w.saveEthTX(job, tx, "UncooperativeClose",
+		data.JobChannel, ch.ID, acc.EthAddr,
+		data.FromBytes(w.pscAddr.Bytes())); err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelWaitChallenge
+
+	return data.Save(w.db.Querier, ch)
+}
+
+// ClientPreUncooperativeCloseRequestData is a job data
+// for ClientPreUncooperativeCloseRequest.
+type ClientPreUncooperativeCloseRequestData struct {
+	Channel  string `json:"channel"`
+	GasPrice uint64 `json:"gasPrice"`
+}
+
+// ClientPreUncooperativeCloseRequest requests the closing of the channel
+// and starts the challenge period.
+func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
+	var jdata ClientPreUncooperativeCloseRequestData
+	if err := parseJobData(job, &jdata); err != nil {
+		return err
+	}
+
+	ch, err := w.channel(jdata.Channel)
+	if err != nil {
+		return err
+	}
+
+	offer, err := w.offering(ch.Offering)
+	if err != nil {
+		return err
+	}
+
+	acc, err := w.account(ch.Client)
+	if err != nil {
+		return err
+	}
+
+	if err := w.clientPreUncooperativeCloseRequestCheckChannel(
+		ch); err != nil {
+		return err
+	}
+
+	return w.clientPreUncooperativeCloseRequestSaveTx(job, ch, acc,
+		offer, jdata.GasPrice)
+}
+
+// ClientAfterUncooperativeCloseRequest waits for the channel
+// to uncooperative close, starts the service termination process.
+func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
+	ch, err := w.relatedChannel(job,
+		data.JobClientAfterUncooperativeCloseRequest)
+	if err != nil {
+		return err
+	}
+
+	ch.ChannelStatus = data.ChannelInChallenge
+	if err = w.db.Update(ch); err != nil {
+		return fmt.Errorf("could not update channel's"+
+			" status: %v", err)
+	}
+
+	if err := w.addJob(data.JobClientPreUncooperativeClose,
+		data.JobChannel, ch.ID); err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobClientPreServiceTerminate,
+		data.JobChannel, ch.ID)
+}
+
+// ClientPreServiceTerminate terminates service.
+func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
+	return nil
 }

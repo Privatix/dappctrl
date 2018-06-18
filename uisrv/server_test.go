@@ -77,7 +77,6 @@ func createTestChannel(t *testing.T) *data.Channel {
 	client := data.NewTestUser()
 	product := data.NewTestProduct()
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
-	fmt.Printf("New tpl offer hash: %v", tplOffer.Hash)
 	offering := data.NewTestOffering(agent.EthAddr, product.ID, tplOffer.ID)
 	offering.MaxInactiveTimeSec = pointer.ToUint64(10)
 	offering.UnitName = "megabytes"

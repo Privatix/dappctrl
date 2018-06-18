@@ -266,7 +266,7 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 	}
 
 	if ch.ChannelStatus != data.ChannelClosedUncoop {
-		t.Fatalf("expected %s service status, but got %s",
+		t.Fatalf("expected %s channel status, but got %s",
 			data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
 	}
 }

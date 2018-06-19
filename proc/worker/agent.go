@@ -517,7 +517,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	return w.addJob(data.JobAgentPreOfferingMsgSOMCPublish,
-		data.JobOfferring, offering.ID)
+		data.JobOffering, offering.ID)
 }
 
 // AgentPreOfferingMsgSOMCPublish publishes to somc and creates after job.

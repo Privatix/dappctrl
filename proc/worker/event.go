@@ -26,9 +26,17 @@ type logChannelCreatedInput struct {
 	authenticationHash common.Hash
 }
 
+type logOfferingCreatedInput struct {
+	agentAddr    common.Address
+	offeringHash common.Hash
+	minDeposit   *big.Int
+	maxSupply    uint16
+}
+
 var (
-	logChannelTopUpDataArguments   abi.Arguments
-	logChannelCreatedDataArguments abi.Arguments
+	logChannelTopUpDataArguments    abi.Arguments
+	logChannelCreatedDataArguments  abi.Arguments
+	logOfferingCreatedDataArguments abi.Arguments
 )
 
 func init() {
@@ -43,6 +51,11 @@ func init() {
 	}
 
 	abiBytes32, err := abi.NewType("bytes32")
+	if err != nil {
+		panic(err)
+	}
+
+	abiUint16, err := abi.NewType("uint16")
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +75,12 @@ func init() {
 		},
 		{
 			Type: abiBytes32,
+		},
+	}
+
+	logOfferingCreatedDataArguments = abi.Arguments{
+		{
+			Type: abiUint16,
 		},
 	}
 }
@@ -150,5 +169,43 @@ func extractLogChannelCreated(log *data.EthLog) (*logChannelCreatedInput, error)
 		offeringHash:       offeringHash,
 		deposit:            deposit,
 		authenticationHash: common.Hash(authHashB),
+	}, nil
+}
+
+func extractLogOfferingCreated(log *data.EthLog) (*logOfferingCreatedInput, error) {
+	if len(log.Topics) != 4 {
+		return nil, fmt.Errorf(
+			"wrong number of topics, wanted: %v, got: %v",
+			4, len(log.Topics))
+	}
+
+	dataBytes, err := data.ToBytes(log.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(dataBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(dataUnpacked) != 1 {
+		return nil, fmt.Errorf("wrong number of non-indexed arguments")
+	}
+
+	curSupply, ok := dataUnpacked[0].(uint16)
+	if !ok {
+		return nil, fmt.Errorf("could not decode event data")
+	}
+
+	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	offeringHash := log.Topics[2]
+	minDeposit := big.NewInt(0).SetBytes(log.Topics[3].Bytes())
+
+	return &logOfferingCreatedInput{
+		agentAddr:    agentAddr,
+		offeringHash: offeringHash,
+		minDeposit:   minDeposit,
+		maxSupply:    curSupply,
 	}, nil
 }

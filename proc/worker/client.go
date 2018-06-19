@@ -11,11 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/messages/offer"
+	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 )
@@ -678,4 +681,106 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 
 	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
 	return err
+}
+
+// ClientAfterOfferingMsgBCPublish creates offering.
+func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return err
+	}
+
+	logOfferingCreated, err := extractLogOfferingCreated(ethLog)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		offeringsData, err := w.somc.FindOfferings([]string{
+			data.FromBytes(logOfferingCreated.offeringHash.Bytes())})
+		if err != nil {
+			w.logger.Error("failed to find offering: %v", err)
+			return
+		}
+
+		offering, err := w.fillOfferingFromSOMCReply(
+			job.RelatedID, data.FromBytes(logOfferingCreated.agentAddr.Bytes()),
+			ethLog.BlockNumber, offeringsData)
+		if err != nil {
+			w.logger.Error("failed to fill offering: %v", err)
+			return
+		}
+
+		if err := w.db.Insert(offering); err != nil {
+			w.logger.Error("failed to insert offering: %v", err)
+		}
+	}()
+
+	return nil
+}
+
+func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber uint64, offeringsData []somc.OfferingData) (*data.Offering, error) {
+	if len(offeringsData) == 0 {
+		return nil, fmt.Errorf("no offering returned from somc")
+	}
+
+	offeringData := offeringsData[0]
+	if err := w.db.FindOneTo(&data.Offering{}, "hash", offeringData.Hash); err == nil {
+		return nil, fmt.Errorf("offering exists with hash: %s", offeringData.Hash)
+	}
+
+	msgRaw, sig := messages.UnpackSignature(offeringData.Offering)
+
+	msg := offer.Message{}
+	if err := json.Unmarshal(msgRaw, &msg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal offering data: %v", err)
+	}
+
+	pubk, err := data.ToBytes(msg.AgentPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode agent pub key")
+	}
+
+	if !messages.VerifySignature(pubk, crypto.Keccak256(msgRaw), sig) {
+		return nil, fmt.Errorf("wrong signature")
+	}
+
+	template, err := w.templateByHash(msg.TemplateHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not find template by given hash: %v. got: %v",
+			msg.TemplateHash, err)
+	}
+
+	product := &data.Product{}
+	if err := w.db.FindOneTo(product, "offer_tpl_id", template.ID); err != nil {
+		return nil, fmt.Errorf("could not find the product: %v", err)
+	}
+
+	return &data.Offering{
+		ID:                 relID,
+		Template:           template.ID,
+		Product:            product.ID,
+		Hash:               offeringData.Hash,
+		Status:             data.MsgChPublished,
+		OfferStatus:        data.OfferRegister,
+		BlockNumberUpdated: blockNumber,
+		Agent:              agentAddr,
+		RawMsg:             data.FromBytes(offeringData.Offering),
+		ServiceName:        product.Name,
+		Country:            msg.Country,
+		Supply:             msg.ServiceSupply,
+		UnitName:           msg.UnitName,
+		UnitType:           msg.UnitType,
+		BillingType:        msg.BillingType,
+		SetupPrice:         msg.SetupPrice,
+		UnitPrice:          msg.UnitPrice,
+		MinUnits:           msg.MinUnits,
+		MaxUnit:            msg.MaxUnit,
+		BillingInterval:    msg.BillingInterval,
+		MaxBillingUnitLag:  msg.MaxBillingUnitLag,
+		MaxSuspendTime:     msg.MaxSuspendTime,
+		MaxInactiveTimeSec: msg.MaxInactiveTimeSec,
+		FreeUnits:          msg.FreeUnits,
+		AdditionalParams:   msg.ServiceSpecificParameters,
+	}, nil
 }

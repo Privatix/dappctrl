@@ -68,7 +68,7 @@ func testAcc(t *testing.T, ch *data.Channel, agent bool) {
 
 func testJob(t *testing.T, ch *data.Channel) {
 	job := data.NewTestJob(data.JobClientPreChannelCreate,
-		data.JobUser, data.JobOfferring)
+		data.JobUser, data.JobOffering)
 	job.RelatedID = ch.ID
 	insertItems(t, job)
 }

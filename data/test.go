@@ -407,10 +407,11 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 		acc.EthAddr, user.EthAddr, off.ID, 0, 0, ChannelActive)
 	endpTmpl := NewTestTemplate(TemplateAccess)
 	prod.OfferAccessID = &endpTmpl.ID
+	prod.OfferTplID = &tmpl.ID
 	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
+	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, user, off, ch, endp)
 
 	return &TestFixture{
 		T:              t,
@@ -459,5 +460,5 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
 	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,
-		f.TemplateOffer, f.User, f.Account, f.Product, f.TemplateAccess)
+		f.User, f.Account, f.Product, f.TemplateAccess, f.TemplateOffer)
 }

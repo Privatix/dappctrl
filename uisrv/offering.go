@@ -227,7 +227,7 @@ func (s *Server) handlePutOfferingStatus(
 
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobAgentPreOfferingMsgBCPublish,
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 		RelatedID:   id,
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
@@ -274,7 +274,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	}
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobClientPreChannelCreate,
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 		RelatedID:   id,
 		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobUser,

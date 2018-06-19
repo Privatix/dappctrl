@@ -90,8 +90,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
 		data.TestToPrivateKey, conf.clientVPN)
 	if err != nil {
-		fakeSOMC.Close()
 		somcConn.Close()
+		fakeSOMC.Close()
 		panic(err)
 	}
 
@@ -109,8 +109,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 }
 
 func (e *workerTest) close() {
-	e.fakeSOMC.Close()
 	e.somcConn.Close()
+	e.fakeSOMC.Close()
 }
 
 func TestMain(m *testing.M) {
@@ -204,7 +204,7 @@ func (e *workerTest) newTestFixture(t *testing.T,
 		job.RelatedID = f.Channel.ID
 	case data.JobEndpoint:
 		job.RelatedID = f.Endpoint.ID
-	case data.JobOfferring:
+	case data.JobOffering:
 		job.RelatedID = f.Offering.ID
 	case data.JobAccount:
 		job.RelatedID = f.Account.ID

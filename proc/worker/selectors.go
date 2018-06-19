@@ -25,7 +25,7 @@ func (w *Worker) relatedAndValidate(rec reform.Record, job *data.Job, jobType, r
 
 func (w *Worker) relatedOffering(job *data.Job, jobType string) (*data.Offering, error) {
 	rec := &data.Offering{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobOfferring)
+	err := w.relatedAndValidate(rec, job, jobType, data.JobOffering)
 	return rec, err
 }
 

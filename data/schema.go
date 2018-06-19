@@ -252,10 +252,10 @@ const (
 
 // Job related object types.
 const (
-	JobOfferring = "offering"
-	JobChannel   = "channel"
-	JobEndpoint  = "endpoint"
-	JobAccount   = "account"
+	JobOffering = "offering"
+	JobChannel  = "channel"
+	JobEndpoint = "endpoint"
+	JobAccount  = "account"
 )
 
 // Transaction statuses.

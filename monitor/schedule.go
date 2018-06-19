@@ -432,7 +432,7 @@ func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   id,
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 	}
 
 	m.scheduleCommon(el, j)
@@ -494,7 +494,7 @@ func (m *Monitor) scheduleClientOfferingCreated(el *data.EthLog,
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   util.NewUUID(),
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 	}
 
 	m.scheduleCommon(el, j)

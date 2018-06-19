@@ -63,9 +63,6 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
-	if err != nil {
-		t.Fatal(err)
-	}
 	ethLog := data.NewTestEthLog()
 	ethLog.TxHash = data.FromBytes(env.ethBack.tx.Hash().Bytes())
 	ethLog.JobID = &fixture.job.ID
@@ -345,7 +342,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 		fixture.Channel.ID, data.MsgUnpublished); err != nil {
 		t.Fatalf("could not find %T: %v", endpoint, err)
 	}
-	defer env.deleteFromTestDB(t, endpoint)
+	env.deleteFromTestDB(t, endpoint)
 
 	if endpoint.RawMsg == "" {
 		t.Fatal("raw msg is not set")
@@ -456,7 +453,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 3. offer_status="register"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
-		data.JobOfferring)
+		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
 
@@ -520,7 +517,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	// 2. "preOfferingMsgSOMCPublish"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterOfferingMsgBCPublish,
-		data.JobOfferring)
+		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
 
@@ -534,7 +531,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	}
 
 	// Test somc publish job created.
-	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring,
+	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering,
 		offering.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,
@@ -546,7 +543,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	// 2. set msg_status="msg_channel_published"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
-		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
+		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering)
 
 	env.setOfferingHash(t, fixture)
 	defer env.close()

@@ -126,18 +126,15 @@ main_conf = dict(
         'icon_tmpl_f': '{}/Desktop/privatix-dappgui.desktop'.format(
             environ['HOME']),
         'icon_tmpl': {
-            'section': 'Desktop Entry',
-            'Version': '0.6',
-            'Type': 'Application',
-            'Name': 'Privatix Dapp',
+            'Section': 'Desktop Entry',
             'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
-            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/',
-            'Icon': '/opt/privatix/gui/node_modules/dappctrlgui/icon_64.png',
             'Terminal': 'false',
+            # 'Version': '0.6',
+            'Name': 'Privatix Dapp',
+            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/"',
+            'Type': 'Application',
+            'Icon': '/opt/privatix/gui/node_modules/dappctrlgui/icon_64.png',
         },
-
-        'prvtx_run_f': '{}/privatix_runner.sh'.format(environ['HOME']),
-        'prvtx_run_cmd': 'sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/',
 
         'npm_tmp_f': 'tmp_nodesource',
         'npm_url': 'https://deb.nodesource.com/setup_9.x',
@@ -146,7 +143,7 @@ main_conf = dict(
 
         'gui_inst': [
             'chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
-            'sudo su - $USER -c \'cd /opt/privatix/gui && npm install dappctrlgui\''
+            'sudo su - $USER -c \'cd /opt/privatix/gui && sudo npm install dappctrlgui\''
             # 'sudo apt-get install -y npm',
             # 'sudo npm install dappctrlgui'
         ],
@@ -589,7 +586,7 @@ class Params(CMD):
     def interfase(self):
         def check_interfs(i):
             logging.info('Please enter one of your '
-                         'available interfaces: {}'.format(i))
+                         'available external interfaces: {}'.format(i))
 
             new_intrfs = raw_input('>')
             if new_intrfs not in i:
@@ -876,7 +873,7 @@ class GUI(CMD):
         config = ConfigParser()
         tmpl_file = self.gui['icon_tmpl_f']
         tmpl = self.gui['icon_tmpl']
-        section = tmpl['section']
+        section = tmpl['Section']
 
         logging.debug('Create icon file: {}'.format(tmpl_file))
 
@@ -890,18 +887,13 @@ class GUI(CMD):
               stat(tmpl_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
         logging.debug('Chmod icon file done')
 
-    def create_runner_file(self):
-        file = self.gui['prvtx_run_f']
-        cmd = self.gui['prvtx_run_cmd']
-        self.file_rw(p=file, w=True, data=cmd, log='Create runner file.')
-        chmod(file, 0755)
-
-    def _get_gui(self, sysctl=False):
+    def __get_gui(self, sysctl=False):
         cmds = self.gui['gui_inst']
         for cmd in cmds:
             self._sys_call(cmd, sysctl=sysctl, s_exit=11)
 
-    def get_npm(self, sysctl):
+    def __get_npm(self, sysctl):
+        logging.debug('Get NPM for GUI.')
         npm_path = self._reletive_path(self.gui['npm_tmp_f'])
         self.file_rw(
             p=npm_path,
@@ -915,14 +907,20 @@ class GUI(CMD):
 
         cmd = self.gui['npm_node']
         self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
-        self._get_gui(sysctl)
+
+    def install_gui(self,sysctl):
+        logging.debug('Install GUI.')
+        self.__get_npm(sysctl)
+        self.__get_gui(sysctl)
+
 
     def update_gui(self):
+        logging.debug('Update GUI.')
         p = self.gui['gui_path']
         st = stat(p)
         rmtree(p, ignore_errors=True)
         mkdir(p)
-        self._get_gui()
+        self.__get_gui()
 
 
 class Checker(Params, Rdata, GUI):
@@ -961,12 +959,11 @@ class Checker(Params, Rdata, GUI):
 
             self.run_service(sysctl)
             if args['no_gui']:
-                logging.info('Install GUI.')
+                logging.info('GUI mode.')
                 if pass_check:
                     self.update_gui()
                 else:
-                    self.get_npm(sysctl)
-                self.create_runner_file()
+                    self.install_gui(sysctl)
                 self.create_icon()
             self._finalizer(rw=True, sysctl=sysctl)
 

@@ -25,18 +25,19 @@ from contextlib import closing
 from shutil import rmtree
 from re import search, sub, findall
 from codecs import open
-from stat import S_IEXEC, S_IXUSR, S_IXGRP, S_IXOTH
-from os import remove, mkdir, path, environ, stat, chmod
+from shutil import copyfile
 from json import load, dump
 from time import time, sleep
 from urllib import URLopener
 from urllib2 import urlopen
 from os.path import isfile, isdir
 from argparse import ArgumentParser
+from ConfigParser import ConfigParser
 from platform import linux_distribution
 from subprocess import Popen, PIPE, STDOUT
-from shutil import copyfile
-from ConfigParser import ConfigParser
+from distutils.version import StrictVersion
+from stat import S_IEXEC, S_IXUSR, S_IXGRP, S_IXOTH
+from os import remove, mkdir, path, environ, stat, chmod
 
 """
 Exit code:
@@ -54,6 +55,8 @@ Exit code:
     12 - Problem with run psql
     13 - Problem with ready Vpn 
     14 - Problem with ready Common 
+    15 - The version npm is not satisfied. The user self reinstall
+    16 - Problem with deleting one of the GUI pack
 """
 
 log_conf = dict(
@@ -147,6 +150,11 @@ main_conf = dict(
             # 'sudo apt-get install -y npm',
             # 'sudo npm install dappctrlgui'
         ],
+        'version':{
+            'npm': ['5.6',None,'0'],
+            'nodejs': ['9.20',None,'0'],
+        },
+        'del_cmd': 'sudo apt purge {} -y'
     },
 
     test={
@@ -908,8 +916,73 @@ class GUI(CMD):
         cmd = self.gui['npm_node']
         self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
 
+    def __get_pack_ver(self,sysctl):
+        res = False
+        for k,v in self.gui['version'].items():
+            logging.debug('Check {}.'.format(k))
+            cmd = 'dpkg -l | grep {}'.format(k)
+            raw = self._sys_call(cmd=cmd,sysctl=sysctl)
+            if raw:
+                res = True
+                cmd = '{} -v'.format(k)
+                raw = self._sys_call(cmd=cmd,sysctl=sysctl)
+                ver = '.'.join(findall('\d+',raw)[0:2])
+
+                if StrictVersion(ver) < StrictVersion(v[0]):
+                    self.gui['version'][k][1]=True
+                    self.gui['version'][k][2]=ver
+
+            else:
+                logging.debug('{} not installed yet.'.format(k))
+        return res
+
+    def __check_version(self, sysctl):
+        logging.debug('Check version.')
+        self.__get_pack_ver(sysctl)
+
+        if any([x[1] for x in self.gui['version'].values()]):
+            logging.info('\n\nYou have installed obsolete packages.\n'
+                         'To continue the installation, '
+                         'you need to update the following packages:')
+            for k,v in self.gui['version'].items():
+                if v[1]:
+                    logging.info('   * {} {}. Min requirements: {}'.format(k,v[2],v[0]))
+
+            answ = raw_input('\n\nDo you want to re-install the packages '
+                             'yourself or in automatic mode?\n '
+                             'Y - automatically, N - by yourself.\n'
+                             'If you choose N, the installation is interrupted, '
+                             'and you will need to run it again.\n'
+                             '\n> ')
+
+            while True:
+                if answ.lower() not in ['n','y']:
+                    logging.info('Invalid choice. Select y or n.')
+                    answ = raw_input('> ')
+                    continue
+                if answ.lower() == 'y':
+                    logging.info('You have selected automatic mode')
+                    break
+                else:
+                    logging.info('You have chosen manual mode')
+                    self._rolback(sysctl, 15)
+                    break
+
+
+            for k,v in self.gui['version'].items():
+                if v[1]:
+                    cmd = self.gui['del_cmd'].format(k)
+                    self._sys_call(cmd=cmd,sysctl=sysctl)
+
+            if self.__get_pack_ver(sysctl):
+                logging.info('The problem with deleting one of the listed '
+                             'packages. Try to delete in manual mode '
+                             'and repeat the process again.')
+                self._rolback(sysctl, 16)
+
     def install_gui(self,sysctl):
         logging.debug('Install GUI.')
+        self.__check_version(sysctl)
         self.__get_npm(sysctl)
         self.__get_gui(sysctl)
 

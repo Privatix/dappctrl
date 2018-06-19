@@ -164,7 +164,7 @@ func NewTestProduct() *Product {
 func NewTestTemplate(kind string) *Template {
 	tmpl := &Template{
 		ID:   util.NewUUID(),
-		Raw:  []byte("{}"),
+		Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
 		Kind: kind,
 	}
 	tmpl.Hash = FromBytes(crypto.Keccak256(tmpl.Raw))

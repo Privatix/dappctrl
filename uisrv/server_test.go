@@ -15,7 +15,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"gopkg.in/reform.v1"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -94,8 +94,8 @@ func createTestChannel(t *testing.T) *data.Channel {
 	insertItems(t,
 		agent,
 		client,
-		product,
 		tplOffer,
+		product,
 		offering,
 		ch)
 	return ch

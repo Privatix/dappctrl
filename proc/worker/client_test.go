@@ -13,6 +13,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -447,22 +448,16 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 	defer fxt.Close()
 
 	var job data.Job
-	if err := env.worker.db.SelectOneTo(&job, "WHERE related_id = $1",
-		fxt.Channel.ID); err != nil {
-		t.Fatal(err)
-	}
-	defer data.DeleteFromTestDB(t, db, &job)
+	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &job)
 
 	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	data.SaveToTestDB(t, db, fxt.Channel)
+	env.updateInTestDB(t, fxt.Channel)
 
 	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
 
 	var ch data.Channel
-	if err := data.FindByPrimaryKeyTo(db.Querier, &ch,
-		fxt.Channel.ID); err != nil {
-		t.Fatal(err)
-	}
+	env.findTo(t, &ch, fxt.Channel.ID)
 
 	if ch.ChannelStatus != data.ChannelClosedUncoop {
 		t.Fatalf("expected %s channel status, but got %s",
@@ -479,34 +474,25 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	defer fxt.Close()
 
 	var job data.Job
-	if err := env.worker.db.SelectOneTo(&job, "WHERE related_id = $1",
-		fxt.Channel.ID); err != nil {
-		t.Fatal(err)
-	}
-	defer data.DeleteFromTestDB(t, db, &job)
+	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &job)
 
 	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	data.SaveToTestDB(t, db, fxt.Channel)
+	env.updateInTestDB(t, fxt.Channel)
 
 	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
 	var jobTerm data.Job
-	if err := env.worker.db.SelectOneTo(&jobTerm,
-		"WHERE related_id = $1 AND id != $2",
-		fxt.Channel.ID, fxt.job.ID); err != nil {
-		t.Fatal(err)
-	}
-	defer data.DeleteFromTestDB(t, db, &jobTerm)
+	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",
+		fxt.Channel.ID, fxt.job.ID)
+	defer env.deleteFromTestDB(t, &jobTerm)
 
 	if jobTerm.Type != data.JobClientPreServiceTerminate {
 		t.Fatal("bad job type")
 	}
 
 	var ch data.Channel
-	if err := data.FindByPrimaryKeyTo(db.Querier, &ch,
-		fxt.Channel.ID); err != nil {
-		t.Fatal(err)
-	}
+	env.findTo(t, &ch, fxt.Channel.ID)
 
 	if ch.ChannelStatus != data.ChannelClosedCoop {
 		t.Fatalf("expected %s service status, but got %s",
@@ -515,8 +501,146 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 }
 
 func TestClientPreServiceTerminate(t *testing.T) {
-	t.Skip("TODO")
-	// 1. svc_status="Terminated"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceTerminate, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.TerminateChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrSameJobExists {
+		t.Fatal("job allready exists")
+	}
+
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.TerminateChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+
+	runJob(t, env.worker.ClientPreServiceTerminate, &job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceTerminated {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+	}
+}
+
+func TestClientPreServiceSuspend(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceSuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrActiveJobsExist {
+		t.Fatal("job allready exists")
+	}
+
+	badStatus := []string{data.ServicePending, data.ServiceSuspended,
+		data.ServiceTerminated}
+
+	for _, status := range badStatus {
+		fxt.Channel.ServiceStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+		if _, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+			data.JobTask, false); err != proc.ErrBadServiceStatus {
+			t.Fatal("bad service status")
+		}
+	}
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+	defer env.deleteFromTestDB(t, &job)
+
+	runJob(t, env.worker.ClientPreServiceSuspend, &job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceSuspended {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceSuspended, fxt.Channel.ServiceStatus)
+	}
+}
+
+func TestClientPreServiceUnsuspend(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceUnsuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrActiveJobsExist {
+		t.Fatal("job allready exists")
+	}
+
+	badStatus := []string{data.ServiceActive, data.ServiceTerminated}
+
+	for _, status := range badStatus {
+		fxt.Channel.ServiceStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+		if _, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+			data.JobTask, false); err != proc.ErrBadServiceStatus {
+			t.Fatal("bad service status")
+		}
+	}
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	env.updateInTestDB(t, fxt.Channel)
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+	defer env.deleteFromTestDB(t, &job)
+
+	runJob(t, env.worker.ClientPreServiceUnsuspend, &job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceActive {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceActive, fxt.Channel.ServiceStatus)
+	}
 }
 
 func TestClientAfterOfferingMsgBCPublish(t *testing.T) {

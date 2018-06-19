@@ -169,7 +169,7 @@ CREATE TABLE offerings (
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
     hash sha3_256 NOT NULL -- offering hash
         CONSTRAINT unique_offering_hash UNIQUE,
-    
+
     status msg_status NOT NULL, -- message status
     offer_status offer_status NOT NULL, -- offer status in blockchain
     block_number_updated bigint

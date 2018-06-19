@@ -32,8 +32,8 @@ var (
 
 	clientJobTypes = map[string]string{
 		channelTerminate: data.JobClientPreServiceTerminate,
-		// channelPause:     data.JobClientPreServiceSuspend, // TODO(maxim) This is Job not yet implemented
-		// channelResume:    data.JobClientPreServiceUnsuspend, // TODO(maxim) This is Job not yet implemented
+		channelPause:     data.JobClientPreServiceSuspend,
+		channelResume:    data.JobClientPreServiceUnsuspend,
 	}
 
 	clientStatusFilter   = `WHERE id = '%s' AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
@@ -448,26 +448,44 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 		" %v received.", payload.Action, id)
 
 	if agent {
+		// TODO(maxim) need refactor after refactor agent jobs
 		if !s.findTo(w, &data.Channel{}, id) {
 			return
 		}
+
+		if err := s.queue.Add(&data.Job{
+			Type:        jobType,
+			RelatedType: data.JobChannel,
+			RelatedID:   id,
+			CreatedBy:   data.JobUser,
+			Data:        []byte("{}"),
+		}); err != nil {
+			s.logger.Error("failed to add job %s: %v", jobType, err)
+			s.replyUnexpectedErr(w)
+		}
+
 	} else {
 		if err := s.selectOneTo(w, &data.Channel{},
 			fmt.Sprintf(clientStatusFilter, id)); err != nil {
 			return
 		}
+		if _, err := s.clientChannelAction(jobType, id, false); err != nil {
+			s.logger.Error("failed to add job %s: %v", jobType, err)
+			s.replyUnexpectedErr(w)
+		}
 	}
+}
 
-	if err := s.queue.Add(&data.Job{
-		Type:        jobType,
-		RelatedType: data.JobChannel,
-		RelatedID:   id,
-		CreatedBy:   data.JobUser,
-		Data:        []byte("{}"),
-	}); err != nil {
-		s.logger.Error("failed to add job %s: %v", jobType, err)
-		s.replyUnexpectedErr(w)
+func (s *Server) clientChannelAction(action, channel string, agent bool) (job string, err error) {
+	switch action {
+	case data.JobClientPreServiceSuspend:
+		return s.pr.SuspendChannel(channel, data.JobUser, agent)
+	case data.JobClientPreServiceUnsuspend:
+		return s.pr.ActivateChannel(channel, data.JobUser, agent)
+	case data.JobClientPreServiceTerminate:
+		return s.pr.TerminateChannel(channel, data.JobUser, agent)
 	}
+	return
 }
 
 func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -53,7 +54,8 @@ func TestMain(m *testing.M) {
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,
+		proc.NewProcessor(proc.NewConfig(), queue))
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()

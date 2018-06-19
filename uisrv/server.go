@@ -7,6 +7,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -44,6 +45,7 @@ type Server struct {
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
+	pr             *proc.Processor
 }
 
 // NewServer creates a new agent server.
@@ -51,7 +53,7 @@ func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
 	queue *job.Queue,
-	pwdStorage data.PWDGetSetter) *Server {
+	pwdStorage data.PWDGetSetter, pr *proc.Processor) *Server {
 	return &Server{
 		conf,
 		logger,
@@ -59,7 +61,8 @@ func NewServer(conf *Config,
 		queue,
 		pwdStorage,
 		data.EncryptedKey,
-		data.ToPrivateKey}
+		data.ToPrivateKey,
+		pr}
 }
 
 const (

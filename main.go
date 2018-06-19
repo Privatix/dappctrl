@@ -156,9 +156,11 @@ func main() {
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	worker.SetQueue(queue)
-	worker.SetProcessor(proc.NewProcessor(conf.Proc, queue))
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
+	pr := proc.NewProcessor(conf.Proc, queue)
+	worker.SetProcessor(pr)
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",

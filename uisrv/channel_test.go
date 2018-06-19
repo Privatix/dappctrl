@@ -17,6 +17,7 @@ import (
 const (
 	errFieldVal = "The field in the response" +
 		" does not match the value in the database"
+	status = "/status"
 )
 
 func getChannels(t *testing.T, params map[string]string,
@@ -361,8 +362,14 @@ func TestGetClientChannelStatus(t *testing.T) {
 		"expected not found, got: %d")
 }
 
-func sendChannelAction(t *testing.T, id, action string) *http.Response {
-	path := fmt.Sprint(channelsPath, id, "/status")
+func sendChannelAction(t *testing.T, id, action string, agent bool) *http.Response {
+	var path string
+	if agent {
+		path = channelsPath + id + status
+	} else {
+		path = clientChannelsPath + id + status
+	}
+
 	payload := &ActionPayload{Action: action}
 	return sendPayload(t, http.MethodPut, path, payload)
 }
@@ -373,7 +380,7 @@ func TestUpdateChannelStatus(t *testing.T) {
 	defer setTestUserCredentials(t)()
 
 	testJobCreated := func(action string, jobType string) {
-		res := sendChannelAction(t, fixture.Channel.ID, action)
+		res := sendChannelAction(t, fixture.Channel.ID, action, true)
 		if res.StatusCode != http.StatusOK {
 			t.Fatal("got: ", res.Status)
 		}
@@ -382,12 +389,51 @@ func TestUpdateChannelStatus(t *testing.T) {
 		data.DeleteFromTestDB(t, testServer.db, jobTerm)
 	}
 
-	res := sendChannelAction(t, fixture.Channel.ID, "wrong-action")
-	if res.StatusCode != http.StatusBadRequest {
-		t.Fatalf("wanted: %d, got: %v", http.StatusBadRequest, res.Status)
+	testClientJobCreated := func(action string, channel, jobType string) {
+		res := sendChannelAction(t, channel, action, false)
+		if res.StatusCode != http.StatusOK {
+			t.Fatal("got: ", res.Status)
+		}
+		var job data.Job
+		data.SelectOneFromTestDBTo(t, testServer.db, &job,
+			"WHERE type = $1 AND related_id = $2",
+			jobType, channel)
+		data.DeleteFromTestDB(t, testServer.db, &job)
+	}
+
+	for _, agent := range []bool{true, false} {
+		res := sendChannelAction(t, fixture.Channel.ID,
+			"wrong-action", agent)
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("wanted: %d, got: %v",
+				http.StatusBadRequest, res.Status)
+		}
 	}
 
 	testJobCreated(channelTerminate, data.JobAgentPreServiceTerminate)
 	testJobCreated(channelPause, data.JobAgentPreServiceSuspend)
 	testJobCreated(channelResume, data.JobAgentPreServiceUnsuspend)
+
+	cliChActive := createTestChannel(t)
+	cliChActive.ServiceStatus = data.ServiceActive
+
+	cliChPending := createTestChannel(t)
+	cliChPending.ServiceStatus = data.ServicePending
+
+	cliChSuspended := createTestChannel(t)
+	cliChSuspended.ServiceStatus = data.ServiceSuspended
+
+	testServer.db.Save(cliChActive)
+	testServer.db.Save(cliChPending)
+	testServer.db.Save(cliChSuspended)
+	defer data.DeleteFromTestDB(t, testServer.db, cliChActive,
+		cliChPending, cliChSuspended)
+
+	testClientJobCreated(channelTerminate, cliChPending.ID,
+		data.JobClientPreServiceTerminate)
+	testClientJobCreated(channelPause, cliChActive.ID,
+		data.JobClientPreServiceSuspend)
+	testClientJobCreated(channelResume, cliChSuspended.ID,
+		data.JobClientPreServiceUnsuspend)
+
 }

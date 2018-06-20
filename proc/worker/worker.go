@@ -92,7 +92,6 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		somc:           somc,
 		deployConfig:   config.DeployConfig,
 		clientVPN:      clientVPN,
-		runner:         svcrun.NewIdleMock(),
 	}, nil
 }
 

@@ -53,7 +53,7 @@ type vpnConf struct {
 	PingRestart   string `json:"ping-restart"`
 	Port          string `json:"port"`
 	Proto         string `json:"proto"`
-	ServerAddress string
+	ServerAddress string `json:"serverAddress"`
 }
 
 func newVpnConfig() *vpnConf {
@@ -206,7 +206,11 @@ func clientConfig(srvAddr string,
 		return nil, err
 	}
 
-	config.ServerAddress = srvAddr
+	// if the configuration does not have a server address,
+	// then take it from srvAddr
+	if config.ServerAddress == defaultServerAddress && srvAddr != "" {
+		config.ServerAddress = srvAddr
+	}
 
 	if checkParam(nameCompLZO, additionalParams) {
 		config.CompLZO = nameCompLZO

@@ -23,11 +23,14 @@ const (
 	errDeployConfig = "error deploy config"
 	errTestAddress  = "test network address are not available"
 
-	nameCipher       = "cipher"
-	nameConnectRetry = "connect-retry"
-	namePing         = "ping"
-	namePingRestart  = "ping-restart"
-	nameProto        = "proto"
+	nameCipher        = "cipher"
+	nameConnectRetry  = "connect-retry"
+	namePing          = "ping"
+	namePingRestart   = "ping-restart"
+	nameProto         = "proto"
+	nameServerAddress = "serverAddress"
+
+	testServerName = "testserver"
 )
 
 type srvData struct {
@@ -37,6 +40,7 @@ type srvData struct {
 
 func createSrvData(t *testing.T) *srvData {
 	out := srvConfig(t)
+	out[nameServerAddress] = testServerName
 
 	param, err := json.Marshal(out)
 	if err != nil {

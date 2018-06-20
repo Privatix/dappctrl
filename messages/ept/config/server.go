@@ -16,6 +16,7 @@ const (
 	caNameFromConfig = "ca"
 	caPathName       = "caPathName"
 	caData           = "caData"
+	serverAddress    = "serverAddress"
 )
 
 type pushReq struct {
@@ -34,11 +35,13 @@ type PushConfigReq struct {
 	caPath   string
 	keys     []string
 	retrySec int64
+	extIP    string
 }
 
 // NewPushConfigReq fills the request structure
 func NewPushConfigReq(username, password, confPath,
-	caPath string, keys []string, retrySec int64) *PushConfigReq {
+	caPath string, keys []string, retrySec int64,
+	extIP string) *PushConfigReq {
 	return &PushConfigReq{
 		username: username,
 		password: password,
@@ -46,6 +49,7 @@ func NewPushConfigReq(username, password, confPath,
 		caPath:   caPath,
 		keys:     keys,
 		retrySec: retrySec,
+		extIP:    extIP,
 	}
 }
 
@@ -144,10 +148,11 @@ func parseLine(keys map[string]bool,
 // The confPath, caPath are absolute paths to OpenVpn config and Ca files,
 // In variable keys the list of keys for parsing.
 // The timeout in seconds between attempts to send data to the server must
-// be specified in variable retrySec
+// be specified in variable retrySec.
 func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	logger *util.Logger, in *PushConfigReq) error {
-	if in.retrySec <= 0 || logger == nil || sessSrvConfig == nil {
+	if in.retrySec <= 0 || logger == nil || sessSrvConfig == nil ||
+		in.extIP == "" {
 		return ErrInput
 	}
 
@@ -155,6 +160,9 @@ func PushConfig(ctx context.Context, sessSrvConfig *srv.Config,
 	if err != nil {
 		return err
 	}
+
+	// set OpenVpn server address to config
+	args.Config[serverAddress] = in.extIP
 
 	req := &pushReq{
 		sessSrvConfig: sessSrvConfig,

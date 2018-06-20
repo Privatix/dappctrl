@@ -20,7 +20,7 @@
 import sys
 import logging
 import socket
-import signal
+from signal import SIGINT, signal, pause
 from contextlib import closing
 from shutil import rmtree
 from re import search, sub, findall
@@ -57,6 +57,8 @@ Exit code:
     14 - Problem with ready Common 
     15 - The version npm is not satisfied. The user self reinstall
     16 - Problem with deleting one of the GUI pack
+    17 - Exception in code, see logging
+    18 - Exit Ctrl+C
 """
 
 log_conf = dict(
@@ -152,10 +154,12 @@ main_conf = dict(
         ],
         'version':{
             'npm': ['5.6',None,'0'],
-            'nodejs': ['9.20',None,'0'],
+            'nodejs': ['9.0',None,'0'],
         },
-        'del_cmd': 'sudo apt purge {} -y'
+
     },
+    del_pack='sudo apt purge {} -y',
+    del_dirs='sudo rm -rf {}*',
 
     test={
         'path': 'test_data.sql',
@@ -183,13 +187,19 @@ class CMD:
         dirname = path.dirname(__file__)
         return path.join(dirname, name)
 
-    def _rolback(self, sysctl, code):
+    def signal_handler(self, sign, frm):
+        logging.info('You pressed Ctrl+C!')
+        self._rolback(sysctl=False, code=18)
+        pause()
 
+    def _rolback(self, sysctl, code):
         # Rolback net.ipv4.ip_forward
         if not sysctl:
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
+        cmd = main_conf['del_dirs'].format(main_conf['iptables']['path_download'])
+        self._sys_call(cmd)
         sys.exit(code)
 
     def file_rw(self, p, w=False, data=None, log=None, json_r=False):
@@ -905,6 +915,7 @@ class GUI(CMD):
             self._sys_call(cmd, sysctl=sysctl, s_exit=11)
 
     def __get_npm(self, sysctl):
+        # install npm and nodejs
         logging.debug('Get NPM for GUI.')
         npm_path = self._reletive_path(self.gui['npm_tmp_f'])
         self.file_rw(
@@ -975,7 +986,7 @@ class GUI(CMD):
 
             for k,v in self.gui['version'].items():
                 if v[1]:
-                    cmd = self.gui['del_cmd'].format(k)
+                    cmd = main_conf['del_pack'].format(k)
                     self._sys_call(cmd=cmd,sysctl=sysctl)
 
             if self.__get_pack_ver(sysctl):
@@ -1019,30 +1030,35 @@ class Checker(Params, Rdata, GUI):
             upgr_pack(ver)
             ip, intfs, tun, port, sysctl = self.revise_params()
             self.download(sysctl, 6)
-            self.unpacking(sysctl)
-            self._rw_openvpn_conf(ip, tun, port, sysctl, 7)
-            self._rw_unit_file(ip, intfs, sysctl, 5)
-            self.clean()
-            self._clear_db_log()
-            self.ip_dappctrl()
-            self.run_service(sysctl, comm=True)
-            self._check_db_run(sysctl, 9)
-            if not args['test']:
-                logging.info('Test mode.')
-                self._test_mode(sysctl)
-            else:
-                logging.info('Full mode.')
-                self._run_dapp_cmd(sysctl)
-
-            self.run_service(sysctl)
-            if args['no_gui']:
-                logging.info('GUI mode.')
-                if pass_check:
-                    self.update_gui()
+            try:
+                self.unpacking(sysctl)
+                self._rw_openvpn_conf(ip, tun, port, sysctl, 7)
+                self._rw_unit_file(ip, intfs, sysctl, 5)
+                self.clean()
+                self._clear_db_log()
+                self.ip_dappctrl()
+                self.run_service(sysctl, comm=True)
+                self._check_db_run(sysctl, 9)
+                if not args['test']:
+                    logging.info('Test mode.')
+                    self._test_mode(sysctl)
                 else:
-                    self.install_gui(sysctl)
-                self.create_icon()
-            self._finalizer(rw=True, sysctl=sysctl)
+                    logging.info('Full mode.')
+                    self._run_dapp_cmd(sysctl)
+
+                self.run_service(sysctl)
+                if args['no_gui']:
+                    logging.info('GUI mode.')
+                    if pass_check:
+                        self.update_gui()
+                    else:
+                        self.install_gui(sysctl)
+                    self.create_icon()
+                self._finalizer(rw=True, sysctl=sysctl)
+            except BaseException as mexpt:
+                logging.error('Trouble: {}'.format(mexpt))
+                self._rolback(sysctl,17)
+
 
 
 if __name__ == '__main__':
@@ -1080,6 +1096,8 @@ if __name__ == '__main__':
                          log='Search port in finalizer.pid')
     logging.debug('Input args: {}'.format(args))
     logging.debug('finalizer.pid: {}'.format(port))
+    signal(SIGINT, check.signal_handler)
+
     if not args['build']:
         logging.debug('Build mode.')
         check.build_cmd()

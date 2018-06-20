@@ -33,8 +33,8 @@ var conf struct {
 
 var logger *util.Logger
 
-func connect(t *testing.T,
-	handleByteCount HandleByteCountFunc) (net.Conn, <-chan error) {
+func connect(t *testing.T, handleSession HandleSessionFunc,
+	channel string) (net.Conn, <-chan error) {
 	lst, err := net.Listen("tcp", conf.VPNMonitor.Addr)
 	if err != nil {
 		t.Fatalf("failed to listen: %s", err)
@@ -46,7 +46,8 @@ func connect(t *testing.T,
 
 	ch := make(chan error)
 	go func() {
-		mon := NewMonitor(conf.VPNMonitor, logger, handleByteCount)
+		mon := NewMonitor(
+			conf.VPNMonitor, logger, handleSession, channel)
 		ch <- mon.MonitorTraffic()
 		mon.Close()
 	}()
@@ -102,12 +103,12 @@ func assertNothingToReceive(t *testing.T, conn net.Conn, reader *bufio.Reader) {
 	}
 }
 
-func ignoreByteCount(ch string, up, down uint64) bool {
+func handleSessionEvent(ch string, event int, up, down uint64) bool {
 	return true
 }
 
 func TestOldOpenVPN(t *testing.T) {
-	conn, ch := connect(t, ignoreByteCount)
+	conn, ch := connect(t, handleSessionEvent, "")
 	defer conn.Close()
 
 	send(t, conn, prefixClientListHeader)
@@ -116,19 +117,23 @@ func TestOldOpenVPN(t *testing.T) {
 	expectExit(t, ch, ErrServerOutdated)
 }
 
+func checkByteCount(t *testing.T, reader *bufio.Reader) {
+	cmd := fmt.Sprintf("bytecount %d", conf.VPNMonitor.ByteCountPeriod)
+	if str := receive(t, reader); str != cmd {
+		t.Fatalf("unexpected bytecount command: %s", str)
+	}
+}
+
 func TestInitFlow(t *testing.T) {
-	conn, ch := connect(t, ignoreByteCount)
+	conn, ch := connect(t, handleSessionEvent, "")
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
 
+	checkByteCount(t, reader)
+
 	if str := receive(t, reader); str != "status 2" {
 		t.Fatalf("unexpected status command: %s", str)
-	}
-
-	cmd := fmt.Sprintf("bytecount %d", conf.VPNMonitor.ByteCountPeriod)
-	if str := receive(t, reader); str != cmd {
-		t.Fatalf("unexpected bytecount command: %s", str)
 	}
 
 	exit(t, conn, ch)
@@ -140,6 +145,25 @@ const (
 	commonName  = "Common-Name"
 	testChannel = "Test-Channel"
 )
+
+func TestClientInitFlow(t *testing.T) {
+	conn, ch := connect(t, handleSessionEvent, testChannel)
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	checkByteCount(t, reader)
+
+	if str := receive(t, reader); str != "state on" {
+		t.Fatalf("unexpected state command: %s", str)
+	}
+
+	if str := receive(t, reader); str != "hold release" {
+		t.Fatalf("unexpected hold command: %s", str)
+	}
+
+	exit(t, conn, ch)
+}
 
 func sendByteCount(t *testing.T, conn net.Conn) {
 	send(t, conn, prefixClientListHeader)
@@ -153,19 +177,20 @@ func sendByteCountClient(t *testing.T, conn net.Conn) {
 	send(t, conn, msg)
 }
 
-func TestByteCount(t *testing.T) {
-	type data struct {
-		ch       string
-		up, down uint64
-	}
+type eventData struct {
+	event    int
+	ch       string
+	up, down uint64
+}
 
-	out := make(chan data)
-	handleByteCount := func(ch string, up, down uint64) bool {
-		out <- data{ch, up, down}
+func TestByteCount(t *testing.T) {
+	out := make(chan eventData)
+	handleSessionEvent := func(ch string, event int, up, down uint64) bool {
+		out <- eventData{event, ch, up, down}
 		return true
 	}
 
-	conn, ch := connect(t, handleByteCount)
+	conn, ch := connect(t, handleSessionEvent, "")
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -175,30 +200,81 @@ func TestByteCount(t *testing.T) {
 
 	sendByteCount(t, conn)
 
-	data2 := <-out
-	if data2.ch != testChannel || data2.down != down || data2.up != up {
-		t.Fatalf("wrong handler arguments for agent mode")
+	data := <-out
+	if data.event != SessionByteCount || data.ch != testChannel ||
+		data.down != down || data.up != up {
+		t.Fatalf("wrong up/down in agent mode")
 	}
 
 	assertNothingToReceive(t, conn, reader)
 
+	exit(t, conn, ch)
+}
+
+func sendClientState(t *testing.T, conn net.Conn, connected bool) {
+	var state string
+	if connected {
+		state = "CONNECTED"
+	}
+	msg := fmt.Sprintf("%s,%s", prefixState, state)
+	send(t, conn, msg)
+}
+
+func TestClientSessionEvents(t *testing.T) {
+	out := make(chan eventData)
+	handleSessionEvent := func(ch string, event int, up, down uint64) bool {
+		out <- eventData{event, ch, up, down}
+		return true
+	}
+
+	conn, ch := connect(t, handleSessionEvent, testChannel)
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	receive(t, reader)
+	receive(t, reader)
+	receive(t, reader)
+
+	// Should be ignored since it's not consireded
+	// to be connected being in client mode.
+	sendByteCountClient(t, conn)
+	assertNothingToReceive(t, conn, reader)
+
+	sendClientState(t, conn, true)
+
+	data := <-out
+	if data.event != SessionStarted {
+		t.Fatalf("wrong event for started session in client mode")
+	}
+
 	sendByteCountClient(t, conn)
 
-	data2 = <-out
-	if data2.ch != conf.VPNMonitor.Channel ||
-		data2.down != down || data2.up != up {
-		t.Fatalf("wrong handler arguments for client mode")
+	data = <-out
+	if data.event != SessionByteCount ||
+		data.ch != testChannel ||
+		data.down != down || data.up != up {
+		t.Fatalf("wrong up/down in client mode")
 	}
+
+	sendClientState(t, conn, false)
+
+	data = <-out
+	if data.event != SessionStopped {
+		t.Fatalf("wrong event for stopped session in client mode")
+	}
+
+	assertNothingToReceive(t, conn, reader)
 
 	exit(t, conn, ch)
 }
 
 func TestKill(t *testing.T) {
-	handleByteCount := func(ch string, up, down uint64) bool {
+	handleSessionEvent := func(ch string, event int, up, down uint64) bool {
 		return false
 	}
 
-	conn, ch := connect(t, handleByteCount)
+	conn, ch := connect(t, handleSessionEvent, "")
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)

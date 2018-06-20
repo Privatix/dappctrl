@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/execsrv"
@@ -44,6 +45,7 @@ type config struct {
 	PayAddress    string
 	Proc          *proc.Config
 	Report        *bugsnag.Config
+	ServiceRunner *svcrun.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
@@ -59,6 +61,7 @@ func newConfig() *config {
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
+		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		VPNClient:     vpncli.NewConfig(),
@@ -156,6 +159,9 @@ func main() {
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	worker.SetQueue(queue)
+
+	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, queue)
+	worker.SetRunner(runner)
 
 	pr := proc.NewProcessor(conf.Proc, queue)
 	worker.SetProcessor(pr)

@@ -8,7 +8,15 @@
     "Monitor": {
         "Addr": "localhost:7505",
         "ByteCountPeriod": 5,
-        "Channel": "ae5deac9-44c3-4840-bdff-ca9de58c89f4"
+    },
+
+    "MonitorDelay": 1000,
+
+    "OpenVPN": {
+        "Name": "openvpn",
+        "Args": [],
+        "ConfigRoot": "/etc/openvpn/config",
+        "StartDelay": 1000
     },
 
     "Pusher": {

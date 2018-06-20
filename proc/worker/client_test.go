@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
@@ -504,6 +505,23 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	}
 }
 
+func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
+	workerF func(*data.Job) error, job *data.Job, runnerMethod int) {
+	calledMethod := -1
+	var calledChannel string
+	env.worker.runner = svcrun.Mock(
+		func(method int, channel string) (bool, error) {
+			calledMethod, calledChannel = method, channel
+			return false, nil
+		})
+
+	runJob(t, workerF, job)
+
+	if calledMethod != runnerMethod || calledChannel != job.RelatedID {
+		t.Fatalf("unexpected service runner call arguments")
+	}
+}
+
 func TestClientPreServiceTerminate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
@@ -531,7 +549,8 @@ func TestClientPreServiceTerminate(t *testing.T) {
 	var job data.Job
 	env.findTo(t, &job, jobID)
 
-	runJob(t, env.worker.ClientPreServiceTerminate, &job)
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceTerminate, &job, svcrun.MockStop)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -584,7 +603,8 @@ func TestClientPreServiceSuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJob(t, env.worker.ClientPreServiceSuspend, &job)
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceSuspend, &job, svcrun.MockStop)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -636,7 +656,8 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJob(t, env.worker.ClientPreServiceUnsuspend, &job)
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceUnsuspend, &job, svcrun.MockStart)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)

@@ -23,7 +23,6 @@ const (
 	sampleCa     = "/ovpn/samples/ca.crt"
 	ovpnFileName = "server.ovpn"
 	caFileName   = "ca.crt"
-	filePerm     = 0644
 )
 
 var (
@@ -119,7 +118,6 @@ func createTestConfig(t *testing.T, dir string) *Config {
 		ExportConfigKeys: conf.VPNConfigPusher.ExportConfigKeys,
 		ConfigPath:       cfgPath,
 		CaCertPath:       caPath,
-		Pushed:           false,
 		TimeOut:          conf.VPNConfigPusher.TimeOut,
 	}
 }
@@ -144,6 +142,25 @@ func TestPushConfig(t *testing.T) {
 
 	if err := PushConfig(context.Background(), c); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOVPNConfigPushed(t *testing.T) {
+	rootDir, err := ioutil.TempDir("", util.NewUUID())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(rootDir)
+
+	if OVPNConfigPushed(rootDir) {
+		t.Fatal("configuration not yet updated")
+	}
+	if err := OVPNConfigUpdated(rootDir); err != nil {
+		t.Fatal(err)
+	}
+	if !OVPNConfigPushed(rootDir) {
+		t.Fatal("configuration already updated")
 	}
 }
 

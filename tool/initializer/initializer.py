@@ -823,6 +823,7 @@ class Params(CMD):
 
 class Rdata(CMD):
     def __init__(self):
+        CMD.__init__(self)
         self.url = main_conf['iptables']['link_download']
         self.files = main_conf['iptables']['file_download']
         self.p_dwld = main_conf['iptables']['path_download']
@@ -875,10 +876,13 @@ class Rdata(CMD):
 
 class GUI(CMD):
     def __init__(self):
+        CMD.__init__(self)
         self.gui = main_conf['gui']
 
     def create_icon(self):
         config = ConfigParser()
+        config.optionxform = str
+
         tmpl_file = self.gui['icon_tmpl_f']
         tmpl = self.gui['icon_tmpl']
         section = tmpl['Section']

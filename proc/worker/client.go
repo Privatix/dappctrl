@@ -352,7 +352,9 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 		return err
 	}
 
-	// TODO(maxim) Stop OpenVPN client via dappvpn.
+	if err := w.runner.Stop(ch.ID); err != nil {
+		w.logger.Info("failed to stop service: %s", err)
+	}
 
 	ch.ServiceStatus = data.ServiceTerminated
 	return data.Save(w.db.Querier, ch)
@@ -365,7 +367,9 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 		return err
 	}
 
-	// TODO(maxim) Stop OpenVPN client via dappvpn (check & kill).
+	if err := w.runner.Stop(ch.ID); err != nil {
+		w.logger.Error("failed to stop service: %s", err)
+	}
 
 	ch.ServiceStatus = data.ServiceSuspended
 	return data.Save(w.db.Querier, ch)
@@ -378,7 +382,9 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 		return err
 	}
 
-	// TODO(maxim) Start OpenVPN client via dappvpn.
+	if err := w.runner.Start(ch.ID); err != nil {
+		w.logger.Error("failed to start service: %s", err)
+	}
 
 	ch.ServiceStatus = data.ServiceActive
 	return data.Save(w.db.Querier, ch)

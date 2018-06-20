@@ -107,6 +107,16 @@
         "TLS": null
     },
 
+    "ServiceRunner": {
+        "Services": {
+            "VPN": {
+                "Name": "/root/go/bin/dappvpn",
+                "Args": ["-config=/opt/privatix/config/dappvpn.config.json"],
+                "Single": true
+            }
+        }
+    },
+
     "SessionServer": {
         "Addr": "localhost:8000",
         "TLS": null

@@ -180,6 +180,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		BlockNumberUpdated: 1,
 		Template:           tpl,
 		Agent:              agent,
+		ServiceName:        "VPN",
 		Hash:               FromBytes(crypto.Keccak256(fakeMsg)),
 		Product:            product,
 		Supply:             1,

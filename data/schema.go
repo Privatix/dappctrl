@@ -240,6 +240,7 @@ const (
 	JobBillingChecker = "billing_checker"
 	JobBCMonitor      = "bc_monitor"
 	JobTask           = "task"
+	JobServiceAdapter = "service_adapter"
 )
 
 // Job statuses.

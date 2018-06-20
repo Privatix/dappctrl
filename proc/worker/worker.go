@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	reform "gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
@@ -59,6 +60,7 @@ type Worker struct {
 	clientVPN      *config.Config
 	deployConfig   deployConfigFunc
 	processor      *proc.Processor
+	runner         svcrun.ServiceRunner
 }
 
 // NewWorker returns new instance of worker.
@@ -90,15 +92,21 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		somc:           somc,
 		deployConfig:   config.DeployConfig,
 		clientVPN:      clientVPN,
+		runner:         svcrun.NewIdleMock(),
 	}, nil
 }
 
-// SetQueue sets queue for handlers.
+// SetQueue sets a queue for handlers.
 func (w *Worker) SetQueue(queue *job.Queue) {
 	w.queue = queue
 }
 
-// SetProcessor sets processor.
+// SetProcessor sets a processor.
 func (w *Worker) SetProcessor(processor *proc.Processor) {
 	w.processor = processor
+}
+
+// SetRunner sets a service runner.
+func (w *Worker) SetRunner(runner svcrun.ServiceRunner) {
+	w.runner = runner
 }

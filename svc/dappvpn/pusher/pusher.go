@@ -2,6 +2,9 @@ package pusher
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	c "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/util"
@@ -9,7 +12,12 @@ import (
 	"github.com/rdegges/go-ipify"
 )
 
-const defaultIP = "127.0.0.1"
+const (
+	// PushedFile the name of a file that indicates that
+	// the configuration is already loaded on the server.
+	PushedFile = "configPushed"
+	filePerm   = 0644
+)
 
 // Config for pushing OpenVpn configuration.
 // ExportConfigKeys - list of parameters that are exported to
@@ -24,7 +32,6 @@ type Config struct {
 	ExportConfigKeys []string
 	ConfigPath       string
 	CaCertPath       string
-	Pushed           bool
 	TimeOut          int64
 }
 
@@ -50,7 +57,7 @@ func NewCollect(conf *Config, srv *srv.Config, user, pass string,
 	ip, err := externalIP()
 	if err != nil {
 		logger.Warn("couldn't get my IP address: %s", err)
-		ip = defaultIP
+		ip = c.DefaultServerAddress
 	}
 
 	return &Collect{
@@ -73,9 +80,22 @@ func push(ctx context.Context, username, pass string, config *Config,
 
 // PushConfig send the OpenVpn configuration to Session server.
 func PushConfig(ctx context.Context, c *Collect) error {
-	return push(ctx, c.username, c.password, c.config, c.server, c.logger, c.ip)
+	return push(ctx, c.username, c.password, c.config,
+		c.server, c.logger, c.ip)
 }
 
 func externalIP() (string, error) {
 	return ipify.GetIp()
+}
+
+// OVPNConfigPushed checks if the OpenVpn configuration is loaded to server.
+func OVPNConfigPushed(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, PushedFile))
+	return err == nil
+}
+
+// OVPNConfigUpdated makes configPushed file.
+func OVPNConfigUpdated(dir string) error {
+	file := filepath.Join(dir, PushedFile)
+	return ioutil.WriteFile(file, nil, filePerm)
 }

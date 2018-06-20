@@ -27,12 +27,14 @@ const (
 
 	nameCompLZO = "comp-lzo"
 
-	defaultCipher        = "AES-256-CBC"
-	defaultConnectRetry  = "2 120"
-	defaultPing          = "10"
-	defaultPingRestart   = "10"
-	defaultProto         = "tcp"
-	defaultServerAddress = "127.0.0.1"
+	defaultCipher       = "AES-256-CBC"
+	defaultConnectRetry = "2 120"
+	defaultPing         = "10"
+	defaultPingRestart  = "10"
+	defaultProto        = "tcp"
+
+	// DefaultServerAddress default OpenVpn server address.
+	DefaultServerAddress = "127.0.0.1"
 	defaultServerPort    = "443"
 )
 
@@ -64,7 +66,7 @@ func newVpnConfig() *vpnConf {
 		PingRestart:   defaultPingRestart,
 		Port:          defaultServerPort,
 		Proto:         defaultProto,
-		ServerAddress: defaultServerAddress,
+		ServerAddress: DefaultServerAddress,
 	}
 }
 
@@ -208,7 +210,8 @@ func clientConfig(srvAddr string,
 
 	// if the configuration does not have a server address,
 	// then take it from srvAddr
-	if config.ServerAddress == defaultServerAddress && srvAddr != "" {
+	if (config.ServerAddress == DefaultServerAddress ||
+		config.ServerAddress == "") && srvAddr != "" {
 		config.ServerAddress = srvAddr
 	}
 

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/privatix/dappctrl/sesssrv"
@@ -148,7 +149,9 @@ func handleMonitor(confFile string) {
 		return true
 	}
 
-	if !conf.Pusher.Pushed {
+	dir := filepath.Dir(confFile)
+
+	if !pusher.OVPNConfigPushed(dir) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -160,6 +163,13 @@ func handleMonitor(confFile string) {
 			if err := pusher.PushConfig(ctx, c); err != nil {
 				logger.Error("failed to send OpenVpn"+
 					" server configuration: %s\n", err)
+				return
+			}
+
+			if err := pusher.OVPNConfigUpdated(dir); err != nil {
+				logger.Error("failed to save %s file in %s"+
+					" directory: %s\n", pusher.PushedFile,
+					dir, err)
 			}
 		}()
 	}

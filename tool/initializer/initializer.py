@@ -65,7 +65,7 @@ log_conf = dict(
     filename='/var/log/initializer.log',
     datefmt='%m/%d %H:%M:%S',
     format='%(levelname)7s [%(lineno)3s] %(message)s')
-log_conf.update(level='DEBUG')
+log_conf.update(level='INFO')
 logging.basicConfig(**log_conf)
 logging.getLogger().addHandler(logging.StreamHandler())
 
@@ -160,6 +160,7 @@ main_conf = dict(
     },
     del_pack='sudo apt purge {} -y',
     del_dirs='sudo rm -rf {}*',
+    search_pack='sudo dpkg -l | grep {}',
 
     test={
         'path': 'test_data.sql',
@@ -170,6 +171,7 @@ main_conf = dict(
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
+    ports = dict(vpn_port=None,dapp_port=None)
 )
 
 
@@ -198,9 +200,72 @@ class CMD:
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
-        cmd = main_conf['del_dirs'].format(main_conf['iptables']['path_download'])
-        self._sys_call(cmd)
+
+        self.clear_contr(pass_check=True)
         sys.exit(code)
+
+    def service(self, srv, status, port, reverse=False):
+        logging.debug(
+            'Service:{}, port:{},status:{},reverse:{}'.format(srv, port,
+                                                              status,
+                                                              reverse))
+        tmpl = ['systemctl {} {} && sleep 0.5']
+        rmpl_rest = ['systemctl stop {1} && sleep 0.5',
+                     'systemctl start {1} && sleep 0.5']
+        rmpl_stat = ['systemctl is-active {1}']
+
+        scroll = {'start': tmpl, 'stop': tmpl,
+                  'restart': rmpl_rest, 'status': rmpl_stat}
+        stat = {'vpn': self.f_vpn, 'comm': self.f_com}
+
+        if status not in scroll.keys():
+            logging.debug(
+                '{} status must be in {}'.format(srv, scroll.keys()))
+            return False
+
+        logging.debug('Status scroll: {}'.format(scroll))
+        raw_res = list()
+        for cmd in scroll[status]:
+            cmd = cmd.format(status, stat[srv])
+            logging.debug('CMD from scroll: {}'.format(cmd))
+
+            res = self._sys_call(cmd, rolback=False)
+            if status == 'status':
+                if res == 'active\n':
+                    if reverse:
+                        return self._checker_port(port, 'stop')
+                    else:
+                        return self._checker_port(port)
+                else:
+                    return False
+
+            if status == 'restart':
+                check_stat = 'start' if 'start' in cmd else 'stop'
+            else:
+                check_stat = status
+
+            if 'failed' in res or not self._checker_port(port, check_stat):
+                return False
+            raw_res.append(True)
+        return all(raw_res)
+
+    def clear_contr(self,pass_check=False):
+        # Stop container.Check it if pass_check True.Clear conteiner path
+        self.service('vpn', 'stop', main_conf['ports']['vpn_port'])
+        self.service('comm', 'stop', main_conf['ports']['dapp_port'])
+        sleep(3)
+
+        p_dowld = main_conf['iptables']['path_download']
+        logging.debug('Crear {}*'.format(p_dowld))
+
+        if pass_check or not self.service('vpn', 'status', main_conf['ports']['vpn_port'], True) and \
+                not self.service('comm', 'status', main_conf['ports']['dapp_port'], True):
+            rmtree(p_dowld + main_conf['iptables']['path_vpn'],
+                   ignore_errors=True)
+            rmtree(p_dowld + main_conf['iptables']['path_com'],
+                   ignore_errors=True)
+            return True
+        return False
 
     def file_rw(self, p, w=False, data=None, log=None, json_r=False):
         try:
@@ -219,7 +284,8 @@ class CMD:
             else:
                 f = open(p, 'r')
                 if json_r:
-                    data = load(f)
+                    if f:
+                        data = load(f)
                 else:
                     data = f.readlines()
                 f.close()
@@ -331,17 +397,23 @@ class CMD:
             logging.error('Get/upgrade systemd ver: {}'.format(sysexp))
             sys.exit(1)
 
-    def _ping_port(self, port):
+    def _ping_port(self, port, verb=False):
         with closing(
                 socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
             if sock.connect_ex(('0.0.0.0', int(port))) == 0:
-                logging.debug("Port is open")
+                if verb:
+                    logging.info("Port {} is open".format(port))
+                else:
+                    logging.debug("Port {} is open".format(port))
                 return True
             else:
-                logging.debug("Port is not available")
+                if verb:
+                    logging.info("Port {} is not available".format(port))
+                else:
+                    logging.debug("Port {} is not available".format(port))
                 return False
 
-    def _cycle_ask(self, p, status):
+    def _cycle_ask(self, p, status, verb=False):
         logging.debug('Ask port: {}, status: {}'.format(p, status))
         ts = time()
         tw = 350
@@ -349,7 +421,7 @@ class CMD:
         if status == 'stop':
             logging.debug('Stop mode')
             while True:
-                if not self._ping_port(p):
+                if not self._ping_port(p,verb):
                     return True
                 if time() - ts > tw:
                     return False
@@ -357,24 +429,27 @@ class CMD:
         else:
             logging.debug('Start mode')
             while True:
-                if self._ping_port(p):
+                if self._ping_port(p,verb):
                     return True
                 if time() - ts > tw:
                     return False
-                sleep(1)
+                sleep(2)
 
-    def _checker_port(self, port, status='start'):
+    def _checker_port(self, port, status='start', verb=False):
         logging.debug('Checker: {}'.format(status))
+        if not port:
+            return None
         if isinstance(port, (list, set)):
             resp = list()
             for p in port:
-                resp.append(self._cycle_ask(p, status))
+                resp.append(self._cycle_ask(p, status, verb))
             return True if all(resp) else False
         else:
-            return self._cycle_ask(port, status)
+            return self._cycle_ask(port, status, verb)
 
     def __wait_up(self, sysctl):
-        logging.debug('Wait run services')
+        logging.info('Wait run services. This may take 15 minutes. '
+                     'Do not turn off !')
         use_port = main_conf['final']
         dupp_conf = self._get_url(main_conf['build']['conf_link'])
         for k, v in dupp_conf.iteritems():
@@ -382,17 +457,17 @@ class CMD:
                 use_port['dapp_port'].append(int(v['Addr'].split(':')[-1]))
 
         logging.debug('Check ports: {}'.format(use_port))
-        if not self._checker_port(use_port['vpn_port']):
-            logging.debug('Restart VPN')
+        if not self._checker_port(port=use_port['vpn_port'],verb=True):
+            logging.info('Restart VPN')
             self.run_service(sysctl=sysctl, comm=False, restart=True)
-            if not self._checker_port(use_port['vpn_port']):
+            if not self._checker_port(port=use_port['vpn_port'],verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
 
-        if not self._checker_port(use_port['dapp_port']):
-            logging.debug('Restart Common')
+        if not self._checker_port(port=use_port['dapp_port'],verb=True):
+            logging.info('Restart Common')
             self.run_service(sysctl=sysctl, comm=True, restart=True)
-            if not self._checker_port(use_port['dapp_port']):
+            if not self._checker_port(port=use_port['dapp_port'],verb=True):
                 logging.error('Common is not ready')
                 exit(14)
 
@@ -478,65 +553,6 @@ class CMD:
 class Params(CMD):
     """ This class provide check sysctl and iptables """
 
-    def service(self, srv, status, port, reverse=False):
-        logging.debug(
-            'Service:{}, port:{},status:{},reverse:{}'.format(srv, port,
-                                                              status,
-                                                              reverse))
-        tmpl = ['systemctl {} {} && sleep 0.5']
-        rmpl_rest = ['systemctl stop {1} && sleep 0.5',
-                     'systemctl start {1} && sleep 0.5']
-        rmpl_stat = ['systemctl is-active {1}']
-
-        scroll = {'start': tmpl, 'stop': tmpl,
-                  'restart': rmpl_rest, 'status': rmpl_stat}
-        stat = {'vpn': self.f_vpn, 'comm': self.f_com}
-
-        if status not in scroll.keys():
-            logging.debug(
-                '{} status must be in {}'.format(srv, scroll.keys()))
-            return False
-
-        logging.debug('Status scroll: {}'.format(scroll))
-        raw_res = list()
-        for cmd in scroll[status]:
-            cmd = cmd.format(status, stat[srv])
-            logging.debug('CMD from scroll: {}'.format(cmd))
-
-            res = self._sys_call(cmd, rolback=False)
-            if status == 'status':
-                if res == 'active\n':
-                    if reverse:
-                        return self._checker_port(port, 'stop')
-                    else:
-                        return self._checker_port(port)
-                else:
-                    return False
-
-            if status == 'restart':
-                check_stat = 'start' if 'start' in cmd else 'stop'
-            else:
-                check_stat = status
-
-            if 'failed' in res or not self._checker_port(port, check_stat):
-                return False
-            raw_res.append(True)
-        return all(raw_res)
-
-    def clear_contr(self):
-        self.service('vpn', 'stop', port['vpn_port'])
-        self.service('comm', 'stop', port['dapp_port'])
-
-        if not self.service('vpn', 'status', port['vpn_port'], True) and \
-                not self.service('comm', 'status', port['dapp_port'], True):
-            p_dowld = main_conf['iptables']['path_download']
-            rmtree(p_dowld + main_conf['iptables']['path_vpn'],
-                   ignore_errors=True)
-            rmtree(p_dowld + main_conf['iptables']['path_com'],
-                   ignore_errors=True)
-            return True
-        return False
-
     def check_port(self):
         port = main_conf['iptables']['openvpn_port']
         port = findall('\d\d\d', port)[0]
@@ -583,12 +599,12 @@ class Params(CMD):
 
             logging.info('You have the following interfaces {}. '
                          'Please enter another tun interface.'
-                         'For example tun{}.'.format(i, max_tun_index + 1))
+                         'For example tun{}.\n'.format(i, max_tun_index + 1))
 
             new_tun = raw_input('>')
             if new_tun in i:
                 logging.info(
-                    'Wrong. The interface should be different from: {}'.format(
+                    'Wrong. The interface should be different from: {}\n'.format(
                         i))
                 new_tun = check_tun(i)
             return new_tun
@@ -604,11 +620,11 @@ class Params(CMD):
     def interfase(self):
         def check_interfs(i):
             logging.info('Please enter one of your '
-                         'available external interfaces: {}'.format(i))
+                         'available external interfaces: {}\n'.format(i))
 
             new_intrfs = raw_input('>')
             if new_intrfs not in i:
-                logging.info('Wrong. Interface must be one of: {}'.format(i))
+                logging.info('Wrong. Interface must be one of: {}\n'.format(i))
                 new_intrfs = check_interfs(i)
             return new_intrfs
 
@@ -634,7 +650,7 @@ class Params(CMD):
                 match = search(p, addr)
                 if not match:
                     logging.info('You addres is wrong,please enter '
-                                 'right address.Example: 255.255.255.255')
+                                 'right address.Last octet is always 0.Example: 255.255.255.0\n')
                     addr = check_addr(p)
                 break
             return addr
@@ -645,7 +661,7 @@ class Params(CMD):
                 logging.info(
                     'Addres {} is busy or wrong, please enter new address '
                     'without changing the 4th octet.'
-                    'Example: xxx.xxx.xxx.0'.format(addr))
+                    'Example: xxx.xxx.xxx.0\n'.format(addr))
 
                 pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}0$'
                 addr = check_addr(pattern)
@@ -935,7 +951,7 @@ class GUI(CMD):
         res = False
         for k,v in self.gui['version'].items():
             logging.debug('Check {}.'.format(k))
-            cmd = 'dpkg -l | grep {}'.format(k)
+            cmd = main_conf['search_pack'].format(k)
             raw = self._sys_call(cmd=cmd,sysctl=sysctl)
             if raw:
                 res = True
@@ -986,6 +1002,7 @@ class GUI(CMD):
 
             for k,v in self.gui['version'].items():
                 if v[1]:
+                    logging.info('Preparing for deletion {} {}'.format(k,v[2]))
                     cmd = main_conf['del_pack'].format(k)
                     self._sys_call(cmd=cmd,sysctl=sysctl)
 
@@ -1006,6 +1023,7 @@ class GUI(CMD):
         logging.debug('Update GUI.')
         p = self.gui['gui_path']
         st = stat(p)
+        logging.debug('Clear: {}'.format(p))
         rmtree(p, ignore_errors=True)
         mkdir(p)
         self.__get_gui()
@@ -1056,7 +1074,7 @@ class Checker(Params, Rdata, GUI):
                     self.create_icon()
                 self._finalizer(rw=True, sysctl=sysctl)
             except BaseException as mexpt:
-                logging.error('Trouble: {}'.format(mexpt))
+                logging.error('Main trouble: {}'.format(mexpt))
                 self._rolback(sysctl,17)
 
 
@@ -1090,12 +1108,18 @@ if __name__ == '__main__':
     parser.add_argument("--no-gui", nargs='?', default=True,
                         help='Full install without GUI')
     args = vars(parser.parse_args())
+
     check = Checker()
-    port = check.file_rw(p=main_conf['mark_final'],
-                         json_r=True,
-                         log='Search port in finalizer.pid')
+
+    if isfile(main_conf['mark_final']):
+        raw = check.file_rw(p=main_conf['mark_final'],
+                             json_r=True,
+                             log='Search port in finalizer.pid')
+        if raw:
+            main_conf['ports'].update(raw)
     logging.debug('Input args: {}'.format(args))
-    logging.debug('finalizer.pid: {}'.format(port))
+    logging.debug('Inside finalizer.pid: {}'.format(main_conf['ports']))
+
     signal(SIGINT, check.signal_handler)
 
     if not args['build']:
@@ -1105,12 +1129,12 @@ if __name__ == '__main__':
     elif args['vpn']:
         logging.info('Vpn mode.')
         sys.stdout.write(
-            str(check.service('vpn', args['vpn'], port['vpn_port'])))
+            str(check.service('vpn', args['vpn'], main_conf['ports']['vpn_port'])))
 
     elif args['comm']:
         logging.info('Comm mode.')
         sys.stdout.write(
-            str(check.service('comm', args['comm'], port['dapp_port'])))
+            str(check.service('comm', args['comm'], main_conf['ports']['dapp_port'])))
 
     elif not args['update']:
         logging.info('Update containers mode.')
@@ -1120,8 +1144,8 @@ if __name__ == '__main__':
 
     elif args['mass']:
         logging.debug('Mass mode.')
-        comm_stat = check.service('comm', args['mass'], port['dapp_port'])
-        vpn_stat = check.service('vpn', args['mass'], port['vpn_port'])
+        comm_stat = check.service('comm', args['mass'], main_conf['ports']['dapp_port'])
+        vpn_stat = check.service('vpn', args['mass'], main_conf['ports']['vpn_port'])
         sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
 
     elif not args['update_gui']:
@@ -1132,6 +1156,7 @@ if __name__ == '__main__':
         logging.info('Update All mode.')
         if check.clear_contr():
             check.init_os(args, True)
+        logging.info('')
 
     else:
         logging.info('Begin init.')

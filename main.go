@@ -10,7 +10,6 @@ import (
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
 	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
@@ -133,13 +132,6 @@ func main() {
 	go func() {
 		logger.Fatal("failed to start session server: %s",
 			sess.ListenAndServe())
-	}()
-
-	// TODO: Remove when not needed anymore.
-	exec := execsrv.NewServer(logger)
-	go func() {
-		logger.Fatal("failed to start exec server: %s",
-			exec.ListenAndServe())
 	}()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)

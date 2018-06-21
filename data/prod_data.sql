@@ -254,4 +254,46 @@ VALUES ('error.sendremote',
         'Allow error reporting to send logs to Privatix.',
         'error reporting');
 
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.default.gasprice',
+        '20000000000',
+        'Default GAS price for transactions.',
+        'default gas price');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.challenge.period',
+        '500',
+        'Number of blocks to wait from an uncooperativeClose initiated by the Client in order to give the Agent a chance to respond with a balance proof in case the Client cheats. After the challenge period, the Client can settle and delete the channel. Number of blocks Agent will wait from registerServiceOffering or from createChannel before he can delete service offering and recieve Agent''s deposit back.',
+        'challenge period');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.max.deposit',
+        '30000000000',
+        'We temporarily limit total token deposits in a channel to 300 PRIX. This is just for the bug bounty release, as a safety measure.',
+        'maximum deposit');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappctrl',
+        '0.0.5',
+        'Version of dappctrl.',
+        'dappctrl version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappgui',
+        '0.0.4',
+        'Version of dappgui.',
+        'dappgui version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappvpn',
+        '0.0.2',
+        'Version of dappvpn.',
+        'dappvpn version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.isagent',
+        'false',
+        'Specifies user role. "true" - agent. "false" - client.',
+        'user role is agent');
+
 END TRANSACTION;

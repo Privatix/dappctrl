@@ -7,6 +7,7 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
+//go:generate rm -f statik.go
 //go:generate statik -f -src=. -dest=..
 
 // File paths.

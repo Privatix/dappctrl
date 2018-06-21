@@ -701,26 +701,22 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	go func() {
-		offeringsData, err := w.somc.FindOfferings([]string{
-			data.FromBytes(logOfferingCreated.offeringHash.Bytes())})
-		if err != nil {
-			w.logger.Error("failed to find offering: %v", err)
-			return
-		}
+	offeringsData, err := w.somc.FindOfferings([]string{
+		data.FromBytes(logOfferingCreated.offeringHash.Bytes())})
+	if err != nil {
+		return fmt.Errorf("failed to find offering: %v", err)
+	}
 
-		offering, err := w.fillOfferingFromSOMCReply(
-			job.RelatedID, data.FromBytes(logOfferingCreated.agentAddr.Bytes()),
-			ethLog.BlockNumber, offeringsData)
-		if err != nil {
-			w.logger.Error("failed to fill offering: %v", err)
-			return
-		}
+	offering, err := w.fillOfferingFromSOMCReply(
+		job.RelatedID, data.FromBytes(logOfferingCreated.agentAddr.Bytes()),
+		ethLog.BlockNumber, offeringsData)
+	if err != nil {
+		return fmt.Errorf("failed to fill offering: %v", err)
+	}
 
-		if err := w.db.Insert(offering); err != nil {
-			w.logger.Error("failed to insert offering: %v", err)
-		}
-	}()
+	if err := w.db.Insert(offering); err != nil {
+		return fmt.Errorf("failed to insert offering: %v", err)
+	}
 
 	return nil
 }

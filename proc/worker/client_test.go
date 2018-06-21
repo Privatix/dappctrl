@@ -721,12 +721,14 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	env.insertToTestDB(t, ethLog)
 	defer env.deleteFromTestDB(t, ethLog)
 
-	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteFindOfferings(t,
+			[]string{expectedOffering.Hash}, [][]byte{packed})
+	}()
 
-	// Mock reply from SOMC.
-	env.fakeSOMC.WriteFindOfferings(t,
-		[]string{expectedOffering.Hash}, [][]byte{packed})
-	time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
 
 	created := &data.Offering{}
 	env.selectOneTo(t, created, "WHERE hash=$1", expectedOffering.Hash)

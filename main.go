@@ -92,6 +92,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}
+	defer logger.GracefulStop()
 
 	db, err := data.NewDB(conf.DB, logger)
 	if err != nil {

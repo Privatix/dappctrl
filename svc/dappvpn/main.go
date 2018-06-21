@@ -59,6 +59,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create logger: %s\n", err)
 	}
+	defer logger.GracefulStop()
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":

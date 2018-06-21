@@ -160,11 +160,11 @@ func main() {
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	worker.SetQueue(queue)
 
-	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, queue)
-	worker.SetRunner(runner)
-
 	pr := proc.NewProcessor(conf.Proc, queue)
 	worker.SetProcessor(pr)
+
+	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
+	worker.SetRunner(runner)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 

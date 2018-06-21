@@ -12,6 +12,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -30,13 +31,14 @@ var (
 		DB                *data.DBConfig
 		Log               *util.LogConfig
 		Job               *job.Config
+		Proc              *proc.Config
 		ServiceRunner     *Config
 		ServiceRunnerTest *testConfig
 	}
 
 	logger *util.Logger
 	db     *reform.DB
-	queue  *job.Queue
+	pr     *proc.Processor
 )
 
 func assertNotRunning(t *testing.T, runner *serviceRunner, channel string) {
@@ -59,7 +61,7 @@ func assertJobAdded(t *testing.T, channel string) {
 
 func newTestServiceRunner() *serviceRunner {
 	runner := NewServiceRunner(
-		conf.ServiceRunner, logger, db, queue).(*serviceRunner)
+		conf.ServiceRunner, logger, db, pr).(*serviceRunner)
 
 	runner.newCmd = func(
 		name string, args []string, channel string) *exec.Cmd {
@@ -69,8 +71,15 @@ func newTestServiceRunner() *serviceRunner {
 	return runner
 }
 
-func TestStart(t *testing.T) {
+func newTestFixture(t *testing.T) *data.TestFixture {
 	fxt := data.NewTestFixture(t, db)
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, db, fxt.Channel)
+	return fxt
+}
+
+func TestStart(t *testing.T) {
+	fxt := newTestFixture(t)
 	defer fxt.Close()
 
 	runner := newTestServiceRunner()
@@ -91,7 +100,7 @@ func TestStart(t *testing.T) {
 }
 
 func TestStop(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixture(t)
 	defer fxt.Close()
 
 	runner := newTestServiceRunner()
@@ -112,7 +121,7 @@ func TestStop(t *testing.T) {
 }
 
 func TestStopAll(t *testing.T) {
-	fxt := data.NewTestFixture(t, db)
+	fxt := newTestFixture(t)
 	defer fxt.Close()
 
 	ch := *fxt.Channel
@@ -152,6 +161,7 @@ func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
 	conf.Job = job.NewConfig()
+	conf.Proc = proc.NewConfig()
 	conf.ServiceRunner = NewConfig()
 	conf.ServiceRunnerTest = newTestConfig()
 	util.ReadTestConfig(&conf)
@@ -161,7 +171,8 @@ func TestMain(m *testing.M) {
 	db = data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(db)
 
-	queue = job.NewQueue(conf.Job, logger, db, nil)
+	queue := job.NewQueue(conf.Job, logger, db, nil)
+	pr = proc.NewProcessor(conf.Proc, queue)
 
 	os.Exit(m.Run())
 }

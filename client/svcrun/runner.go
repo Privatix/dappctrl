@@ -8,7 +8,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -52,7 +52,7 @@ type serviceRunner struct {
 	conf   *Config
 	logger *util.Logger
 	db     *reform.DB
-	queue  *job.Queue
+	pr     *proc.Processor
 	newCmd newCmdFunc
 	mtx    sync.Mutex
 	cmds   map[string]*exec.Cmd
@@ -60,7 +60,7 @@ type serviceRunner struct {
 
 // NewServiceRunner creates a new service runner.
 func NewServiceRunner(conf *Config, logger *util.Logger,
-	db *reform.DB, queue *job.Queue) ServiceRunner {
+	db *reform.DB, pr *proc.Processor) ServiceRunner {
 	newCmd := func(name string, args []string, channel string) *exec.Cmd {
 		return exec.Command(name, append(args, "-channel="+channel)...)
 	}
@@ -69,7 +69,7 @@ func NewServiceRunner(conf *Config, logger *util.Logger,
 		conf:   conf,
 		logger: logger,
 		db:     db,
-		queue:  queue,
+		pr:     pr,
 		newCmd: newCmd,
 		cmds:   make(map[string]*exec.Cmd),
 	}
@@ -152,14 +152,9 @@ func (r *serviceRunner) wait(channel, key string, cmd *exec.Cmd) {
 
 	delete(r.cmds, key)
 
-	if err := r.queue.Add(&data.Job{
-		Type:        data.JobClientPreServiceSuspend,
-		RelatedType: data.JobChannel,
-		RelatedID:   channel,
-		CreatedBy:   data.JobServiceAdapter,
-		Data:        []byte("{}"),
-	}); err != nil {
-		r.logger.Error("failed to add a job to the queue: %s", err)
+	_, err := r.pr.SuspendChannel(channel, data.JobServiceAdapter, false)
+	if err != nil {
+		r.logger.Warn("failed to suspend channel: %s", err)
 	}
 }
 

@@ -42,6 +42,7 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobClientPreServiceTerminate:            worker.ClientPreServiceTerminate,
 		data.JobClientPreServiceSuspend:              worker.ClientPreServiceSuspend,
 		data.JobClientPreServiceUnsuspend:            worker.ClientPreServiceUnsuspend,
+		data.JobClientAfterOfferingMsgBCPublish:      worker.ClientAfterOfferingMsgBCPublish,
 
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,

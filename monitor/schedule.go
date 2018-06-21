@@ -103,16 +103,13 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 			if !found {
 				scheduler, found = accountSchedulers[eventHash]
 			}
-			// TODO: uncomment when client jobs will be implemented
-			/*
-				case forClient:
-					scheduler, found = clientSchedulers[eventHash]
-					if !found {
-						scheduler, found = accountSchedulers[eventHash]
-					}
-				case isOfferingRelated(&el):
-					scheduler, found = offeringSchedulers[eventHash]
-			*/
+		case forClient:
+			scheduler, found = clientSchedulers[eventHash]
+			if !found {
+				scheduler, found = accountSchedulers[eventHash]
+			}
+		case isOfferingRelated(&el):
+			scheduler, found = offeringSchedulers[eventHash]
 		}
 
 		if !found {

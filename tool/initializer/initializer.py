@@ -250,6 +250,11 @@ class CMD:
 
     def clear_contr(self,pass_check=False):
         # Stop container.Check it if pass_check True.Clear conteiner path
+        logging.info('\n\n    Attention! \n'
+                     ' During installation, a failure occurred. \n'
+                     ' All installed will be removed and returned to '
+                     'the initial state.\n Wait for the end.\n '
+                     'And try again.')
         self.service('vpn', 'stop', main_conf['ports']['vpn_port'])
         self.service('comm', 'stop', main_conf['ports']['dapp_port'])
         sleep(3)

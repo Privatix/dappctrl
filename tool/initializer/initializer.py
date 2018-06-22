@@ -59,6 +59,7 @@ Exit code:
     16 - Problem with deleting one of the GUI pack
     17 - Exception in code, see logging
     18 - Exit Ctrl+C
+    19 - OS not supported
 """
 
 log_conf = dict(
@@ -92,10 +93,8 @@ main_conf = dict(
         unit_vpn='systemd-nspawn@vpn.service',
         unit_com='systemd-nspawn@common.service',
         unit_field={
-            # 'ExecStop=/sbin/sysctl': False,
             'ExecStopPost=/sbin/sysctl': False,
 
-            # 'ExecStop=/sbin/iptables': 'ExecStop=/sbin/iptables -t nat -D POSTROUTING -s {} -o {} -j MASQUERADE\n',
             'ExecStartPre=/sbin/iptables': 'ExecStartPre=/sbin/iptables -t nat -A POSTROUTING -s {} -o {} -j MASQUERADE\n',
             'ExecStopPost=/sbin/iptables': 'ExecStopPost=/sbin/iptables -t nat -D POSTROUTING -s {} -o {} -j MASQUERADE\n',
         }
@@ -133,7 +132,6 @@ main_conf = dict(
             'Section': 'Desktop Entry',
             'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
             'Terminal': 'false',
-            # 'Version': '0.6',
             'Name': 'Privatix Dapp',
             'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/"',
             'Type': 'Application',
@@ -148,12 +146,11 @@ main_conf = dict(
         'gui_inst': [
             'chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
             'sudo su - $USER -c \'cd /opt/privatix/gui && sudo npm install dappctrlgui\''
-            # 'sudo apt-get install -y npm',
-            # 'sudo npm install dappctrlgui'
         ],
-        'version':{
-            'npm': ['5.6',None,'0'],
-            'nodejs': ['9.0',None,'0'],
+        'chown': 'sudo chown -R {0}:$(id -gn {0}) {1}',
+        'version': {
+            'npm': ['5.6', None, '0'],
+            'nodejs': ['9.0', None, '0'],
         },
 
     },
@@ -170,7 +167,7 @@ main_conf = dict(
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
-    ports = dict(vpn_port=None,dapp_port=None)
+    ports=dict(vpn_port=None, dapp_port=None)
 )
 
 
@@ -215,7 +212,7 @@ class CMD:
 
         scroll = {'start': tmpl, 'stop': tmpl,
                   'restart': rmpl_rest, 'status': rmpl_stat}
-        stat = {'vpn': self.f_vpn, 'comm': self.f_com}
+        unit_serv = {'vpn': self.f_vpn, 'comm': self.f_com}
 
         if status not in scroll.keys():
             logging.debug(
@@ -225,7 +222,7 @@ class CMD:
         logging.debug('Status scroll: {}'.format(scroll))
         raw_res = list()
         for cmd in scroll[status]:
-            cmd = cmd.format(status, stat[srv])
+            cmd = cmd.format(status, unit_serv[srv])
             logging.debug('CMD from scroll: {}'.format(cmd))
 
             res = self._sys_call(cmd, rolback=False)
@@ -248,7 +245,7 @@ class CMD:
             raw_res.append(True)
         return all(raw_res)
 
-    def clear_contr(self,pass_check=False):
+    def clear_contr(self, pass_check=False):
         # Stop container.Check it if pass_check True.Clear conteiner path
         logging.info('\n\n    Attention! \n'
                      ' During installation, a failure occurred. \n'
@@ -262,8 +259,11 @@ class CMD:
         p_dowld = main_conf['iptables']['path_download']
         logging.debug('Crear {}*'.format(p_dowld))
 
-        if pass_check or not self.service('vpn', 'status', main_conf['ports']['vpn_port'], True) and \
-                not self.service('comm', 'status', main_conf['ports']['dapp_port'], True):
+        if pass_check or not self.service('vpn', 'status',
+                                          main_conf['ports']['vpn_port'],
+                                          True) and \
+                not self.service('comm', 'status',
+                                 main_conf['ports']['dapp_port'], True):
             rmtree(p_dowld + main_conf['iptables']['path_vpn'],
                    ignore_errors=True)
             rmtree(p_dowld + main_conf['iptables']['path_com'],
@@ -425,7 +425,7 @@ class CMD:
         if status == 'stop':
             logging.debug('Stop mode')
             while True:
-                if not self._ping_port(p,verb):
+                if not self._ping_port(p, verb):
                     return True
                 if time() - ts > tw:
                     return False
@@ -433,7 +433,7 @@ class CMD:
         else:
             logging.debug('Start mode')
             while True:
-                if self._ping_port(p,verb):
+                if self._ping_port(p, verb):
                     return True
                 if time() - ts > tw:
                     return False
@@ -461,17 +461,17 @@ class CMD:
                 use_port['dapp_port'].append(int(v['Addr'].split(':')[-1]))
 
         logging.debug('Check ports: {}'.format(use_port))
-        if not self._checker_port(port=use_port['vpn_port'],verb=True):
+        if not self._checker_port(port=use_port['vpn_port'], verb=True):
             logging.info('Restart VPN')
             self.run_service(sysctl=sysctl, comm=False, restart=True)
-            if not self._checker_port(port=use_port['vpn_port'],verb=True):
+            if not self._checker_port(port=use_port['vpn_port'], verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
 
-        if not self._checker_port(port=use_port['dapp_port'],verb=True):
+        if not self._checker_port(port=use_port['dapp_port'], verb=True):
             logging.info('Restart Common')
             self.run_service(sysctl=sysctl, comm=True, restart=True)
-            if not self._checker_port(port=use_port['dapp_port'],verb=True):
+            if not self._checker_port(port=use_port['dapp_port'], verb=True):
                 logging.error('Common is not ready')
                 exit(14)
 
@@ -628,7 +628,8 @@ class Params(CMD):
 
             new_intrfs = raw_input('>')
             if new_intrfs not in i:
-                logging.info('Wrong. Interface must be one of: {}\n'.format(i))
+                logging.info(
+                    'Wrong. Interface must be one of: {}\n'.format(i))
                 new_intrfs = check_interfs(i)
             return new_intrfs
 
@@ -909,32 +910,47 @@ class GUI(CMD):
         CMD.__init__(self)
         self.gui = main_conf['gui']
 
-    def create_icon(self):
+        if environ.get('SUDO_USER'):
+            self.__icon_file = self.gui['icon_tmpl_f'].format(
+                '/home/', environ['SUDO_USER'])
+
+            self.__chown_cmd = self.gui['chown'].format(
+                environ['SUDO_USER'], self.__icon_file
+            )
+        else:
+            self.__icon_file = self.gui['icon_tmpl_f'].format(
+                '', environ['HOME']
+            )
+            self.__chown_cmd = self.gui['chown'].format(
+                environ['USER'], self.__icon_file
+            )
+
+    def __create_icon(self):
         config = ConfigParser()
         config.optionxform = str
-        if environ.get('SUDO_USER'):
-            tmpl_file = self.gui['icon_tmpl_f'].format('/home/', environ['SUDO_USER'])
-        else:
-            tmpl_file = self.gui['icon_tmpl_f'].format('', environ['HOME'])
         tmpl = self.gui['icon_tmpl']
         section = tmpl['Section']
 
-        logging.debug('Create icon file: {}'.format(tmpl_file))
+        logging.debug('Create icon file: {}'.format(self.__icon_file))
 
-        with open(tmpl_file, 'w') as icon:
+        with open(self.__icon_file, 'w') as icon:
             config.add_section(section)
             [config.set(section, k, v) for k, v in tmpl.items()]
             config.write(icon)
 
         logging.debug('Create icon file done')
-        chmod(tmpl_file,
-              stat(tmpl_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
+        chmod(self.__icon_file,
+              stat(self.__icon_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
+
         logging.debug('Chmod icon file done')
+        self._sys_call(self.__chown_cmd)
+        logging.debug('Chown icon file done')
 
     def __get_gui(self, sysctl=False):
         cmds = self.gui['gui_inst']
         for cmd in cmds:
             self._sys_call(cmd, sysctl=sysctl, s_exit=11)
+        self.__create_icon()
 
     def __get_npm(self, sysctl):
         # install npm and nodejs
@@ -953,37 +969,40 @@ class GUI(CMD):
         cmd = self.gui['npm_node']
         self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=11)
 
-    def __get_pack_ver(self,sysctl):
+    def __get_pack_ver(self, sysctl):
         res = False
-        for k,v in self.gui['version'].items():
-            logging.debug('Check {}.'.format(k))
+        for k, v in self.gui['version'].items():
+            logging.info('Check {} version.'.format(k))
             cmd = main_conf['search_pack'].format(k)
-            raw = self._sys_call(cmd=cmd,sysctl=sysctl)
+            raw = self._sys_call(cmd=cmd, sysctl=sysctl)
             if raw:
                 res = True
                 cmd = '{} -v'.format(k)
-                raw = self._sys_call(cmd=cmd,sysctl=sysctl)
-                ver = '.'.join(findall('\d+',raw)[0:2])
+                raw = self._sys_call(cmd=cmd, sysctl=sysctl)
+                ver = '.'.join(findall('\d+', raw)[0:2])
 
                 if StrictVersion(ver) < StrictVersion(v[0]):
-                    self.gui['version'][k][1]=True
-                    self.gui['version'][k][2]=ver
+                    self.gui['version'][k][1] = True
+                    self.gui['version'][k][2] = ver
 
             else:
-                logging.debug('{} not installed yet.'.format(k))
+                logging.info('{} not installed yet.'.format(k))
         return res
 
     def __check_version(self, sysctl):
-        logging.debug('Check version.')
         self.__get_pack_ver(sysctl)
+
+        logging.debug('Check dependencies.')
 
         if any([x[1] for x in self.gui['version'].values()]):
             logging.info('\n\nYou have installed obsolete packages.\n'
                          'To continue the installation, '
                          'you need to update the following packages:')
-            for k,v in self.gui['version'].items():
+            for k, v in self.gui['version'].items():
                 if v[1]:
-                    logging.info('   * {} {}. Min requirements: {}'.format(k,v[2],v[0]))
+                    logging.info(
+                        ' - {} {}. Min requirements: {}'.format(k, v[2],
+                                                                  v[0]))
 
             answ = raw_input('\n\nDo you want to re-install the packages '
                              'yourself or in automatic mode?\n '
@@ -993,7 +1012,7 @@ class GUI(CMD):
                              '\n> ')
 
             while True:
-                if answ.lower() not in ['n','y']:
+                if answ.lower() not in ['n', 'y']:
                     logging.info('Invalid choice. Select y or n.')
                     answ = raw_input('> ')
                     continue
@@ -1005,12 +1024,12 @@ class GUI(CMD):
                     self._rolback(sysctl, 15)
                     break
 
-
-            for k,v in self.gui['version'].items():
+            for k, v in self.gui['version'].items():
                 if v[1]:
-                    logging.info('Preparing for deletion {} {}'.format(k,v[2]))
+                    logging.info('Preparing for deletion '
+                                 '{} {}'.format(k, v[2]))
                     cmd = main_conf['del_pack'].format(k)
-                    self._sys_call(cmd=cmd,sysctl=sysctl)
+                    self._sys_call(cmd=cmd, sysctl=sysctl)
 
             if self.__get_pack_ver(sysctl):
                 logging.info('The problem with deleting one of the listed '
@@ -1018,20 +1037,22 @@ class GUI(CMD):
                              'and repeat the process again.')
                 self._rolback(sysctl, 16)
 
-    def install_gui(self,sysctl):
+    def install_gui(self, sysctl):
         logging.debug('Install GUI.')
         self.__check_version(sysctl)
         self.__get_npm(sysctl)
         self.__get_gui(sysctl)
 
-
-    def update_gui(self):
-        logging.debug('Update GUI.')
+    def _clear_gui(self):
+        logging.info('Clear GUI.')
         p = self.gui['gui_path']
-        st = stat(p)
         logging.debug('Clear: {}'.format(p))
         rmtree(p, ignore_errors=True)
         mkdir(p)
+
+    def update_gui(self):
+        logging.info('Update GUI.')
+        self._clear_gui()
         self.__get_gui()
 
 
@@ -1051,6 +1072,7 @@ class Checker(Params, Rdata, GUI):
             if not upgr_pack:
                 logging.error('You system is {}.'
                               'She is not supported yet'.format(dist_name))
+                sys.exit(19)
             upgr_pack(ver)
             ip, intfs, tun, port, sysctl = self.revise_params()
             self.download(sysctl, 6)
@@ -1077,12 +1099,11 @@ class Checker(Params, Rdata, GUI):
                         self.update_gui()
                     else:
                         self.install_gui(sysctl)
-                    self.create_icon()
+
                 self._finalizer(rw=True, sysctl=sysctl)
             except BaseException as mexpt:
                 logging.error('Main trouble: {}'.format(mexpt))
-                self._rolback(sysctl,17)
-
+                self._rolback(sysctl, 17)
 
 
 if __name__ == '__main__':
@@ -1119,8 +1140,8 @@ if __name__ == '__main__':
 
     if isfile(main_conf['mark_final']):
         raw = check.file_rw(p=main_conf['mark_final'],
-                             json_r=True,
-                             log='Search port in finalizer.pid')
+                            json_r=True,
+                            log='Search port in finalizer.pid')
         if raw:
             main_conf['ports'].update(raw)
     logging.debug('Input args: {}'.format(args))
@@ -1135,12 +1156,14 @@ if __name__ == '__main__':
     elif args['vpn']:
         logging.info('Vpn mode.')
         sys.stdout.write(
-            str(check.service('vpn', args['vpn'], main_conf['ports']['vpn_port'])))
+            str(check.service('vpn', args['vpn'],
+                              main_conf['ports']['vpn_port'])))
 
     elif args['comm']:
         logging.info('Comm mode.')
         sys.stdout.write(
-            str(check.service('comm', args['comm'], main_conf['ports']['dapp_port'])))
+            str(check.service('comm', args['comm'],
+                              main_conf['ports']['dapp_port'])))
 
     elif not args['update']:
         logging.info('Update containers mode.')
@@ -1150,8 +1173,10 @@ if __name__ == '__main__':
 
     elif args['mass']:
         logging.debug('Mass mode.')
-        comm_stat = check.service('comm', args['mass'], main_conf['ports']['dapp_port'])
-        vpn_stat = check.service('vpn', args['mass'], main_conf['ports']['vpn_port'])
+        comm_stat = check.service('comm', args['mass'],
+                                  main_conf['ports']['dapp_port'])
+        vpn_stat = check.service('vpn', args['mass'],
+                                 main_conf['ports']['vpn_port'])
         sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
 
     elif not args['update_gui']:

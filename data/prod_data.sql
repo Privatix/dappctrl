@@ -291,7 +291,7 @@ VALUES ('system.version.dappvpn',
         'dappvpn version');
 
 INSERT INTO settings (key, value, description, name)
-VALUES ('system.isagent',
+VALUES ('user.isagent',
         'false',
         'Specifies user role. "true" - agent. "false" - client.',
         'user role is agent');

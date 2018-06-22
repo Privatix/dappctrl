@@ -128,8 +128,7 @@ main_conf = dict(
     gui={
         'gui_path': '/opt/privatix/gui/',
 
-        'icon_tmpl_f': '{}/Desktop/privatix-dappgui.desktop'.format(
-            environ['HOME']),
+        'icon_tmpl_f': '{}{}/Desktop/privatix-dappgui.desktop',
         'icon_tmpl': {
             'Section': 'Desktop Entry',
             'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
@@ -908,8 +907,10 @@ class GUI(CMD):
     def create_icon(self):
         config = ConfigParser()
         config.optionxform = str
-
-        tmpl_file = self.gui['icon_tmpl_f']
+        if environ.get('SUDO_USER'):
+            tmpl_file = self.gui['icon_tmpl_f'].format('/home/', environ['SUDO_USER'])
+        else:
+            tmpl_file = self.gui['icon_tmpl_f'].format('', environ['HOME'])
         tmpl = self.gui['icon_tmpl']
         section = tmpl['Section']
 

@@ -204,7 +204,7 @@ type Contract struct {
 
 // Setting keys.
 const (
-	IsAgentKey = "system.isagent" // specifies user role. "true" - agent. "false" - client.
+	IsAgentKey = "user.isagent" // specifies user role. "true" - agent. "false" - client.
 )
 
 // Setting is a user setting.

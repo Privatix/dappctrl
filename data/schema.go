@@ -202,6 +202,11 @@ type Contract struct {
 	Enabled bool   `json:"enabled" reform:"enabled"`
 }
 
+// Setting keys.
+const (
+	IsAgentKey = "system.isagent" // specifies user role. "true" - agent. "false" - client.
+)
+
 // Setting is a user setting.
 //reform:settings
 type Setting struct {

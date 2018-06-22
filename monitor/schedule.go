@@ -82,6 +82,12 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		return
 	}
 
+	agent, err := data.IsAgent(m.db.Querier)
+	if err != nil {
+		m.errWrapper(ctx, err)
+		return
+	}
+
 	for rows.Next() {
 		var el data.EthLog
 		var forAgent, forClient bool
@@ -98,18 +104,19 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		var scheduler funcAndType
 		found := false
 		switch {
-		case forAgent:
+		case forAgent && agent:
 			scheduler, found = agentSchedulers[eventHash]
 			if !found {
 				scheduler, found = accountSchedulers[eventHash]
 			}
-		case forClient:
+		case forClient && !agent:
 			scheduler, found = clientSchedulers[eventHash]
 			if !found {
 				scheduler, found = accountSchedulers[eventHash]
 			}
 		case isOfferingRelated(&el):
 			scheduler, found = offeringSchedulers[eventHash]
+
 		}
 
 		if !found {

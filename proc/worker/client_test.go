@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
@@ -87,8 +88,13 @@ func TestClientAfterChannelCreate(t *testing.T) {
 		data.JobClientAfterChannelCreate, data.JobChannel)
 	defer fxt.Close()
 
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = pointer.ToString(fxt.job.ID)
+	data.SaveToTestDB(t, db, ethLog)
+
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
+	defer data.DeleteFromTestDB(t, db, ethLog)
 
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
 	env.fakeSOMC.WriteWaitForEndpoint(t, fxt.Channel.ID, nil)

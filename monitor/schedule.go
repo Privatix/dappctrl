@@ -287,6 +287,8 @@ func (m *Monitor) getOpenBlockNumber(el *data.EthLog) (uint32, bool, error) {
 			return 0, false, err
 		}
 		return blockNumber, true, nil
+	case common.HexToHash(eth.EthDigestChannelCreated):
+		return 0, false, nil
 	}
 
 	return 0, false, fmt.Errorf("unsupported topic")

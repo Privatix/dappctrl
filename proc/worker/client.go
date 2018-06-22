@@ -169,6 +169,12 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return err
+	}
+
+	ch.Block = uint32(ethLog.BlockNumber)
 	ch.ChannelStatus = data.ChannelActive
 	if err = data.Save(w.db.Querier, &ch); err != nil {
 		return err

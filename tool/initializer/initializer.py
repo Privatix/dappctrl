@@ -147,6 +147,7 @@ main_conf = dict(
             'chown -R $USER:$(id -gn $USER) /opt/privatix/gui/',
             'sudo su - $USER -c \'cd /opt/privatix/gui && sudo npm install dappctrlgui\''
         ],
+        'chown': 'sudo chown -R {0}:$(id -gn {0}) {1}',
         'version': {
             'npm': ['5.6', None, '0'],
             'nodejs': ['9.0', None, '0'],
@@ -910,12 +911,19 @@ class GUI(CMD):
         self.gui = main_conf['gui']
 
         if environ.get('SUDO_USER'):
-            self.icon_file = self.gui['icon_tmpl_f'].format('/home/',
-                                                            environ[
-                                                                'SUDO_USER'])
+            self.__icon_file = self.gui['icon_tmpl_f'].format(
+                '/home/', environ['SUDO_USER'])
+
+            self.__chown_cmd = self.gui['chown'].format(
+                environ['SUDO_USER'], self.__icon_file
+            )
         else:
-            self.icon_file = self.gui['icon_tmpl_f'].format('',
-                                                            environ['HOME'])
+            self.__icon_file = self.gui['icon_tmpl_f'].format(
+                '', environ['HOME']
+            )
+            self.__chown_cmd = self.gui['chown'].format(
+                environ['USER'], self.__icon_file
+            )
 
     def __create_icon(self):
         config = ConfigParser()
@@ -923,17 +931,20 @@ class GUI(CMD):
         tmpl = self.gui['icon_tmpl']
         section = tmpl['Section']
 
-        logging.debug('Create icon file: {}'.format(self.icon_file))
+        logging.debug('Create icon file: {}'.format(self.__icon_file))
 
-        with open(self.icon_file, 'w') as icon:
+        with open(self.__icon_file, 'w') as icon:
             config.add_section(section)
             [config.set(section, k, v) for k, v in tmpl.items()]
             config.write(icon)
 
         logging.debug('Create icon file done')
-        chmod(self.icon_file,
-              stat(self.icon_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
+        chmod(self.__icon_file,
+              stat(self.__icon_file).st_mode | S_IXUSR | S_IXGRP | S_IXOTH)
+
         logging.debug('Chmod icon file done')
+        self._sys_call(self.__chown_cmd)
+        logging.debug('Chown icon file done')
 
     def __get_gui(self, sysctl=False):
         cmds = self.gui['gui_inst']

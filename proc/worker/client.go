@@ -180,21 +180,18 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	go func() {
-		ep, err := w.somc.WaitForEndpoint(job.RelatedID)
-		if err != nil {
-			w.logger.Error("failed to get endpoint for chan %s: %s",
-				ch.ID, err)
-			return
-		}
+	ep, err := w.somc.GetEndpoint(job.RelatedID)
+	if err != nil {
+		return fmt.Errorf("failed to get endpoint for chan %s: %s",
+			ch.ID, err)
+	}
 
-		err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
-			data.JobChannel, ch.ID, ep)
-		if err != nil {
-			w.logger.Error("failed to add "+
-				"JobClientPreEndpointMsgSOMCGet job: %s", err)
-		}
-	}()
+	err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
+		data.JobChannel, ch.ID, ep)
+	if err != nil {
+		return fmt.Errorf("failed to add "+
+			"JobClientPreEndpointMsgSOMCGet job: %s", err)
+	}
 
 	return nil
 }

@@ -96,9 +96,13 @@ func TestClientAfterChannelCreate(t *testing.T) {
 	data.SaveToTestDB(t, db, fxt.Channel)
 	defer data.DeleteFromTestDB(t, db, ethLog)
 
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteGetEndpoint(t, fxt.Channel.ID, nil)
+	}()
+
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
-	env.fakeSOMC.WriteWaitForEndpoint(t, fxt.Channel.ID, nil)
-	time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 
 	data.ReloadFromTestDB(t, db, fxt.Channel)
 	if fxt.Channel.ChannelStatus != data.ChannelActive {

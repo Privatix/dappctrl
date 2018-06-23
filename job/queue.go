@@ -222,9 +222,12 @@ func (q *Queue) processMain() error {
 		started := time.Now()
 
 		rows, err := q.db.Query(`
-			SELECT id, related_id FROM jobs
-			 WHERE status = $1 AND not_before <= $2
-			 ORDER BY related_id, created_at
+			SELECT id, related_id FROM (
+			  SELECT DISTINCT ON (related_id) *
+			    FROM jobs
+			   WHERE status = $1
+			   ORDER BY related_id, created_at) AS ordered
+			 WHERE not_before <= $2
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err

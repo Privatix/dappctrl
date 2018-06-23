@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util"
 )
 
 // PreAccountAddBalanceApprove approve balance if amount exists.
@@ -185,8 +186,9 @@ func (w *Worker) AccountAddCheckBalance(job *data.Job) error {
 	}
 
 	// HACK: return error to repeat job after a minute.
+	job.ID = util.NewUUID()
 	job.NotBefore = time.Now().Add(time.Minute)
-	return fmt.Errorf("repeating job")
+	return w.queue.Add(job)
 }
 
 func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {

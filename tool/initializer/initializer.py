@@ -247,11 +247,12 @@ class CMD:
 
     def clear_contr(self, pass_check=False):
         # Stop container.Check it if pass_check True.Clear conteiner path
-        logging.info('\n\n    Attention! \n'
-                     ' During installation, a failure occurred. \n'
-                     ' All installed will be removed and returned to '
-                     'the initial state.\n Wait for the end.\n '
-                     'And try again.')
+        if pass_check:
+            logging.info('\n\n    Attention! \n'
+                         ' During installation, a failure occurred. \n'
+                         ' All installed will be removed and returned to '
+                         'the initial state.\n Wait for the end.\n '
+                         'And try again.')
         self.service('vpn', 'stop', main_conf['ports']['vpn_port'])
         self.service('comm', 'stop', main_conf['ports']['dapp_port'])
         sleep(3)
@@ -1150,17 +1151,17 @@ if __name__ == '__main__':
     signal(SIGINT, check.signal_handler)
 
     if not args['build']:
-        logging.debug('Build mode.')
+        logging.info('Build mode.')
         check.build_cmd()
 
     elif args['vpn']:
-        logging.info('Vpn mode.')
+        logging.debug('Vpn mode.')
         sys.stdout.write(
             str(check.service('vpn', args['vpn'],
                               main_conf['ports']['vpn_port'])))
 
     elif args['comm']:
-        logging.info('Comm mode.')
+        logging.debug('Comm mode.')
         sys.stdout.write(
             str(check.service('comm', args['comm'],
                               main_conf['ports']['dapp_port'])))

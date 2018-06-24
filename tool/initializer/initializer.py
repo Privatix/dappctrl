@@ -202,9 +202,9 @@ class CMD:
 
     def service(self, srv, status, port, reverse=False):
         logging.debug(
-            'Service:{}, port:{},status:{},reverse:{}'.format(srv, port,
-                                                              status,
-                                                              reverse))
+            'Service:{}, port:{}, status:{}, reverse:{}'.format(srv, port,
+                                                                status,
+                                                                reverse))
         tmpl = ['systemctl {} {} && sleep 0.5']
         rmpl_rest = ['systemctl stop {1} && sleep 0.5',
                      'systemctl start {1} && sleep 0.5']
@@ -215,17 +215,20 @@ class CMD:
         unit_serv = {'vpn': self.f_vpn, 'comm': self.f_com}
 
         if status not in scroll.keys():
-            logging.debug(
-                '{} status must be in {}'.format(srv, scroll.keys()))
-            return False
+            logging.error('Status {} not suitable for service {}. '
+                          'Status must be one from {}'.format(
+                status, srv, scroll.keys())
+            )
+            return None
 
-        logging.debug('Status scroll: {}'.format(scroll))
         raw_res = list()
         for cmd in scroll[status]:
             cmd = cmd.format(status, unit_serv[srv])
-            logging.debug('CMD from scroll: {}'.format(cmd))
-
             res = self._sys_call(cmd, rolback=False)
+
+            if not port:
+                continue
+
             if status == 'status':
                 if res == 'active\n':
                     if reverse:
@@ -243,6 +246,9 @@ class CMD:
             if 'failed' in res or not self._checker_port(port, check_stat):
                 return False
             raw_res.append(True)
+
+        if not port:
+            return None
         return all(raw_res)
 
     def clear_contr(self, pass_check=False):
@@ -1003,7 +1009,7 @@ class GUI(CMD):
                 if v[1]:
                     logging.info(
                         ' - {} {}. Min requirements: {}'.format(k, v[2],
-                                                                  v[0]))
+                                                                v[0]))
 
             answ = raw_input('\n\nDo you want to re-install the packages '
                              'yourself or in automatic mode?\n '

@@ -154,9 +154,8 @@ var accountSchedulers = map[common.Hash]funcAndType{
 	},
 	common.HexToHash(eth.EthTokenTransfer): {
 		(*Monitor).scheduleTokenTransfer,
-		data.JobAfterAccountAddBalance,
+		"", // determines a job type inside the scheduleTokenTransfer function
 	},
-	// TODO: return balance schedulers
 }
 
 var agentSchedulers = map[common.Hash]funcAndType{
@@ -392,6 +391,12 @@ func (m *Monitor) scheduleTokenTransfer(el *data.EthLog, jobType string) {
 	addr1Hash := data.FromBytes(addr1.Bytes())
 	addr2 := common.BytesToAddress(el.Topics[topic2].Bytes())
 	addr2Hash := data.FromBytes(addr2.Bytes())
+
+	if addr1 == m.pscAddr {
+		jobType = data.JobAfterAccountReturnBalance
+	} else {
+		jobType = data.JobAfterAccountAddBalance
+	}
 
 	acc := &data.Account{}
 	if err := m.db.SelectOneTo(acc, "where eth_addr=$1 or eth_addr=$2", addr1Hash,

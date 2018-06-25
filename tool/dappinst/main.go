@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	defaultVPNServiceID = "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532"
-
 	jsonIdent = "    "
 )
 
@@ -28,6 +26,8 @@ func main() {
 		"dappvpn.config.json", "Dappvpn configuration template JSON")
 	dappvpnconf := flag.String("dappvpnconf",
 		"dappvpn.config.json", "Dappvpn configuration file to create")
+	template := flag.String("template", "", "Offering template ID")
+	agent := flag.Bool("agent", false, "Whether to install agent")
 	flag.Parse()
 
 	logger, err := util.NewLogger(util.NewLogConfig())
@@ -42,7 +42,7 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	id, pass := customiseProduct(logger, db, defaultVPNServiceID)
+	id, pass := customiseProduct(logger, db, *template, *agent)
 	createDappvpnConfig(logger, id, pass, *dappvpnconftpl, *dappvpnconf)
 }
 
@@ -53,14 +53,15 @@ func randPass() string {
 }
 
 func customiseProduct(logger *util.Logger,
-	db *reform.DB, oldID string) (string, string) {
+	db *reform.DB, templateID string, agent bool) (string, string) {
 	prod := new(data.Product)
-	if err := db.FindByPrimaryKeyTo(
-		prod, oldID); err != nil {
-		logger.Fatal("failed to select"+
-			" Vpn Service product: %v", err)
+	err := db.SelectOneTo(prod,
+		"offer_tpl_id = $1 AND is_server = $2", templateID, agent)
+	if err != nil {
+		logger.Fatal("failed to find VPN service product: %v", err)
 	}
 
+	oldID := prod.ID
 	prod.ID = util.NewUUID()
 
 	salt, err := rand.Int(rand.Reader, big.NewInt(9*1e18))

@@ -219,7 +219,7 @@ func handleMonitor(confFile string) {
 
 	dir := filepath.Dir(confFile)
 
-	if !pusher.OVPNConfigPushed(dir) {
+	if len(channel) == 0 && !pusher.OVPNConfigPushed(dir) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 

@@ -61,7 +61,8 @@
         "TryPeriod": 60000,
         "Types": {
             "clientPreChannelCreate": {
-                "TryLimit": 3,
+                "Duplicated": true,
+		"TryLimit": 3,
                 "TryPeriod": 60000
             },
             "preAccountAddBalanceApprove": {
@@ -90,7 +91,8 @@
                 "TryPeriod": 60000
             },
             "addCheckBalance": {
-                "TryLimit": 0,
+                "Duplicated": true,
+		"TryLimit": 0,
                 "TryPeriod": 60000
             }
         }

@@ -106,17 +106,12 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		switch {
 		case forAgent && agent:
 			scheduler, found = agentSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
-			}
 		case forClient && !agent:
 			scheduler, found = clientSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
-			}
-		case isOfferingRelated(&el):
+		case isOfferingRelated(&el) && !agent:
 			scheduler, found = offeringSchedulers[eventHash]
-
+		default:
+			scheduler, found = accountSchedulers[eventHash]
 		}
 
 		if !found {

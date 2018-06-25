@@ -184,10 +184,10 @@ func TestGetEndpoint(t *testing.T) {
 	req := srv.Read(t, getEndpointMethod)
 	data := []byte("{}")
 
-	repl := JSONRPCMessage{ID:req.ID, Result: data}
+	repl := JSONRPCMessage{ID: req.ID, Result: data}
 	srv.Write(t, &repl)
 
-	ret := <- ch
+	ret := <-ch
 
 	if ret.err != nil {
 		t.Fatalf("failed to get endpoint data: %s", ret.err)

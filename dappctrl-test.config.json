@@ -148,7 +148,8 @@
     },
 
     "Log": {
-        "Level": "info"
+        "Level": "info",
+        "LogPath": ""
     },
 
     "PayServer": {

@@ -97,7 +97,8 @@
     },
 
     "Log": {
-        "Level": "info"
+        "Level": "info",
+        "LogPath": "/var/log"
     },
 
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",

@@ -3,23 +3,30 @@ package util
 import (
 	"errors"
 	gofmt "fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/privatix/dappctrl/report"
 )
+
+const logFilePerm = 0644
 
 // Logger to log internal events.
 type Logger struct {
 	logger *log.Logger
 	level  int
 	rep    report.Reporter
+	out    io.Writer
 }
 
 // LogConfig is a logger configuration.
 type LogConfig struct {
-	Level string
+	Level   string
+	LogPath string
 }
 
 // Log levels.
@@ -57,6 +64,23 @@ func parseLogLevel(lvl string) int {
 	return -1
 }
 
+func createLogFile(path string) (*os.File, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, err
+	}
+
+	fileName := gofmt.Sprintf("dappctrl-%s.log",
+		time.Now().Format("2006-01-02"))
+	absolutePath := filepath.Join(path, fileName)
+
+	return os.OpenFile(absolutePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND,
+		logFilePerm)
+}
+
 // NewLogger creates a new logger.
 func NewLogger(conf *LogConfig) (*Logger, error) {
 	lvl := parseLogLevel(conf.Level)
@@ -64,10 +88,32 @@ func NewLogger(conf *LogConfig) (*Logger, error) {
 		return nil, errors.New("bad log level")
 	}
 
-	return &Logger{
-		logger: log.New(os.Stderr, "", log.LstdFlags),
-		level:  lvl,
-	}, nil
+	logger := &Logger{level: lvl}
+
+	if conf.LogPath != "" {
+		file, err := createLogFile(conf.LogPath)
+		if err != nil {
+			logger.out = os.Stderr
+		} else {
+			logger.out = file
+		}
+	} else {
+		logger.out = os.Stderr
+	}
+
+	logger.logger = log.New(logger.out, "", log.LstdFlags)
+
+	return logger, nil
+}
+
+// GracefulStop closes the log file.
+func (l *Logger) GracefulStop() {
+	if file, ok := l.out.(*os.File); ok {
+		if file != os.Stderr && file != os.Stdout &&
+			file != os.Stdin {
+			file.Close()
+		}
+	}
 }
 
 // Reporter adds Reporter to the logger.

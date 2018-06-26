@@ -1,3 +1,4 @@
+--templateid = efc61769-96c8-4c0d-b50a-e4d11fc30523
 BEGIN TRANSACTION;
 
 INSERT INTO templates (id, hash, raw, kind)

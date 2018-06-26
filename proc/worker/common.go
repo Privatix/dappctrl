@@ -185,10 +185,11 @@ func (w *Worker) AccountAddCheckBalance(job *data.Job) error {
 		return err
 	}
 
-	// HACK: return error to repeat job after a minute.
-	job.ID = util.NewUUID()
-	job.NotBefore = time.Now().Add(time.Minute)
-	return w.queue.Add(job)
+	// Repeat job after a minute.
+	newJob := *job
+	newJob.ID = util.NewUUID()
+	newJob.NotBefore = time.Now().Add(time.Minute)
+	return w.queue.Add(&newJob)
 }
 
 func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {

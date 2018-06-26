@@ -91,8 +91,9 @@ func (w *Worker) clientPreChannelCreateSaveTX(
 		return err
 	}
 
-	// TODO: set gas limit from conf
-	tx, err := w.ethBack.PSCCreateChannel(bind.NewKeyedTransactor(key),
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.CreateChannel
+	tx, err := w.ethBack.PSCCreateChannel(auth,
 		agentAddr, offerHash, big.NewInt(int64(deposit)))
 	if err != nil {
 		return err

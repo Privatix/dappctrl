@@ -106,17 +106,10 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		switch {
 		case forAgent && agent:
 			scheduler, found = agentSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
-			}
 		case forClient && !agent:
 			scheduler, found = clientSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
-			}
-		case isOfferingRelated(&el):
+		case isOfferingRelated(&el) && !agent:
 			scheduler, found = offeringSchedulers[eventHash]
-
 		}
 
 		if !found {
@@ -147,17 +140,6 @@ type funcAndType struct {
 	t string
 }
 
-var accountSchedulers = map[common.Hash]funcAndType{
-	common.HexToHash(eth.EthTokenApproval): {
-		(*Monitor).scheduleTokenApprove,
-		data.JobPreAccountAddBalance,
-	},
-	common.HexToHash(eth.EthTokenTransfer): {
-		(*Monitor).scheduleTokenTransfer,
-		"", // determines a job type inside the scheduleTokenTransfer function
-	},
-}
-
 var agentSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthDigestChannelCreated): {
 		(*Monitor).scheduleAgentChannelCreated,
@@ -183,6 +165,14 @@ var agentSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleAgentOfferingCreated,
 		data.JobAgentAfterOfferingMsgBCPublish,
 	},
+	common.HexToHash(eth.EthTokenApproval): {
+		(*Monitor).scheduleTokenApprove,
+		data.JobPreAccountAddBalance,
+	},
+	common.HexToHash(eth.EthTokenTransfer): {
+		(*Monitor).scheduleTokenTransfer,
+		"", // determines a job type inside the scheduleTokenTransfer function
+	},
 }
 
 var clientSchedulers = map[common.Hash]funcAndType{
@@ -205,6 +195,14 @@ var clientSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobClientAfterUncooperativeClose,
+	},
+	common.HexToHash(eth.EthTokenApproval): {
+		(*Monitor).scheduleTokenApprove,
+		data.JobPreAccountAddBalance,
+	},
+	common.HexToHash(eth.EthTokenTransfer): {
+		(*Monitor).scheduleTokenTransfer,
+		"", // determines a job type inside the scheduleTokenTransfer function
 	},
 }
 
@@ -313,6 +311,7 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		data.FromBytes(agentAddress.Bytes()),
 		data.FromBytes(clientAddress.Bytes()),
 	}
+	var row *sql.Row
 	if haveOpenBlockNumber {
 		query = `SELECT c.id
                            FROM channels AS c, offerings AS o
@@ -322,18 +321,14 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
                                 AND c.client = $3
                                 AND c.block = $4`
 		args = append(args, openBlockNumber)
+		row = m.db.QueryRow(query, args...)
 	} else {
 		query = `SELECT c.id
-                           FROM channels AS c, offerings AS o, eth_txs AS et
-                          WHERE c.offering = o.id
-                                AND o.hash = $1
-                                AND c.agent = $2
-                                AND c.client = $3
-                                AND et.hash = $4`
-		args = append(args, el.TxHash)
+                           FROM channels AS c, eth_txs AS et
+                          WHERE c.id = et.related_id
+                                AND et.hash = $1`
+		row = m.db.QueryRow(query, el.TxHash)
 	}
-	row := m.db.QueryRow(query, args...)
-
 	var id string
 	if err := row.Scan(&id); err != nil {
 		if err == sql.ErrNoRows {

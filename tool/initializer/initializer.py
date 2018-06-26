@@ -22,10 +22,9 @@ import logging
 import socket
 from signal import SIGINT, signal, pause
 from contextlib import closing
-from shutil import rmtree
 from re import search, sub, findall
 from codecs import open
-from shutil import copyfile
+from shutil import copyfile, rmtree
 from json import load, dump
 from time import time, sleep
 from urllib import URLopener
@@ -60,6 +59,7 @@ Exit code:
     17 - Exception in code, see logging
     18 - Exit Ctrl+C
     19 - OS not supported
+    20 - In build mode,None in dappctrl_id
 """
 
 log_conf = dict(
@@ -102,7 +102,8 @@ main_conf = dict(
     ),
 
     build={
-        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{}\' -dappvpnconf={} -connstr=\"{}\"',
+        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={1} -connstr=\"{3}\" -template={4} -agent=true\n'
+               '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={2} -connstr=\"{3}\" -template={4} -agent=false',
         'cmd_path': '.dapp_cmd',
 
         'db_conf': {
@@ -116,10 +117,14 @@ main_conf = dict(
         'db_stat': 'database system is ready to accept connections',
 
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
+        'dappconconf_path': '/var/lib/container/common/opt/privatix/config/dappvpn.config.json',
         'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/dappctrl.config.json',
         'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.6.0/svc/dappvpn/dappvpn.config.json',
         'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
         'dappctrl_search_field': 'PayAddress',
+        'dappctrl_id_raw': 'https://raw.githubusercontent.com/Privatix/dappctrl/develop/data/prod_data.sql',
+        'field_name_id': '--templateid = ',
+        'dappctrl_id': None,
     },
 
     final={'dapp_port': [], 'vpn_port': 443},
@@ -180,6 +185,8 @@ class CMD:
         self.p_dest = main_conf['iptables']['path_unit']
         self.p_dwld = main_conf['iptables']['path_download']
         self.params = main_conf['iptables']['unit_field']
+        self.path_vpn = main_conf['iptables']['path_vpn']
+        self.path_com = main_conf['iptables']['path_com']
 
     def _reletive_path(self, name):
         dirname = path.dirname(__file__)
@@ -494,6 +501,11 @@ class CMD:
 
         if rw:
             self.__wait_up(sysctl)
+            dest = 'opt/privatix/config/dappvpn.config.json'
+            from_path = '{}{}{}'.format(self.p_dwld, self.path_vpn, dest)
+            to_path = '{}{}{}'.format(self.p_dwld, self.path_com, dest)
+            copyfile(from_path, to_path)
+
             self.file_rw(p=f_path, w=True, data=main_conf['final'],
                          log='Finalizer.Write port info', json_r=True)
             return True
@@ -539,20 +551,42 @@ class CMD:
     def build_cmd(self):
         conf = main_conf['build']
 
+        # Get DB params
         json_db = self._get_url(conf['conf_link'])
         db_conf = json_db.get('DB')
+        logging.debug('DB params: {}'.format(db_conf))
         if db_conf:
             conf['db_conf'].update(db_conf['Conn'])
 
-        # templ = str(self._get_url(conf['templ'])).replace('\'', '"')
+        # Get dappctrl_id from prod_data.sql
+        if not conf['dappctrl_id']:
+            raw_id = self._get_url(link=conf['dappctrl_id_raw'],
+                                   to_json=False).split('\n')
+
+            for i in raw_id:
+                if conf['field_name_id'] in i:
+                    conf['dappctrl_id'] = i.split(conf['field_name_id'])[1]
+                    logging.debug('dapp_id: {}'.format(conf['dappctrl_id']))
+                    break
+            else:
+                logging.error(
+                    'dappctrl_id not exist: {}'.format(conf['dappctrl_id']))
+                sys.exit(20)
+
+        # Get dappvpn.config.json
         templ = self._get_url(link=conf['templ'], to_json=False).replace(
             '\n', '')
 
         conf['db_conf'] = (sub("'|{|}", "", str(conf['db_conf']))).replace(
             ': ', '=').replace(',', '')
 
-        conf['cmd'] = conf['cmd'].format(templ, conf['dappvpnconf_path'],
-                                         conf['db_conf'])
+        conf['cmd'] = conf['cmd'].format(templ,
+                                         conf['dappvpnconf_path'],
+                                         conf['dappconconf_path'],
+                                         conf['db_conf'],
+                                         conf['dappctrl_id']
+                                         )
+
         logging.debug('Build cmd: {}'.format(conf['cmd']))
         self.file_rw(
             p=self._reletive_path(conf['cmd_path']),
@@ -821,14 +855,20 @@ class Params(CMD):
                      log='Clear DB log')
 
     def _run_dapp_cmd(self, sysctl):
-        cmd = self.file_rw(
+        cmds = self.file_rw(
             p=self._reletive_path(main_conf['build']['cmd_path']),
             log='Read dapp cmd')
 
-        if cmd:
-            self._sys_call(cmd=cmd[0], sysctl=sysctl)
-            sleep(1)
+        if cmds:
+            cmds = cmds[0].split('\n')
+            for cmd in cmds:
+                self._sys_call(cmd=cmd, sysctl=sysctl)
+                sleep(1)
         else:
+            logging.error('Have not {} file for further execution. '
+                          'It is necessary to run the initializer '
+                          'in build mode.'.format(
+                main_conf['build']['cmd_path']))
             self._rolback(sysctl, 10)
 
     def _test_mode(self, sysctl):
@@ -1061,6 +1101,14 @@ class GUI(CMD):
         logging.info('Update GUI.')
         self._clear_gui()
         self.__get_gui()
+
+
+class Nspawn():
+    pass
+
+
+class LXC():
+    pass
 
 
 class Checker(Params, Rdata, GUI):

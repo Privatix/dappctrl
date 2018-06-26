@@ -83,25 +83,18 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
 	}, nil
 }
 
-func (w *Worker) addJobWithData(
-	jType, rType, rID string, jData interface{}) error {
-	data2, err := json.Marshal(jData)
-	if err != nil {
-		return err
-	}
-
-	return w.queue.Add(&data.Job{
-		RelatedType: rType,
-		RelatedID:   rID,
-		Type:        jType,
-		CreatedAt:   time.Now(),
-		CreatedBy:   data.JobTask,
-		Data:        data2,
-	})
+func (w *Worker) addJob(jType, rType, rID string) error {
+	return w.queue.AddSimple(jType, rType, rID, data.JobTask)
 }
 
-func (w *Worker) addJob(jType, rType, rID string) error {
-	return w.addJobWithData(jType, rType, rID, &struct{}{})
+func (w *Worker) addJobWithData(
+	jType, rType, rID string, jData interface{}) error {
+	return w.queue.AddWithData(jType, rType, rID, data.JobTask, jData)
+}
+
+func (w *Worker) addJobWithDelay(
+	jType, rType, rID string, delay time.Duration) error {
+	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
 }
 
 func (w *Worker) updateAccountBalances(acc *data.Account) error {

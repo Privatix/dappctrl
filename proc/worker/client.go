@@ -15,6 +15,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
@@ -331,7 +332,12 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 	}
 
 	ch.ChannelStatus = data.ChannelClosedUncoop
-	return data.Save(w.db.Querier, ch)
+	if err := data.Save(w.db.Querier, ch); err != nil {
+		return err
+	}
+
+	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+	return err
 }
 
 // ClientAfterCooperativeClose changed channel status
@@ -396,7 +402,7 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	return data.Save(w.db.Querier, ch)
 }
 
-func (w *Worker) waitSettlePeriod(ctx context.Context, client,
+func (w *Worker) assertCanSettle(ctx context.Context, client,
 	agent common.Address, block uint32,
 	hash [common.HashLength]byte) error {
 	_, _, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
@@ -405,19 +411,17 @@ func (w *Worker) waitSettlePeriod(ctx context.Context, client,
 		return err
 	}
 
-	for {
-		block, err := w.ethBack.LatestBlockNumber(ctx)
-		if err != nil {
-			return err
-		}
-
-		if block.Uint64() >= uint64(settleBlock) {
-			break
-		}
-
-		// TODO(maxim) hardcoded timeout
-		time.Sleep(time.Second * 10)
+	curr, err := w.ethBack.LatestBlockNumber(ctx)
+	if err != nil {
+		return err
 	}
+
+	if curr.Uint64() < uint64(settleBlock) {
+		return fmt.Errorf(
+			"cannot settle yet (min. block %d, current %d)",
+			uint64(settleBlock), curr.Uint64())
+	}
+
 	return nil
 }
 
@@ -476,8 +480,8 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := w.waitSettlePeriod(ctx, client, agent, ch.Block,
-		offerHash); err != nil {
+	err = w.assertCanSettle(ctx, client, agent, ch.Block, offerHash)
+	if err != nil {
 		return err
 	}
 
@@ -683,13 +687,15 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 			" status: %v", err)
 	}
 
-	if err := w.addJob(data.JobClientPreUncooperativeClose,
-		data.JobChannel, ch.ID); err != nil {
+	blocks, err := data.ReadUintSetting(
+		w.db.Querier, data.SettingEthChallengePeriod)
+	if err != nil {
 		return err
 	}
 
-	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	return err
+	return w.addJobWithDelay(
+		data.JobClientPreUncooperativeClose, data.JobChannel,
+		ch.ID, time.Duration(blocks)*eth.BlockDuration)
 }
 
 // ClientAfterOfferingMsgBCPublish creates offering.

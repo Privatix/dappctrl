@@ -1,6 +1,7 @@
 package job
 
 import (
+	"encoding/json"
 	"errors"
 	"hash/crc32"
 	"runtime"
@@ -354,4 +355,45 @@ func (q *Queue) typeConfig(job *data.Job) TypeConfig {
 		tconf = conf
 	}
 	return tconf
+}
+
+// AddWithDataAndDelay is convenience method to add a job with given data
+// and delay.
+func (q *Queue) AddWithDataAndDelay(
+	jobType, relatedType, relatedID, creator string,
+	jobData interface{}, delay time.Duration) error {
+	data2, err := json.Marshal(jobData)
+	if err != nil {
+		return err
+	}
+
+	return q.Add(&data.Job{
+		Type:        jobType,
+		RelatedType: relatedType,
+		RelatedID:   relatedID,
+		CreatedBy:   creator,
+		Data:        data2,
+		NotBefore:   time.Now().Add(delay),
+	})
+}
+
+// AddWithData is convenience method to add a job with given data.
+func (q *Queue) AddWithData(jobType, relatedType, relatedID, creator string,
+	jobData interface{}) error {
+	return q.AddWithDataAndDelay(jobType, relatedType,
+		relatedID, creator, jobData, time.Duration(0))
+}
+
+// AddSimple is convenience method to add a job.
+func (q *Queue) AddSimple(
+	jobType, relatedType, relatedID, creator string) error {
+	return q.AddWithData(
+		jobType, relatedType, relatedID, creator, &struct{}{})
+}
+
+// AddWithDelay is convenience method to add a job with given data delay.
+func (q *Queue) AddWithDelay(
+	jobType, relatedType, relatedID, creator string, delay time.Duration) error {
+	return q.AddWithDataAndDelay(
+		jobType, relatedType, relatedID, creator, &struct{}{}, delay)
 }

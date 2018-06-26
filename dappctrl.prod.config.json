@@ -24,7 +24,7 @@
     "Eth": {
         "Contract" : {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
+            "PSCAddrHex": "0x2c41e4a0a8664c324e1c28f2690865744fa04c3e"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
     },

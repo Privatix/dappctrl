@@ -20,11 +20,6 @@ type JSONRPCMessage struct {
 	ErrorData json.RawMessage `json:"error,omitempty"`
 }
 
-// IDString helper func returns message id as string.
-func (m *JSONRPCMessage) IDString() string {
-	return fmt.Sprint(m.ID)
-}
-
 // Error returns error if any.
 func (m *JSONRPCMessage) Error() error {
 	if len(m.ErrorData) == 0 {
@@ -93,24 +88,11 @@ func (c *Conn) handleMessage(m *JSONRPCMessage) {
 	defer c.mtx.Unlock()
 
 	if len(m.Method) == 0 {
-		if ch, ok := c.pending[m.IDString()]; ok {
+		if ch, ok := c.pending[m.ID]; ok {
 			ch <- reply{m.Result, m.Error()}
-			delete(c.pending, m.IDString())
+			delete(c.pending, m.ID)
 		}
 		return
-	}
-
-	// Endpoint message has arrived.
-
-	var params endpointParams
-	if err := json.Unmarshal(m.Params, &params); err != nil {
-		c.logger.Error("failed to unmarshal SOMC params: %s", err)
-		return
-	}
-
-	if ch, ok := c.pending[params.Channel]; ok {
-		ch <- reply{params.Endpoint, nil}
-		delete(c.pending, params.Channel)
 	}
 }
 
@@ -132,7 +114,7 @@ func (c *Conn) request(method string, params json.RawMessage) reply {
 		return reply{nil, err}
 	}
 
-	c.pending[msg.IDString()] = ch
+	c.pending[msg.ID] = ch
 
 	c.mtx.Unlock()
 

@@ -168,8 +168,8 @@ type Channel struct {
 	Salt               uint64     `json:"-" reform:"salt"`
 	Username           *string    `json:"-" reform:"username"`
 	Password           string     `json:"-" reform:"password"`
-	ReceiptBalance     uint64     `json:"-" reform:"receipt_balance"`   // Last payment.
-	ReceiptSignature   *string    `json:"-" reform:"receipt_signature"` // Last payment's signature.
+	ReceiptBalance     uint64     `json:"receiptBalance" reform:"receipt_balance"` // Last payment.
+	ReceiptSignature   *string    `json:"-" reform:"receipt_signature"`            // Last payment's signature.
 }
 
 // Session is a client session.

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"database/sql"
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
@@ -66,21 +67,26 @@ func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
 	return w.getTransaction(hash)
 }
 
-func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
+func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 	signer := &types.HomesteadSigner{}
 	pubkey, err := ethutil.RecoverPubKey(signer, tx)
 	if err != nil {
 		err = fmt.Errorf("could not recover client's pub key: %v", err)
-		return nil, err
+		return nil, false, err
 	}
 
-	addr := crypto.PubkeyToAddress(*pubkey)
+	addr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+
+	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", addr)
+	if err != sql.ErrNoRows {
+		return nil, false, nil
+	}
 
 	return &data.User{
 		ID:        util.NewUUID(),
-		EthAddr:   data.FromBytes(addr.Bytes()),
+		EthAddr:   addr,
 		PublicKey: data.FromBytes(crypto.FromECDSAPub(pubkey)),
-	}, nil
+	}, true, nil
 }
 
 func (w *Worker) addJob(jType, rType, rID string) error {

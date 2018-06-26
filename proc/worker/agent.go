@@ -35,7 +35,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	client, err := w.newUser(ethLogTx)
+	client, newUser, err := w.newUser(ethLogTx)
 	if err != nil {
 		return fmt.Errorf("failed to make new client record: %v", err)
 	}
@@ -45,9 +45,11 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return fmt.Errorf("failed to start transaction: %v", err)
 	}
 
-	if err := tx.Insert(client); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to insert %T: %v", client, err)
+	if newUser {
+		if err := tx.Insert(client); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to insert %T: %v", client, err)
+		}
 	}
 
 	logChannelCreated, err := extractLogChannelCreated(ethLog)

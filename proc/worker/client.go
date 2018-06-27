@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"database/sql"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -186,8 +186,8 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", agentEthAddr)
 	if err == sql.ErrNoRows {
 		err = w.db.Insert(&data.User{
-			ID: util.NewUUID(),
-			EthAddr: agentEthAddr,
+			ID:        util.NewUUID(),
+			EthAddr:   agentEthAddr,
 			PublicKey: msg.AgentPubKey,
 		})
 		if err != nil {

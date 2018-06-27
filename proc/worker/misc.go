@@ -1,9 +1,9 @@
 package worker
 
 import (
-	"database/sql"
 	"context"
 	"crypto/ecdsa"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"

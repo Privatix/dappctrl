@@ -29,6 +29,7 @@ const (
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
                                    FROM accounts)`
+	clientGetOfferFilterByID = "id = $1 AND " + clientGetOfferFilter
 	agentGetOfferFilter = `offerings.agent IN
                                (SELECT eth_addr
                                   FROM accounts)
@@ -255,7 +256,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	acc := new(data.Account)
 
 	if err := s.selectOneTo(w, offer,
-		"WHERE "+clientGetOfferFilter); err != nil {
+		"WHERE "+clientGetOfferFilterByID, id); err != nil {
 		return
 	}
 	if !s.findTo(w, acc, req.Account) {

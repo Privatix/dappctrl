@@ -60,13 +60,15 @@ Exit code:
     18 - Exit Ctrl+C
     19 - OS not supported
     20 - In build mode,None in dappctrl_id
+    21 - User from which was installing not root
+
 """
 
 log_conf = dict(
     filename='/var/log/initializer.log',
     datefmt='%m/%d %H:%M:%S',
     format='%(levelname)7s [%(lineno)3s] %(message)s')
-log_conf.update(level='INFO')
+log_conf.update(level='DEBUG')
 logging.basicConfig(**log_conf)
 logging.getLogger().addHandler(logging.StreamHandler())
 
@@ -84,11 +86,11 @@ main_conf = dict(
         path_unit='/lib/systemd/system/',
         openvpn_conf='/etc/openvpn/config/server.conf',
         openvpn_fields=[
-            'server {} {}\n',
-            'push "route {} {}"\n'
+            'server {} {}',
+            'push "route {} {}"'
         ],
-        openvpn_tun='dev {}\n',
-        openvpn_port='port 443\n',
+        openvpn_tun='dev {}',
+        openvpn_port='port 443',
 
         unit_vpn='systemd-nspawn@vpn.service',
         unit_com='systemd-nspawn@common.service',
@@ -647,9 +649,10 @@ class Params(CMD):
                          'For example tun{}.\n'.format(i, max_tun_index + 1))
 
             new_tun = raw_input('>')
-            if new_tun in i:
+            if new_tun in i or ''.join(findall('[^\d+]',new_tun)) != 'tun':
                 logging.info(
-                    'Wrong. The interface should be different from: {}\n'.format(
+                    'Wrong. The interface must called tun\n'
+                    'and should be different from: {}\n'.format(
                         i))
                 new_tun = check_tun(i)
             return new_tun
@@ -796,16 +799,16 @@ class Params(CMD):
             # replace all search fields
             for row in tmp_data:
 
-                for field in [f for f in search_fields]:
+                for field in search_fields:
                     if field.format(def_ip, def_mask) in row:
                         indx = tmp_data.index(row)
-                        tmp_data[indx] = field.format(new_ip, def_mask)
+                        tmp_data[indx] = field.format(new_ip, def_mask) + '\n'
 
                 if search_tun.format('tun') in row:
                     logging.debug(
                         'Rewrite tun interface on: {}'.format(new_tun))
                     indx = tmp_data.index(row)
-                    tmp_data[indx] = search_tun.format(new_tun)
+                    tmp_data[indx] = search_tun.format(new_tun) + '\n'
 
                 if search_port in row:
                     logging.debug('Rewrite port on: {}'.format(new_port))
@@ -918,7 +921,8 @@ class Rdata(CMD):
 
             obj = URLopener()
             for f in self.files:
-                logging.info('Start download {}.'.format(f))
+                logging.info('Start download {}.\nWait.This may take some '
+                             'long time. Do not turn off !'.format(f))
                 obj.retrieve(self.url + f, self.p_dwld + f)
                 logging.info('Download {} done.'.format(f))
             return True
@@ -1160,6 +1164,27 @@ class Checker(Params, Rdata, GUI):
                 logging.error('Main trouble: {}'.format(mexpt))
                 self._rolback(sysctl, 17)
 
+    def sudo_prompt(self):
+        mess = 'Make sure that the user from which you are installing\n' \
+               'is added to the sudo file with parameters\n' \
+               'ALL = (ALL: ALL) NOPASSWD: ALL\n' \
+               'or this user himself is a local root\n\n' \
+               'Y - I understand. Everything is fine\n' \
+               'N - The user does not root, stop the installation.'
+        logging.info(mess)
+
+        answ = raw_input('>')
+
+        while True:
+            if answ.lower() not in ['n', 'y']:
+                logging.info('Invalid choice. Select Y or N.')
+                answ = raw_input('> ')
+                continue
+            if answ.lower() == 'n':
+                sys.exit(21)
+            else:
+                break
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=' *** Installer *** ')
@@ -1199,6 +1224,7 @@ if __name__ == '__main__':
                             log='Search port in finalizer.pid')
         if raw:
             main_conf['ports'].update(raw)
+
     logging.debug('Input args: {}'.format(args))
     logging.debug('Inside finalizer.pid: {}'.format(main_conf['ports']))
 
@@ -1220,12 +1246,6 @@ if __name__ == '__main__':
             str(check.service('comm', args['comm'],
                               main_conf['ports']['dapp_port'])))
 
-    elif not args['update']:
-        logging.info('Update containers mode.')
-        if check.clear_contr():
-            args['no_gui'] = False
-            check.init_os(args, True)
-
     elif args['mass']:
         logging.debug('Mass mode.')
         comm_stat = check.service('comm', args['mass'],
@@ -1234,17 +1254,30 @@ if __name__ == '__main__':
                                  main_conf['ports']['vpn_port'])
         sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
 
+    elif not args['update']:
+        logging.info('Update containers mode.')
+        check.sudo_prompt()
+        if check.clear_contr():
+            args['no_gui'] = False
+            check.init_os(args, True)
+        else:
+            logging.info('Problem with clear all old file.')
+
     elif not args['update_gui']:
         logging.info('Update GUI mode.')
+        check.sudo_prompt()
         check.update_gui()
 
     elif not args['mass_update']:
         logging.info('Update All mode.')
+        check.sudo_prompt()
         if check.clear_contr():
             check.init_os(args, True)
-        logging.info('')
+        else:
+            logging.info('Problem with clear all old file.')
 
     else:
         logging.info('Begin init.')
+        check.sudo_prompt()
         check.init_os(args)
         logging.info('All done.')

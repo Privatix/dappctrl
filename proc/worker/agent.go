@@ -530,12 +530,6 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	offering.Status = data.MsgChPublished
-
-	if err = w.db.Update(offering); err != nil {
-		return fmt.Errorf("could not update %T: %v", offering, err)
-	}
-
 	packedMsgBytes, err := data.ToBytes(offering.RawMsg)
 	if err != nil {
 		return fmt.Errorf("failed to decode offering's raw msg: %v", err)
@@ -545,6 +539,7 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return fmt.Errorf("could not publish offering: %v", err)
 	}
 
+	offering.Status = data.MsgChPublished
 	if err = w.db.Update(offering); err != nil {
 		return fmt.Errorf("could not update %T: %v", offering, err)
 	}

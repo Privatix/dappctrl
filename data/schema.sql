@@ -318,7 +318,8 @@ CREATE TABLE eth_txs (
 -- Ethereum events.
 CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
-    tx_hash sha3_256, -- transaction hash
+    tx_hash sha3_256
+        CONSTRAINT unique_eth_logs_tx_hash UNIQUE, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id
     block_number bigint

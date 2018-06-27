@@ -74,6 +74,8 @@ func (w *Worker) clientPreChannelCreateCheckSupply(
 	}
 
 	if supply == 0 {
+		w.logger.Error("no supply for offering hash: %v",
+			offerHash.Hex())
 		return ErrNoSupply
 	}
 

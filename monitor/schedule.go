@@ -101,25 +101,34 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 		eventHash := el.Topics[0]
 
-		var scheduler funcAndType
-		found := false
-		switch {
-		case forAgent && agent:
-			scheduler, found = agentSchedulers[eventHash]
-		case forClient && !agent:
-			scheduler, found = clientSchedulers[eventHash]
-		case isOfferingRelated(&el) && !agent:
-			scheduler, found = offeringSchedulers[eventHash]
-		}
+		if forAgent || forClient {
+			// Check if it is ptc event first.
+			scheduler, found := ptcSchedulers[eventHash]
 
-		if !found {
-			m.logger.Debug("scheduler not found for event %s",
-				eventHash.Hex())
-			m.ignoreEvent(&el)
-			continue
-		}
+			// If not ptc, check others.
+			if !found {
+				if forAgent && agent {
+					scheduler, found = agentSchedulers[eventHash]
+				}
 
-		scheduler.f(m, &el, scheduler.t)
+				if forClient {
+					if isOfferingRelated(&el) {
+						scheduler, found = offeringSchedulers[eventHash]
+					} else {
+						scheduler, found = clientSchedulers[eventHash]
+					}
+				}
+
+				if !found {
+					m.logger.Debug("scheduler not found for event %s",
+						eventHash.Hex())
+					m.ignoreEvent(&el)
+					continue
+				}
+			}
+
+			scheduler.f(m, &el, scheduler.t)
+		}
 	}
 
 	if err := rows.Err(); err != nil {
@@ -165,14 +174,6 @@ var agentSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleAgentOfferingCreated,
 		data.JobAgentAfterOfferingMsgBCPublish,
 	},
-	common.HexToHash(eth.EthTokenApproval): {
-		(*Monitor).scheduleTokenApprove,
-		data.JobPreAccountAddBalance,
-	},
-	common.HexToHash(eth.EthTokenTransfer): {
-		(*Monitor).scheduleTokenTransfer,
-		"", // determines a job type inside the scheduleTokenTransfer function
-	},
 }
 
 var clientSchedulers = map[common.Hash]funcAndType{
@@ -196,6 +197,9 @@ var clientSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobClientAfterUncooperativeClose,
 	},
+}
+
+var ptcSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthTokenApproval): {
 		(*Monitor).scheduleTokenApprove,
 		data.JobPreAccountAddBalance,

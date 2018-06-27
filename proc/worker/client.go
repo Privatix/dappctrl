@@ -182,7 +182,12 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	ep, err := w.somc.GetEndpoint(job.RelatedID)
+	key, err := w.KeyFromChannelData(ch.ID)
+	if err != nil {
+		return err
+	}
+
+	ep, err := w.somc.GetEndpoint(key)
 	if err != nil {
 		return fmt.Errorf("failed to get endpoint for chan %s: %s",
 			ch.ID, err)

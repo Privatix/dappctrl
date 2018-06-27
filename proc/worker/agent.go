@@ -70,6 +70,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
 		Offering:      offering.ID,
+		Block:         uint32(ethLog.BlockNumber),
 	}
 
 	if err := tx.Insert(channel); err != nil {
@@ -374,7 +375,12 @@ func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 		return fmt.Errorf("unable to parse endpoint's raw msg: %v", err)
 	}
 
-	if err = w.somc.PublishEndpoint(endpoint.Channel, msg); err != nil {
+	key, err := w.KeyFromChannelData(endpoint.Channel)
+	if err != nil {
+		return fmt.Errorf("failed to generate channel key: %v", err)
+	}
+
+	if err = w.somc.PublishEndpoint(key, msg); err != nil {
 		return fmt.Errorf("could not publish endpoint msg: %v", err)
 	}
 

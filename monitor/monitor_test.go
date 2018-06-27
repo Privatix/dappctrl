@@ -240,8 +240,7 @@ func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
 		Failures:    failures,
 	}
 	if err := db.Insert(el); err != nil {
-		t.Fatalf("failed to insert a log event"+
-			" into db: %v", err)
+		t.Fatalf("failed to insert a log event into db: %v", err)
 	}
 
 	return el
@@ -413,7 +412,10 @@ func TestMonitorLogCollect(t *testing.T) {
 		for _, log := range logsToInject {
 			d := genRandData(32 * 5)
 			dataMap[data.FromBytes(d)] = true
+			var txHash common.Hash
+			copy(txHash[:], genRandData(32))
 			client.injectEvent(&ethtypes.Log{
+				TxHash:      txHash,
 				Address:     contractAddr,
 				BlockNumber: block,
 				Topics: []common.Hash{

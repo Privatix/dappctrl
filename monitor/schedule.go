@@ -101,34 +101,25 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 		eventHash := el.Topics[0]
 
-		if forAgent || forClient {
-			// Check if it is ptc event first.
-			scheduler, found := ptcSchedulers[eventHash]
-
-			// If not ptc, check others.
-			if !found {
-				if forAgent && agent {
-					scheduler, found = agentSchedulers[eventHash]
-				}
-
-				if forClient {
-					if isOfferingRelated(&el) {
-						scheduler, found = offeringSchedulers[eventHash]
-					} else {
-						scheduler, found = clientSchedulers[eventHash]
-					}
-				}
-
-				if !found {
-					m.logger.Debug("scheduler not found for event %s",
-						eventHash.Hex())
-					m.ignoreEvent(&el)
-					continue
-				}
-			}
-
-			scheduler.f(m, &el, scheduler.t)
+		var scheduler funcAndType
+		found := false
+		switch {
+		case forAgent && agent:
+			scheduler, found = agentSchedulers[eventHash]
+		case forClient && !agent:
+			scheduler, found = clientSchedulers[eventHash]
+		case isOfferingRelated(&el) && !agent:
+			scheduler, found = offeringSchedulers[eventHash]
 		}
+
+		if !found {
+			m.logger.Debug("scheduler not found for event %s",
+				eventHash.Hex())
+			m.ignoreEvent(&el)
+			continue
+		}
+
+		scheduler.f(m, &el, scheduler.t)
 	}
 
 	if err := rows.Err(); err != nil {

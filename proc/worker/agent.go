@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/AlekSi/pointer"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
@@ -316,14 +317,25 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 
 	hash := crypto.Keccak256(msgSealed)
 
+	var params []byte
+
+	params, err = json.Marshal(msg.AdditionalParams)
+	if err != nil {
+		params = []byte("{}")
+	}
+
 	newEndpoint := &data.Endpoint{
-		ID:               util.NewUUID(),
-		Template:         template.ID,
-		Channel:          channel.ID,
-		Hash:             data.FromBytes(hash),
-		RawMsg:           data.FromBytes(msgSealed),
-		Status:           data.MsgUnpublished,
-		AdditionalParams: []byte("{}"),
+		ID:                     util.NewUUID(),
+		Template:               template.ID,
+		Channel:                channel.ID,
+		Hash:                   data.FromBytes(hash),
+		RawMsg:                 data.FromBytes(msgSealed),
+		Status:                 data.MsgUnpublished,
+		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
+		PaymentReceiverAddress: pointer.ToString(msg.PaymentReceiverAddress),
+		Username:               pointer.ToString(msg.Username),
+		Password:               pointer.ToString(msg.Password),
+		AdditionalParams:       params,
 	}
 
 	tx, err := w.db.Begin()

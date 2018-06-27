@@ -31,6 +31,14 @@ func TestClientPreChannelCreate(t *testing.T) {
 		data.JobClientPreChannelCreate, data.JobChannel)
 	defer fxt.Close()
 
+	offeringMsg := offer.OfferingMessage(fxt.Account, fxt.TemplateOffer,
+		fxt.Offering)
+	offeringMsgBytes, _ := json.Marshal(offeringMsg)
+	key, _ := data.TestToPrivateKey(fxt.Account.PrivateKey, data.TestPassword)
+	packed, _ := messages.PackWithSignature(offeringMsgBytes, key)
+	fxt.Offering.RawMsg = data.FromBytes(packed)
+	env.updateInTestDB(t, fxt.Offering)
+
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
 	fxt.setJobData(t, ClientPreChannelCreateData{
@@ -78,6 +86,11 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
+
+	var agentUserRec data.User
+	env.selectOneTo(t, &agentUserRec, "WHERE eth_addr=$1 and public_key=$2",
+		fxt.Account.EthAddr, fxt.Account.PublicKey)
+	env.deleteFromTestDB(t, &agentUserRec)
 }
 
 func TestClientAfterChannelCreate(t *testing.T) {

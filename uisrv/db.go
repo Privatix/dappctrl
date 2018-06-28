@@ -20,8 +20,8 @@ func (s *Server) findTo(w http.ResponseWriter, v reform.Record, id string) bool 
 }
 
 func (s *Server) selectOneTo(w http.ResponseWriter, v reform.Record,
-	filter string) (err error) {
-	if err = s.db.SelectOneTo(v, filter); err != nil {
+	filter string, args ...interface{}) (err error) {
+	if err = s.db.SelectOneTo(v, filter, args...); err != nil {
 		if err == sql.ErrNoRows {
 			s.replyNotFound(w)
 			return

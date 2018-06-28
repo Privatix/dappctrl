@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -70,6 +71,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
 		Offering:      offering.ID,
+		Block:         uint32(ethLog.BlockNumber),
 	}
 
 	if err := tx.Insert(channel); err != nil {
@@ -315,14 +317,25 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 
 	hash := crypto.Keccak256(msgSealed)
 
+	var params []byte
+
+	params, err = json.Marshal(msg.AdditionalParams)
+	if err != nil {
+		params = []byte("{}")
+	}
+
 	newEndpoint := &data.Endpoint{
-		ID:               util.NewUUID(),
-		Template:         template.ID,
-		Channel:          channel.ID,
-		Hash:             data.FromBytes(hash),
-		RawMsg:           data.FromBytes(msgSealed),
-		Status:           data.MsgUnpublished,
-		AdditionalParams: []byte("{}"),
+		ID:                     util.NewUUID(),
+		Template:               template.ID,
+		Channel:                channel.ID,
+		Hash:                   data.FromBytes(hash),
+		RawMsg:                 data.FromBytes(msgSealed),
+		Status:                 data.MsgUnpublished,
+		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
+		PaymentReceiverAddress: pointer.ToString(msg.PaymentReceiverAddress),
+		Username:               pointer.ToString(msg.Username),
+		Password:               pointer.ToString(msg.Password),
+		AdditionalParams:       params,
 	}
 
 	tx, err := w.db.Begin()
@@ -374,7 +387,12 @@ func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 		return fmt.Errorf("unable to parse endpoint's raw msg: %v", err)
 	}
 
-	if err = w.somc.PublishEndpoint(endpoint.Channel, msg); err != nil {
+	key, err := w.KeyFromChannelData(endpoint.Channel)
+	if err != nil {
+		return fmt.Errorf("failed to generate channel key: %v", err)
+	}
+
+	if err = w.somc.PublishEndpoint(key, msg); err != nil {
 		return fmt.Errorf("could not publish endpoint msg: %v", err)
 	}
 

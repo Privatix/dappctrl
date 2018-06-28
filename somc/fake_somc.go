@@ -16,7 +16,7 @@ import (
 )
 
 // TestEndpointParams exported for tests.
-type TestEndpointParams endpointParams
+type TestEndpointParams EndpointParams
 
 // TestOfferingParams used for tests.
 type TestOfferingParams publishOfferingParams
@@ -115,7 +115,7 @@ func (s *FakeSOMC) Write(t *testing.T, msg *JSONRPCMessage) {
 // ReadPublishEndpoint recieves and returns published endpoint.
 func (s *FakeSOMC) ReadPublishEndpoint(t *testing.T) TestEndpointParams {
 	req := s.Read(t, publishEndpointMethod)
-	params := endpointParams{}
+	params := EndpointParams{}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
 	}
@@ -141,7 +141,7 @@ func (s *FakeSOMC) ReadPublishOfferings(t *testing.T) TestOfferingParams {
 func (s *FakeSOMC) WriteGetEndpoint(
 	t *testing.T, channel string, rawEndpoint []byte) {
 	req := s.Read(t, getEndpointMethod)
-	params := endpointParams{}
+	params := EndpointParams{}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
 	}

@@ -29,7 +29,8 @@ const (
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
                                    FROM accounts)`
-	agentGetOfferFilter = `offerings.agent IN
+	clientGetOfferFilterByID = "id = $1 AND " + clientGetOfferFilter
+	agentGetOfferFilter      = `offerings.agent IN
                                (SELECT eth_addr
                                   FROM accounts)
                                AND (SELECT in_use
@@ -255,7 +256,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	acc := new(data.Account)
 
 	if err := s.selectOneTo(w, offer,
-		"WHERE "+clientGetOfferFilter); err != nil {
+		"WHERE "+clientGetOfferFilterByID, id); err != nil {
 		return
 	}
 	if !s.findTo(w, acc, req.Account) {
@@ -274,8 +275,8 @@ func (s *Server) handlePutClientOfferingStatus(
 	}
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobClientPreChannelCreate,
-		RelatedType: data.JobOffering,
-		RelatedID:   id,
+		RelatedType: data.JobChannel,
+		RelatedID:   util.NewUUID(),
 		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,

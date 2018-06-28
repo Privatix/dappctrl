@@ -1,7 +1,6 @@
 package uisrv
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -36,7 +35,7 @@ var (
 		channelResume:    data.JobClientPreServiceUnsuspend,
 	}
 
-	clientStatusFilter   = `WHERE id = '%s' AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
+	clientStatusFilter   = `WHERE id = $1 AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
 	clientChannelsFilter = `WHERE channels.agent NOT IN (SELECT eth_addr FROM accounts)`
 )
 
@@ -391,8 +390,7 @@ func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, 
 func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	r *http.Request, id string) {
 	channel := new(data.Channel)
-	if err := s.selectOneTo(w, channel,
-		fmt.Sprintf(clientStatusFilter, id)); err != nil {
+	if err := s.selectOneTo(w, channel, clientStatusFilter, id); err != nil {
 		return
 	}
 
@@ -465,8 +463,8 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 		}
 
 	} else {
-		if err := s.selectOneTo(w, &data.Channel{},
-			fmt.Sprintf(clientStatusFilter, id)); err != nil {
+		if err := s.selectOneTo(w, &data.Channel{}, clientStatusFilter,
+			id); err != nil {
 			return
 		}
 		if _, err := s.clientChannelAction(jobType, id, false); err != nil {

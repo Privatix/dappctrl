@@ -31,6 +31,10 @@ var offeringRelatedEventsMap = map[common.Hash]bool{
 	common.HexToHash(eth.EthOfferingPoppedUp): true,
 }
 
+var agentOfferingRelatedEventsMap = map[common.Hash]bool{
+	common.HexToHash(eth.EthOfferingCreated): true,
+}
+
 // schedule creates a job for each unprocessed log event in the database.
 func (m *Monitor) schedule(ctx context.Context, timeout int64,
 	errCh chan error) {
@@ -101,34 +105,39 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 		eventHash := el.Topics[0]
 
-		if forAgent || forClient {
-			// Check if it is ptc event first.
-			scheduler, found := ptcSchedulers[eventHash]
+		var scheduler funcAndType
+		execute := false
 
-			// If not ptc, check others.
-			if !found {
-				if forAgent && agent {
-					scheduler, found = agentSchedulers[eventHash]
+		scheduler, execute = ptcSchedulers[eventHash]
+
+		if !execute {
+			if agent {
+				if isAgentOfferingRelated(&el) {
+					scheduler, execute =
+						agentOfferingSchedulers[eventHash]
+				} else if forAgent {
+					scheduler, execute =
+						agentSchedulers[eventHash]
 				}
-
-				if forClient {
-					if isOfferingRelated(&el) {
-						scheduler, found = offeringSchedulers[eventHash]
-					} else {
-						scheduler, found = clientSchedulers[eventHash]
-					}
-				}
-
-				if !found {
-					m.logger.Debug("scheduler not found for event %s",
-						eventHash.Hex())
-					m.ignoreEvent(&el)
-					continue
+			} else {
+				if isOfferingRelated(&el) {
+					scheduler, execute =
+						offeringSchedulers[eventHash]
+				} else if forClient {
+					scheduler, execute =
+						clientSchedulers[eventHash]
 				}
 			}
-
-			scheduler.f(m, &el, scheduler.t)
 		}
+
+		if !execute {
+			m.logger.Debug("scheduler not found for event %s",
+				eventHash.Hex())
+			m.ignoreEvent(&el)
+			continue
+		}
+
+		scheduler.f(m, &el, scheduler.t)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -140,6 +149,10 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 func isOfferingRelated(el *data.EthLog) bool {
 	return len(el.Topics) > 0 && offeringRelatedEventsMap[el.Topics[0]]
+}
+
+func isAgentOfferingRelated(el *data.EthLog) bool {
+	return len(el.Topics) > 0 && agentOfferingRelatedEventsMap[el.Topics[0]]
 }
 
 type scheduleFunc func(*Monitor, *data.EthLog, string)
@@ -169,10 +182,6 @@ var agentSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobAgentAfterUncooperativeClose,
-	},
-	common.HexToHash(eth.EthOfferingCreated): {
-		(*Monitor).scheduleAgentOfferingCreated,
-		data.JobAgentAfterOfferingMsgBCPublish,
 	},
 }
 
@@ -207,6 +216,13 @@ var ptcSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthTokenTransfer): {
 		(*Monitor).scheduleTokenTransfer,
 		"", // determines a job type inside the scheduleTokenTransfer function
+	},
+}
+
+var agentOfferingSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthOfferingCreated): {
+		(*Monitor).scheduleAgentOfferingCreated,
+		data.JobAgentAfterOfferingMsgBCPublish,
 	},
 }
 

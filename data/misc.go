@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/reform.v1"
 )
@@ -158,4 +159,31 @@ func FindOneTo(db *reform.Querier,
 			str, column, err)
 	}
 	return nil
+}
+
+// ChannelKey returns the unique channel identifier
+// used in a Privatix Service Contract.
+func ChannelKey(client, agent string, block uint32,
+	offeringHash string) ([]byte, error) {
+	clientAddr, err := ToAddress(client)
+	if err != nil {
+		return nil, err
+	}
+
+	agentAddr, err := ToAddress(agent)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := base64.URLEncoding.DecodeString(
+		strings.TrimSpace(offeringHash))
+	if err != nil {
+		return nil, err
+	}
+
+	blockBytes := Uint32ToBytes(block)
+
+	return crypto.Keccak256(clientAddr.Bytes(),
+		agentAddr.Bytes(), blockBytes[:],
+		common.BytesToHash(hash).Bytes()), nil
 }

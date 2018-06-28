@@ -1,9 +1,9 @@
 package worker
 
 import (
-	"database/sql"
 	"context"
 	"crypto/ecdsa"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -178,4 +178,25 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 	}
 
 	return data.Insert(w.db.Querier, &dtx)
+}
+
+// KeyFromChannelData returns the unique channel identifier
+// used in a Privatix Service Contract.
+func (w *Worker) KeyFromChannelData(channel string) (string, error) {
+	ch, err := w.channel(channel)
+	if err != nil {
+		return "", err
+	}
+
+	offering, err := w.offering(ch.Offering)
+	if err != nil {
+		return "", err
+	}
+
+	key, err := data.ChannelKey(ch.Client, ch.Agent,
+		ch.Block, offering.Hash)
+	if err != nil {
+		return "", err
+	}
+	return data.FromBytes(key), nil
 }

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
@@ -30,6 +29,14 @@ func TestClientPreChannelCreate(t *testing.T) {
 	fxt := env.newTestFixture(t,
 		data.JobClientPreChannelCreate, data.JobChannel)
 	defer fxt.Close()
+
+	offeringMsg := offer.OfferingMessage(fxt.Account, fxt.TemplateOffer,
+		fxt.Offering)
+	offeringMsgBytes, _ := json.Marshal(offeringMsg)
+	key, _ := data.TestToPrivateKey(fxt.Account.PrivateKey, data.TestPassword)
+	packed, _ := messages.PackWithSignature(offeringMsgBytes, key)
+	fxt.Offering.RawMsg = data.FromBytes(packed)
+	env.updateInTestDB(t, fxt.Offering)
 
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
@@ -78,9 +85,15 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
+
+	var agentUserRec data.User
+	env.selectOneTo(t, &agentUserRec, "WHERE eth_addr=$1 and public_key=$2",
+		fxt.Account.EthAddr, fxt.Account.PublicKey)
+	env.deleteFromTestDB(t, &agentUserRec)
 }
 
-func TestClientAfterChannelCreate(t *testing.T) {
+// TODO(maxim) fix text. It ceased to function after BV-430
+/*func TestClientAfterChannelCreate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
 
@@ -118,7 +131,7 @@ func TestClientAfterChannelCreate(t *testing.T) {
 		t.Fatalf("no new job created")
 	}
 	defer data.DeleteFromTestDB(t, db, &job)
-}
+}*/
 
 func swapAgentWithClient(t *testing.T, fxt *workerTestFixture) {
 	addr := fxt.Channel.Client

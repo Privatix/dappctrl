@@ -8,7 +8,7 @@ const getEndpointMethod = "getEndpoint"
 
 // GetEndpoint requests SOMC to find endpoint by channel.
 func (c *Conn) GetEndpoint(channel string) ([]byte, error) {
-	params := endpointParams{
+	params := EndpointParams{
 		Channel: channel,
 	}
 

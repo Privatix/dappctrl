@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -73,6 +74,8 @@ func (w *Worker) clientPreChannelCreateCheckSupply(
 	}
 
 	if supply == 0 {
+		w.logger.Error("no supply for offering hash: %v",
+			offerHash.Hex())
 		return ErrNoSupply
 	}
 
@@ -138,29 +141,63 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	var offer data.Offering
-	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, jdata.Offering)
+	var offering data.Offering
+	err = data.FindByPrimaryKeyTo(w.db.Querier, &offering, jdata.Offering)
 	if err != nil {
 		return err
 	}
 
-	deposit, err := w.checkDeposit(&acc, &offer)
+	deposit, err := w.checkDeposit(&acc, &offering)
 	if err != nil {
 		return err
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.ToHash(offering.Hash)
 	if err != nil {
 		return err
 	}
 
-	err = w.clientPreChannelCreateCheckSupply(&offer, offerHash)
+	err = w.clientPreChannelCreateCheckSupply(&offering, offerHash)
 	if err != nil {
 		return err
+	}
+
+	msgRawBytes, err := data.ToBytes(offering.RawMsg)
+	if err != nil {
+		return err
+	}
+
+	msgRaw, _ := messages.UnpackSignature(msgRawBytes)
+
+	msg := offer.Message{}
+	if err := json.Unmarshal(msgRaw, &msg); err != nil {
+		return fmt.Errorf("failed to unmarshal offering msg: %v", err)
+	}
+
+	pubkB, err := data.ToBytes(msg.AgentPubKey)
+	if err != nil {
+		return fmt.Errorf("failed to decode agent pub key")
+	}
+
+	pubkey := crypto.ToECDSAPub(pubkB)
+
+	agentEthAddr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+
+	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", agentEthAddr)
+	if err == sql.ErrNoRows {
+		err = w.db.Insert(&data.User{
+			ID:        util.NewUUID(),
+			EthAddr:   agentEthAddr,
+			PublicKey: msg.AgentPubKey,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to insert agent user rec: %v",
+				err)
+		}
 	}
 
 	return w.clientPreChannelCreateSaveTX(
-		job, &acc, &offer, offerHash, deposit)
+		job, &acc, &offering, offerHash, deposit)
 }
 
 // ClientAfterChannelCreate activates channel and triggers endpoint retrieval.
@@ -182,14 +219,24 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	ep, err := w.somc.GetEndpoint(job.RelatedID)
+	key, err := w.KeyFromChannelData(ch.ID)
+	if err != nil {
+		return err
+	}
+
+	endpointParams, err := w.somc.GetEndpoint(key)
 	if err != nil {
 		return fmt.Errorf("failed to get endpoint for chan %s: %s",
 			ch.ID, err)
 	}
 
+	var ep *somc.EndpointParams
+	if err := json.Unmarshal(endpointParams, &ep); err != nil {
+		return err
+	}
+
 	err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
-		data.JobChannel, ch.ID, ep)
+		data.JobChannel, ch.ID, ep.Endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to add "+
 			"JobClientPreEndpointMsgSOMCGet job: %s", err)

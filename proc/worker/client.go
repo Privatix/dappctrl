@@ -224,14 +224,19 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	ep, err := w.somc.GetEndpoint(key)
+	endpointParams, err := w.somc.GetEndpoint(key)
 	if err != nil {
 		return fmt.Errorf("failed to get endpoint for chan %s: %s",
 			ch.ID, err)
 	}
 
+	var ep *somc.EndpointParams
+	if err := json.Unmarshal(endpointParams, &ep); err != nil {
+		return err
+	}
+
 	err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
-		data.JobChannel, ch.ID, ep)
+		data.JobChannel, ch.ID, ep.Endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to add "+
 			"JobClientPreEndpointMsgSOMCGet job: %s", err)

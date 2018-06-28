@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/AlekSi/pointer"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"

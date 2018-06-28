@@ -413,7 +413,7 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	}
 
 	if err := w.runner.Stop(ch.ID); err != nil {
-		w.logger.Info("failed to stop service: %s", err)
+		return fmt.Errorf("failed to stop service: %s", err)
 	}
 
 	ch.ServiceStatus = data.ServiceTerminated
@@ -428,7 +428,7 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 	}
 
 	if err := w.runner.Stop(ch.ID); err != nil {
-		w.logger.Error("failed to stop service: %s", err)
+		return fmt.Errorf("failed to stop service: %s", err)
 	}
 
 	ch.ServiceStatus = data.ServiceSuspended
@@ -443,7 +443,7 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	}
 
 	if err := w.runner.Start(ch.ID); err != nil {
-		w.logger.Error("failed to start service: %s", err)
+		return fmt.Errorf("failed to start service: %s", err)
 	}
 
 	ch.ServiceStatus = data.ServiceActive

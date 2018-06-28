@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
@@ -405,6 +406,16 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 	return err
 }
 
+func (w *Worker) stopService(channel string) error {
+	if err := w.runner.Stop(channel); err != nil {
+		if err != svcrun.ErrNotRunning {
+			return fmt.Errorf("failed to stop service: %s", err)
+		}
+		w.logger.Warn("failed to stop service: %s", err)
+	}
+	return nil
+}
+
 // ClientPreServiceTerminate terminates service.
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	ch, err := w.relatedChannel(job, data.JobClientPreServiceTerminate)
@@ -412,8 +423,8 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 		return err
 	}
 
-	if err := w.runner.Stop(ch.ID); err != nil {
-		return fmt.Errorf("failed to stop service: %s", err)
+	if err := w.stopService(ch.ID); err != nil {
+		return err
 	}
 
 	ch.ServiceStatus = data.ServiceTerminated
@@ -427,8 +438,8 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 		return err
 	}
 
-	if err := w.runner.Stop(ch.ID); err != nil {
-		return fmt.Errorf("failed to stop service: %s", err)
+	if err := w.stopService(ch.ID); err != nil {
+		return err
 	}
 
 	ch.ServiceStatus = data.ServiceSuspended

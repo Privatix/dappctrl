@@ -92,8 +92,18 @@
             },
             "addCheckBalance": {
                 "Duplicated": true,
-		"TryLimit": 0,
+		        "TryLimit": 0,
                 "TryPeriod": 60000
+            },
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
             }
         }
     },

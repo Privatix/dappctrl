@@ -424,6 +424,8 @@ func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 
 	if offering.BillingType == data.BillingPrepaid || offering.SetupPrice > 0 {
 		channel.ServiceStatus = data.ServiceSuspended
+		changedTime := time.Now().Add(time.Minute)
+		channel.ServiceChangedTime = &changedTime
 		if err = w.db.Update(channel); err != nil {
 			return fmt.Errorf("failed to update %T: %v", channel, err)
 		}

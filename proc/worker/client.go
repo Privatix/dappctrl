@@ -368,6 +368,8 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		}
 
 		ch.ServiceStatus = data.ServiceSuspended
+		changedTime := time.Now()
+		ch.ServiceChangedTime = &changedTime
 		return data.Save(tx.Querier, &ch)
 	})
 }

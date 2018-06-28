@@ -30,7 +30,7 @@ const (
                                 (SELECT eth_addr
                                    FROM accounts)`
 	clientGetOfferFilterByID = "id = $1 AND " + clientGetOfferFilter
-	agentGetOfferFilter = `offerings.agent IN
+	agentGetOfferFilter      = `offerings.agent IN
                                (SELECT eth_addr
                                   FROM accounts)
                                AND (SELECT in_use

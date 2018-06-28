@@ -428,6 +428,8 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	}
 
 	ch.ServiceStatus = data.ServiceTerminated
+	changedTime := time.Now()
+	ch.ServiceChangedTime = &changedTime
 	return data.Save(w.db.Querier, ch)
 }
 
@@ -443,6 +445,8 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 	}
 
 	ch.ServiceStatus = data.ServiceSuspended
+	changedTime := time.Now()
+	ch.ServiceChangedTime = &changedTime
 	return data.Save(w.db.Querier, ch)
 }
 
@@ -458,6 +462,8 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	}
 
 	ch.ServiceStatus = data.ServiceActive
+	changedTime := time.Now()
+	ch.ServiceChangedTime = &changedTime
 	return data.Save(w.db.Querier, ch)
 }
 

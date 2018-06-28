@@ -260,6 +260,9 @@ func (w *Worker) agentUpdateServiceStatus(job *data.Job, jobType string) error {
 		channel.ServiceStatus = data.ServiceActive
 	}
 
+	changedTime := time.Now()
+	channel.ServiceChangedTime = &changedTime
+
 	if err = w.db.Update(channel); err != nil {
 		return fmt.Errorf("could not update service status: %v", err)
 	}

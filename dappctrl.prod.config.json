@@ -112,7 +112,7 @@
 
     "ServiceRunner": {
         "Services": {
-            "VPN": {
+            "VPN server": {
                 "Name": "/root/go/bin/dappvpn",
                 "Args": ["-config=/opt/privatix/config/dappvpn.config.json"],
                 "Single": true

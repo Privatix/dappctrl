@@ -56,7 +56,7 @@ func customiseProduct(logger *util.Logger,
 	db *reform.DB, templateID string, agent bool) (string, string) {
 	prod := new(data.Product)
 	err := db.SelectOneTo(prod,
-		"offer_tpl_id = $1 AND is_server = $2", templateID, agent)
+		"WHERE offer_tpl_id = $1 AND is_server = $2", templateID, agent)
 	if err != nil {
 		logger.Fatal("failed to find VPN service product: %v", err)
 	}

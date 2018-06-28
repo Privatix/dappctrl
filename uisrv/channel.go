@@ -3,6 +3,7 @@ package uisrv
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/common"
@@ -171,9 +172,21 @@ func usageCalc(u *usageBlock, params *usage) {
 	}
 }
 
+func (s *Server) parseTime(w http.ResponseWriter,
+	value string) (ti time.Time, err error) {
+	ti, err = time.Parse(timeFormat, value)
+	if err != nil {
+		s.logger.Warn("failed to parse time: %v", err)
+		s.replyUnexpectedErr(w)
+	}
+	return
+}
+
 func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 	args []interface{}) (resp []*respGetClientChan, err error) {
 	resp = []*respGetClientChan{}
+
+	channels := make(map[string]*respGetClientChan)
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
@@ -192,12 +205,17 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 			&item.ChStat.ServiceStatus, &item.ChStat.ChannelStatus,
 			&item.ChStat.LastChanged, &item.ChStat.MaxInactiveTime,
 			&item.Job.ID, &item.Job.Type, &item.Job.Status,
-			&item.Job.CreatedAt, &i.secUsage, &i.unitsUsage,
-			&item.Usage.MaxUsage, &i.unitType, &item.Usage.Unit,
-			&i.costSeconds, &i.costUnits); err != nil {
+			&item.Job.CreatedAt, &i.secUsage,
+			&i.unitsUsage, &item.Usage.MaxUsage, &i.unitType,
+			&item.Usage.Unit, &i.costSeconds,
+			&i.costUnits); err != nil {
 			s.logger.Warn("failed to scan rows: %v", err)
 			s.replyUnexpectedErr(w)
 			return
+		}
+
+		if item.Job.Status != data.JobDone {
+			continue
 		}
 
 		// time formatting
@@ -211,13 +229,38 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 		// usage calculation
 		usageCalc(&item.Usage, i)
 
-		resp = append(resp, item)
+		if old, ok := channels[item.ID]; ok {
+			var oldTime time.Time
+			var newTime time.Time
+
+			oldTime, err = s.parseTime(w, old.Job.CreatedAt)
+			if err != nil {
+				return
+			}
+
+			newTime, err = s.parseTime(w, item.Job.CreatedAt)
+			if err != nil {
+				return
+			}
+
+			if newTime.After(oldTime) {
+				channels[item.ID] = item
+			}
+			continue
+		}
+
+		channels[item.ID] = item
 	}
 	if err = rows.Err(); err != nil {
 		s.logger.Warn("failed to rows iteration: %v", err)
 		s.replyUnexpectedErr(w)
 		return
 	}
+
+	for _, ch := range channels {
+		resp = append(resp, ch)
+	}
+
 	return resp, nil
 }
 

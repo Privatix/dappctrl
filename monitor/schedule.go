@@ -31,10 +31,6 @@ var offeringRelatedEventsMap = map[common.Hash]bool{
 	common.HexToHash(eth.EthOfferingPoppedUp): true,
 }
 
-var agentOfferingRelatedEventsMap = map[common.Hash]bool{
-	common.HexToHash(eth.EthOfferingCreated): true,
-}
-
 // schedule creates a job for each unprocessed log event in the database.
 func (m *Monitor) schedule(ctx context.Context, timeout int64,
 	errCh chan error) {
@@ -106,31 +102,33 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		eventHash := el.Topics[0]
 
 		var scheduler funcAndType
-		execute := false
+		found := false
 
-		scheduler, execute = ptcSchedulers[eventHash]
+		if forClient || forAgent {
+			scheduler, found = ptcSchedulers[eventHash]
+		}
 
-		if !execute {
+		if !found {
 			if agent {
-				if isAgentOfferingRelated(&el) {
-					scheduler, execute =
+				if isOfferingRelated(&el) {
+					scheduler, found =
 						agentOfferingSchedulers[eventHash]
 				} else if forAgent {
-					scheduler, execute =
+					scheduler, found =
 						agentSchedulers[eventHash]
 				}
 			} else {
 				if isOfferingRelated(&el) {
-					scheduler, execute =
+					scheduler, found =
 						offeringSchedulers[eventHash]
 				} else if forClient {
-					scheduler, execute =
+					scheduler, found =
 						clientSchedulers[eventHash]
 				}
 			}
 		}
 
-		if !execute {
+		if !found {
 			m.logger.Debug("scheduler not found for event %s",
 				eventHash.Hex())
 			m.ignoreEvent(&el)
@@ -149,10 +147,6 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 func isOfferingRelated(el *data.EthLog) bool {
 	return len(el.Topics) > 0 && offeringRelatedEventsMap[el.Topics[0]]
-}
-
-func isAgentOfferingRelated(el *data.EthLog) bool {
-	return len(el.Topics) > 0 && agentOfferingRelatedEventsMap[el.Topics[0]]
 }
 
 type scheduleFunc func(*Monitor, *data.EthLog, string)
@@ -221,6 +215,10 @@ var ptcSchedulers = map[common.Hash]funcAndType{
 
 var agentOfferingSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthOfferingCreated): {
+		(*Monitor).scheduleAgentOfferingCreated,
+		data.JobAgentAfterOfferingMsgBCPublish,
+	},
+	common.HexToHash(eth.EthOfferingPoppedUp): {
 		(*Monitor).scheduleAgentOfferingCreated,
 		data.JobAgentAfterOfferingMsgBCPublish,
 	},

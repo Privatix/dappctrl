@@ -262,7 +262,7 @@ func launchOpenVPN() {
 	args = append(args, filepath.Join(
 		conf.OpenVPN.ConfigRoot, channel, "client.ovpn"))
 
-	cmd := exec.Command(conf.OpenVPN.Name, conf.OpenVPN.Args...)
+	cmd := exec.Command(conf.OpenVPN.Name, args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

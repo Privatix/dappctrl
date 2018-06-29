@@ -40,7 +40,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
-	fxt.setJobData(t, ClientPreChannelCreateData{
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
 		Offering: fxt.Offering.ID,
 	})
@@ -181,7 +181,7 @@ func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
 	}
 	sealed := sealMessage(t, env, fxt, &msg)
 
-	fxt.setJobData(t, sealed)
+	setJobData(t, fxt.DB, fxt.job, sealed)
 	runJob(t, env.worker.ClientPreEndpointMsgSOMCGet, fxt.job)
 
 	var endp data.Endpoint
@@ -252,7 +252,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
 
-	fxt.setJobData(t, ClientPreChannelTopUpData{
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelTopUpData{
 		Channel:  fxt.Channel.ID,
 		GasPrice: uint64(testTXGasPrice),
 	})
@@ -301,7 +301,7 @@ func clientPreUncooperativeCloseRequestNormFlow(t *testing.T, env *workerTest,
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
 
-	fxt.setJobData(t, ClientPreUncooperativeCloseRequestData{
+	setJobData(t, fxt.DB, fxt.job, ClientPreUncooperativeCloseRequestData{
 		Channel:  fxt.Channel.ID,
 		GasPrice: uint64(testTXGasPrice),
 	})

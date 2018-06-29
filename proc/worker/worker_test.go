@@ -237,13 +237,13 @@ func (f *workerTestFixture) close() {
 	f.TestFixture.Close()
 }
 
-func (f *workerTestFixture) setJobData(t *testing.T, d interface{}) {
+func setJobData(t *testing.T, db *reform.DB, job *data.Job, d interface{}) {
 	b, err := json.Marshal(d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.job.Data = b
-	data.SaveToTestDB(t, f.DB, f.job)
+	job.Data = b
+	data.SaveToTestDB(t, db, job)
 }
 
 func testCommonErrors(t *testing.T, workerF func(*data.Job) error, job data.Job) {

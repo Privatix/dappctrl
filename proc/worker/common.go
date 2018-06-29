@@ -76,7 +76,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return err
 	}
 
-	jobData, err := w.balanceData(job)
+	jobData, err := w.approvedBalanceData(job)
 	if err != nil {
 		return fmt.Errorf("failed to parse job data: %v", err)
 	}
@@ -95,6 +95,19 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 
 	return w.saveEthTX(job, tx, "PSCAddBalanceERC20", job.RelatedType,
 		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+}
+
+func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error) {
+	approveJob := data.Job{}
+	err := w.db.SelectOneTo(&approveJob,
+		"WHERE type=$1 AND related_type=$2 AND related_id=$3",
+		data.JobPreAccountAddBalanceApprove, data.JobAccount,
+		job.RelatedID)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.balanceData(&approveJob)
 }
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.

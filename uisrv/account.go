@@ -2,7 +2,6 @@ package uisrv
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -181,6 +180,10 @@ type accountBalancePayload struct {
 	GasPrice    uint64 `json:"gasPrice"`
 }
 
+type txReply struct {
+	TXHash string `json:"txHash"`
+}
+
 func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Request, id string) {
 	payload := &accountBalancePayload{}
 	if !s.parsePayload(w, r, payload) {
@@ -194,36 +197,24 @@ func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if !s.findTo(w, &data.Account{}, id) {
+	var acc data.Account
+	if !s.findTo(w, &acc, id) {
 		return
 	}
 
-	jobType := data.JobPreAccountAddBalanceApprove
+	handler := s.addBalance
 	if payload.Destination == data.ContractPTC {
-		jobType = data.JobPreAccountReturnBalance
+		handler = s.returnBalance
 	}
 
-	jobData := &data.JobBalanceData{
-		Amount:   payload.Amount,
-		GasPrice: payload.GasPrice,
-	}
-
-	jobDataB, err := json.Marshal(jobData)
+	hash, err := handler(&acc, payload.GasPrice, payload.Amount, nil)
 	if err != nil {
-		s.logger.Error("failed to marshal %T: %v", jobData, err)
-		s.replyUnexpectedErr(w)
+		s.logger.Warn("failed to update account balance: %s", err)
+		s.replyErr(w, http.StatusBadRequest, &serverError{
+			Message: "failed to update account balance",
+		})
 		return
 	}
 
-	if err = s.queue.Add(&data.Job{
-		Type:        jobType,
-		RelatedType: data.JobAccount,
-		RelatedID:   id,
-		Data:        jobDataB,
-		CreatedBy:   data.JobUser,
-	}); err != nil {
-		s.logger.Error("failed to add transfer job: %v", err)
-		s.replyUnexpectedErr(w)
-		return
-	}
+	s.reply(w, &txReply{TXHash: hash})
 }

@@ -164,7 +164,8 @@ func main() {
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
 	worker.SetRunner(runner)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
+	uiSrv := uisrv.NewServer(
+		conf.AgentServer, logger, db, queue, pwdStorage, pr, worker)
 
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",

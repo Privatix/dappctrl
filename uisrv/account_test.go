@@ -14,6 +14,23 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
+func verifyTXHash(t *testing.T, res *http.Response) {
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("got: ", res.Status)
+	}
+
+	var reply txReply
+	if err := json.NewDecoder(res.Body).Decode(&reply); err != nil {
+		t.Fatalf("failed to decode reply: %s", err)
+	}
+
+	if reply.TXHash != testTXHash {
+		t.Fatalf("wrong tx hash: %s", reply.TXHash)
+	}
+}
+
 func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
@@ -54,31 +71,21 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 		}
 	}
 
-	// TODO:
-	// transfer ptc job created
 	res := sendAccountBalanceAction(
 		t,
 		acc.ID,
 		data.ContractPTC,
 		1,
 	)
-	if res.StatusCode != http.StatusOK {
-		t.Fatal("got: ", res.Status)
-	}
-	data.FindInTestDB(t, testServer.db, &data.Job{}, "type",
-		data.JobPreAccountReturnBalance)
-	// transfer psc job created
+	verifyTXHash(t, res)
+
 	res = sendAccountBalanceAction(
 		t,
 		acc.ID,
 		data.ContractPSC,
 		1,
 	)
-	if res.StatusCode != http.StatusOK {
-		t.Fatal("got: ", res.Status)
-	}
-	data.FindInTestDB(t, testServer.db, &data.Job{}, "type",
-		data.JobPreAccountAddBalanceApprove)
+	verifyTXHash(t, res)
 }
 
 func sendAccountBalanceAction(t *testing.T,

@@ -160,12 +160,17 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		return err
 	}
 
+	var jobID *string
+	if job != nil {
+		jobID = pointer.ToString(job.ID)
+	}
+
 	dtx := data.EthTx{
 		ID:          util.NewUUID(),
 		Hash:        data.FromBytes(tx.Hash().Bytes()),
 		Method:      method,
 		Status:      data.TxSent,
-		JobID:       pointer.ToString(job.ID),
+		JobID:       jobID,
 		Issued:      time.Now(),
 		AddrFrom:    from,
 		AddrTo:      to,

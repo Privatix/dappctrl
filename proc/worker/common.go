@@ -88,7 +88,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
-	auth.GasPrice = big.NewInt(jobData.GasPrice)
+	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
 	tx, err := w.ethBack.PSCAddBalanceERC20(auth, big.NewInt(int64(jobData.Amount)))
 	if err != nil {
 		return fmt.Errorf("could not add balance to psc: %v", err)

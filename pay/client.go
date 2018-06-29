@@ -29,7 +29,7 @@ func newPayload(db *reform.DB,
 	}
 
 	var client data.Account
-	if err := db.FindByPrimaryKeyTo(&client, ch.Client); err != nil {
+	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
 		return nil, err
 	}
 

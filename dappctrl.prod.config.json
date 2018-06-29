@@ -11,6 +11,12 @@
         "Timeout": 5
     },
 
+    "ClientMonitor": {
+        "CollectPeriod": 5000,
+        "RequestTLS": false,
+        "RequestTimeout": 2500
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",

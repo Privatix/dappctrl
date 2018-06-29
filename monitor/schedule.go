@@ -3,9 +3,7 @@ package monitor
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 

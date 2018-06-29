@@ -4,7 +4,7 @@ dev tun
 
 # Use protocol tcp for communicating
 # with remote host
-proto {{if .Proto}}{{.Proto}}{{else}}tcp{{autogen}}{{end}}
+proto {{if .Proto}}{{.Proto}}{{else}}tcp-client{{autogen}}{{end}}
 
 # Encrypt packets with AES-256-CBC algorithm
 cipher {{if .Cipher}}{{.Cipher}}{{else}}AES-256-CBC{{autogen}}{{end}}
@@ -13,12 +13,10 @@ cipher {{if .Cipher}}{{.Cipher}}{{else}}AES-256-CBC{{autogen}}{{end}}
 # during TLS handshake.
 tls-client
 
-client
-
 # Remote host name or IP address
 # with port number and protocol tcp
 # for communicating
-{{if .ServerAddress}}{{if .Port}}remote {{.ServerAddress}} {{.Port}} {{.Proto}}{{end}}{{end}}
+{{if .ServerAddress}}{{if .Port}}remote {{.ServerAddress}} {{.Port}}{{end}}{{end}}
 
 # If hostname resolve fails for --remote,
 # retry resolve for n seconds before failing.
@@ -59,7 +57,9 @@ ping {{if .Ping}}{{.Ping}}{{else}}10{{autogen}}{{end}}
 
 # Authenticate with server using
 # username/password in interactive mode
-auth-user-pass access.ovpn
+auth-user-pass {{.AccessFile}}
+
+pull
 
 # or you can use directive below:
 # auth-user-pass /path/to/pass.file Authenticate
@@ -80,7 +80,7 @@ auth-retry nointeract
 # functions are completed. This option will
 # cause all message and error output
 # to be sent to the log file
-daemon
+#daemon
 
 # take n as the number of seconds
 # to wait between connection retries
@@ -103,4 +103,8 @@ connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end
 
 # Set log file verbosity.
 verb 3
-log-append /var/log/openvpn/openvpn-tcp.log
+#log-append /var/log/openvpn/openvpn-tcp.log
+
+# Management interface settings
+management 0.0.0.0 7505
+management-hold

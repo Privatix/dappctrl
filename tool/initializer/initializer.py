@@ -73,6 +73,7 @@ logging.basicConfig(**log_conf)
 logging.getLogger().addHandler(logging.StreamHandler())
 
 main_conf = dict(
+    branch='release/0.7.0',
     iptables=dict(
         link_download='http://art.privatix.net/',
         file_download=[
@@ -120,11 +121,11 @@ main_conf = dict(
 
         'dappvpnconf_path': '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json',
         'dappconconf_path': '/var/lib/container/common/opt/privatix/config/dappvpn.config.json',
-        'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.7.0/dappctrl.prod.config.json',
-        'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.7.0/svc/dappvpn/dappvpn.config.json',
+        'conf_link': 'https://raw.githubusercontent.com/Privatix/dappctrl/{}/dappctrl.config.json',
+        'templ': 'https://raw.githubusercontent.com/Privatix/dappctrl/{}/svc/dappvpn/dappvpn.config.json',
         'dappctrl_conf_local': '/var/lib/container/common/opt/privatix/config/dappctrl.config.local.json',
         'dappctrl_search_field': 'PayAddress',
-        'dappctrl_id_raw': 'https://raw.githubusercontent.com/Privatix/dappctrl/release/0.7.0/data/prod_data.sql',
+        'dappctrl_id_raw': 'https://raw.githubusercontent.com/Privatix/dappctrl/{}/data/prod_data.sql',
         'field_name_id': '--templateid = ',
         'dappctrl_id': None,
     },
@@ -189,6 +190,9 @@ class CMD:
         self.params = main_conf['iptables']['unit_field']
         self.path_vpn = main_conf['iptables']['path_vpn']
         self.path_com = main_conf['iptables']['path_com']
+        self.dupp_conf_url = main_conf['build']['conf_link'].format(main_conf['branch'])
+        self.dupp_vpn_templ = main_conf['build']['templ'].format(main_conf['branch'])
+        self.dupp_raw_id = main_conf['build']['dappctrl_id_raw'].format(main_conf['branch'])
 
     def _reletive_path(self, name):
         dirname = path.dirname(__file__)
@@ -199,14 +203,21 @@ class CMD:
         self._rolback(sysctl=False, code=18)
         pause()
 
+    def _clear_dir(self, p):
+        logging.debug('Clear dir: {}'.format(p))
+        cmd = main_conf['del_dirs'].format(p)
+        self._sys_call(cmd)
+
     def _rolback(self, sysctl, code):
         # Rolback net.ipv4.ip_forward
+        logging.debug('Rolback')
         if not sysctl:
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
 
         self.clear_contr(pass_check=True)
+        self._clear_dir(main_conf['gui']['gui_path'])
         sys.exit(code)
 
     def service(self, srv, status, port, reverse=False):
@@ -280,10 +291,12 @@ class CMD:
                                           True) and \
                 not self.service('comm', 'status',
                                  main_conf['ports']['dapp_port'], True):
-            rmtree(p_dowld + main_conf['iptables']['path_vpn'],
-                   ignore_errors=True)
-            rmtree(p_dowld + main_conf['iptables']['path_com'],
-                   ignore_errors=True)
+
+            self._clear_dir(p_dowld)
+            # rmtree(p_dowld + main_conf['iptables']['path_vpn'],
+            #        ignore_errors=True)
+            # rmtree(p_dowld + main_conf['iptables']['path_com'],
+            #        ignore_errors=True)
             return True
         return False
 
@@ -471,7 +484,7 @@ class CMD:
         logging.info('Wait run services. This may take 15 minutes. '
                      'Do not turn off !')
         use_port = main_conf['final']
-        dupp_conf = self._get_url(main_conf['build']['conf_link'])
+        dupp_conf = self._get_url(self.dupp_conf_url)
         for k, v in dupp_conf.iteritems():
             if isinstance(v, dict) and v.get('Addr'):
                 use_port['dapp_port'].append(int(v['Addr'].split(':')[-1]))
@@ -503,11 +516,6 @@ class CMD:
 
         if rw:
             self.__wait_up(sysctl)
-            dest = 'opt/privatix/config/dappvpn.config.json'
-            from_path = '{}{}{}'.format(self.p_dwld, self.path_vpn, dest)
-            to_path = '{}{}{}'.format(self.p_dwld, self.path_com, dest)
-            copyfile(from_path, to_path)
-
             self.file_rw(p=f_path, w=True, data=main_conf['final'],
                          log='Finalizer.Write port info', json_r=True)
             return True
@@ -554,7 +562,7 @@ class CMD:
         conf = main_conf['build']
 
         # Get DB params
-        json_db = self._get_url(conf['conf_link'])
+        json_db = self._get_url(self.dupp_conf_url)
         db_conf = json_db.get('DB')
         logging.debug('DB params: {}'.format(db_conf))
         if db_conf:
@@ -562,7 +570,7 @@ class CMD:
 
         # Get dappctrl_id from prod_data.sql
         if not conf['dappctrl_id']:
-            raw_id = self._get_url(link=conf['dappctrl_id_raw'],
+            raw_id = self._get_url(link=self.dupp_raw_id,
                                    to_json=False).split('\n')
 
             for i in raw_id:
@@ -576,7 +584,7 @@ class CMD:
                 sys.exit(20)
 
         # Get dappvpn.config.json
-        templ = self._get_url(link=conf['templ'], to_json=False).replace(
+        templ = self._get_url(link=self.dupp_vpn_templ, to_json=False).replace(
             '\n', '')
 
         conf['db_conf'] = (sub("'|{|}", "", str(conf['db_conf']))).replace(
@@ -858,12 +866,16 @@ class Params(CMD):
                      log='Clear DB log')
 
     def _run_dapp_cmd(self, sysctl):
+        # generate two conf in path:
+        #  /var/lib/container/vpn/opt/privatix/config/dappvpn.config.json
+        #  /var/lib/container/common/opt/privatix/config/dappvpn.config.json
+
         cmds = self.file_rw(
             p=self._reletive_path(main_conf['build']['cmd_path']),
             log='Read dapp cmd')
+        logging.debug('Dupp cmds: {}'.format(cmds))
 
         if cmds:
-            cmds = cmds[0].split('\n')
             for cmd in cmds:
                 self._sys_call(cmd=cmd, sysctl=sysctl)
                 sleep(1)
@@ -881,7 +893,7 @@ class Params(CMD):
         cmd = main_conf['test']['cmd'].format(main_conf['test']['path'])
 
         self._sys_call(cmd=cmd, sysctl=sysctl, s_exit=12)
-        raw_tmpl = self._get_url(main_conf['build']['templ'])
+        raw_tmpl = self._get_url(self.dupp_vpn_templ)
         self.file_rw(p=main_conf['build']['dappvpnconf_path'], w=True,
                      data=raw_tmpl, log='Create file with test sql data.')
 
@@ -1098,8 +1110,9 @@ class GUI(CMD):
         logging.info('Clear GUI.')
         p = self.gui['gui_path']
         logging.debug('Clear: {}'.format(p))
-        rmtree(p, ignore_errors=True)
-        mkdir(p)
+        self._clear_dir(p)
+        # rmtree(p, ignore_errors=True)
+        # mkdir(p)
 
     def update_gui(self):
         logging.info('Update GUI.')

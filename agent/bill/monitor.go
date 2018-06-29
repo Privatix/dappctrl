@@ -226,19 +226,25 @@ func (m *Monitor) processRound() error {
 
 func (m *Monitor) suspendService(uuid string) error {
 	_, err := m.pr.SuspendChannel(uuid, jobCreator, true)
-	m.logger.Info("Agent billing: chan %s not suspended: %s",uuid, err.Error())
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not suspended: %s",uuid, err)
+	}
 	return nil
 }
 
 func (m *Monitor) terminateService(uuid string) error {
 	_, err := m.pr.TerminateChannel(uuid, jobCreator, true)
-	m.logger.Info("Agent billing: chan %s not terminated: %s",uuid, err.Error())
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not terminated: %s",uuid, err)
+	}
 	return nil
 }
 
 func (m *Monitor) unsuspendService(uuid string) error {
 	_, err := m.pr.ActivateChannel(uuid, jobCreator, true)
-	m.logger.Info("Agent billing: chan %s not unsuspended: %s",uuid, err.Error())
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not unsuspended: %s",uuid, err)
+	}
 	return nil
 }
 

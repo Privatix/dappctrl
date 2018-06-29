@@ -223,7 +223,8 @@ func (m *Monitor) processRound() error {
 		m.VerifyUnitsBasedChannels,
 		m.VerifyChannelsForInactivity,
 		m.VerifySuspendedChannelsAndTryToUnsuspend,
-		m.VerifySuspendedChannelsAndTryToTerminate)
+		m.VerifySuspendedChannelsAndTryToTerminate,
+		m.VerifyBillingLags)
 }
 
 func (m *Monitor) suspendService(uuid string) error {

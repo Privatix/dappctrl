@@ -39,14 +39,14 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return fmt.Errorf("insufficient ptc balance")
 	}
 
-	amount, err = w.ethBalance(addr)
+	ethBalance, err := w.ethBalance(addr)
 	if err != nil {
 		return fmt.Errorf("failed to get eth balance: %v", err)
 	}
 
 	wantedEthBalance := w.gasConf.PTC.Approve * jobData.GasPrice
 
-	if wantedEthBalance > amount.Uint64() {
+	if wantedEthBalance > ethBalance.Uint64() {
 		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
 			wantedEthBalance, amount.Uint64())
 	}

@@ -74,7 +74,7 @@ pull
 # Client will retry the connection
 # without requerying for an
 # --auth-user-pass username/password.
-auth-retry nointeract
+#auth-retry nointeract
 
 # Become a daemon after all initialization
 # functions are completed. This option will

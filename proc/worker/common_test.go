@@ -50,7 +50,6 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 }
 
 func TestPreAccountAddBalance(t *testing.T) {
-	// PSC.addBalanceERC20()
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobPreAccountAddBalance,
 		data.JobAccount)
@@ -60,7 +59,6 @@ func TestPreAccountAddBalance(t *testing.T) {
 	transferAmount := int64(10)
 	approveJob := data.NewTestJob(data.JobPreAccountAddBalanceApprove,
 		data.JobUser, data.JobAccount)
-	// approveJob.RelatedType = data.JobAccount
 	approveJob.RelatedID = fixture.Account.ID
 	env.insertToTestDB(t, approveJob)
 	setJobData(t, fixture.DB, approveJob, &data.JobBalanceData{
@@ -68,9 +66,18 @@ func TestPreAccountAddBalance(t *testing.T) {
 	})
 	defer env.deleteFromTestDB(t, approveJob)
 
+	txHash := data.FromBytes(common.HexToHash("0xd238f7").Bytes())
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fixture.job.ID
+	ethLog.TxHash = txHash
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
 	tx := &data.EthTx{
-		ID:          util.NewUUID(),
-		Hash:        data.FromBytes(common.HexToHash("0xds68f7").Bytes()),
+		ID: util.NewUUID(),
+		JobID: &approveJob.ID,
+		Hash: txHash,
 		RelatedType: data.JobAccount,
 		RelatedID:   fixture.Account.ID,
 		Status:      data.TxSent,
@@ -79,6 +86,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 		TxRaw:       []byte("{}"),
 	}
 	env.insertToTestDB(t, tx)
+
 	defer env.deleteFromTestDB(t, tx)
 
 	runJob(t, env.worker.PreAccountAddBalance, fixture.job)

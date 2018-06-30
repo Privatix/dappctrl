@@ -99,12 +99,20 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 }
 
 func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error) {
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return nil, err
+	}
 	approveJob := data.Job{}
-	err := w.db.SelectOneTo(&approveJob,
-		"WHERE type=$1 AND related_type=$2 AND related_id=$3"+
-			" ORDER BY created_at DESC", // TODO(@drew2a) @furhat fix this please
-		data.JobPreAccountAddBalanceApprove, data.JobAccount,
-		job.RelatedID)
+	err = w.db.SelectOneTo(&approveJob,
+		`INNER JOIN eth_txs ON
+			jobs.id=eth_txs.job AND
+			eth_txs.hash=$1 AND
+			jobs.related_type=$2 AND
+			jobs.related_id=$3 AND
+			jobs.type=$4`,
+		ethLog.TxHash, data.JobAccount, job.RelatedID,
+		data.JobPreAccountAddBalanceApprove)
 	if err != nil {
 		return nil, err
 	}

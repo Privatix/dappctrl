@@ -84,7 +84,7 @@ func postPayload(db *reform.DB, channel string,
 	if endp.PaymentReceiverAddress == nil {
 		return fmt.Errorf("no payment addr found for chan %s", channel)
 	}
-	//TODO: add URL validation and che
+	//TODO: add URL validation and TLS support
 	url := *endp.PaymentReceiverAddress
 	/*
 	if tls {

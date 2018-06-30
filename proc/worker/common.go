@@ -101,7 +101,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error) {
 	approveJob := data.Job{}
 	err := w.db.SelectOneTo(&approveJob,
-		"WHERE type=$1 AND related_type=$2 AND related_id=$3" +
+		"WHERE type=$1 AND related_type=$2 AND related_id=$3"+
 			" ORDER BY created_at DESC", // TODO(@drew2a) @furhat fix this please
 		data.JobPreAccountAddBalanceApprove, data.JobAccount,
 		job.RelatedID)

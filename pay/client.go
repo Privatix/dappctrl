@@ -86,7 +86,7 @@ func postPayload(db *reform.DB, channel string,
 	}
 	//TODO: add URL validation and TLS support
 	url := *endp.PaymentReceiverAddress
-	
+
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Millisecond,
 	}

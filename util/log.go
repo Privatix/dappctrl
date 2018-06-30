@@ -74,7 +74,7 @@ func createLogFile(prefix, path string) (*os.File, error) {
 		return nil, err
 	}
 
-	fileName := gofmt.Sprintf(prefix + "-%s.log",
+	fileName := gofmt.Sprintf(prefix+"-%s.log",
 		time.Now().Format("2006-01-02"))
 	absolutePath := filepath.Join(path, fileName)
 

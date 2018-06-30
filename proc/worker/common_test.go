@@ -69,14 +69,14 @@ func TestPreAccountAddBalance(t *testing.T) {
 	defer env.deleteFromTestDB(t, approveJob)
 
 	tx := &data.EthTx{
-		ID: util.NewUUID(),
-		Hash: data.FromBytes(common.HexToHash("0xds68f7").Bytes()),
+		ID:          util.NewUUID(),
+		Hash:        data.FromBytes(common.HexToHash("0xds68f7").Bytes()),
 		RelatedType: data.JobAccount,
-		RelatedID: fixture.Account.ID,
-		Status: data.TxSent,
-		Gas: 1,
-		GasPrice: uint64(1),
-		TxRaw: []byte("{}"),
+		RelatedID:   fixture.Account.ID,
+		Status:      data.TxSent,
+		Gas:         1,
+		GasPrice:    uint64(1),
+		TxRaw:       []byte("{}"),
 	}
 	env.insertToTestDB(t, tx)
 	defer env.deleteFromTestDB(t, tx)

@@ -19,6 +19,18 @@ func (s *Server) findTo(w http.ResponseWriter, v reform.Record, id string) bool 
 	return true
 }
 
+func (s *Server) selectOneTo(w http.ResponseWriter, v reform.Record,
+	filter string, args ...interface{}) (err error) {
+	if err = s.db.SelectOneTo(v, filter, args...); err != nil {
+		if err == sql.ErrNoRows {
+			s.replyNotFound(w)
+			return
+		}
+		s.replyUnexpectedErr(w)
+	}
+	return
+}
+
 func (s *Server) insert(w http.ResponseWriter, rec reform.Struct) bool {
 	if err := s.db.Insert(rec); err != nil {
 		s.logger.Error("failed to insert: %v", err)

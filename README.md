@@ -39,7 +39,9 @@ Build `dappctrl` package:
 DAPPCTRL=github.com/privatix/dappctrl
 DAPPCTRL_DIR=$HOME/go/src/$DAPPCTRL
 mkdir -p $DAPPCTRL_DIR
-git clone git@github.com:Privatix/dappctrl.git $DAPPCTRL_DIR
+git clone https://github.com/Privatix/dappctrl.git $DAPPCTRL_DIR
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+cd $DAPPCTRL_DIR && dep ensure
 go get -d $DAPPCTRL/...
 go get -u gopkg.in/reform.v1/reform
 go get -u github.com/rakyll/statik
@@ -54,6 +56,7 @@ Prepare a `dappctrl` database instance:
 ```bash
 psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
 psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
+psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/prod_data.sql
 ```
 
 Make a copy of `dappctrl.config.json`:

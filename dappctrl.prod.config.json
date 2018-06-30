@@ -11,20 +11,26 @@
         "Timeout": 5
     },
 
+    "ClientMonitor": {
+        "CollectPeriod": 5000,
+        "RequestTLS": false,
+        "RequestTimeout": 2500
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
             "sslmode": "disable",
             "user": "postgres",
             "host": "localhost",
-            "port": "5432"
+            "port": "5433"
         }
     },
 
     "Eth": {
         "Contract" : {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x81baa1d7de419c42f9fe4799afb6be324a867da4"
+            "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
     },
@@ -61,8 +67,19 @@
         "TryPeriod": 60000,
         "Types": {
             "clientPreChannelCreate": {
-                "TryLimit": 3,
+                "Duplicated": true,
+		"TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
             },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
@@ -90,14 +107,27 @@
                 "TryPeriod": 60000
             },
             "addCheckBalance": {
-                "TryLimit": 0,
+                "Duplicated": true,
+		        "TryLimit": 0,
                 "TryPeriod": 60000
+            },
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
             }
         }
     },
 
     "Log": {
-        "Level": "info"
+        "Level": "info",
+        "LogPath": "/var/log",
+        "LogFilePrefix": "dappctrl"
     },
 
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
@@ -105,6 +135,16 @@
     "PayServer": {
         "Addr": "0.0.0.0:9000",
         "TLS": null
+    },
+
+    "ServiceRunner": {
+        "Services": {
+            "VPN server": {
+                "Name": "/root/go/bin/dappvpn",
+                "Args": ["-config=/opt/privatix/config/dappvpn.config.json"],
+                "Single": true
+            }
+        }
     },
 
     "SessionServer": {

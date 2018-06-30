@@ -20,19 +20,28 @@ type testEthBackCall struct {
 }
 
 type testEthBackend struct {
-	callStack  []testEthBackCall
-	balanceEth *big.Int
-	balancePSC *big.Int
-	balancePTC *big.Int
-	abi        abi.ABI
-	pscAddr    common.Address
-	tx         *types.Transaction
+	callStack   []testEthBackCall
+	balanceEth  *big.Int
+	balancePSC  *big.Int
+	balancePTC  *big.Int
+	blockNumber *big.Int
+	abi         abi.ABI
+	pscAddr     common.Address
+	offerSupply uint16
+	tx          *types.Transaction
 }
 
 func newTestEthBackend(pscAddr common.Address) *testEthBackend {
 	b := &testEthBackend{}
 	b.pscAddr = pscAddr
+	b.blockNumber = big.NewInt(1)
 	return b
+}
+
+func (b *testEthBackend) LatestBlockNumber(ctx context.Context) (*big.Int, error) {
+	block := b.blockNumber
+	b.blockNumber = new(big.Int).Add(b.blockNumber, big.NewInt(1))
+	return block, nil
 }
 
 func (b *testEthBackend) CooperativeClose(opts *bind.TransactOpts,
@@ -126,6 +135,16 @@ func (b *testEthBackend) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	return tx, nil
 }
 
+func (b *testEthBackend) PSCGetChannelInfo(opts *bind.CallOpts,
+	client common.Address, agent common.Address,
+	blockNumber uint32,
+	hash [common.HashLength]byte) ([common.HashLength]byte,
+	*big.Int, uint32, *big.Int, error) {
+	settleBlock, _ := b.LatestBlockNumber(context.Background())
+
+	return [32]byte{}, nil, uint32(settleBlock.Uint64()), nil, nil
+}
+
 // setTransaction mocks return value for GetTransactionByHash.
 func (b *testEthBackend) setTransaction(t *testing.T,
 	opts *bind.TransactOpts, input []byte) {
@@ -158,4 +177,84 @@ func (b *testEthBackend) testCalled(t *testing.T, method string,
 	}
 	t.Logf("%+v\n", b.callStack)
 	t.Fatalf("no call of %s from %v with args: %v", method, caller, args)
+}
+
+func (b *testEthBackend) PSCOfferingSupply(opts *bind.CallOpts,
+	hash [common.HashLength]byte) (uint16, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "PSCOfferingSupply",
+		caller: opts.From,
+		args:   []interface{}{hash},
+	})
+	return b.offerSupply, nil
+}
+
+const (
+	testTXNonce    uint64 = 1
+	testTXGasLimit uint64 = 2
+	testTXGasPrice int64  = 1
+)
+
+func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
+	agent common.Address, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "PSCCreateChannel",
+		caller: opts.From,
+		args:   []interface{}{agent, hash, deposit},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		big.NewInt(testTXGasPrice), []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCSettle(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32,
+	hash [common.HashLength]byte) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "Settle",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, new(big.Int), testTXGasLimit,
+		big.NewInt(testTXGasPrice), []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCTopUpChannel(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	deposit *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "TopUpChannel",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, deposit},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, deposit, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCUncooperativeClose(opts *bind.TransactOpts,
+	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
+	balance *big.Int) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		method: "UncooperativeClose",
+		caller: opts.From,
+		args:   []interface{}{agent, blockNumber, hash, balance},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, agent, balance, testTXGasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
 }

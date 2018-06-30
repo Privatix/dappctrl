@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	defaultVPNServiceID = "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532"
-
 	jsonIdent = "    "
 )
 
@@ -28,12 +26,15 @@ func main() {
 		"dappvpn.config.json", "Dappvpn configuration template JSON")
 	dappvpnconf := flag.String("dappvpnconf",
 		"dappvpn.config.json", "Dappvpn configuration file to create")
+	template := flag.String("template", "", "Offering template ID")
+	agent := flag.Bool("agent", false, "Whether to install agent")
 	flag.Parse()
 
 	logger, err := util.NewLogger(util.NewLogConfig())
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}
+	defer logger.GracefulStop()
 
 	db, err := data.NewDBFromConnStr(*connStr, logger)
 	if err != nil {
@@ -41,8 +42,9 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	id, pass := customiseProduct(logger, db, defaultVPNServiceID)
-	createDappvpnConfig(logger, id, pass, *dappvpnconftpl, *dappvpnconf)
+	id, pass := customiseProduct(logger, db, *template, *agent)
+	createDappvpnConfig(
+		logger, id, pass, *dappvpnconftpl, *dappvpnconf, *agent)
 }
 
 func randPass() string {
@@ -52,14 +54,15 @@ func randPass() string {
 }
 
 func customiseProduct(logger *util.Logger,
-	db *reform.DB, oldID string) (string, string) {
+	db *reform.DB, templateID string, agent bool) (string, string) {
 	prod := new(data.Product)
-	if err := db.FindByPrimaryKeyTo(
-		prod, oldID); err != nil {
-		logger.Fatal("failed to select"+
-			" Vpn Service product: %v", err)
+	err := db.SelectOneTo(prod,
+		"WHERE offer_tpl_id = $1 AND is_server = $2", templateID, agent)
+	if err != nil {
+		logger.Fatal("failed to find VPN service product: %v", err)
 	}
 
+	oldID := prod.ID
 	prod.ID = util.NewUUID()
 
 	salt, err := rand.Int(rand.Reader, big.NewInt(9*1e18))
@@ -101,7 +104,7 @@ func customiseProduct(logger *util.Logger,
 }
 
 func createDappvpnConfig(logger *util.Logger,
-	username, password, dappvpnconftpl, dappvpnconf string) {
+	username, password, dappvpnconftpl, dappvpnconf string, agent bool) {
 	var conf map[string]interface{}
 	if err := json.Unmarshal([]byte(dappvpnconftpl), &conf); err != nil {
 		logger.Fatal("failed to parse dappvpn config template: %s", err)
@@ -114,6 +117,16 @@ func createDappvpnConfig(logger *util.Logger,
 
 	srv.(map[string]interface{})["Username"] = username
 	srv.(map[string]interface{})["Password"] = password
+
+	if !agent {
+		mon, ok := conf["Monitor"]
+		if !ok {
+			logger.Fatal(
+				"no monitor section in dappvpn config template")
+		}
+
+		mon.(map[string]interface{})["Addr"] = "localhost:7506"
+	}
 
 	if err := util.WriteJSONFile(
 		dappvpnconf, "", jsonIdent, &conf); err != nil {

@@ -38,6 +38,9 @@ func (s *Server) handleUpdateStop(
 			return
 		}
 
+		// TODO: Use unit size instead of this hardcode.
+		args.Units /= 1024 * 1024
+
 		switch prod.UsageRepType {
 		case data.ProductUsageIncremental:
 			sess.UnitsUsed += args.Units

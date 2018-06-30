@@ -1,6 +1,7 @@
 package job
 
 import (
+	"encoding/json"
 	"errors"
 	"hash/crc32"
 	"runtime"
@@ -32,6 +33,7 @@ type TypeConfig struct {
 	TryLimit   uint8 // Default number of tries to complete job.
 	TryPeriod  uint  // Default retry period, in milliseconds.
 	Duplicated bool  // Whether do or do not check for duplicates.
+	FirstStartDelay uint // Default first run delay after job added, in milliseconds.
 }
 
 // Config is a job queue configuration.
@@ -116,10 +118,15 @@ func (q *Queue) checkDuplicated(j *data.Job) error {
 
 // Add adds a new job to the job queue.
 func (q *Queue) Add(j *data.Job) error {
-	if !q.typeConfig(j).Duplicated {
+	tconf := q.typeConfig(j)
+	if !tconf.Duplicated {
 		if err := q.checkDuplicated(j); err != nil {
 			return err
 		}
+	}
+	if tconf.FirstStartDelay > 0 {
+		j.NotBefore = time.Now().Add(
+			time.Duration(tconf.FirstStartDelay) * time.Millisecond)
 	}
 
 	j.ID = util.NewUUID()
@@ -222,9 +229,12 @@ func (q *Queue) processMain() error {
 		started := time.Now()
 
 		rows, err := q.db.Query(`
-			SELECT id, related_id FROM jobs
-			 WHERE status = $1 AND not_before <= $2
-			 ORDER BY related_id, created_at
+			SELECT id, related_id FROM (
+			  SELECT DISTINCT ON (related_id) *
+			    FROM jobs
+			   WHERE status = $1
+			   ORDER BY related_id, created_at) AS ordered
+			 WHERE not_before <= $2
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			return err
@@ -351,4 +361,45 @@ func (q *Queue) typeConfig(job *data.Job) TypeConfig {
 		tconf = conf
 	}
 	return tconf
+}
+
+// AddWithDataAndDelay is convenience method to add a job with given data
+// and delay.
+func (q *Queue) AddWithDataAndDelay(
+	jobType, relatedType, relatedID, creator string,
+	jobData interface{}, delay time.Duration) error {
+	data2, err := json.Marshal(jobData)
+	if err != nil {
+		return err
+	}
+
+	return q.Add(&data.Job{
+		Type:        jobType,
+		RelatedType: relatedType,
+		RelatedID:   relatedID,
+		CreatedBy:   creator,
+		Data:        data2,
+		NotBefore:   time.Now().Add(delay),
+	})
+}
+
+// AddWithData is convenience method to add a job with given data.
+func (q *Queue) AddWithData(jobType, relatedType, relatedID, creator string,
+	jobData interface{}) error {
+	return q.AddWithDataAndDelay(jobType, relatedType,
+		relatedID, creator, jobData, time.Duration(0))
+}
+
+// AddSimple is convenience method to add a job.
+func (q *Queue) AddSimple(
+	jobType, relatedType, relatedID, creator string) error {
+	return q.AddWithData(
+		jobType, relatedType, relatedID, creator, &struct{}{})
+}
+
+// AddWithDelay is convenience method to add a job with given data delay.
+func (q *Queue) AddWithDelay(
+	jobType, relatedType, relatedID, creator string, delay time.Duration) error {
+	return q.AddWithDataAndDelay(
+		jobType, relatedType, relatedID, creator, &struct{}{}, delay)
 }

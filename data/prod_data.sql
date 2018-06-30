@@ -1,3 +1,4 @@
+--templateid = efc61769-96c8-4c0d-b50a-e4d11fc30523
 BEGIN TRANSACTION;
 
 INSERT INTO templates (id, hash, raw, kind)
@@ -102,7 +103,7 @@ VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
                     "additionalParams",
                     "maxSuspendTime"
                 ],
-                "title": "VPN Service Offering",
+                "title": "Privatix VPN offering",
                 "type": "object"
             },
             "uiSchema": {
@@ -209,17 +210,26 @@ VALUES ('d0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
                 "serviceEndpointAddress",
                 "additionalParams"
             ],
-            "title": "Endpoint Message template",
+            "title": "Privatix VPN access",
             "type": "object"
 	    }',
         'access');
 
 INSERT INTO products (id, name, offer_tpl_id, offer_access_id, usage_rep_type,
                       is_server, salt, password, client_ident, config, service_endpoint_address)
-VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN service',
+VALUES ('4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'VPN server',
         'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
         'total', TRUE, 6012867121110302348,
-        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp', 'by_channel_id', '{"somekey": "somevalue"}', 'localhost');
+        'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
+        'by_channel_id', '{"somekey": "somevalue"}', '127.0.0.1');
+
+INSERT INTO products(	id, name, offer_tpl_id, offer_access_id, usage_rep_type,
+                      is_server, salt, password, client_ident, config, service_endpoint_address)
+	VALUES ('37fa14e4-51da-4021-8ea9-9e725229e8aa', 'VPN client',
+     'efc61769-96c8-4c0d-b50a-e4d11fc30523', 'd0dfbbb2-dd07-423a-8ce0-1e74ce50105b',
+     'total', false, 6012867121110302348,
+     'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
+     'by_channel_id', '{"somekey": "somevalue"}', '127.0.0.1');
 
 INSERT INTO settings (key, value, description, name)
 VALUES ('eth.min.confirmations',
@@ -244,5 +254,47 @@ VALUES ('error.sendremote',
         'true',
         'Allow error reporting to send logs to Privatix.',
         'error reporting');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.default.gasprice',
+        '20000000000',
+        'Default GAS price for transactions.',
+        'default gas price');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.challenge.period',
+        '500',
+        'Number of blocks to wait from an uncooperativeClose initiated by the Client in order to give the Agent a chance to respond with a balance proof in case the Client cheats. After the challenge period, the Client can settle and delete the channel. Number of blocks Agent will wait from registerServiceOffering or from createChannel before he can delete service offering and recieve Agent''s deposit back.',
+        'challenge period');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('eth.max.deposit',
+        '30000000000',
+        'We temporarily limit total token deposits in a channel to 300 PRIX. This is just for the bug bounty release, as a safety measure.',
+        'maximum deposit');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappctrl',
+        '0.0.5',
+        'Version of dappctrl.',
+        'dappctrl version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappgui',
+        '0.0.4',
+        'Version of dappgui.',
+        'dappgui version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('system.version.dappvpn',
+        '0.0.2',
+        'Version of dappvpn.',
+        'dappvpn version');
+
+INSERT INTO settings (key, value, description, name)
+VALUES ('user.isagent',
+        'false',
+        'Specifies user role. "true" - agent. "false" - client.',
+        'user role is agent');
 
 END TRANSACTION;

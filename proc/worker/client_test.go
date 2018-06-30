@@ -1,94 +1,788 @@
 package worker
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"gopkg.in/reform.v1"
+
+	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/ept"
+	"github.com/privatix/dappctrl/messages/offer"
+	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/util"
 )
 
 func TestClientPreChannelCreate(t *testing.T) {
-	// 1. Check sufficient internal balance exists PSC.BalanceOf()
-	// 2. Check that available SO supply exists
-	// 3. Add channel to `channels` with ch_status="Pending"
-	// 5. PSC.createChannel()
-	t.Skip("TODO")
-	// fixture := newTestFixture(t, data.JobClientPreChannelCreate,
-	// 	data.JobOfferring)
-	// defer fixture.Close()
+	env := newWorkerTest(t)
+	defer env.close()
 
-	// testEthBack.balancePSC = fixture.Offering
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelCreate, data.JobChannel)
+	defer fxt.Close()
 
-	// runJob(t, testWorker.ClientPreChannelCreate, fixture.job)
+	offeringMsg := offer.OfferingMessage(fxt.Account, fxt.TemplateOffer,
+		fxt.Offering)
+	offeringMsgBytes, _ := json.Marshal(offeringMsg)
+	key, _ := data.TestToPrivateKey(fxt.Account.PrivateKey, data.TestPassword)
+	packed, _ := messages.PackWithSignature(offeringMsgBytes, key)
+	fxt.Offering.RawMsg = data.FromBytes(packed)
+	env.updateInTestDB(t, fxt.Offering)
+
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
+		Account:  fxt.Account.ID,
+		Offering: fxt.Offering.ID,
+	})
+
+	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
+		fxt.Offering.SetupPrice
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+		env.worker.ClientPreChannelCreate(fxt.job))
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+	util.TestExpectResult(t, "Job run", ErrNoSupply,
+		env.worker.ClientPreChannelCreate(fxt.job))
+
+	issued := time.Now()
+	env.ethBack.offerSupply = 1
+	runJob(t, env.worker.ClientPreChannelCreate, fxt.job)
+
+	var tx data.EthTx
+	ch := data.Channel{ID: fxt.job.RelatedID}
+	data.FindInTestDB(t, db, &tx, "related_id", ch.ID)
+	data.ReloadFromTestDB(t, db, &ch)
+	defer data.DeleteFromTestDB(t, db, &ch, &tx)
+
+	if ch.Agent != fxt.Offering.Agent ||
+		ch.Client != fxt.Account.EthAddr ||
+		ch.Offering != fxt.Offering.ID || ch.Block != 0 ||
+		ch.ChannelStatus != data.ChannelPending ||
+		ch.ServiceStatus != data.ServicePending ||
+		ch.TotalDeposit != minDeposit {
+		t.Fatalf("wrong channel content")
+	}
+
+	if tx.Method != "CreateChannel" || tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != fxt.Account.EthAddr ||
+		tx.AddrTo != fxt.Offering.Agent ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel {
+		t.Fatalf("wrong transaction content")
+	}
+
+	var agentUserRec data.User
+	env.selectOneTo(t, &agentUserRec, "WHERE eth_addr=$1 and public_key=$2",
+		fxt.Account.EthAddr, fxt.Account.PublicKey)
+	env.deleteFromTestDB(t, &agentUserRec)
 }
 
-func TestClientAfterChannelCreate(t *testing.T) {
-	t.Skip("TODO")
-	// 1. ch_status="Active"
-	// 2. svc_status="Pending"
-	// 3. "preEndpointMsgSOMCGet"
+// TODO(maxim) fix text. It ceased to function after BV-430
+/*func TestClientAfterChannelCreate(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterChannelCreate, data.JobChannel)
+	defer fxt.Close()
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = pointer.ToString(fxt.job.ID)
+	data.SaveToTestDB(t, db, ethLog)
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	data.SaveToTestDB(t, db, fxt.Channel)
+	defer data.DeleteFromTestDB(t, db, ethLog)
+
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteGetEndpoint(t, fxt.Channel.ID, nil)
+	}()
+
+	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
+
+	data.ReloadFromTestDB(t, db, fxt.Channel)
+	if fxt.Channel.ChannelStatus != data.ChannelActive {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ChannelActive, fxt.Channel.ChannelStatus)
+	}
+
+	var job data.Job
+	err := env.worker.db.SelectOneTo(&job,
+		"WHERE related_id = $1 AND id != $2",
+		fxt.Channel.ID, fxt.job.ID)
+	if err != nil {
+		t.Fatalf("no new job created")
+	}
+	defer data.DeleteFromTestDB(t, db, &job)
+}*/
+
+func swapAgentWithClient(t *testing.T, fxt *workerTestFixture) {
+	addr := fxt.Channel.Client
+	fxt.Channel.Client = fxt.Channel.Agent
+	fxt.Channel.Agent = addr
+
+	fxt.User.PublicKey = fxt.Account.PublicKey
+
+	data.SaveToTestDB(t, db, fxt.Channel, fxt.User)
 }
 
-func TestClientPreChannelTopUp(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Check sufficient internal balance exists PSC.BalanceOf()
-	// 2. PSC.topUpChannel()
-}
+func sealMessage(t *testing.T, env *workerTest,
+	fxt *workerTestFixture, msg *ept.Message) []byte {
+	mdata, _ := json.Marshal(&msg)
 
-func TestClientAfterChannelTopUp(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Add deposit to channels.total_deposit
-}
+	pub, err := data.ToBytes(fxt.User.PublicKey)
+	util.TestExpectResult(t, "Decode pub", nil, err)
 
-func TestClientPreUncooperativeCloseRequest(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PSC.uncooperativeClose
-	// 2. set ch_status="wait_challenge"
-}
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
 
-func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
-	t.Skip("TODO")
-	// 1. set ch_status="in_challenge"
-	// 2. "preUncooperativeClose" with delay
-	// 3. "preServiceTerminate"
-}
+	sealed, err := messages.AgentSeal(mdata, pub, key)
+	util.TestExpectResult(t, "AgentSeal", nil, err)
 
-func TestClientPreUncooperativeClose(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Check challenge_period ended.
-	// 2. PSC.settle()
-	// 3. set ch_status="wait_uncoop"
-}
-
-func TestClientAfterUncooperativeClose(t *testing.T) {
-	t.Skip("TODO")
-	// 1. set ch_status="closed_uncoop"
-}
-
-func TestClientAfterCooperativeClose(t *testing.T) {
-	t.Skip("TODO")
-	// 1. set ch_status="closed_coop"
-	// 2. "preServiceTerminate"
-}
-
-func TestClientPreServiceTerminate(t *testing.T) {
-	t.Skip("TODO")
-	// 1. svc_status="Terminated"
+	return sealed
 }
 
 func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Get EndpointMessage from SOMC
-	// 2. set msg_status="msg_channel_published"
-	// 3. svc_status="Active"
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreEndpointMsgSOMCGet, data.JobChannel)
+	defer fxt.Close()
+
+	swapAgentWithClient(t, fxt)
+
+	msg := ept.Message{
+		TemplateHash:           "test-hash",
+		Username:               util.NewUUID(),
+		Password:               "test-password",
+		PaymentReceiverAddress: "1.2.3.4:5678",
+		ServiceEndpointAddress: "test-endpoint-addr",
+		AdditionalParams: map[string]string{
+			"test-key": "test-value",
+		},
+	}
+	sealed := sealMessage(t, env, fxt, &msg)
+
+	setJobData(t, fxt.DB, fxt.job, sealed)
+	runJob(t, env.worker.ClientPreEndpointMsgSOMCGet, fxt.job)
+
+	var endp data.Endpoint
+	data.SelectOneFromTestDBTo(t, db, &endp,
+		"WHERE channel = $1 AND id != $2",
+		fxt.Channel.ID, fxt.Endpoint.ID)
+	defer data.DeleteFromTestDB(t, db, &endp)
+
+	params, _ := json.Marshal(msg.AdditionalParams)
+	if endp.Template != fxt.Offering.Template ||
+		strings.Trim(endp.Hash, " ") != msg.TemplateHash ||
+		endp.RawMsg != data.FromBytes(sealed) ||
+		endp.Status != data.MsgUnpublished ||
+		endp.PaymentReceiverAddress == nil ||
+		*endp.PaymentReceiverAddress != msg.PaymentReceiverAddress ||
+		endp.ServiceEndpointAddress == nil ||
+		*endp.ServiceEndpointAddress != msg.ServiceEndpointAddress ||
+		endp.Username == nil || *endp.Username != msg.Username ||
+		endp.Password == nil || *endp.Password != msg.Password ||
+		string(endp.AdditionalParams) != string(params) {
+		t.Fatalf("bad endpoint content")
+	}
+}
+
+func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterEndpointMsgSOMCGet, data.JobEndpoint)
+	defer fxt.Close()
+
+	err := fmt.Errorf("some error")
+	env.worker.deployConfig = func(db *reform.DB, endpoint, dir string) error {
+		return err
+	}
+
+	util.TestExpectResult(t, "run job", err,
+		env.worker.ClientAfterEndpointMsgSOMCGet(fxt.job))
+
+	err = nil
+	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
+
+	var endp data.Endpoint
+	data.FindInTestDB(t, db, &endp, "id", fxt.Endpoint.ID)
+
+	var ch data.Channel
+	data.FindInTestDB(t, db, &ch, "id", fxt.Channel.ID)
+
+	if endp.Status != data.MsgChPublished ||
+		ch.ServiceStatus != data.ServiceSuspended {
+		t.Fatalf("bad endpoint or channel status")
+	}
+}
+
+func TestClientPreChannelTopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelTopUp, data.JobChannel)
+	defer fxt.Close()
+
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	env.updateInTestDB(t, client)
+
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelTopUpData{
+		Channel:  fxt.Channel.ID,
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
+		fxt.Offering.SetupPrice
+
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+		env.worker.ClientPreChannelTopUp(fxt.job))
+
+	issued := time.Now()
+	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+
+	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
+
+	var tx data.EthTx
+	env.selectOneTo(t, &tx, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &tx)
+
+	if tx.Method != "TopUpChannel" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != client.EthAddr ||
+		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
+}
+
+func TestClientAfterChannelTopUp(t *testing.T) {
+	testAfterChannelTopUp(t, false)
+}
+
+func clientPreUncooperativeCloseRequestNormFlow(t *testing.T, env *workerTest,
+	fxt *workerTestFixture) {
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	env.updateInTestDB(t, client)
+
+	fxt.job.RelatedType = data.JobChannel
+	fxt.job.RelatedID = util.NewUUID()
+
+	setJobData(t, fxt.DB, fxt.job, ClientPreUncooperativeCloseRequestData{
+		Channel:  fxt.Channel.ID,
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	fxt.Channel.TotalDeposit = 1
+	fxt.Channel.ReceiptBalance = 1
+	env.updateInTestDB(t, fxt.Channel)
+
+	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
+
+	checkChanStatus(t, env, fxt.Channel.ID,
+		data.ChannelWaitChallenge)
+}
+
+func checkChanStatus(t *testing.T, env *workerTest, channel string,
+	status string) {
+	var ch data.Channel
+	env.findTo(t, &ch, channel)
+
+	if ch.ChannelStatus != status {
+		t.Fatal("channel status is wrong")
+	}
+}
+
+func TestClientPreUncooperativeCloseRequest(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreChannelTopUp, data.JobChannel)
+	defer fxt.Close()
+
+	issued := time.Now()
+
+	clientPreUncooperativeCloseRequestNormFlow(t, env, fxt)
+
+	var tx data.EthTx
+
+	env.selectOneTo(t, &tx, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &tx)
+
+	if tx.Method != "UncooperativeClose" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != fxt.Channel.Client ||
+		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
+
+	badChStatus := []string{data.ChannelClosedCoop,
+		data.ChannelClosedUncoop, data.ChannelWaitUncoop,
+		data.ChannelWaitCoop, data.ChannelWaitChallenge,
+		data.ChannelInChallenge}
+
+	badServiceStatus := []string{data.ServiceTerminated}
+
+	fxt.Channel.ReceiptBalance = 2
+	env.updateInTestDB(t, fxt.Channel)
+
+	util.TestExpectResult(t, "Job run", ErrChReceiptBalance,
+		env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+
+	for _, status := range badServiceStatus {
+		fxt.Channel.ServiceStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+
+		util.TestExpectResult(t, "Job run", ErrInvalidServiceStatus,
+			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+	}
+
+	for _, status := range badChStatus {
+		fxt.Channel.ChannelStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+
+		util.TestExpectResult(t, "Job run", ErrInvalidChStatus,
+			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
+	}
+}
+
+func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
+	defer fxt.Close()
+
+	st := data.Setting{Key: data.SettingEthChallengePeriod, Value: "0"}
+	data.InsertToTestDB(t, db, &st)
+	defer data.DeleteFromTestDB(t, db, &st)
+
+	runJob(t, env.worker.ClientAfterUncooperativeCloseRequest, fxt.job)
+
+	ch := new(data.Channel)
+	env.findTo(t, ch, fxt.Channel.ID)
+
+	if ch.ChannelStatus != data.ChannelInChallenge {
+		t.Fatal("channel status is wrong")
+	}
+
+	j, err := env.db.FindAllFrom(data.JobTable, "related_id",
+		fxt.Channel.ID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var jobs []*data.Job
+
+	for _, v := range j {
+		if job, ok := v.(*data.Job); ok {
+			jobs = append(jobs, job)
+		}
+	}
+
+	if len(jobs) != 2 {
+		t.Fatal("not all jobs are in the database")
+	}
+}
+
+func TestClientPreUncooperativeClose(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreUncooperativeClose, data.JobChannel)
+	defer fxt.Close()
+
+	client := data.NewTestAccount(data.TestPassword)
+	client.EthAddr = fxt.Channel.Client
+	if err := data.Save(db.Querier, client); err != nil {
+		t.Fatal(err)
+	}
+
+	issued := time.Now()
+
+	runJob(t, env.worker.ClientPreUncooperativeClose, fxt.job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+	if ch.ChannelStatus != data.ChannelWaitUncoop {
+		t.Fatal("bad channel status")
+	}
+
+	var tx data.EthTx
+	env.selectOneTo(t, &tx, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteEthTx(t, fxt.job.ID)
+
+	if tx.Method != "Settle" ||
+		tx.Status != data.TxSent ||
+		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
+		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
+		tx.AddrFrom != client.EthAddr ||
+		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
+		tx.GasPrice != uint64(testTXGasPrice) ||
+		tx.Gas != uint64(testTXGasLimit) ||
+		tx.RelatedType != data.JobChannel ||
+		tx.RelatedID != fxt.Channel.ID {
+		t.Fatalf("wrong transaction content")
+	}
+}
+
+func TestClientAfterUncooperativeClose(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterUncooperativeClose, data.JobChannel)
+	defer fxt.Close()
+
+	var job data.Job
+	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &job)
+
+	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
+	env.updateInTestDB(t, fxt.Channel)
+
+	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ChannelStatus != data.ChannelClosedUncoop {
+		t.Fatalf("expected %s channel status, but got %s",
+			data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+	}
+}
+
+func TestClientAfterCooperativeClose(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterCooperativeClose, data.JobChannel)
+	defer fxt.Close()
+
+	var job data.Job
+	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
+	defer env.deleteFromTestDB(t, &job)
+
+	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
+	env.updateInTestDB(t, fxt.Channel)
+
+	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
+
+	var jobTerm data.Job
+	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",
+		fxt.Channel.ID, fxt.job.ID)
+	defer env.deleteFromTestDB(t, &jobTerm)
+
+	if jobTerm.Type != data.JobClientPreServiceTerminate {
+		t.Fatal("bad job type")
+	}
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ChannelStatus != data.ChannelClosedCoop {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ChannelClosedCoop, fxt.Channel.ChannelStatus)
+	}
+}
+
+func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
+	workerF func(*data.Job) error, job *data.Job, runnerMethod int) {
+	calledMethod := -1
+	var calledChannel string
+	env.worker.runner = svcrun.Mock(
+		func(method int, channel string) (bool, error) {
+			calledMethod, calledChannel = method, channel
+			return false, nil
+		})
+
+	runJob(t, workerF, job)
+
+	if calledMethod != runnerMethod || calledChannel != job.RelatedID {
+		t.Fatalf("unexpected service runner call arguments")
+	}
+}
+
+func TestClientPreServiceTerminate(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceTerminate, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.TerminateChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrSameJobExists {
+		t.Fatal("job allready exists")
+	}
+
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.TerminateChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceTerminate, &job, svcrun.MockStop)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceTerminated {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+	}
+}
+
+func TestClientPreServiceSuspend(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceSuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrActiveJobsExist {
+		t.Fatal("job allready exists")
+	}
+
+	badStatus := []string{data.ServicePending, data.ServiceSuspended,
+		data.ServiceTerminated}
+
+	for _, status := range badStatus {
+		fxt.Channel.ServiceStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+		if _, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+			data.JobTask, false); err != proc.ErrBadServiceStatus {
+			t.Fatal("bad service status")
+		}
+	}
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fxt.Channel)
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.SuspendChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+	defer env.deleteFromTestDB(t, &job)
+
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceSuspend, &job, svcrun.MockStop)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceSuspended {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceSuspended, fxt.Channel.ServiceStatus)
+	}
+}
+
+func TestClientPreServiceUnsuspend(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceUnsuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	env.updateInTestDB(t, fxt.Channel)
+
+	if _, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+		data.JobTask, false); err != proc.ErrActiveJobsExist {
+		t.Fatal("job allready exists")
+	}
+
+	badStatus := []string{data.ServiceActive, data.ServiceTerminated}
+
+	for _, status := range badStatus {
+		fxt.Channel.ServiceStatus = status
+		env.updateInTestDB(t, fxt.Channel)
+		if _, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+			data.JobTask, false); err != proc.ErrBadServiceStatus {
+			t.Fatal("bad service status")
+		}
+	}
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	env.updateInTestDB(t, fxt.Channel)
+	env.deleteFromTestDB(t, fxt.job)
+
+	jobID, err := env.worker.processor.ActivateChannel(fxt.Channel.ID,
+		data.JobTask, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var job data.Job
+	env.findTo(t, &job, jobID)
+	defer env.deleteFromTestDB(t, &job)
+
+	runJobCheckingRunnerCall(t, env,
+		env.worker.ClientPreServiceUnsuspend, &job, svcrun.MockStart)
+
+	var ch data.Channel
+	env.findTo(t, &ch, fxt.Channel.ID)
+
+	if ch.ServiceStatus != data.ServiceActive {
+		t.Fatalf("expected %s service status, but got %s",
+			data.ServiceActive, fxt.Channel.ServiceStatus)
+	}
 }
 
 func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
-	t.Skip("TODO")
-	// 1. "preOfferingMsgSOMCGet"
-}
+	env := newWorkerTest(t)
+	defer env.close()
 
-func TestClientOfferingMsgSOMCGet(t *testing.T) {
-	t.Skip("TODO")
-	// 1. Get OfferingMessage from SOMC
-	// 2. set msg_status="msg_channel_published"
+	fxt := env.newTestFixture(t,
+		data.JobClientPreOfferingMsgSOMCGet, data.JobOffering)
+	defer fxt.Close()
+
+	// Set id for offerring that is about to be created.
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	var offeringHash common.Hash
+
+	// Create expected offering.
+	expectedOffering := *fxt.Offering
+	expectedOffering.ID = fxt.job.RelatedID
+	expectedOffering.Status = data.MsgChPublished
+	expectedOffering.OfferStatus = data.OfferRegister
+	expectedOffering.Country = "US"
+	msg := offer.OfferingMessage(fxt.Account,
+		fxt.TemplateOffer, &expectedOffering)
+	msgBytes, err := json.Marshal(msg)
+	util.TestExpectResult(t, "Marshall msg", nil, err)
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
+	packed, err := messages.PackWithSignature(msgBytes, key)
+	util.TestExpectResult(t, "PackWithSignature", nil, err)
+	expectedOffering.RawMsg = data.FromBytes(packed)
+	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
+	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	// Create eth log records used by job.
+	var curSupply uint16 = expectedOffering.Supply
+	logData, err := logOfferingCreatedDataArguments.Pack(curSupply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	minDeposit := big.NewInt(10)
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash(agentAddr.Bytes()),
+		offeringHash,
+		common.BytesToHash(minDeposit.Bytes()),
+	}
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Data = data.FromBytes(logData)
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteFindOfferings(t,
+			[]string{expectedOffering.Hash}, [][]byte{packed})
+	}()
+
+	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
+
+	created := &data.Offering{}
+	env.selectOneTo(t, created, "WHERE hash=$1", expectedOffering.Hash)
+	defer env.deleteFromTestDB(t, created)
+
+	if expectedOffering.Template != created.Template ||
+		expectedOffering.Product != created.Product ||
+		created.Status != data.MsgChPublished ||
+		expectedOffering.Agent != created.Agent ||
+		expectedOffering.RawMsg != created.RawMsg ||
+		fxt.Product.Name != created.ServiceName ||
+		expectedOffering.Description != created.Description ||
+		expectedOffering.Country != created.Country ||
+		expectedOffering.Supply != created.Supply ||
+		expectedOffering.UnitName != created.UnitName ||
+		expectedOffering.BillingType != created.BillingType ||
+		expectedOffering.SetupPrice != created.SetupPrice ||
+		expectedOffering.UnitPrice != created.UnitPrice ||
+		expectedOffering.MinUnits != created.MinUnits ||
+		expectedOffering.BillingInterval != created.BillingInterval ||
+		expectedOffering.MaxBillingUnitLag != created.MaxBillingUnitLag ||
+		expectedOffering.MaxSuspendTime != created.MaxSuspendTime ||
+		expectedOffering.MaxInactiveTimeSec != created.MaxInactiveTimeSec ||
+		expectedOffering.FreeUnits != created.FreeUnits ||
+		!bytes.Equal(expectedOffering.AdditionalParams, created.AdditionalParams) {
+		t.Fatal("wrong offering created")
+	}
 }
 
 func TestClientPreAccountAddBalanceApprove(t *testing.T) {

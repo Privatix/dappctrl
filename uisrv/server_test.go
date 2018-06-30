@@ -12,12 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"gopkg.in/reform.v1"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -52,7 +54,8 @@ func TestMain(m *testing.M) {
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
+	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,
+		proc.NewProcessor(proc.NewConfig(), queue))
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()
@@ -77,18 +80,24 @@ func createTestChannel(t *testing.T) *data.Channel {
 	product := data.NewTestProduct()
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	offering := data.NewTestOffering(agent.EthAddr, product.ID, tplOffer.ID)
+	offering.MaxInactiveTimeSec = pointer.ToUint64(10)
+	offering.UnitName = "megabytes"
+	offering.UnitType = data.UnitScalar
+	offering.SetupPrice = 22
+	offering.UnitPrice = 11
 	ch := data.NewTestChannel(
 		agent.EthAddr,
 		client.EthAddr,
 		offering.ID,
 		0,
-		1,
+		10000,
 		data.ChannelActive)
+	ch.ServiceChangedTime = pointer.ToTime(time.Now())
 	insertItems(t,
 		agent,
 		client,
-		product,
 		tplOffer,
+		product,
 		offering,
 		ch)
 	return ch

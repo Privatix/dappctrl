@@ -6,6 +6,8 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+
+	"github.com/xeipuuv/gojsonschema"
 )
 
 const certificate = "CERTIFICATE"
@@ -79,4 +81,12 @@ func IsTLSCert(block string) bool {
 	}
 
 	return true
+}
+
+// ValidateJSON validates a given JSON against a given schema.
+func ValidateJSON(schema, data []byte) bool {
+	sloader := gojsonschema.NewBytesLoader(schema)
+	dloader := gojsonschema.NewBytesLoader(data)
+	result, err := gojsonschema.Validate(sloader, dloader)
+	return err == nil && result.Valid() && len(result.Errors()) == 0
 }

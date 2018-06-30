@@ -5,10 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/reform.v1"
 )
@@ -26,15 +28,19 @@ func FromBytes(src []byte) string {
 // ToHash returns the ethereum's hash represented by the base64 string s.
 func ToHash(h string) (common.Hash, error) {
 	hashBytes, err := ToBytes(h)
-	ret := common.BytesToHash(hashBytes)
-	return ret, err
+	if err != nil {
+		err = fmt.Errorf("unable to parse ethereum hash: %s", err)
+	}
+	return common.BytesToHash(hashBytes), err
 }
 
 // ToAddress returns ethereum's address from base 64 encoded string.
 func ToAddress(addr string) (common.Address, error) {
 	addrBytes, err := ToBytes(addr)
-	ret := common.BytesToAddress(addrBytes)
-	return ret, err
+	if err != nil {
+		err = fmt.Errorf("unable to parse ethereum addr: %s", err)
+	}
+	return common.BytesToAddress(addrBytes), err
 }
 
 // BytesToUint32 using big endian.
@@ -50,6 +56,16 @@ func Uint32ToBytes(x uint32) [4]byte {
 	var xBytes [4]byte
 	binary.BigEndian.PutUint32(xBytes[:], x)
 	return xBytes
+}
+
+// Uint192ToBytes using big endian with leading zeros.
+func Uint192ToBytes(x *big.Int) [24]byte {
+	var ret [24]byte
+	xBytes := x.Bytes()
+	for i, v := range xBytes {
+		ret[24 - len(xBytes) + i] = v
+	}
+	return ret
 }
 
 // HashPassword computes encoded hash of the password.
@@ -93,4 +109,92 @@ func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
 
 	return value, nil
 
+}
+
+// IsAgent specifies user role. "true" - agent. "false" - client.
+func IsAgent(db *reform.Querier) (bool, error) {
+	var setting Setting
+	err := db.FindByPrimaryKeyTo(&setting, IsAgentKey)
+	if err != nil {
+		var err2 error
+
+		if err == sql.ErrNoRows {
+			err2 = fmt.Errorf("key %s is not exist"+
+				" in Setting table", IsAgentKey)
+		} else {
+			err2 = fmt.Errorf("failed to get key %s"+
+				" from Setting table", IsAgentKey)
+		}
+		return false, err2
+	}
+	val, err := strconv.ParseBool(setting.Value)
+	if err != nil {
+		return false, fmt.Errorf("key %s from Setting table"+
+			" has an incorrect format", IsAgentKey)
+	}
+	return val, nil
+}
+
+// FindByPrimaryKeyTo calls db.FindByPrimaryKeyTo() returning more descriptive
+// error.
+func FindByPrimaryKeyTo(db *reform.Querier,
+	rec reform.Record, key interface{}) error {
+	if err := db.FindByPrimaryKeyTo(rec, key); err != nil {
+		return fmt.Errorf("failed to find %T by primary key: %s",
+			rec, err)
+	}
+	return nil
+}
+
+// Insert calls db.Insert() returning more descriptive error.
+func Insert(db *reform.Querier, str reform.Struct) error {
+	if err := db.Insert(str); err != nil {
+		return fmt.Errorf("failed to insert %T: %s", str, err)
+	}
+	return nil
+}
+
+// Save calls db.Save() returning more descriptive error.
+func Save(db *reform.Querier, rec reform.Record) error {
+	if err := db.Save(rec); err != nil {
+		return fmt.Errorf("failed to save %T: %s", rec, err)
+	}
+	return nil
+}
+
+// FindOneTo calls db.FindOneTo() returning more descriptive error.
+func FindOneTo(db *reform.Querier,
+	str reform.Struct, column string, arg interface{}) error {
+	if err := db.FindOneTo(str, column, arg); err != nil {
+		return fmt.Errorf("failed to find %T by '%s' column: %s",
+			str, column, err)
+	}
+	return nil
+}
+
+// ChannelKey returns the unique channel identifier
+// used in a Privatix Service Contract.
+func ChannelKey(client, agent string, block uint32,
+	offeringHash string) ([]byte, error) {
+	clientAddr, err := ToAddress(client)
+	if err != nil {
+		return nil, err
+	}
+
+	agentAddr, err := ToAddress(agent)
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := base64.URLEncoding.DecodeString(
+		strings.TrimSpace(offeringHash))
+	if err != nil {
+		return nil, err
+	}
+
+	blockBytes := Uint32ToBytes(block)
+
+	return crypto.Keccak256(clientAddr.Bytes(),
+		agentAddr.Bytes(), blockBytes[:],
+		common.BytesToHash(hash).Bytes()), nil
 }

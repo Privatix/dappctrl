@@ -43,6 +43,23 @@ func (s *Server) handlePutProducts(w http.ResponseWriter, r *http.Request) {
 	if !s.parseProductPayload(w, r, product) {
 		return
 	}
+
+	// TODO(maxim) make it on front-end
+	oldProduct := new(data.Product)
+	if err := s.db.FindByPrimaryKeyTo(oldProduct, product.ID); err != nil {
+		s.logger.Warn("failed to find product: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	if product.Salt == 0 {
+		product.Salt = oldProduct.Salt
+	}
+
+	if product.Password == "" {
+		product.Password = oldProduct.Password
+	}
+
 	if err := s.db.Update(product); err != nil {
 		s.logger.Warn("failed to update product: %v", err)
 		s.replyUnexpectedErr(w)

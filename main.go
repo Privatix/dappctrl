@@ -3,18 +3,24 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	abill "github.com/privatix/dappctrl/agent/bill"
+	cbill "github.com/privatix/dappctrl/client/bill"
+	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/execsrv"
 	"github.com/privatix/dappctrl/job"
+	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/handlers"
 	"github.com/privatix/dappctrl/proc/worker"
+	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/uisrv"
@@ -32,6 +38,7 @@ type ethConfig struct {
 type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
+	ClientMonitor *cbill.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
@@ -40,21 +47,28 @@ type config struct {
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
+	Report        *bugsnag.Config
+	ServiceRunner *svcrun.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
+	VPNClient     *vpncli.Config
 }
 
 func newConfig() *config {
 	return &config{
 		BlockMonitor:  monitor.NewConfig(),
+		ClientMonitor: cbill.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
+		Report:        bugsnag.NewConfig(),
+		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
+		VPNClient:     vpncli.NewConfig(),
 	}
 }
 
@@ -76,6 +90,8 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func main() {
+	defer bugsnag.PanicHunter()
+
 	conf := newConfig()
 	readConfig(conf)
 
@@ -83,12 +99,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}
+	defer logger.GracefulStop()
 
 	db, err := data.NewDB(conf.DB, logger)
 	if err != nil {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	reporter := bugsnag.NewClient(conf.Report, db, logger)
+	logger.Reporter(reporter)
 
 	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {
@@ -120,13 +140,6 @@ func main() {
 			sess.ListenAndServe())
 	}()
 
-	// TODO: Remove when not needed anymore.
-	exec := execsrv.NewServer(logger)
-	go func() {
-		logger.Fatal("failed to start exec server: %s",
-			exec.ListenAndServe())
-	}()
-
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
 		panic(err)
@@ -134,21 +147,45 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(db, somcConn,
+	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey)
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
+		conf.VPNClient)
 	if err != nil {
 		panic(err)
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, proc.HandlersMap(worker))
+	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	worker.SetQueue(queue)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage)
+	pr := proc.NewProcessor(conf.Proc, queue)
+	worker.SetProcessor(pr)
+
+	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
+	worker.SetRunner(runner)
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
+	}()
+
+	amon, err := abill.NewMonitor(
+		time.Duration(5)*time.Second, db, logger, pr)
+	if err != nil {
+		logger.Fatal("failed to create agent billing monitor: %s", err)
+	}
+	go func() {
+		logger.Fatal("failed to run agent billing monitor: %s",
+			amon.Run())
+	}()
+
+	cmon := cbill.NewMonitor(conf.ClientMonitor,
+		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+	go func() {
+		logger.Fatal("failed to run client billing monitor: %s",
+			cmon.Run())
 	}()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,

@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util"
 )
 
 func TestPreAccountAddBalanceApprove(t *testing.T) {
@@ -21,7 +22,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 
 	var transferAmount int64 = 10
 
-	fixture.setJobData(t, data.JobBalanceData{
+	setJobData(t, fixture.DB, fixture.job, data.JobBalanceData{
 		Amount: uint(transferAmount),
 	})
 
@@ -49,18 +50,44 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 }
 
 func TestPreAccountAddBalance(t *testing.T) {
-	// PSC.addBalanceERC20()
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobPreAccountAddBalance,
 		data.JobAccount)
 	defer env.close()
 	defer fixture.close()
 
-	var transferAmount int64 = 10
-
-	fixture.setJobData(t, data.JobBalanceData{
+	transferAmount := int64(10)
+	approveJob := data.NewTestJob(data.JobPreAccountAddBalanceApprove,
+		data.JobUser, data.JobAccount)
+	approveJob.RelatedID = fixture.Account.ID
+	env.insertToTestDB(t, approveJob)
+	setJobData(t, fixture.DB, approveJob, &data.JobBalanceData{
 		Amount: uint(transferAmount),
 	})
+	defer env.deleteFromTestDB(t, approveJob)
+
+	txHash := data.FromBytes(common.HexToHash("0xd238f7").Bytes())
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fixture.job.ID
+	ethLog.TxHash = txHash
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	tx := &data.EthTx{
+		ID: util.NewUUID(),
+		JobID: &approveJob.ID,
+		Hash: txHash,
+		RelatedType: data.JobAccount,
+		RelatedID:   fixture.Account.ID,
+		Status:      data.TxSent,
+		Gas:         1,
+		GasPrice:    uint64(1),
+		TxRaw:       []byte("{}"),
+	}
+	env.insertToTestDB(t, tx)
+
+	defer env.deleteFromTestDB(t, tx)
 
 	runJob(t, env.worker.PreAccountAddBalance, fixture.job)
 
@@ -86,7 +113,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 
 	var amount int64 = 10
 
-	fixture.setJobData(t, &data.JobBalanceData{
+	setJobData(t, fixture.DB, fixture.job, &data.JobBalanceData{
 		Amount: uint(amount),
 	})
 
@@ -165,4 +192,67 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	}
 
 	testCommonErrors(t, worker, *fixture.job)
+}
+
+func testAfterChannelTopUp(t *testing.T, agent bool) {
+	var jobType string
+
+	if agent {
+		jobType = data.JobAgentAfterChannelTopUp
+	} else {
+		jobType = data.JobClientAfterChannelTopUp
+	}
+
+	// Add deposit to channels.total_deposit
+	env := newWorkerTest(t)
+	fixture := env.newTestFixture(t, jobType,
+		data.JobChannel)
+	defer env.close()
+	defer fixture.close()
+
+	block := fixture.Channel.Block
+	addedDeposit := big.NewInt(1)
+
+	eventData, err := logChannelTopUpDataArguments.Pack(block, addedDeposit)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
+	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
+	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
+	topics := data.LogTopics{
+		common.BytesToHash(agentAddr.Bytes()),
+		common.BytesToHash(clientAddr.Bytes()),
+		offeringHash,
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fixture.job.ID
+	ethLog.Data = data.FromBytes(eventData)
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	var job func(*data.Job) error
+
+	if agent {
+		job = env.worker.AgentAfterChannelTopUp
+	} else {
+		job = env.worker.ClientAfterChannelTopUp
+	}
+	runJob(t, job, fixture.job)
+
+	channel := new(data.Channel)
+	env.findTo(t, channel, fixture.Channel.ID)
+
+	diff := channel.TotalDeposit - fixture.Channel.TotalDeposit
+	if diff != addedDeposit.Uint64() {
+		t.Fatal("total deposit not updated")
+	}
+
+	testCommonErrors(t, job, *fixture.job)
 }

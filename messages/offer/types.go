@@ -18,5 +18,6 @@ type Message struct {
 	MaxSuspendTime            uint    `json:"maxSuspendTime"`
 	MaxInactiveTimeSec        *uint64 `json:"maxInactiveTimeSec"`
 	FreeUnits                 uint8   `json:"freeUnits"`
+	Nonce                     string  `json:"nonce"`
 	ServiceSpecificParameters []byte  `json:"serviceSpecificParameters"`
 }

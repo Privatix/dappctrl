@@ -27,7 +27,7 @@ type Conn struct {
 	conf    *Config
 	logger  *util.Logger
 	conn    *websocket.Conn
-	pending map[string]chan reply
+	pending map[uint32]chan reply
 	mtx     sync.Mutex // Mostly to guard the pending map.
 	exit    bool
 	id      uint32
@@ -44,7 +44,7 @@ func NewConn(conf *Config, logger *util.Logger) (*Conn, error) {
 		conf:    conf,
 		logger:  logger,
 		conn:    c,
-		pending: make(map[string]chan reply),
+		pending: make(map[uint32]chan reply),
 	}
 
 	go conn.handleMessages()

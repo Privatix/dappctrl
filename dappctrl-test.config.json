@@ -65,11 +65,7 @@
         "RetrySec": [ 0, 1, 2 ],
         "SessSrvStartTimeout": [0, 1, 2 ],
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"],
-        "VPNConfig": {
-            "Login": "!login!",
-            "Pass": "test-pass"
-        }
+        "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
     },
 
     "Eth": {
@@ -79,6 +75,11 @@
         },
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": ""
+    },
+
+    "JobHandlerTest": {
+        "SOMCTimeout": 10,
+        "ReactionDelay": 10
     },
 
     "Gas": {
@@ -105,7 +106,8 @@
     },
 
     "JobHanlderTest": {
-        "SOMCTimeout": 10
+        "SOMCTimeout": 10,
+        "ReactionDelay": 10
     },
 
     "Job": {
@@ -146,12 +148,27 @@
     },
 
     "Log": {
-        "Level": "info"
+        "Level": "info",
+        "LogPath": ""
     },
 
     "PayServer": {
         "Addr": "localhost:9000",
         "TLS": null
+    },
+
+    "ServiceRunner": {
+        "Services": {
+            "VPN": {
+                "Name": "sleep",
+                "Args": [".1"],
+                "Single": true
+            }
+        }
+    },
+
+    "ServiceRunnerTest": {
+        "ExecPeriod": 100
     },
 
     "SessionServer": {

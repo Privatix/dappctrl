@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/rakyll/statik/fs"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	_ "github.com/privatix/dappctrl/statik"
@@ -21,6 +21,15 @@ import (
 const (
 	errGenConfig    = "config file is empty"
 	errDeployConfig = "error deploy config"
+	errTestAddress  = "test network address are not available"
+
+	nameCipher        = "cipher"
+	nameConnectRetry  = "connect-retry"
+	namePing          = "ping"
+	namePingRestart   = "ping-restart"
+	nameServerAddress = "serverAddress"
+
+	testServerName = "testserver"
 )
 
 type srvData struct {
@@ -30,10 +39,15 @@ type srvData struct {
 
 func createSrvData(t *testing.T) *srvData {
 	out := srvConfig(t)
+	out[nameServerAddress] = testServerName
 
 	param, err := json.Marshal(out)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if len(conf.EptTest.ValidHost) < 1 {
+		t.Fatal(errTestAddress)
 	}
 
 	address := strings.Split(conf.EptTest.ValidHost[0], ":")
@@ -141,7 +155,17 @@ func TestGetText(t *testing.T) {
 }
 
 func TestDeployClientConfig(t *testing.T) {
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
+
 	srv := createSrvData(t)
+
+	fxt.Endpoint.AdditionalParams = srv.param
+	fxt.Endpoint.ServiceEndpointAddress = pointer.ToString(srv.addr)
+
+	if err := db.Update(fxt.Endpoint); err != nil {
+		t.Fatal(err)
+	}
 
 	rootDir, err := ioutil.TempDir("", util.NewUUID())
 	if err != nil {
@@ -150,28 +174,23 @@ func TestDeployClientConfig(t *testing.T) {
 
 	defer os.RemoveAll(rootDir)
 
-	objects := []reform.Record{&data.Channel{ID: util.NewUUID()},
-		&data.Endpoint{Channel: util.NewUUID()}}
+	if err := DeployConfig(db, fxt.Endpoint.ID, rootDir); err != nil {
+		t.Fatal(err)
+	}
 
-	for _, record := range objects {
-		end, err := Deploy(record, rootDir, srv.addr,
-			conf.EptTest.VPNConfig.Login,
-			conf.EptTest.VPNConfig.Pass, srv.param)
-		if err != nil {
-			t.Fatal(err)
-		}
+	target := filepath.Join(rootDir, fxt.Endpoint.Channel)
 
-		accessFile := filepath.Join(end, clientAccessName)
-		confFile := filepath.Join(end, clientConfName)
+	accessFile := filepath.Join(target, clientAccessName)
+	confFile := filepath.Join(target, clientConfName)
 
-		if notExist(confFile) ||
-			notExist(accessFile) {
+	for _, f := range []string{accessFile, confFile} {
+		if notExist(f) {
 			t.Fatal(errDeployConfig)
 		}
-
-		checkAccess(t, accessFile, conf.EptTest.VPNConfig.Login,
-			conf.EptTest.VPNConfig.Pass)
-
-		checkConf(t, confFile, srv)
 	}
+
+	checkAccess(t, accessFile, *fxt.Endpoint.Username,
+		*fxt.Endpoint.Password)
+
+	checkConf(t, confFile, srv)
 }

@@ -11,42 +11,50 @@
         "Timeout": 5
     },
 
+    "ClientMonitor": {
+        "CollectPeriod": 5000,
+        "RequestTLS": false,
+        "RequestTimeout": 2500
+    },
+
     "DB": {
         "Conn": {
-            "user": "postgres",
             "dbname": "dappctrl",
-            "sslmode": "disable"
+            "sslmode": "disable",
+            "user": "postgres",
+            "host": "localhost",
+            "port": "5433"
         }
     },
 
     "Eth": {
         "Contract" : {
-            "PTCAddrHex": "0xcA9a5951628486fAf8B9f58dB565E33ef9673394",
-            "PSCAddrHex": "0xa396e36ca7c36d7b74580f4ab6943704b8f2ee2e"
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
+            "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
-        "GethURL": "https://rinkeby.infura.io/2B6KNL16rwlqe4fjM7BB"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
     },
 
     "Gas": {
         "PTC": {
-            "Approve": 45375
+            "Approve": 100000
         },
         "PSC": {
-            "AddBalanceERC20": 49412,
-            "RegisterServiceOffering": 95625,
-            "CreateChannel": 76797,
-            "CooperativeClose": 97566,
-            "ReturnBalanceERC20": 43417,
-            "SetNetworkFee": 27400,
-            "UncooperativeClose": 56612,
-            "Settle": 41828,
-            "TopUp": 42065,
-            "GetChannelInfo": 29066,
-            "PublishServiceOfferingEndpoint": 30528,
-            "GetKey": 27310,
-            "BalanceOf": 23655,
-            "PopupServiceOffering": 32674,
-            "RemoveServiceOffering": 39238
+            "AddBalanceERC20": 100000,
+            "RegisterServiceOffering": 200000,
+            "CreateChannel": 200000,
+            "CooperativeClose": 200000,
+            "ReturnBalanceERC20": 100000,
+            "SetNetworkFee": 100000,
+            "UncooperativeClose": 100000,
+            "Settle": 100000,
+            "TopUp": 100000,
+            "GetChannelInfo": 100000,
+            "PublishServiceOfferingEndpoint": 100000,
+            "GetKey": 100000,
+            "BalanceOf": 100000,
+            "PopupServiceOffering": 100000,
+            "RemoveServiceOffering": 100000
         }
     },
 
@@ -63,19 +71,29 @@
                 "TryPeriod": 60000
             },
             "preAccountAddBalanceApprove": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "preAccountAddBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "afterAccountAddBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "preAccountReturnBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "afterAccountReturnBalance": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
             "addCheckBalance": {
                 "TryLimit": 0,
@@ -85,7 +103,8 @@
     },
 
     "Log": {
-        "Level": "info"
+        "Level": "info",
+        "LogPath": "/var/log"
     },
 
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
@@ -93,6 +112,16 @@
     "PayServer": {
         "Addr": "0.0.0.0:9000",
         "TLS": null
+    },
+
+    "ServiceRunner": {
+        "Services": {
+            "VPN": {
+                "Name": "/root/go/bin/dappvpn",
+                "Args": ["-config=/opt/privatix/config/dappvpn.config.json"],
+                "Single": true
+            }
+        }
     },
 
     "SessionServer": {
@@ -103,5 +132,7 @@
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://89.38.96.53:8080"
-    }
+    },
+
+    "StaticPassword": ""
 }

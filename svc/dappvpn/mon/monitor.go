@@ -15,8 +15,7 @@ import (
 // Config is a configuration for OpenVPN monitor.
 type Config struct {
 	Addr            string
-	ByteCountPeriod uint   // In seconds.
-	Channel         string // Client mode channel.
+	ByteCountPeriod uint // In seconds.
 }
 
 // NewConfig creates a default configuration for OpenVPN monitor.
@@ -37,23 +36,33 @@ type client struct {
 type Monitor struct {
 	conf            *Config
 	logger          *util.Logger
-	handleByteCount HandleByteCountFunc
+	handleSession   HandleSessionFunc
+	channel         string // Client mode channel (empty in server mode).
 	conn            net.Conn
 	mtx             sync.Mutex // To guard writing.
 	clients         map[uint]client
+	clientConnected bool
 }
 
-// HandleByteCountFunc is a byte count handler. If it returns false, then the
-// monitor kills the corresponding session.
-type HandleByteCountFunc func(ch string, up, down uint64) bool
+// Session events.
+const (
+	SessionStarted   = iota // For client mode only.
+	SessionStopped   = iota // For client mode only.
+	SessionByteCount = iota
+)
+
+// HandleSessionFunc is a session event handler. If it returns false in server
+// mode, then the monitor kills the corresponding session.
+type HandleSessionFunc func(ch string, event int, up, down uint64) bool
 
 // NewMonitor creates a new OpenVPN monitor.
 func NewMonitor(conf *Config, logger *util.Logger,
-	handleByteCount HandleByteCountFunc) *Monitor {
+	handleSession HandleSessionFunc, channel string) *Monitor {
 	return &Monitor{
-		conf:            conf,
-		logger:          logger,
-		handleByteCount: handleByteCount,
+		conf:          conf,
+		logger:        logger,
+		handleSession: handleSession,
+		channel:       channel,
 	}
 }
 
@@ -81,11 +90,7 @@ func (m *Monitor) MonitorTraffic() error {
 
 	reader := bufio.NewReader(m.conn)
 
-	if err := m.requestClients(); err != nil {
-		return err
-	}
-
-	if err := m.setByteCountPeriod(); err != nil {
+	if err := m.initConn(); err != nil {
 		return err
 	}
 
@@ -121,6 +126,28 @@ func (m *Monitor) killSession(cn string) error {
 	return m.write(fmt.Sprintf("kill %s", cn))
 }
 
+func (m *Monitor) initConn() error {
+	if err := m.setByteCountPeriod(); err != nil {
+		return err
+	}
+
+	if len(m.channel) == 0 {
+		if err := m.requestClients(); err != nil {
+			return err
+		}
+	} else {
+		if err := m.write("state on"); err != nil {
+			return err
+		}
+
+		if err := m.write("hold release"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 const (
 	prefixClientListHeader  = "HEADER,CLIENT_LIST,"
 	prefixClientList        = "CLIENT_LIST,"
@@ -128,6 +155,7 @@ const (
 	prefixByteCountClient   = ">BYTECOUNT:"
 	prefixClientEstablished = ">CLIENT:ESTABLISHED,"
 	prefixError             = "ERROR: "
+	prefixState             = ">STATE:"
 )
 
 func (m *Monitor) processReply(s string) error {
@@ -152,6 +180,10 @@ func (m *Monitor) processReply(s string) error {
 
 	if strings.HasPrefix(s, prefixClientEstablished) {
 		return m.requestClients()
+	}
+
+	if strings.HasPrefix(s, prefixState) {
+		return m.processState(s[len(prefixState):])
 	}
 
 	if strings.HasPrefix(s, prefixError) {
@@ -210,7 +242,7 @@ func (m *Monitor) processByteCount(s string) error {
 		cl.channel, up, down)
 
 	go func() {
-		if !m.handleByteCount(cl.channel, up, down) {
+		if !m.handleSession(cl.channel, SessionByteCount, up, down) {
 			m.killSession(cl.commonName)
 		}
 	}()
@@ -219,6 +251,10 @@ func (m *Monitor) processByteCount(s string) error {
 }
 
 func (m *Monitor) processByteCountClient(s string) error {
+	if !m.clientConnected {
+		return nil
+	}
+
 	sp := split(s)
 
 	down, err := strconv.ParseUint(sp[0], 10, 64)
@@ -234,8 +270,28 @@ func (m *Monitor) processByteCountClient(s string) error {
 	m.logger.Info("openvpn byte count: up %d, down %d", up, down)
 
 	go func() {
-		m.handleByteCount(m.conf.Channel, up, down)
+		m.handleSession(m.channel, SessionByteCount, up, down)
 	}()
+
+	return nil
+}
+
+func (m *Monitor) processState(s string) error {
+	connected := split(s)[1] == "CONNECTED"
+
+	if m.clientConnected && !connected {
+		m.logger.Warn("disconnected from server")
+		go func() {
+			m.handleSession(m.channel, SessionStopped, 0, 0)
+		}()
+		m.clientConnected = false
+	} else if !m.clientConnected && connected {
+		m.logger.Warn("connected to server")
+		go func() {
+			m.handleSession(m.channel, SessionStarted, 0, 0)
+		}()
+		m.clientConnected = true
+	}
 
 	return nil
 }

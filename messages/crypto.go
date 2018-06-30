@@ -25,11 +25,10 @@ func AgentSeal(msg, clientPub []byte, agentKey *ecdsa.PrivateKey) ([]byte, error
 
 // ClientOpen decrypts message using client's key and verifies using agent's key.
 func ClientOpen(c, agentPub []byte, clientPrv *ecdsa.PrivateKey) ([]byte, error) {
-	sealed := c[:len(c)-sigLen]
+	sealed, sig := UnpackSignature(c)
 	hash := ethcrypto.Keccak256(sealed)
-	sig := c[len(c)-sigLen:]
 
-	if !ethcrypto.VerifySignature(agentPub, hash, sig) {
+	if !VerifySignature(agentPub, hash, sig) {
 		return nil, fmt.Errorf("wrong signature")
 	}
 
@@ -51,6 +50,18 @@ func PackWithSignature(msg []byte, key *ecdsa.PrivateKey) ([]byte, error) {
 	}
 
 	return packSignature(msg, sig), nil
+}
+
+// UnpackSignature unpacks msg from signature.
+func UnpackSignature(c []byte) (msg []byte, sig []byte) {
+	msg = c[:len(c)-sigLen]
+	sig = c[len(c)-sigLen:]
+	return
+}
+
+// VerifySignature returns true if signature is correct.
+func VerifySignature(pubk, msg, sig []byte) bool {
+	return ethcrypto.VerifySignature(pubk, msg, sig)
 }
 
 // signature computes and returns signature.

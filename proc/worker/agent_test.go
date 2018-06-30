@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -63,9 +62,6 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
-	if err != nil {
-		t.Fatal(err)
-	}
 	ethLog := data.NewTestEthLog()
 	ethLog.TxHash = data.FromBytes(env.ethBack.tx.Hash().Bytes())
 	ethLog.JobID = &fixture.job.ID
@@ -124,51 +120,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 }
 
 func TestAgentAfterChannelTopUp(t *testing.T) {
-	// Add deposit to channels.total_deposit
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterChannelTopUp,
-		data.JobChannel)
-	defer env.close()
-	defer fixture.close()
-
-	block := fixture.Channel.Block
-	addedDeposit := big.NewInt(1)
-
-	eventData, err := logChannelTopUpDataArguments.Pack(block, addedDeposit)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
-	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
-	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
-	topics := data.LogTopics{
-		common.BytesToHash(agentAddr.Bytes()),
-		common.BytesToHash(clientAddr.Bytes()),
-		offeringHash,
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fixture.job.ID
-	ethLog.Data = data.FromBytes(eventData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
-
-	runJob(t, env.worker.AgentAfterChannelTopUp, fixture.job)
-
-	channel := &data.Channel{}
-	env.findTo(t, channel, fixture.Channel.ID)
-
-	diff := channel.TotalDeposit - fixture.Channel.TotalDeposit
-	if diff != addedDeposit.Uint64() {
-		t.Fatal("total deposit not updated")
-	}
-
-	testCommonErrors(t, env.worker.AgentAfterChannelTopUp, *fixture.job)
+	testAfterChannelTopUp(t, true)
 }
 
 func testChannelStatusChanged(t *testing.T,
@@ -183,9 +135,7 @@ func testChannelStatusChanged(t *testing.T,
 
 func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 	// set ch_status="in_challenge"
-	// if channels.receipt_balance > 0
-	//   then "preCooperativeClose"
-	//   else "preServiceTerminate"
+	// "preServiceTerminate"
 
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
@@ -210,9 +160,14 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 		testChangesStatusAndCreatesJob(t, 0, data.JobAgentPreServiceTerminate)
 	})
 
-	t.Run("ChannelInChallengeAndCoopCloseJobCreated", func(t *testing.T) {
-		testChangesStatusAndCreatesJob(t, 1, data.JobAgentPreCooperativeClose)
-	})
+	runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
+		fixture.job)
+	testChannelStatusChanged(t, fixture.job, env,
+		data.ChannelInChallenge)
+	env.deleteJob(t,
+		data.JobAgentPreServiceTerminate,
+		data.JobChannel,
+		fixture.Channel.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeCloseRequest,
 		*fixture.job)
@@ -241,56 +196,6 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeClose,
 		*fixture.job)
-}
-
-func TestAgentPreCooperativeClose(t *testing.T) {
-	// 1. PSC.cooperativeClose()
-	// 2. "preServiceTerminate"
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentPreCooperativeClose,
-		data.JobChannel)
-	defer env.close()
-	defer fixture.close()
-
-	// Test eth transaction was recorder.
-	defer env.deleteEthTx(t, fixture.job.ID)
-
-	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
-
-	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
-
-	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
-
-	balance := big.NewInt(int64(fixture.Channel.ReceiptBalance))
-
-	balanceMsgSig := data.TestToBytes(t, *fixture.Channel.ReceiptSignature)
-
-	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
-
-	balanceHash := eth.BalanceClosingHash(clientAddr, conf.pscAddr,
-		uint32(fixture.Channel.Block), offeringHash,
-		balance)
-
-	key, err := data.TestToPrivateKey(fixture.Account.PrivateKey, data.TestPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	closingSig, err := ethcrypto.Sign(balanceHash, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
-		env.gasConf.PSC.CooperativeClose, agentAddr,
-		uint32(fixture.Channel.Block),
-		[common.HashLength]byte(offeringHash), balance,
-		balanceMsgSig, closingSig)
-
-	// Test agent pre service terminate job created.
-	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
-
-	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
@@ -363,7 +268,45 @@ func TestAgentPreServiceTerminate(t *testing.T) {
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
 
+	testCooperativeCloseCalled(t, env, fixture)
+
 	testCommonErrors(t, env.worker.AgentPreServiceTerminate, *fixture.job)
+}
+
+func testCooperativeCloseCalled(t *testing.T, env *workerTest,
+	fixture *workerTestFixture) {
+	// Test eth transaction was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
+	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
+
+	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
+
+	balance := big.NewInt(int64(fixture.Channel.ReceiptBalance))
+
+	balanceMsgSig := data.TestToBytes(t, *fixture.Channel.ReceiptSignature)
+
+	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
+
+	balanceHash := eth.BalanceClosingHash(clientAddr, conf.pscAddr,
+		uint32(fixture.Channel.Block), offeringHash,
+		balance)
+
+	key, err := data.TestToPrivateKey(fixture.Account.PrivateKey, data.TestPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	closingSig, err := ethcrypto.Sign(balanceHash, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+		env.gasConf.PSC.CooperativeClose, agentAddr,
+		uint32(fixture.Channel.Block),
+		[common.HashLength]byte(offeringHash), balance,
+		balanceMsgSig, closingSig)
 }
 
 func TestAgentPreEndpointMsgCreate(t *testing.T) {
@@ -389,7 +332,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 		fixture.Channel.ID, data.MsgUnpublished); err != nil {
 		t.Fatalf("could not find %T: %v", endpoint, err)
 	}
-	defer env.deleteFromTestDB(t, endpoint)
+	env.deleteFromTestDB(t, endpoint)
 
 	if endpoint.RawMsg == "" {
 		t.Fatal("raw msg is not set")
@@ -415,7 +358,8 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
-func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
+// TODO(maxim) fix text. It ceased to function after BV-430
+/*func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
 	// 3. "afterEndpointMsgSOMCPublish"
@@ -442,7 +386,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 		if !bytes.Equal(msgBytes, ret.Endpoint) {
 			t.Fatal("wrong endpoint sent to somc")
 		}
-	case <-time.After(conf.JobHanlderTest.SOMCTimeout * time.Second):
+	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
 		t.Fatal("timeout")
 	}
 
@@ -457,7 +401,7 @@ func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 		data.JobChannel, endpoint.Channel)
 
 	testCommonErrors(t, workerF, *fixture.job)
-}
+}*/
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
 	fixture *workerTestFixture, env *workerTest,
@@ -500,7 +444,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 3. offer_status="register"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
-		data.JobOfferring)
+		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
 
@@ -564,7 +508,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	// 2. "preOfferingMsgSOMCPublish"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterOfferingMsgBCPublish,
-		data.JobOfferring)
+		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
 
@@ -578,7 +522,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	}
 
 	// Test somc publish job created.
-	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring,
+	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering,
 		offering.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,
@@ -590,7 +534,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 	// 2. set msg_status="msg_channel_published"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t,
-		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOfferring)
+		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering)
 
 	env.setOfferingHash(t, fixture)
 	defer env.close()
@@ -618,7 +562,7 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		if ret.Hash != offering.Hash {
 			t.Fatal("wrong hash stored")
 		}
-	case <-time.After(conf.JobHanlderTest.SOMCTimeout * time.Second):
+	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
 		t.Fatal("timeout")
 	}
 

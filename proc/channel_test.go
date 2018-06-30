@@ -37,12 +37,12 @@ func newTestJob(channel string) *data.Job {
 	}
 }
 
-type channelActionFunc func(id, jobCreator string) (string, error)
+type channelActionFunc func(id, jobCreator string, agent bool) (string, error)
 
 func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	funcName, jobType, badServiceStatus, goodServiceStatus,
-	jobTypeToCheck string, cancel bool) {
-	_, err := channelAction(util.NewUUID(), data.JobUser)
+	jobTypeToCheck string, agent bool, cancel bool) {
+	_, err := channelAction(util.NewUUID(), data.JobUser, agent)
 	util.TestExpectResult(t, funcName, reform.ErrNoRows, err)
 
 	fxt := data.NewTestFixture(t, db)
@@ -50,7 +50,7 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 
 	fxt.Channel.ServiceStatus = badServiceStatus
 	data.SaveToTestDB(t, db, fxt.Channel)
-	_, err = channelAction(fxt.Channel.ID, data.JobUser)
+	_, err = channelAction(fxt.Channel.ID, data.JobUser, agent)
 	util.TestExpectResult(t, funcName, ErrBadServiceStatus, err)
 
 	job := newTestJob(fxt.Channel.ID)
@@ -65,7 +65,7 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	data.SaveToTestDB(t, db, fxt.Channel, job)
 	defer data.DeleteFromTestDB(t, db, job)
 
-	_, err = channelAction(fxt.Channel.ID, data.JobUser)
+	_, err = channelAction(fxt.Channel.ID, data.JobUser, agent)
 	util.TestExpectResult(t, funcName, expected, err)
 
 	if len(jobTypeToCheck) != 0 {
@@ -76,7 +76,7 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	data.SaveToTestDB(t, db, job)
 
 	before := time.Now()
-	id, err := channelAction(fxt.Channel.ID, data.JobBCMonitor)
+	id, err := channelAction(fxt.Channel.ID, data.JobBCMonitor, agent)
 	after := time.Now()
 	util.TestExpectResult(t, funcName, nil, err)
 
@@ -99,22 +99,40 @@ func testChannelAction(t *testing.T, channelAction channelActionFunc,
 	}
 }
 
-func TestSuspendChannel(t *testing.T) {
+func TestSuspendChannelAgent(t *testing.T) {
 	testChannelAction(t, proc.SuspendChannel, "SuspendChannel",
 		data.JobAgentPreServiceSuspend, data.ServiceSuspended,
-		data.ServiceActive, "", false)
+		data.ServiceActive, "", true, false)
 }
 
-func TestActivateChannel(t *testing.T) {
+func TestActivateChannelAgent(t *testing.T) {
 	testChannelAction(t, proc.ActivateChannel, "ActivateChannel",
 		data.JobAgentPreServiceUnsuspend, data.ServiceActive,
-		data.ServiceSuspended, "", false)
+		data.ServiceSuspended, "", true, false)
 }
 
-func TestTerminateChannel(t *testing.T) {
+func TestTerminateChannelAgent(t *testing.T) {
 	testChannelAction(t, proc.TerminateChannel, "TerminateChannel",
 		data.JobAgentPreServiceTerminate, data.ServiceTerminated,
-		data.ServiceSuspended, data.JobAgentPreServiceTerminate, true)
+		data.ServiceSuspended, data.JobAgentPreServiceTerminate, true, true)
+}
+
+func TestSuspendChannelClient(t *testing.T) {
+	testChannelAction(t, proc.SuspendChannel, "SuspendChannel",
+		data.JobClientPreServiceSuspend, data.ServiceSuspended,
+		data.ServiceActive, "", false, false)
+}
+
+func TestActivateChannelClient(t *testing.T) {
+	testChannelAction(t, proc.ActivateChannel, "ActivateChannel",
+		data.JobClientPreServiceUnsuspend, data.ServiceActive,
+		data.ServiceSuspended, "", false, false)
+}
+
+func TestTerminateChannelClient(t *testing.T) {
+	testChannelAction(t, proc.TerminateChannel, "TerminateChannel",
+		data.JobClientPreServiceTerminate, data.ServiceTerminated,
+		data.ServiceSuspended, data.JobClientPreServiceTerminate, false, true)
 }
 
 func TestMain(m *testing.M) {

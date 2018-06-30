@@ -164,53 +164,38 @@ func TestPublishEndpoint(t *testing.T) {
 	}
 }
 
-type waitForEndpointReturn struct {
+type getEndpointReturn struct {
 	data []byte
 	err  error
 }
 
-func TestWaitForEndpoint(t *testing.T) {
+func TestGetEndpoint(t *testing.T) {
 	srv := newServer(t)
 	defer srv.Close()
 	conn := newConn(t)
 	defer conn.Close()
 
-	ch := make(chan waitForEndpointReturn)
-	for i := 0; i < 2; i++ {
-		go func() {
-			data, err := conn.WaitForEndpoint("a")
-			ch <- waitForEndpointReturn{data, err}
-		}()
-	}
+	ch := make(chan getEndpointReturn)
+	go func() {
+		data, err := conn.GetEndpoint("a")
+		ch <- getEndpointReturn{data, err}
+	}()
 
-	for i := 0; i < 2; i++ {
-		req := srv.Read(t, waitForEndpointMethod)
-		repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
-		srv.Write(t, &repl)
-	}
+	req := srv.Read(t, getEndpointMethod)
+	data := []byte("{}")
 
-	time.Sleep(time.Millisecond)
-
-	params := endpointParams{Channel: "a", Endpoint: []byte("{}")}
-	data, _ := json.Marshal(&params)
-
-	repl := JSONRPCMessage{
-		ID:     100,
-		Method: publishEndpointMethod,
-		Params: data,
-	}
+	repl := JSONRPCMessage{ID: req.ID, Result: data}
 	srv.Write(t, &repl)
 
-	for i := 0; i < 2; i++ {
-		ret := <-ch
+	ret := <-ch
 
-		if ret.err != nil {
-			t.Fatalf("failed to get endpoint data: %s", ret.err)
-		}
+	if ret.err != nil {
+		t.Fatalf("failed to get endpoint data: %s", ret.err)
+	}
 
-		if bytes.Compare(ret.data, []byte("{}")) != 0 {
-			t.Fatalf("endpoint data mismatch")
-		}
+	if bytes.Compare(ret.data, []byte("{}")) != 0 {
+		t.Logf("%s", ret.data)
+		t.Fatalf("endpoint data mismatch")
 	}
 }
 

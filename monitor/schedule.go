@@ -3,9 +3,7 @@ package monitor
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 
@@ -82,6 +80,12 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		return
 	}
 
+	agent, err := data.IsAgent(m.db.Querier)
+	if err != nil {
+		m.errWrapper(ctx, err)
+		return
+	}
+
 	for rows.Next() {
 		var el data.EthLog
 		var forAgent, forClient bool
@@ -97,22 +101,29 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 		var scheduler funcAndType
 		found := false
-		switch {
-		case forAgent:
-			scheduler, found = agentSchedulers[eventHash]
-			if !found {
-				scheduler, found = accountSchedulers[eventHash]
+
+		if forClient || forAgent {
+			scheduler, found = ptcSchedulers[eventHash]
+		}
+
+		if !found {
+			if agent {
+				if isOfferingRelated(&el) {
+					scheduler, found =
+						agentOfferingSchedulers[eventHash]
+				} else if forAgent {
+					scheduler, found =
+						agentSchedulers[eventHash]
+				}
+			} else {
+				if isOfferingRelated(&el) {
+					scheduler, found =
+						offeringSchedulers[eventHash]
+				} else if forClient {
+					scheduler, found =
+						clientSchedulers[eventHash]
+				}
 			}
-			// TODO: uncomment when client jobs will be implemented
-			/*
-				case forClient:
-					scheduler, found = clientSchedulers[eventHash]
-					if !found {
-						scheduler, found = accountSchedulers[eventHash]
-					}
-				case isOfferingRelated(&el):
-					scheduler, found = offeringSchedulers[eventHash]
-			*/
 		}
 
 		if !found {
@@ -143,18 +154,6 @@ type funcAndType struct {
 	t string
 }
 
-var accountSchedulers = map[common.Hash]funcAndType{
-	common.HexToHash(eth.EthTokenApproval): {
-		(*Monitor).scheduleTokenApprove,
-		data.JobPreAccountAddBalance,
-	},
-	common.HexToHash(eth.EthTokenTransfer): {
-		(*Monitor).scheduleTokenTransfer,
-		data.JobAfterAccountAddBalance,
-	},
-	// TODO: return balance schedulers
-}
-
 var agentSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthDigestChannelCreated): {
 		(*Monitor).scheduleAgentChannelCreated,
@@ -175,10 +174,6 @@ var agentSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobAgentAfterUncooperativeClose,
-	},
-	common.HexToHash(eth.EthOfferingCreated): {
-		(*Monitor).scheduleAgentOfferingCreated,
-		data.JobAgentAfterOfferingMsgBCPublish,
 	},
 }
 
@@ -202,6 +197,28 @@ var clientSchedulers = map[common.Hash]funcAndType{
 	common.HexToHash(eth.EthUncooperativeChannelClose): {
 		(*Monitor).scheduleAgentClientChannel,
 		data.JobClientAfterUncooperativeClose,
+	},
+}
+
+var ptcSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthTokenApproval): {
+		(*Monitor).scheduleTokenApprove,
+		data.JobPreAccountAddBalance,
+	},
+	common.HexToHash(eth.EthTokenTransfer): {
+		(*Monitor).scheduleTokenTransfer,
+		"", // determines a job type inside the scheduleTokenTransfer function
+	},
+}
+
+var agentOfferingSchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthOfferingCreated): {
+		(*Monitor).scheduleAgentOfferingCreated,
+		data.JobAgentAfterOfferingMsgBCPublish,
+	},
+	common.HexToHash(eth.EthOfferingPoppedUp): {
+		(*Monitor).scheduleAgentOfferingCreated,
+		data.JobAgentAfterOfferingMsgBCPublish,
 	},
 }
 
@@ -283,6 +300,8 @@ func (m *Monitor) getOpenBlockNumber(el *data.EthLog) (uint32, bool, error) {
 			return 0, false, err
 		}
 		return blockNumber, true, nil
+	case common.HexToHash(eth.EthDigestChannelCreated):
+		return 0, false, nil
 	}
 
 	return 0, false, fmt.Errorf("unsupported topic")
@@ -308,6 +327,7 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		data.FromBytes(agentAddress.Bytes()),
 		data.FromBytes(clientAddress.Bytes()),
 	}
+	var row *sql.Row
 	if haveOpenBlockNumber {
 		query = `SELECT c.id
                            FROM channels AS c, offerings AS o
@@ -317,18 +337,14 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
                                 AND c.client = $3
                                 AND c.block = $4`
 		args = append(args, openBlockNumber)
+		row = m.db.QueryRow(query, args...)
 	} else {
 		query = `SELECT c.id
-                           FROM channels AS c, offerings AS o, eth_txs AS et
-                          WHERE c.offering = o.id
-                                AND o.hash = $1
-                                AND c.agent = $2
-                                AND c.client = $3
-                                AND et.hash = $4`
-		args = append(args, el.TxHash)
+                           FROM channels AS c, eth_txs AS et
+                          WHERE c.id = et.related_id
+                                AND et.hash = $1`
+		row = m.db.QueryRow(query, el.TxHash)
 	}
-	row := m.db.QueryRow(query, args...)
-
 	var id string
 	if err := row.Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
@@ -356,26 +372,10 @@ func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 		m.ignoreEvent(el)
 		return
 	}
-	amountBytes, err := data.ToBytes(el.Data)
-	if err != nil {
-		m.logger.Error("failed to decode eth log data: %v", err)
-		m.ignoreEvent(el)
-		return
-	}
-	balanceData := &data.JobBalanceData{
-		Amount: uint(big.NewInt(0).SetBytes(amountBytes).Uint64()),
-	}
-	dataEncoded, err := json.Marshal(balanceData)
-	if err != nil {
-		m.logger.Error("failed to marshal balance data: %v", err)
-		m.ignoreEvent(el)
-		return
-	}
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   acc.ID,
 		RelatedType: data.JobAccount,
-		Data:        dataEncoded,
 	}
 
 	m.scheduleCommon(el, j)
@@ -386,6 +386,12 @@ func (m *Monitor) scheduleTokenTransfer(el *data.EthLog, jobType string) {
 	addr1Hash := data.FromBytes(addr1.Bytes())
 	addr2 := common.BytesToAddress(el.Topics[topic2].Bytes())
 	addr2Hash := data.FromBytes(addr2.Bytes())
+
+	if addr1 == m.pscAddr {
+		jobType = data.JobAfterAccountReturnBalance
+	} else {
+		jobType = data.JobAfterAccountAddBalance
+	}
 
 	acc := &data.Account{}
 	if err := m.db.SelectOneTo(acc, "where eth_addr=$1 or eth_addr=$2", addr1Hash,
@@ -432,7 +438,7 @@ func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   id,
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 	}
 
 	m.scheduleCommon(el, j)
@@ -494,7 +500,7 @@ func (m *Monitor) scheduleClientOfferingCreated(el *data.EthLog,
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   util.NewUUID(),
-		RelatedType: data.JobOfferring,
+		RelatedType: data.JobOffering,
 	}
 
 	m.scheduleCommon(el, j)

@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"crypto/ecdsa"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -66,34 +67,40 @@ func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
 	return w.getTransaction(hash)
 }
 
-func (w *Worker) newUser(tx *types.Transaction) (*data.User, error) {
+func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 	signer := &types.HomesteadSigner{}
 	pubkey, err := ethutil.RecoverPubKey(signer, tx)
 	if err != nil {
 		err = fmt.Errorf("could not recover client's pub key: %v", err)
-		return nil, err
+		return nil, false, err
 	}
 
-	addr := crypto.PubkeyToAddress(*pubkey)
+	addr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+
+	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", addr)
+	if err != sql.ErrNoRows {
+		return nil, false, nil
+	}
 
 	return &data.User{
 		ID:        util.NewUUID(),
-		EthAddr:   data.FromBytes(addr.Bytes()),
+		EthAddr:   addr,
 		PublicKey: data.FromBytes(crypto.FromECDSAPub(pubkey)),
-	}, nil
+	}, true, nil
 }
 
 func (w *Worker) addJob(jType, rType, rID string) error {
-	return w.queue.Add(&data.Job{
-		ID:          util.NewUUID(),
-		Status:      data.JobActive,
-		RelatedType: rType,
-		RelatedID:   rID,
-		Type:        jType,
-		CreatedAt:   time.Now(),
-		CreatedBy:   data.JobTask,
-		Data:        []byte("{}"),
-	})
+	return w.queue.AddSimple(jType, rType, rID, data.JobTask)
+}
+
+func (w *Worker) addJobWithData(
+	jType, rType, rID string, jData interface{}) error {
+	return w.queue.AddWithData(jType, rType, rID, data.JobTask, jData)
+}
+
+func (w *Worker) addJobWithDelay(
+	jType, rType, rID string, delay time.Duration) error {
+	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
 }
 
 func (w *Worker) updateAccountBalances(acc *data.Account) error {
@@ -124,6 +131,13 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
 	return w.db.Update(acc)
+}
+
+func parseJobData(job *data.Job, data interface{}) error {
+	if err := json.Unmarshal(job.Data, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal job data: %s", err)
+	}
+	return nil
 }
 
 func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
@@ -163,5 +177,26 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 		RelatedID:   relatedID,
 	}
 
-	return w.db.Insert(&dtx)
+	return data.Insert(w.db.Querier, &dtx)
+}
+
+// KeyFromChannelData returns the unique channel identifier
+// used in a Privatix Service Contract.
+func (w *Worker) KeyFromChannelData(channel string) (string, error) {
+	ch, err := w.channel(channel)
+	if err != nil {
+		return "", err
+	}
+
+	offering, err := w.offering(ch.Offering)
+	if err != nil {
+		return "", err
+	}
+
+	key, err := data.ChannelKey(ch.Client, ch.Agent,
+		ch.Block, offering.Hash)
+	if err != nil {
+		return "", err
+	}
+	return data.FromBytes(key), nil
 }

@@ -112,11 +112,9 @@ func validParams(out map[string]string) bool {
 	}
 
 	delete(out, caData)
+	delete(out, serverAddress)
 
-	if len(out) != 0 {
-		return false
-	}
-	return true
+	return len(out) == 0
 }
 
 func joinFile(path, file string) string {
@@ -147,7 +145,8 @@ func pushConfig(ctx context.Context, productID string, keys []string,
 	retrySec int64) error {
 	req := NewPushConfigReq(productID, data.TestPassword,
 		joinFile(samplesPath, conf.EptTest.ConfValidCaValid),
-		joinFile(samplesPath, conf.EptTest.Ca), keys, retrySec)
+		joinFile(samplesPath, conf.EptTest.Ca), keys, retrySec,
+		"example.com")
 
 	return PushConfig(ctx, conf.SessionServer.Config, logger, req)
 }

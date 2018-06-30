@@ -79,37 +79,44 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
 
 	client := &data.User{}
-	if s.db.FindOneTo(client, "eth_addr", ch.Client) != nil {
+	if err := s.db.FindOneTo(client, "eth_addr", ch.Client); err != nil {
+		s.logger.Warn("could not find client with addr %v: %v",
+			ch.Client, err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	pub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
+		s.logger.Error("could not decode public key: %v", err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	sig, err := data.ToBytes(pld.BalanceMsgSig)
 	if err != nil {
+		s.logger.Error("could not decode signature: %v", err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	pscAddr, err := data.ToAddress(pld.ContractAddress)
 	if err != nil {
+		s.logger.Error("could not parse contract addr: %v", err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	agentAddr, err := data.ToAddress(ch.Agent)
 	if err != nil {
+		s.logger.Error("could not parse agent addr: %v", err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	offeringHash, err := data.ToHash(pld.OfferingHash)
 	if err != nil {
+		s.logger.Error("could not parse offering hash: %v", err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}

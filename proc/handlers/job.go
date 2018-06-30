@@ -1,4 +1,4 @@
-package proc
+package handlers
 
 import (
 	"github.com/privatix/dappctrl/data"
@@ -15,7 +15,6 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentAfterChannelTopUp:              worker.AgentAfterChannelTopUp,
 		data.JobAgentAfterUncooperativeCloseRequest: worker.AgentAfterUncooperativeClose,
 		data.JobAgentAfterUncooperativeClose:        worker.AgentAfterUncooperativeClose,
-		data.JobAgentPreCooperativeClose:            worker.AgentPreCooperativeClose,
 		data.JobAgentAfterCooperativeClose:          worker.AgentAfterCooperativeClose,
 		data.JobAgentPreServiceSuspend:              worker.AgentPreServiceSuspend,
 		data.JobAgentPreServiceUnsuspend:            worker.AgentPreServiceUnsuspend,
@@ -26,6 +25,24 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentPreOfferingMsgBCPublish:        worker.AgentPreOfferingMsgBCPublish,
 		data.JobAgentAfterOfferingMsgBCPublish:      worker.AgentAfterOfferingMsgBCPublish,
 		data.JobAgentPreOfferingMsgSOMCPublish:      worker.AgentPreOfferingMsgSOMCPublish,
+
+		// Client jobs.
+		data.JobClientPreChannelCreate:               worker.ClientPreChannelCreate,
+		data.JobClientAfterChannelCreate:             worker.ClientAfterChannelCreate,
+		data.JobClientPreEndpointMsgSOMCGet:          worker.ClientPreEndpointMsgSOMCGet,
+		data.JobClientAfterEndpointMsgSOMCGet:        worker.ClientAfterEndpointMsgSOMCGet,
+		data.JobClientAfterUncooperativeClose:        worker.ClientAfterUncooperativeClose,
+		data.JobClientAfterCooperativeClose:          worker.ClientAfterCooperativeClose,
+		data.JobClientPreUncooperativeClose:          worker.ClientPreUncooperativeClose,
+		data.JobClientPreChannelTopUp:                worker.ClientPreChannelTopUp,
+		data.JobClientAfterChannelTopUp:              worker.ClientAfterChannelTopUp,
+		data.JobClientPreUncooperativeCloseRequest:   worker.ClientPreUncooperativeCloseRequest,
+		data.JobClientAfterUncooperativeCloseRequest: worker.ClientAfterUncooperativeCloseRequest,
+		data.JobClientPreServiceTerminate:            worker.ClientPreServiceTerminate,
+		data.JobClientPreServiceSuspend:              worker.ClientPreServiceSuspend,
+		data.JobClientPreServiceUnsuspend:            worker.ClientPreServiceUnsuspend,
+		data.JobClientAfterOfferingMsgBCPublish:      worker.ClientAfterOfferingMsgBCPublish,
+
 		// Common jobs.
 		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,
 		data.JobPreAccountAddBalance:        worker.PreAccountAddBalance,

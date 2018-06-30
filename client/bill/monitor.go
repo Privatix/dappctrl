@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -116,7 +117,7 @@ L:
 	m.exit = nil
 	m.mtx.Unlock()
 
-	logger.Info("%s", ret)
+	m.logger.Info("%s", ret)
 	return ret
 }
 
@@ -133,13 +134,13 @@ func (m *Monitor) Close() {
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
 	if ch.ReceiptBalance == ch.TotalDeposit {
-		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker)
+		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, false)
 		if err != nil {
 			if err != proc.ErrSameJobExists {
 				return err
 			}
 			msg := "failed to trigger termination for chan %s: %s"
-			m.logger.Error(msg, ch.ID, err)
+			m.logger.Debug(msg, ch.ID, err)
 		} else {
 			msg := "triggered termination for chan %s"
 			m.logger.Info(msg, ch.ID)
@@ -149,7 +150,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 
 	var consumed uint64
 	if err := m.db.QueryRow(`
-		SELECT sum(units_used)
+		SELECT COALESCE(sum(units_used),0)
 		  FROM sessions
 		 WHERE channel = $1`, ch.ID).Scan(&consumed); err != nil {
 		return err
@@ -167,7 +168,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return nil
 	}
 
-	amount := consumed/offer.UnitPrice + offer.SetupPrice
+	amount := consumed*offer.UnitPrice + offer.SetupPrice
 	if amount > ch.TotalDeposit {
 		amount = ch.TotalDeposit
 	}
@@ -178,7 +179,9 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
-	err := m.post(m.db, ch, m.psc, m.pw.Get(), amount,
+	m.logger.Info("posting cheque for amount: %d...", amount)
+	pscB64 := data.FromBytes(common.HexToAddress(m.psc).Bytes())
+	err := m.post(m.db, ch, pscB64, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout)
 	if err != nil {
 		m.logger.Error("failed to post cheque for chan %s: %s", ch, err)

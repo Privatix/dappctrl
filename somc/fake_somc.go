@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/privatix/dappctrl/data"
 )
 
 // TestEndpointParams exported for tests.
-type TestEndpointParams endpointParams
+type TestEndpointParams EndpointParams
 
 // TestOfferingParams used for tests.
 type TestOfferingParams publishOfferingParams
@@ -113,7 +115,7 @@ func (s *FakeSOMC) Write(t *testing.T, msg *JSONRPCMessage) {
 // ReadPublishEndpoint recieves and returns published endpoint.
 func (s *FakeSOMC) ReadPublishEndpoint(t *testing.T) TestEndpointParams {
 	req := s.Read(t, publishEndpointMethod)
-	params := endpointParams{}
+	params := EndpointParams{}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
 		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
 	}
@@ -132,4 +134,66 @@ func (s *FakeSOMC) ReadPublishOfferings(t *testing.T) TestOfferingParams {
 	repl := JSONRPCMessage{ID: req.ID, Result: []byte("true")}
 	s.Write(t, &repl)
 	return TestOfferingParams(params)
+}
+
+// WriteGetEndpoint verifies a passed channel ID and sends a given raw
+// endpoint message.
+func (s *FakeSOMC) WriteGetEndpoint(
+	t *testing.T, channel string, rawEndpoint []byte) {
+	req := s.Read(t, getEndpointMethod)
+	params := EndpointParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOMC: failed to unmurshal params: ", err)
+	}
+
+	if params.Channel != channel {
+		t.Fatalf("FakeSOMC: expected channel %s, but actual is %s",
+			channel, params.Channel)
+	}
+
+	params.Endpoint = rawEndpoint
+	data, _ := json.Marshal(&params)
+
+	repl := JSONRPCMessage{
+		ID:     req.ID,
+		Result: data,
+	}
+	s.Write(t, &repl)
+}
+
+// WriteFindOfferings verifies passed hashes and returns given results.
+func (s *FakeSOMC) WriteFindOfferings(
+	t *testing.T, hashes []string, rawOfferings [][]byte) {
+	req := s.Read(t, findOfferingsMethod)
+	params := findOfferingsParams{}
+	if err := json.Unmarshal(req.Params, &params); err != nil {
+		t.Fatal("FakeSOM: failed to unmarshal params: ", err)
+	}
+
+	for i, hash := range params.Hashes {
+		if hash != hashes[i] {
+			t.Fatal("FakeSOMC: unexpected hash being searched")
+		}
+	}
+
+	type findOfferingResult struct {
+		Hash string `json:"hash"`
+		Data string `json:"data"`
+	}
+
+	ret := []findOfferingResult{}
+	for i, hash := range hashes {
+		ret = append(ret, findOfferingResult{
+			Hash: hash,
+			Data: data.FromBytes(rawOfferings[i]),
+		})
+	}
+
+	retData, _ := json.Marshal(&ret)
+
+	repl := JSONRPCMessage{
+		ID:     req.ID,
+		Result: retData,
+	}
+	s.Write(t, &repl)
 }

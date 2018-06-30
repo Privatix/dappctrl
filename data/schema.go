@@ -168,8 +168,8 @@ type Channel struct {
 	Salt               uint64     `json:"-" reform:"salt"`
 	Username           *string    `json:"-" reform:"username"`
 	Password           string     `json:"-" reform:"password"`
-	ReceiptBalance     uint64     `json:"-" reform:"receipt_balance"`   // Last payment.
-	ReceiptSignature   *string    `json:"-" reform:"receipt_signature"` // Last payment's signature.
+	ReceiptBalance     uint64     `json:"receiptBalance" reform:"receipt_balance"` // Last payment.
+	ReceiptSignature   *string    `json:"-" reform:"receipt_signature"`            // Last payment's signature.
 }
 
 // Session is a client session.
@@ -201,6 +201,11 @@ type Contract struct {
 	Version *uint8 `json:"version" reform:"version"`
 	Enabled bool   `json:"enabled" reform:"enabled"`
 }
+
+// Setting keys.
+const (
+	IsAgentKey = "user.isagent" // specifies user role. "true" - agent. "false" - client.
+)
 
 // Setting is a user setting.
 //reform:settings
@@ -240,6 +245,7 @@ const (
 	JobBillingChecker = "billing_checker"
 	JobBCMonitor      = "bc_monitor"
 	JobTask           = "task"
+	JobServiceAdapter = "service_adapter"
 )
 
 // Job statuses.
@@ -252,10 +258,10 @@ const (
 
 // Job related object types.
 const (
-	JobOfferring = "offering"
-	JobChannel   = "channel"
-	JobEndpoint  = "endpoint"
-	JobAccount   = "account"
+	JobOffering = "offering"
+	JobChannel  = "channel"
+	JobEndpoint = "endpoint"
+	JobAccount  = "account"
 )
 
 // Transaction statuses.
@@ -277,9 +283,12 @@ const (
 	JobClientPreUncooperativeClose          = "clientPreUncooperativeClose"
 	JobClientAfterUncooperativeClose        = "clientAfterUncooperativeClose"
 	JobClientAfterCooperativeClose          = "clientAfterCooperativeClose"
+	JobClientPreServiceSuspend              = "clientPreServiceSuspend"
+	JobClientPreServiceUnsuspend            = "clientPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
 	JobClientAfterServiceTerminate          = "clientAfterServiceTerminate"
 	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"
+	JobClientAfterEndpointMsgSOMCGet        = "clientAfterEndpointMsgSOMCGet"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientPreOfferingMsgSOMCGet          = "clientPreOfferingMsgSOMCGet"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"

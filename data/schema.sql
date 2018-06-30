@@ -75,7 +75,8 @@ CREATE TYPE job_creator AS ENUM (
     'user', -- by user through UI
     'billing_checker', -- by billing checker procedure
     'bc_monitor', -- by blockchain monitor
-    'task' -- by another task
+    'task', -- by another task
+    'service_adapter' -- by service adapter
 );
 
 -- Job status.
@@ -106,7 +107,9 @@ CREATE TABLE settings (
 -- Accounts used to perform Client and/or Agent operations.
 CREATE TABLE accounts (
     id uuid PRIMARY KEY,
-    eth_addr eth_addr NOT NULL, -- ethereum address
+    eth_addr eth_addr NOT NULL -- ethereum address
+      CONSTRAINT unique_eth_addr UNIQUE,
+
     public_key text NOT NULL,
     private_key text NOT NULL,
     is_default boolean NOT NULL DEFAULT FALSE, -- default account
@@ -128,14 +131,18 @@ CREATE TABLE accounts (
 -- Each of them can play an agent role, a client role, or both of them.
 CREATE TABLE users (
     id uuid PRIMARY KEY,
-    eth_addr eth_addr NOT NULL, -- ethereum address
+    eth_addr eth_addr NOT NULL -- ethereum address
+        CONSTRAINT unique_user_addr UNIQUE,
+
     public_key text NOT NULL
 );
 
 -- Templates.
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
-    hash sha3_256 NOT NULL,
+    hash sha3_256 NOT NULL
+        CONSTRAINT unique_template_hash UNIQUE,
+
     raw json NOT NULL,
     kind tpl_kind NOT NULL
 );
@@ -161,7 +168,9 @@ CREATE TABLE offerings (
     is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
-    hash sha3_256 NOT NULL, -- offering hash
+    hash sha3_256 NOT NULL -- offering hash
+        CONSTRAINT unique_offering_hash UNIQUE,
+
     status msg_status NOT NULL, -- message status
     offer_status offer_status NOT NULL, -- offer status in blockchain
     block_number_updated bigint

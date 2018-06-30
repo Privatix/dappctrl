@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
@@ -29,7 +28,7 @@ func newPayload(db *reform.DB,
 	}
 
 	var client data.Account
-	if err := db.FindByPrimaryKeyTo(&client, ch.Client); err != nil {
+	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
 		return nil, err
 	}
 
@@ -51,7 +50,12 @@ func newPayload(db *reform.DB,
 		return nil, err
 	}
 
-	hash := eth.BalanceProofHash(common.HexToAddress(pscAddr),
+	pscAddrParsed, err := data.ToAddress(pscAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := eth.BalanceProofHash(pscAddrParsed,
 		agentAddr, ch.Block, offerHash, big.NewInt(int64(amount)))
 
 	key, err := data.ToPrivateKey(client.PrivateKey, pass)
@@ -84,13 +88,8 @@ func postPayload(db *reform.DB, channel string,
 	if endp.PaymentReceiverAddress == nil {
 		return fmt.Errorf("no payment addr found for chan %s", channel)
 	}
-
-	url := *endp.PaymentReceiverAddress + payPath
-	if tls {
-		url = "https://" + url
-	} else {
-		url = "http://" + url
-	}
+	//TODO: add URL validation and TLS support
+	url := *endp.PaymentReceiverAddress
 
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Millisecond,

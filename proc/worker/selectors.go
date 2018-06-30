@@ -25,7 +25,7 @@ func (w *Worker) relatedAndValidate(rec reform.Record, job *data.Job, jobType, r
 
 func (w *Worker) relatedOffering(job *data.Job, jobType string) (*data.Offering, error) {
 	rec := &data.Offering{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobOfferring)
+	err := w.relatedAndValidate(rec, job, jobType, data.JobOffering)
 	return rec, err
 }
 
@@ -54,6 +54,15 @@ func (w *Worker) ethLog(job *data.Job) (*data.EthLog, error) {
 		return nil, fmt.Errorf("failed to find %T: %v", log, err)
 	}
 	return log, nil
+}
+
+func (w *Worker) channel(pk string) (*data.Channel, error) {
+	channel := &data.Channel{}
+	err := w.db.FindByPrimaryKeyTo(channel, pk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find %T: %v", channel, err)
+	}
+	return channel, nil
 }
 
 func (w *Worker) endpoint(channel string) (*data.Endpoint, error) {

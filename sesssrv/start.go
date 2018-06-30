@@ -30,17 +30,27 @@ func (s *Server) handleStart(
 		return
 	}
 
-	s.Logger().Info("new client session from IP %s, port %d",
-		args.ClientIP, args.ClientPort)
+	s.Logger().Info("new client session for %s", args.ClientID)
 
 	now := time.Now()
+
+	var ip *string
+	if len(args.ClientIP) != 0 {
+		ip = pointer.ToString(args.ClientIP)
+	}
+
+	var port *uint16
+	if args.ClientPort != 0 {
+		port = pointer.ToUint16(args.ClientPort)
+	}
+
 	sess := data.Session{
 		ID:            util.NewUUID(),
 		Channel:       ch.ID,
 		Started:       now,
 		LastUsageTime: now,
-		ClientIP:      pointer.ToString(args.ClientIP),
-		ClientPort:    pointer.ToUint16(args.ClientPort),
+		ClientIP:      ip,
+		ClientPort:    port,
 	}
 	if err := s.db.Insert(&sess); err != nil {
 		s.Logger().Error("failed to insert session: %s", err)

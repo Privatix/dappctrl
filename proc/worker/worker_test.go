@@ -13,21 +13,25 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
 
 type testConfig struct {
+	clientVPN      *config.Config
 	DB             *data.DBConfig
-	JobHanlderTest *struct {
-		SOMCTimeout time.Duration // In seconds.
+	JobHandlerTest *struct {
+		SOMCTimeout   time.Duration // In seconds.
+		ReactionDelay time.Duration // In milliseconds.
 	}
 	Gas       *GasConf
 	Job       *job.Config
@@ -40,12 +44,13 @@ type testConfig struct {
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		DB:       data.NewDBConfig(),
-		Job:      job.NewConfig(),
-		Log:      util.NewLogConfig(),
-		SOMC:     somc.NewConfig(),
-		SOMCTest: somc.NewTestConfig(),
-		pscAddr:  common.HexToAddress("0x1"),
+		clientVPN: config.NewConfig(),
+		DB:        data.NewDBConfig(),
+		Job:       job.NewConfig(),
+		Log:       util.NewLogConfig(),
+		SOMC:      somc.NewConfig(),
+		SOMCTest:  somc.NewTestConfig(),
+		pscAddr:   common.HexToAddress("0x1"),
 	}
 }
 
@@ -81,15 +86,17 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(db, somcConn, ethBack, conf.Gas,
-		conf.pscAddr, conf.PayServer.Addr,
-		pwdStorage, data.TestToPrivateKey)
+	worker, err := NewWorker(logger, db, somcConn, ethBack, conf.Gas,
+		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
+		data.TestToPrivateKey, conf.clientVPN)
 	if err != nil {
-		fakeSOMC.Close()
 		somcConn.Close()
+		fakeSOMC.Close()
 		panic(err)
 	}
+
 	worker.SetQueue(jobQueue)
+	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), jobQueue))
 
 	return &workerTest{
 		db:       db,
@@ -102,8 +109,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 }
 
 func (e *workerTest) close() {
-	e.fakeSOMC.Close()
 	e.somcConn.Close()
+	e.fakeSOMC.Close()
 }
 
 func TestMain(m *testing.M) {
@@ -143,6 +150,13 @@ func (e *workerTest) findTo(t *testing.T, rec reform.Record, id string) {
 	err := e.db.FindByPrimaryKeyTo(rec, id)
 	if err != nil {
 		t.Fatal("failed to find: ", err)
+	}
+}
+
+func (e *workerTest) selectOneTo(t *testing.T, rec reform.Record, tail string,
+	args ...interface{}) {
+	if err := e.db.SelectOneTo(rec, tail, args...); err != nil {
+		t.Fatal("failed to select: ", err)
 	}
 }
 
@@ -190,7 +204,7 @@ func (e *workerTest) newTestFixture(t *testing.T,
 		job.RelatedID = f.Channel.ID
 	case data.JobEndpoint:
 		job.RelatedID = f.Endpoint.ID
-	case data.JobOfferring:
+	case data.JobOffering:
 		job.RelatedID = f.Offering.ID
 	case data.JobAccount:
 		job.RelatedID = f.Account.ID
@@ -223,13 +237,13 @@ func (f *workerTestFixture) close() {
 	f.TestFixture.Close()
 }
 
-func (f *workerTestFixture) setJobData(t *testing.T, d interface{}) {
+func setJobData(t *testing.T, db *reform.DB, job *data.Job, d interface{}) {
 	b, err := json.Marshal(d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.job.Data = b
-	data.SaveToTestDB(t, f.DB, f.job)
+	job.Data = b
+	data.SaveToTestDB(t, db, job)
 }
 
 func testCommonErrors(t *testing.T, workerF func(*data.Job) error, job data.Job) {

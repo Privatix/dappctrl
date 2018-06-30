@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	reform "gopkg.in/reform.v1"
 
+	"github.com/AlekSi/pointer"
 	"github.com/privatix/dappctrl/eth/truffle"
 	"github.com/privatix/dappctrl/util"
 )
@@ -163,7 +164,7 @@ func NewTestProduct() *Product {
 func NewTestTemplate(kind string) *Template {
 	tmpl := &Template{
 		ID:   util.NewUUID(),
-		Raw:  []byte("{}"),
+		Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
 		Kind: kind,
 	}
 	tmpl.Hash = FromBytes(crypto.Keccak256(tmpl.Raw))
@@ -179,6 +180,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		BlockNumberUpdated: 1,
 		Template:           tpl,
 		Agent:              agent,
+		ServiceName:        "VPN",
 		Hash:               FromBytes(crypto.Keccak256(fakeMsg)),
 		Product:            product,
 		Supply:             1,
@@ -289,10 +291,18 @@ func RollbackTestTX(t *testing.T, tx *reform.TX) {
 	}
 }
 
-// FindInTestDB selects a record from test db
+// FindInTestDB selects a record from test DB.
 func FindInTestDB(t *testing.T, db *reform.DB,
 	str reform.Struct, column string, arg interface{}) {
 	if err := db.FindOneTo(str, column, arg); err != nil {
+		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
+	}
+}
+
+// SelectOneFromTestDBTo selects a record from test DB using a given query tail.
+func SelectOneFromTestDBTo(t *testing.T, db *reform.DB,
+	str reform.Struct, tail string, args ...interface{}) {
+	if err := db.SelectOneTo(str, tail, args...); err != nil {
 		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
 	}
 }
@@ -382,6 +392,11 @@ type TestFixture struct {
 	Endpoint       *Endpoint
 }
 
+// Test service addresses.
+const (
+	TestServiceEndpointAddress = "localhost"
+)
+
 // NewTestFixture creates a new test fixture.
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod := NewTestProduct()
@@ -393,9 +408,11 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 		acc.EthAddr, user.EthAddr, off.ID, 0, 0, ChannelActive)
 	endpTmpl := NewTestTemplate(TemplateAccess)
 	prod.OfferAccessID = &endpTmpl.ID
+	prod.OfferTplID = &tmpl.ID
+	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
+	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, user, off, ch, endp)
 
 	return &TestFixture{
 		T:              t,
@@ -411,6 +428,7 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	}
 }
 
+// NewEthTestFixture creates a new ethereum test fixture.
 func NewEthTestFixture(t *testing.T, db *reform.DB,
 	account *truffle.TestAccount) *TestFixture {
 	prod := NewTestProduct()
@@ -443,5 +461,5 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
 	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,
-		f.TemplateOffer, f.User, f.Account, f.Product, f.TemplateAccess)
+		f.User, f.Account, f.Product, f.TemplateAccess, f.TemplateOffer)
 }

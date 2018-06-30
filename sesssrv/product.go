@@ -2,9 +2,16 @@ package sesssrv
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/srv"
+)
+
+const (
+	externalIP = "externalIP"
+	defaultIP  = "127.0.0.1"
 )
 
 // ProductArgs is a set of product arguments.
@@ -24,10 +31,15 @@ func (s *Server) handleProductConfig(
 		return
 	}
 
-	prod, ok := s.findProduct(w, ctx.Username)
+	product, ok := s.findProduct(w, ctx.Username)
 	if !ok {
 		return
 	}
+
+	product.ServiceEndpointAddress = serviceEndpointAddress(args.Config,
+		product)
+
+	delete(args.Config, externalIP)
 
 	prodConf, err := json.Marshal(args.Config)
 	if err != nil {
@@ -35,12 +47,37 @@ func (s *Server) handleProductConfig(
 		return
 	}
 
-	prod.Config = prodConf
+	product.Config = prodConf
 
-	if ok := s.updateProduct(w, prod); !ok {
+	if ok := s.updateProduct(w, product); !ok {
 		return
 
 	}
 
 	s.RespondResult(w, nil)
+}
+
+func serviceEndpointAddress(config map[string]string,
+	product *data.Product) *string {
+	if product == nil {
+		return nil
+	}
+
+	if (product.ServiceEndpointAddress != nil &&
+		*product.ServiceEndpointAddress != defaultIP) ||
+		config == nil {
+		return product.ServiceEndpointAddress
+	}
+
+	if extIP, ok := config[externalIP]; ok {
+		ip := net.ParseIP(extIP)
+
+		// TODO(maxim) IPv4 only
+		if ip.To4() != nil {
+			return &extIP
+		}
+		return product.ServiceEndpointAddress
+	}
+
+	return product.ServiceEndpointAddress
 }

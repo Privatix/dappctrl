@@ -140,7 +140,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 				return err
 			}
 			msg := "failed to trigger termination for chan %s: %s"
-			m.logger.Error(msg, ch.ID, err)
+			m.logger.Debug(msg, ch.ID, err)
 		} else {
 			msg := "triggered termination for chan %s"
 			m.logger.Info(msg, ch.ID)
@@ -168,7 +168,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return nil
 	}
 
-	amount := consumed * offer.UnitPrice + offer.SetupPrice
+	amount := consumed*offer.UnitPrice + offer.SetupPrice
 	if amount > ch.TotalDeposit {
 		amount = ch.TotalDeposit
 	}

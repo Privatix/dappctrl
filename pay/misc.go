@@ -79,8 +79,9 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 	ch *data.Channel, pld *payload) bool {
 
 	client := &data.User{}
-	if s.db.FindOneTo(client, "eth_addr", ch.Client) != nil {
-		s.logger.Warn("could not find client with addr: %v", ch.Client)
+	if err := s.db.FindOneTo(client, "eth_addr", ch.Client); err != nil {
+		s.logger.Warn("could not find client with addr %v: %v",
+			ch.Client, err)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}

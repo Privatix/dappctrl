@@ -2,6 +2,7 @@ package worker
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -239,9 +240,6 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 		[common.HashLength]byte(offeringHash), balance,
 		balanceMsgSig, closingSig)
 
-	// Test agent pre service terminate job created.
-	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
-
 	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
 
@@ -256,6 +254,9 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 	runJob(t, env.worker.AgentAfterCooperativeClose, fixture.job)
 
 	testChannelStatusChanged(t, fixture.job, env, data.ChannelClosedCoop)
+
+	// Test agent pre service terminate job created.
+	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterCooperativeClose, *fixture.job)
 }
@@ -416,16 +417,25 @@ func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
 	fixture *workerTestFixture, env *workerTest,
 	setupPrice uint64, billingType, expectedStatus string) {
 
-	fixture.Channel.ServiceStatus = data.ServicePending
-	env.updateInTestDB(t, fixture.Channel)
-
 	fixture.Offering.SetupPrice = setupPrice
 	fixture.Offering.BillingType = billingType
 	env.updateInTestDB(t, fixture.Offering)
 
 	runJob(t, env.worker.AgentAfterEndpointMsgSOMCPublish, fixture.job)
 
-	testServiceStatusChanged(t, fixture.job, env, expectedStatus)
+	testJobToChangeServiceStatus(t, fixture.Channel.ID, env, expectedStatus)
+}
+
+func testJobToChangeServiceStatus(t *testing.T,
+	channel string, env *workerTest, jobType string) {
+	j := &data.Job{}
+	env.selectOneTo(t, j, "WHERE related_id = $1", channel)
+	defer env.deleteFromTestDB(t, j)
+
+	if j.Type != jobType {
+		t.Fatalf("wanted: %s, got: %s", jobType, j.Type)
+
+	}
 }
 
 func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
@@ -437,14 +447,30 @@ func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
 		data.JobChannel)
 	defer env.close()
 	defer fixture.close()
+	defer env.insertToTestDB(t, fixture.job)
 
-	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env, 0, data.BillingPrepaid,
-		data.ServiceSuspended)
-	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env, 1, data.BillingPostpaid,
-		data.ServiceSuspended)
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fixture.Channel)
 
-	testCommonErrors(t, env.worker.AgentAfterEndpointMsgSOMCPublish,
-		*fixture.job)
+	err := fmt.Errorf("active jobs exist")
+	util.TestExpectResult(t, "run job", err,
+		env.worker.AgentAfterEndpointMsgSOMCPublish(fixture.job))
+
+	env.deleteFromTestDB(t, fixture.job)
+
+	fixture.Channel.ServiceStatus = data.ServicePending
+	env.updateInTestDB(t, fixture.Channel)
+
+	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env,
+		0, data.BillingPostpaid,
+		data.JobAgentPreServiceUnsuspend)
+
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	env.updateInTestDB(t, fixture.Channel)
+
+	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env,
+		1, data.BillingPrepaid,
+		data.JobAgentPreServiceSuspend)
 }
 
 func TestAgentPreOfferingMsgBCPublish(t *testing.T) {

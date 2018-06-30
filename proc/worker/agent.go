@@ -101,16 +101,17 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	var jobType string
-
 	if channel.ReceiptBalance > 0 {
-		jobType = data.JobAgentPreCooperativeClose
+		if err = w.addJob(data.JobAgentPreCooperativeClose,
+			data.JobChannel, channel.ID); err != nil {
+			return fmt.Errorf("could not add %s job: %v",
+				data.JobAgentPreCooperativeClose, err)
+		}
 	} else {
-		jobType = data.JobAgentPreServiceTerminate
-	}
-
-	if err = w.addJob(jobType, data.JobChannel, channel.ID); err != nil {
-		return fmt.Errorf("could not add %s job: %v", jobType, err)
+		if _, err = w.processor.TerminateChannel(channel.ID,
+			data.JobTask, true); err != nil {
+			return err
+		}
 	}
 
 	channel.ChannelStatus = data.ChannelInChallenge
@@ -129,8 +130,8 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID); err != nil {
+	if _, err = w.processor.TerminateChannel(channel.ID,
+		data.JobTask, true); err != nil {
 		return err
 	}
 
@@ -210,11 +211,6 @@ func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not cooperative close: %v", err)
 	}
 
-	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID); err != nil {
-		return fmt.Errorf("could not add job: %v", err)
-	}
-
 	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
 		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
@@ -227,7 +223,13 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 	}
 
 	channel.ChannelStatus = data.ChannelClosedCoop
-	return w.db.Update(channel)
+	if err := w.db.Update(channel); err != nil {
+		return fmt.Errorf("could not update %T: %v", channel, err)
+	}
+
+	_, err = w.processor.TerminateChannel(channel.ID,
+		data.JobTask, true)
+	return err
 }
 
 // AgentPreServiceSuspend marks service as suspended.
@@ -422,11 +424,17 @@ func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	if offering.BillingType == data.BillingPrepaid || offering.SetupPrice > 0 {
-		channel.ServiceStatus = data.ServiceSuspended
+	if offering.BillingType == data.BillingPrepaid ||
+		offering.SetupPrice > 0 {
+		_, err = w.processor.SuspendChannel(channel.ID,
+			data.JobTask, true)
 
 	} else {
-		channel.ServiceStatus = data.ServiceActive
+		_, err = w.processor.ActivateChannel(channel.ID,
+			data.JobTask, true)
+	}
+	if err != nil {
+		return err
 	}
 
 	changedTime := time.Now().Add(time.Minute)

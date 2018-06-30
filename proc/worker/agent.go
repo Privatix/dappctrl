@@ -426,15 +426,10 @@ func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 
 	if offering.BillingType == data.BillingPrepaid ||
 		offering.SetupPrice > 0 {
-		_, err = w.processor.SuspendChannel(channel.ID,
-			data.JobTask, true)
+		channel.ServiceStatus = data.ServiceSuspended
 
 	} else {
-		_, err = w.processor.ActivateChannel(channel.ID,
-			data.JobTask, true)
-	}
-	if err != nil {
-		return err
+		channel.ServiceStatus = data.ServiceActive
 	}
 
 	changedTime := time.Now().Add(time.Minute)

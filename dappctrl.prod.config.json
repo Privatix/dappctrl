@@ -76,6 +76,11 @@
                 "TryPeriod": 30000,
                 "FirstStartDelay": 25000
             },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
+            },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
                 "TryLimit": 3,

@@ -101,17 +101,16 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
+	var jobType string
+
 	if channel.ReceiptBalance > 0 {
-		if err = w.addJob(data.JobAgentPreCooperativeClose,
-			data.JobChannel, channel.ID); err != nil {
-			return fmt.Errorf("could not add %s job: %v",
-				data.JobAgentPreCooperativeClose, err)
-		}
+		jobType = data.JobAgentPreCooperativeClose
 	} else {
-		if _, err = w.processor.TerminateChannel(channel.ID,
-			data.JobTask, true); err != nil {
-			return err
-		}
+		jobType = data.JobAgentPreServiceTerminate
+	}
+
+	if err = w.addJob(jobType, data.JobChannel, channel.ID); err != nil {
+		return fmt.Errorf("could not add %s job: %v", jobType, err)
 	}
 
 	channel.ChannelStatus = data.ChannelInChallenge
@@ -130,8 +129,8 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	if _, err = w.processor.TerminateChannel(channel.ID,
-		data.JobTask, true); err != nil {
+	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
+		channel.ID); err != nil {
 		return err
 	}
 
@@ -211,6 +210,11 @@ func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not cooperative close: %v", err)
 	}
 
+	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
+		channel.ID); err != nil {
+		return fmt.Errorf("could not add job: %v", err)
+	}
+
 	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
 		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
@@ -227,9 +231,7 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", channel, err)
 	}
 
-	_, err = w.processor.TerminateChannel(channel.ID,
-		data.JobTask, true)
-	return err
+	return nil
 }
 
 // AgentPreServiceSuspend marks service as suspended.

@@ -209,6 +209,9 @@ func TestAgentPreCooperativeClose(t *testing.T) {
 
 	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
 
+	// Test agent pre service terminate job created.
+	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
+
 	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
 
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
@@ -253,9 +256,6 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 	runJob(t, env.worker.AgentAfterCooperativeClose, fixture.job)
 
 	testChannelStatusChanged(t, fixture.job, env, data.ChannelClosedCoop)
-
-	// Test agent pre service terminate job created.
-	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterCooperativeClose, *fixture.job)
 }

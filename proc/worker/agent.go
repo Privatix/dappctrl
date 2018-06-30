@@ -142,14 +142,49 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 	return nil
 }
 
-// AgentPreCooperativeClose call contract cooperative close method and trigger
-// service terminate job.
-func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentPreCooperativeClose)
+// AgentAfterCooperativeClose marks channel as closed coop.
+func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
+	channel, err := w.relatedChannel(job, data.JobAgentAfterCooperativeClose)
 	if err != nil {
 		return err
 	}
 
+	channel.ChannelStatus = data.ChannelClosedCoop
+	if err := w.db.Update(channel); err != nil {
+		return fmt.Errorf("could not update %T: %v", channel, err)
+	}
+
+	_, err = w.processor.TerminateChannel(channel.ID,
+		data.JobTask, true)
+	return err
+}
+
+// AgentPreServiceSuspend marks service as suspended.
+func (w *Worker) AgentPreServiceSuspend(job *data.Job) error {
+	_, err := w.agentUpdateServiceStatus(job,
+		data.JobAgentPreServiceSuspend)
+	return err
+}
+
+// AgentPreServiceUnsuspend marks service as active.
+func (w *Worker) AgentPreServiceUnsuspend(job *data.Job) error {
+	_, err := w.agentUpdateServiceStatus(job,
+		data.JobAgentPreServiceUnsuspend)
+	return err
+}
+
+// AgentPreServiceTerminate marks service as active.
+func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
+	channel, err := w.agentUpdateServiceStatus(job,
+		data.JobAgentPreServiceTerminate)
+	if err != nil {
+		return err
+	}
+	return w.agentCooperativeClose(job, channel)
+}
+
+func (w *Worker) agentCooperativeClose(job *data.Job,
+	channel *data.Channel) error {
 	offering, err := w.offering(channel.Offering)
 	if err != nil {
 		return err
@@ -210,49 +245,15 @@ func (w *Worker) AgentPreCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not cooperative close: %v", err)
 	}
 
-	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID); err != nil {
-		return fmt.Errorf("could not add job: %v", err)
-	}
-
 	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
 		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
 }
 
-// AgentAfterCooperativeClose marks channel as closed coop.
-func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentAfterCooperativeClose)
-	if err != nil {
-		return err
-	}
-
-	channel.ChannelStatus = data.ChannelClosedCoop
-	if err := w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update %T: %v", channel, err)
-	}
-
-	return nil
-}
-
-// AgentPreServiceSuspend marks service as suspended.
-func (w *Worker) AgentPreServiceSuspend(job *data.Job) error {
-	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceSuspend)
-}
-
-// AgentPreServiceUnsuspend marks service as active.
-func (w *Worker) AgentPreServiceUnsuspend(job *data.Job) error {
-	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceUnsuspend)
-}
-
-// AgentPreServiceTerminate marks service as active.
-func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
-	return w.agentUpdateServiceStatus(job, data.JobAgentPreServiceTerminate)
-}
-
-func (w *Worker) agentUpdateServiceStatus(job *data.Job, jobType string) error {
+func (w *Worker) agentUpdateServiceStatus(job *data.Job,
+	jobType string) (*data.Channel, error) {
 	channel, err := w.relatedChannel(job, jobType)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch jobType {
@@ -268,10 +269,10 @@ func (w *Worker) agentUpdateServiceStatus(job *data.Job, jobType string) error {
 	channel.ServiceChangedTime = &changedTime
 
 	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update service status: %v", err)
+		return nil, fmt.Errorf("could not update service status: %v", err)
 	}
 
-	return nil
+	return channel, nil
 }
 
 // AgentPreEndpointMsgCreate prepares endpoint message to be sent to client.

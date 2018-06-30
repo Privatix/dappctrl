@@ -135,9 +135,7 @@ func testChannelStatusChanged(t *testing.T,
 
 func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 	// set ch_status="in_challenge"
-	// if channels.receipt_balance > 0
-	//   then "preCooperativeClose"
-	//   else "preServiceTerminate"
+	// "preServiceTerminate"
 
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
@@ -162,9 +160,14 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 		testChangesStatusAndCreatesJob(t, 0, data.JobAgentPreServiceTerminate)
 	})
 
-	t.Run("ChannelInChallengeAndCoopCloseJobCreated", func(t *testing.T) {
-		testChangesStatusAndCreatesJob(t, 1, data.JobAgentPreCooperativeClose)
-	})
+	runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
+		fixture.job)
+	testChannelStatusChanged(t, fixture.job, env,
+		data.ChannelInChallenge)
+	env.deleteJob(t,
+		data.JobAgentPreServiceTerminate,
+		data.JobChannel,
+		fixture.Channel.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeCloseRequest,
 		*fixture.job)
@@ -193,56 +196,6 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeClose,
 		*fixture.job)
-}
-
-func TestAgentPreCooperativeClose(t *testing.T) {
-	// 1. PSC.cooperativeClose()
-	// 2. "preServiceTerminate"
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentPreCooperativeClose,
-		data.JobChannel)
-	defer env.close()
-	defer fixture.close()
-
-	// Test eth transaction was recorder.
-	defer env.deleteEthTx(t, fixture.job.ID)
-
-	runJob(t, env.worker.AgentPreCooperativeClose, fixture.job)
-
-	// Test agent pre service terminate job created.
-	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel, fixture.Channel.ID)
-
-	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
-
-	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
-
-	balance := big.NewInt(int64(fixture.Channel.ReceiptBalance))
-
-	balanceMsgSig := data.TestToBytes(t, *fixture.Channel.ReceiptSignature)
-
-	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
-
-	balanceHash := eth.BalanceClosingHash(clientAddr, conf.pscAddr,
-		uint32(fixture.Channel.Block), offeringHash,
-		balance)
-
-	key, err := data.TestToPrivateKey(fixture.Account.PrivateKey, data.TestPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	closingSig, err := ethcrypto.Sign(balanceHash, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
-		env.gasConf.PSC.CooperativeClose, agentAddr,
-		uint32(fixture.Channel.Block),
-		[common.HashLength]byte(offeringHash), balance,
-		balanceMsgSig, closingSig)
-
-	testCommonErrors(t, env.worker.AgentPreCooperativeClose, *fixture.job)
 }
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
@@ -315,7 +268,45 @@ func TestAgentPreServiceTerminate(t *testing.T) {
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
 
+	testCooperativeCloseCalled(t, env, fixture)
+
 	testCommonErrors(t, env.worker.AgentPreServiceTerminate, *fixture.job)
+}
+
+func testCooperativeCloseCalled(t *testing.T, env *workerTest,
+	fixture *workerTestFixture) {
+	// Test eth transaction was recorder.
+	defer env.deleteEthTx(t, fixture.job.ID)
+
+	agentAddr := data.TestToAddress(t, fixture.Channel.Agent)
+
+	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
+
+	balance := big.NewInt(int64(fixture.Channel.ReceiptBalance))
+
+	balanceMsgSig := data.TestToBytes(t, *fixture.Channel.ReceiptSignature)
+
+	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
+
+	balanceHash := eth.BalanceClosingHash(clientAddr, conf.pscAddr,
+		uint32(fixture.Channel.Block), offeringHash,
+		balance)
+
+	key, err := data.TestToPrivateKey(fixture.Account.PrivateKey, data.TestPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	closingSig, err := ethcrypto.Sign(balanceHash, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+		env.gasConf.PSC.CooperativeClose, agentAddr,
+		uint32(fixture.Channel.Block),
+		[common.HashLength]byte(offeringHash), balance,
+		balanceMsgSig, closingSig)
 }
 
 func TestAgentPreEndpointMsgCreate(t *testing.T) {

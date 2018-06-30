@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -179,7 +180,8 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
 	m.logger.Info("posting cheque for amount: %d...", amount)
-	err := m.post(m.db, ch, m.psc, m.pw.Get(), amount,
+	pscB64 := data.FromBytes(common.HexToAddress(m.psc).Bytes())
+	err := m.post(m.db, ch, pscB64, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout)
 	if err != nil {
 		m.logger.Error("failed to post cheque for chan %s: %s", ch, err)

@@ -71,6 +71,11 @@
 		"TryLimit": 3,
                 "TryPeriod": 60000
             },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
                 "TryLimit": 3,

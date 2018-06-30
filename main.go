@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	abill "github.com/privatix/dappctrl/agent/bill"
+	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
@@ -35,6 +38,7 @@ type ethConfig struct {
 type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
+	ClientMonitor *cbill.Config
 	Eth           *ethConfig
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
@@ -54,6 +58,7 @@ type config struct {
 func newConfig() *config {
 	return &config{
 		BlockMonitor:  monitor.NewConfig(),
+		ClientMonitor: cbill.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
@@ -164,6 +169,23 @@ func main() {
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
+	}()
+
+	amon, err := abill.NewMonitor(
+		time.Duration(5)*time.Second, db, logger, pr)
+	if err != nil {
+		logger.Fatal("failed to create agent billing monitor: %s", err)
+	}
+	go func() {
+		logger.Fatal("failed to run agent billing monitor: %s",
+			amon.Run())
+	}()
+
+	cmon := cbill.NewMonitor(conf.ClientMonitor,
+		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+	go func() {
+		logger.Fatal("failed to run client billing monitor: %s",
+			cmon.Run())
 	}()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,

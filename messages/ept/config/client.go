@@ -26,12 +26,14 @@ const (
 	pathPerm         = 0755
 
 	nameCompLZO = "comp-lzo"
+	nameProto   = "proto"
 
 	defaultCipher       = "AES-256-CBC"
 	defaultConnectRetry = "2 120"
 	defaultPing         = "10"
 	defaultPingRestart  = "10"
-	defaultProto        = "tcp"
+	defaultProto        = "tcp-client"
+	defaultAccessFile   = "access.ovpn"
 
 	// DefaultServerAddress default OpenVpn server address.
 	DefaultServerAddress = "127.0.0.1"
@@ -55,7 +57,8 @@ type vpnConf struct {
 	PingRestart   string `json:"ping-restart"`
 	Port          string `json:"port"`
 	Proto         string `json:"proto"`
-	ServerAddress string `json:"serverAddress"`
+	ServerAddress string `json:"-"`
+	AccessFile    string `json:"-"`
 }
 
 func newVpnConfig() *vpnConf {
@@ -67,6 +70,7 @@ func newVpnConfig() *vpnConf {
 		Port:          defaultServerPort,
 		Proto:         defaultProto,
 		ServerAddress: DefaultServerAddress,
+		AccessFile:    defaultAccessFile,
 	}
 }
 
@@ -123,6 +127,9 @@ func deploy(targetDir, srvAddr string,
 
 	dir := filepath.Join(targetDir)
 
+	// set absolute path for  access file
+	cfg.AccessFile = filepath.Join(dir, defaultAccessFile)
+
 	if err := cfg.saveToFile(filepath.Join(dir,
 		clientConfName)); err != nil {
 		return err
@@ -138,16 +145,33 @@ func autogenFu() string {
 }
 
 func checkParam(key string, data []byte) bool {
-	var vals map[string]string
+	v := variables(data)
 
-	if err := json.Unmarshal(data, &vals); err != nil {
-		return false
-	}
-
-	if _, ok := vals[key]; !ok {
+	if _, ok := v[key]; !ok {
 		return false
 	}
 	return true
+}
+
+func proto(data []byte) string {
+	v := variables(data)
+
+	val, ok := v[nameProto]
+	if !ok {
+		return defaultProto
+	}
+
+	if val == "tcp-server" || val == "tcp" {
+		return defaultProto
+	}
+	return val
+
+}
+
+func variables(data []byte) (v map[string]string) {
+	v = make(map[string]string)
+	json.Unmarshal(data, &v)
+	return
 }
 
 // generate injects config values into custom template
@@ -208,16 +232,13 @@ func clientConfig(srvAddr string,
 		return nil, err
 	}
 
-	// if the configuration does not have a server address,
-	// then take it from srvAddr
-	if (config.ServerAddress == DefaultServerAddress ||
-		config.ServerAddress == "") && srvAddr != "" {
-		config.ServerAddress = srvAddr
-	}
+	config.ServerAddress = srvAddr
 
 	if checkParam(nameCompLZO, additionalParams) {
 		config.CompLZO = nameCompLZO
 	}
+
+	config.Proto = proto(additionalParams)
 
 	return config, nil
 }

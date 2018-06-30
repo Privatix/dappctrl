@@ -33,6 +33,7 @@ type TypeConfig struct {
 	TryLimit   uint8 // Default number of tries to complete job.
 	TryPeriod  uint  // Default retry period, in milliseconds.
 	Duplicated bool  // Whether do or do not check for duplicates.
+	FirstStartDelay uint // Default first run delay after job added, in milliseconds.
 }
 
 // Config is a job queue configuration.
@@ -117,10 +118,15 @@ func (q *Queue) checkDuplicated(j *data.Job) error {
 
 // Add adds a new job to the job queue.
 func (q *Queue) Add(j *data.Job) error {
-	if !q.typeConfig(j).Duplicated {
+	tconf := q.typeConfig(j)
+	if !tconf.Duplicated {
 		if err := q.checkDuplicated(j); err != nil {
 			return err
 		}
+	}
+	if tconf.FirstStartDelay > 0 {
+		j.NotBefore = time.Now().Add(
+			time.Duration(tconf.FirstStartDelay) * time.Millisecond)
 	}
 
 	j.ID = util.NewUUID()

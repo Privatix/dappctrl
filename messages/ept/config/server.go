@@ -16,7 +16,7 @@ const (
 	caNameFromConfig = "ca"
 	caPathName       = "caPathName"
 	caData           = "caData"
-	serverAddress    = "serverAddress"
+	serverAddress    = "externalIP"
 )
 
 type pushReq struct {

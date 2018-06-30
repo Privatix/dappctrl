@@ -25,8 +25,9 @@ type Logger struct {
 
 // LogConfig is a logger configuration.
 type LogConfig struct {
-	Level   string
-	LogPath string
+	Level         string
+	LogPath       string
+	LogFilePrefix string
 }
 
 // Log levels.
@@ -64,7 +65,7 @@ func parseLogLevel(lvl string) int {
 	return -1
 }
 
-func createLogFile(path string) (*os.File, error) {
+func createLogFile(prefix, path string) (*os.File, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func createLogFile(path string) (*os.File, error) {
 		return nil, err
 	}
 
-	fileName := gofmt.Sprintf("dappctrl-%s.log",
+	fileName := gofmt.Sprintf(prefix+"-%s.log",
 		time.Now().Format("2006-01-02"))
 	absolutePath := filepath.Join(path, fileName)
 
@@ -91,7 +92,7 @@ func NewLogger(conf *LogConfig) (*Logger, error) {
 	logger := &Logger{level: lvl}
 
 	if conf.LogPath != "" {
-		file, err := createLogFile(conf.LogPath)
+		file, err := createLogFile(conf.LogFilePrefix, conf.LogPath)
 		if err != nil {
 			logger.out = os.Stderr
 		} else {

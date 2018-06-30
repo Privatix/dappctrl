@@ -3,9 +3,7 @@ package monitor
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"math/big"
 	"strings"
 	"time"
 
@@ -374,26 +372,10 @@ func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 		m.ignoreEvent(el)
 		return
 	}
-	amountBytes, err := data.ToBytes(el.Data)
-	if err != nil {
-		m.logger.Error("failed to decode eth log data: %v", err)
-		m.ignoreEvent(el)
-		return
-	}
-	balanceData := &data.JobBalanceData{
-		Amount: uint(big.NewInt(0).SetBytes(amountBytes).Uint64()),
-	}
-	dataEncoded, err := json.Marshal(balanceData)
-	if err != nil {
-		m.logger.Error("failed to marshal balance data: %v", err)
-		m.ignoreEvent(el)
-		return
-	}
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   acc.ID,
 		RelatedType: data.JobAccount,
-		Data:        dataEncoded,
 	}
 
 	m.scheduleCommon(el, j)

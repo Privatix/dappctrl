@@ -15,7 +15,6 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentAfterChannelTopUp:              worker.AgentAfterChannelTopUp,
 		data.JobAgentAfterUncooperativeCloseRequest: worker.AgentAfterUncooperativeClose,
 		data.JobAgentAfterUncooperativeClose:        worker.AgentAfterUncooperativeClose,
-		data.JobAgentPreCooperativeClose:            worker.AgentPreCooperativeClose,
 		data.JobAgentAfterCooperativeClose:          worker.AgentAfterCooperativeClose,
 		data.JobAgentPreServiceSuspend:              worker.AgentPreServiceSuspend,
 		data.JobAgentPreServiceUnsuspend:            worker.AgentPreServiceUnsuspend,

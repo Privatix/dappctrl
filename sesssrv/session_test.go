@@ -147,7 +147,7 @@ func testUpdateStopNormalFlow(fxt *data.TestFixture, sess *data.Session, stop bo
 
 		if sess.LastUsageTime.Before(before) ||
 			sess.LastUsageTime.After(after) ||
-			sess.UnitsUsed != uint64((i+1)*units) {
+			sess.UnitsUsed != (uint64((i+1)*units)/1024/1024) {
 			fxt.T.Fatalf("wrong session data after update")
 		}
 

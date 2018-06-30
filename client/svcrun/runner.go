@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os/exec"
 	"sync"
+	"syscall"
 
 	"gopkg.in/reform.v1"
 
@@ -82,7 +83,8 @@ func (r *serviceRunner) StopAll() error {
 
 	var err error
 	for _, v := range r.cmds {
-		if err2 := v.Process.Kill(); err == nil {
+		err2 := syscall.Kill(-v.Process.Pid, syscall.SIGKILL)
+		if err == nil {
 			err = err2
 		}
 	}
@@ -105,6 +107,7 @@ func (r *serviceRunner) Start(channel string) error {
 	}
 
 	cmd := r.newCmd(conf.Name, conf.Args, channel)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -173,7 +176,7 @@ func (r *serviceRunner) Stop(channel string) error {
 		return ErrNotRunning
 	}
 
-	return cmd.Process.Kill()
+	return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 }
 
 // IsRunning returns whether a service for a given channel is running.

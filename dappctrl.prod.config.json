@@ -11,6 +11,12 @@
         "Timeout": 5
     },
 
+    "ClientMonitor": {
+        "CollectPeriod": 5000,
+        "RequestTLS": false,
+        "RequestTimeout": 2500
+    },
+
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
@@ -24,7 +30,7 @@
     "Eth": {
         "Contract" : {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
+            "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
     },
@@ -65,6 +71,16 @@
 		"TryLimit": 3,
                 "TryPeriod": 60000
             },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
+            },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
                 "TryLimit": 3,
@@ -92,15 +108,26 @@
             },
             "addCheckBalance": {
                 "Duplicated": true,
-		"TryLimit": 0,
+		        "TryLimit": 0,
                 "TryPeriod": 60000
+            },
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
             }
         }
     },
 
     "Log": {
         "Level": "info",
-        "LogPath": "/var/log"
+        "LogPath": "/var/log",
+        "LogFilePrefix": "dappctrl"
     },
 
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",

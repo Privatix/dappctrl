@@ -27,7 +27,6 @@ const (
 	nameConnectRetry  = "connect-retry"
 	namePing          = "ping"
 	namePingRestart   = "ping-restart"
-	nameProto         = "proto"
 	nameServerAddress = "serverAddress"
 
 	testServerName = "testserver"

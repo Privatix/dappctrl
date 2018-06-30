@@ -43,7 +43,8 @@ func main() {
 	defer data.CloseDB(db)
 
 	id, pass := customiseProduct(logger, db, *template, *agent)
-	createDappvpnConfig(logger, id, pass, *dappvpnconftpl, *dappvpnconf)
+	createDappvpnConfig(
+		logger, id, pass, *dappvpnconftpl, *dappvpnconf, *agent)
 }
 
 func randPass() string {
@@ -103,7 +104,7 @@ func customiseProduct(logger *util.Logger,
 }
 
 func createDappvpnConfig(logger *util.Logger,
-	username, password, dappvpnconftpl, dappvpnconf string) {
+	username, password, dappvpnconftpl, dappvpnconf string, agent bool) {
 	var conf map[string]interface{}
 	if err := json.Unmarshal([]byte(dappvpnconftpl), &conf); err != nil {
 		logger.Fatal("failed to parse dappvpn config template: %s", err)
@@ -116,6 +117,16 @@ func createDappvpnConfig(logger *util.Logger,
 
 	srv.(map[string]interface{})["Username"] = username
 	srv.(map[string]interface{})["Password"] = password
+
+	if !agent {
+		mon, ok := conf["Monitor"]
+		if !ok {
+			logger.Fatal(
+				"no monitor section in dappvpn config template")
+		}
+
+		mon.(map[string]interface{})["Addr"] = "localhost:7506"
+	}
 
 	if err := util.WriteJSONFile(
 		dappvpnconf, "", jsonIdent, &conf); err != nil {

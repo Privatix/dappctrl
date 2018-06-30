@@ -167,7 +167,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return nil
 	}
 
-	amount := consumed/offer.UnitPrice + offer.SetupPrice
+	amount := consumed * offer.UnitPrice + offer.SetupPrice
 	if amount > ch.TotalDeposit {
 		amount = ch.TotalDeposit
 	}

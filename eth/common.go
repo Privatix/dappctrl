@@ -14,6 +14,7 @@ func BalanceClosingHash(clientAddr, pscAddr common.Address, block uint32,
 	offeringHash common.Hash, balance *big.Int) []byte {
 	blockBytes := data.Uint32ToBytes(block)
 	return crypto.Keccak256(
+		[]byte("\x19Ethereum Signed Message:\n32"),
 		crypto.Keccak256(
 			[]byte("Privatix: receiver closing signature"),
 			clientAddr.Bytes(),
@@ -30,6 +31,7 @@ func BalanceProofHash(pscAddr, agentAddr common.Address, block uint32,
 	offeringHash common.Hash, balance *big.Int) []byte {
 	blockBytes := data.Uint32ToBytes(block)
 	return crypto.Keccak256(
+		[]byte("\x19Ethereum Signed Message:\n32"),
 		crypto.Keccak256(
 			[]byte("Privatix: sender balance proof signature"),
 			agentAddr.Bytes(),

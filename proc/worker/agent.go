@@ -154,9 +154,7 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", channel, err)
 	}
 
-	_, err = w.processor.TerminateChannel(channel.ID,
-		data.JobTask, true)
-	return err
+	return nil
 }
 
 // AgentPreServiceSuspend marks service as suspended.

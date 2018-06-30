@@ -84,14 +84,15 @@ func postPayload(db *reform.DB, channel string,
 	if endp.PaymentReceiverAddress == nil {
 		return fmt.Errorf("no payment addr found for chan %s", channel)
 	}
-
-	url := *endp.PaymentReceiverAddress + payPath
+	//TODO: add URL validation and che
+	url := *endp.PaymentReceiverAddress
+	/*
 	if tls {
 		url = "https://" + url
 	} else {
 		url = "http://" + url
 	}
-
+	*/
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Millisecond,
 	}

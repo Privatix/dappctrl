@@ -80,36 +80,44 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 
 	client := &data.User{}
 	if s.db.FindOneTo(client, "eth_addr", ch.Client) != nil {
+		s.logger.Warn("could not find client with addr: %v", ch.Client)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	pub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
+		s.logger.Error("could not decode public key")
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	sig, err := data.ToBytes(pld.BalanceMsgSig)
 	if err != nil {
+		s.logger.Error("could not decode signature")
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	pscAddr, err := data.ToAddress(pld.ContractAddress)
 	if err != nil {
+		s.logger.Error("could not parse contract addr: %v",
+			pld.ContractAddress)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	agentAddr, err := data.ToAddress(ch.Agent)
 	if err != nil {
+		s.logger.Error("could not parse agent addr: %v", ch.Agent)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}
 
 	offeringHash, err := data.ToHash(pld.OfferingHash)
 	if err != nil {
+		s.logger.Error("could not parse offering hash: %v",
+			pld.OfferingHash)
 		s.replyErr(w, http.StatusInternalServerError, errUnexpected)
 		return false
 	}

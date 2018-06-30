@@ -178,6 +178,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
+	m.logger.Info("posting cheque for amount: %d...", amount)
 	err := m.post(m.db, ch, m.psc, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout)
 	if err != nil {

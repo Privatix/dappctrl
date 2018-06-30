@@ -20,6 +20,7 @@ func (s *Server) handlePay(w http.ResponseWriter, r *http.Request) {
 	if !s.parsePayload(w, r, pld) {
 		return
 	}
+	s.logger.Info("processing pay cheque: %+v", pld)
 	ch, ok := s.findChannel(w, pld.OfferingHash, pld.AgentAddress,
 		pld.OpenBlockNumber)
 	if !ok || !s.validateChannelForPayment(w, ch, pld) ||

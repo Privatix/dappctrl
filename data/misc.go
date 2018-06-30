@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -55,6 +56,16 @@ func Uint32ToBytes(x uint32) [4]byte {
 	var xBytes [4]byte
 	binary.BigEndian.PutUint32(xBytes[:], x)
 	return xBytes
+}
+
+// Uint192ToBytes using big endian with leading zeros.
+func Uint192ToBytes(x *big.Int) [24]byte {
+	var ret [24]byte
+	xBytes := x.Bytes()
+	for i, v := range xBytes {
+		ret[24 - len(xBytes) + i] = v
+	}
+	return ret
 }
 
 // HashPassword computes encoded hash of the password.

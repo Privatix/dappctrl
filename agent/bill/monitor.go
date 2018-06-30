@@ -75,8 +75,7 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
 
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active')
                  AND channels.channel_status NOT IN ('pending')
@@ -102,8 +101,7 @@ func (m *Monitor) VerifyUnitsBasedChannels() error {
 
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active')
                  AND channels.channel_status NOT IN ('pending')
@@ -132,7 +130,7 @@ func (m *Monitor) VerifyBillingLags() error {
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
 
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active')
                      AND channels.channel_status NOT IN ('pending')
@@ -161,7 +159,7 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
 
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('suspended')
                  AND channels.channel_status NOT IN ('pending')
@@ -185,13 +183,13 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
                      ON channels.id = ses.channel
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status IN ('pending', 'active', 'suspended')
                  AND channels.channel_status NOT IN ('pending')
                  AND acc.in_use
                GROUP BY channels.id, offer.max_inactive_time_sec
-              HAVING GREATEST(MAX(ses.last_usage_time), channels.service_changed_time) + 
+              HAVING GREATEST(MAX(ses.last_usage_time), channels.service_changed_time) +
 	      (offer.max_inactive_time_sec * INTERVAL '1 second') < now();`
 
 	return m.processEachChannel(query, m.terminateService)
@@ -206,7 +204,7 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
                      LEFT JOIN offerings offer
                      ON channels.offering = offer.id
 
-                     LEFT JOIN accounts acc
+                     INNER JOIN accounts acc
                      ON channels.agent = acc.eth_addr
                WHERE channels.service_status = 'suspended'
                  AND channels.channel_status NOT IN ('pending')
@@ -228,17 +226,26 @@ func (m *Monitor) processRound() error {
 
 func (m *Monitor) suspendService(uuid string) error {
 	_, err := m.pr.SuspendChannel(uuid, jobCreator, true)
-	return err
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not suspended: %s",uuid, err)
+	}
+	return nil
 }
 
 func (m *Monitor) terminateService(uuid string) error {
 	_, err := m.pr.TerminateChannel(uuid, jobCreator, true)
-	return err
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not terminated: %s",uuid, err)
+	}
+	return nil
 }
 
 func (m *Monitor) unsuspendService(uuid string) error {
 	_, err := m.pr.ActivateChannel(uuid, jobCreator, true)
-	return err
+	if err != nil {
+		m.logger.Info("Agent billing: chan %s not unsuspended: %s",uuid, err)
+	}
+	return nil
 }
 
 func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {

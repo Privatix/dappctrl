@@ -149,7 +149,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 
 	var consumed uint64
 	if err := m.db.QueryRow(`
-		SELECT sum(units_used)
+		SELECT COALESCE(sum(units_used),0)
 		  FROM sessions
 		 WHERE channel = $1`, ch.ID).Scan(&consumed); err != nil {
 		return err

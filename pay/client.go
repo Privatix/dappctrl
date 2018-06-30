@@ -29,7 +29,7 @@ func newPayload(db *reform.DB,
 	}
 
 	var client data.Account
-	if err := db.FindByPrimaryKeyTo(&client, ch.Client); err != nil {
+	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
 		return nil, err
 	}
 
@@ -84,14 +84,9 @@ func postPayload(db *reform.DB, channel string,
 	if endp.PaymentReceiverAddress == nil {
 		return fmt.Errorf("no payment addr found for chan %s", channel)
 	}
-
-	url := *endp.PaymentReceiverAddress + payPath
-	if tls {
-		url = "https://" + url
-	} else {
-		url = "http://" + url
-	}
-
+	//TODO: add URL validation and TLS support
+	url := *endp.PaymentReceiverAddress
+	
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Millisecond,
 	}

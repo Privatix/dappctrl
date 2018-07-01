@@ -68,7 +68,7 @@ log_conf = dict(
     filename='/var/log/initializer.log',
     datefmt='%m/%d %H:%M:%S',
     format='%(levelname)7s [%(lineno)3s] %(message)s')
-log_conf.update(level='DEBUG')
+log_conf.update(level='INFO')
 logging.basicConfig(**log_conf)
 logging.getLogger().addHandler(logging.StreamHandler())
 

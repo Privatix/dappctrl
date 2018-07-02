@@ -63,7 +63,7 @@ func Uint192ToBytes(x *big.Int) [24]byte {
 	var ret [24]byte
 	xBytes := x.Bytes()
 	for i, v := range xBytes {
-		ret[24 - len(xBytes) + i] = v
+		ret[24-len(xBytes)+i] = v
 	}
 	return ret
 }

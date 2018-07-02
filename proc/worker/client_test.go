@@ -92,8 +92,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 	env.deleteFromTestDB(t, &agentUserRec)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestClientAfterChannelCreate(t *testing.T) {
+func TestClientAfterChannelCreate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
 
@@ -102,17 +101,20 @@ func TestClientPreChannelCreate(t *testing.T) {
 	defer fxt.Close()
 
 	ethLog := data.NewTestEthLog()
-	ethLog.JobID = pointer.ToString(fxt.job.ID)
+	ethLog.JobID = &fxt.job.ID
 	data.SaveToTestDB(t, db, ethLog)
 
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
 	defer data.DeleteFromTestDB(t, db, ethLog)
 
+	channelKey, _ := data.ChannelKey(fxt.Channel.Client, fxt.Channel.Agent,
+		uint32(ethLog.BlockNumber), fxt.Offering.Hash)
+
 	go func() {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
-		env.fakeSOMC.WriteGetEndpoint(t, fxt.Channel.ID, nil)
+		env.fakeSOMC.WriteGetEndpoint(t, data.FromBytes(channelKey), nil)
 	}()
 
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
@@ -131,7 +133,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		t.Fatalf("no new job created")
 	}
 	defer data.DeleteFromTestDB(t, db, &job)
-}*/
+}
 
 func swapAgentWithClient(t *testing.T, fxt *workerTestFixture) {
 	addr := fxt.Channel.Client

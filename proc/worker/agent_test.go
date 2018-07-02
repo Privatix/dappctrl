@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -358,8 +359,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
+func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
 	// 3. "afterEndpointMsgSOMCPublish"
@@ -377,9 +377,13 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
+	channelKey, _ := data.ChannelKey(fixture.Channel.Client,
+		fixture.Channel.Agent, fixture.Channel.Block,
+		fixture.Offering.Hash)
+
 	select {
 	case ret := <-somcEndpointChan:
-		if ret.Channel != fixture.Endpoint.Channel {
+		if ret.Channel != data.FromBytes(channelKey) {
 			t.Fatal("wrong channel used to publish endpoint")
 		}
 		msgBytes := data.TestToBytes(t, fixture.Endpoint.RawMsg)
@@ -401,7 +405,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 		data.JobChannel, endpoint.Channel)
 
 	testCommonErrors(t, workerF, *fixture.job)
-}*/
+}
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
 	fixture *workerTestFixture, env *workerTest,

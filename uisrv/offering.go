@@ -3,7 +3,6 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc/worker"
@@ -279,7 +278,6 @@ func (s *Server) handlePutClientOfferingStatus(
 		Type:        data.JobClientPreChannelCreate,
 		RelatedType: data.JobChannel,
 		RelatedID:   util.NewUUID(),
-		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
 	}); err != nil {

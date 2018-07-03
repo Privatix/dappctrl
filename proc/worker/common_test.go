@@ -75,9 +75,9 @@ func TestPreAccountAddBalance(t *testing.T) {
 	defer env.deleteFromTestDB(t, ethLog)
 
 	tx := &data.EthTx{
-		ID: util.NewUUID(),
-		JobID: &approveJob.ID,
-		Hash: txHash,
+		ID:          util.NewUUID(),
+		JobID:       &approveJob.ID,
+		Hash:        txHash,
 		RelatedType: data.JobAccount,
 		RelatedID:   fixture.Account.ID,
 		Status:      data.TxSent,

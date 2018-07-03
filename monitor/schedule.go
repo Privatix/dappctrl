@@ -523,7 +523,6 @@ func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string
 
 func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
-	j.CreatedAt = time.Now()
 	if j.Data == nil {
 		j.Data = []byte("{}")
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -163,7 +162,6 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		RelatedType: data.JobAccount,
 		RelatedID:   acc.ID,
 		Type:        data.JobAccountAddCheckBalance,
-		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobUser,
 		Data:        []byte("{}"),
 	}); err != nil {

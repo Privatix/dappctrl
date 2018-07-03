@@ -30,10 +30,10 @@ type HandlerMap map[string]Handler
 
 // TypeConfig is a configuration for specific job type.
 type TypeConfig struct {
-	TryLimit   uint8 // Default number of tries to complete job.
-	TryPeriod  uint  // Default retry period, in milliseconds.
-	Duplicated bool  // Whether do or do not check for duplicates.
-	FirstStartDelay uint // Default first run delay after job added, in milliseconds.
+	TryLimit        uint8 // Default number of tries to complete job.
+	TryPeriod       uint  // Default retry period, in milliseconds.
+	Duplicated      bool  // Whether do or do not check for duplicates.
+	FirstStartDelay uint  // Default first run delay after job added, in milliseconds.
 }
 
 // Config is a job queue configuration.

@@ -351,7 +351,8 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		return err
 	}
 
-	if err := w.deployConfig(w.db, job.RelatedID, w.clientVPN.ConfigDir); err != nil {
+	if err := w.deployConfig(w.db, job.RelatedID, w.clientVPN.ConfigDir,
+		w.manageVpnPort); err != nil {
 		return err
 	}
 

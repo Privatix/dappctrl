@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
@@ -163,6 +162,8 @@ func main() {
 
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
 	worker.SetRunner(runner)
+	worker.ManagementInterfacePort(
+		managementPortForClient(conf.ServiceRunner, logger, db.Querier))
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 

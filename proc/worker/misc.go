@@ -200,3 +200,9 @@ func (w *Worker) KeyFromChannelData(channel string) (string, error) {
 	}
 	return data.FromBytes(key), nil
 }
+
+// ManagementInterfacePort saves the port number for
+// connect OpenVpn management interface.
+func (w *Worker) ManagementInterfacePort(port uint16) {
+	w.manageVpnPort = port
+}

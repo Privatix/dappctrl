@@ -106,5 +106,5 @@ verb 3
 #log-append /var/log/openvpn/openvpn-tcp.log
 
 # Management interface settings
-management 0.0.0.0 7506
+management 0.0.0.0 {{if .ManagementPort}}{{.ManagementPort}}{{else}}7506{{autogen}}{{end}}
 management-hold

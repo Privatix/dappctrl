@@ -157,8 +157,6 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.queue.Add(&data.Job{
-		ID:          util.NewUUID(),
-		Status:      data.JobActive,
 		RelatedType: data.JobAccount,
 		RelatedID:   acc.ID,
 		Type:        data.JobAccountAddCheckBalance,

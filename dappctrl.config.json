@@ -61,8 +61,19 @@
         "TryPeriod": 60000,
         "Types": {
             "clientPreChannelCreate": {
+                "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
             },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
@@ -90,14 +101,26 @@
                 "TryPeriod": 60000
             },
             "addCheckBalance": {
+                "Duplicated": true,
                 "TryLimit": 0,
                 "TryPeriod": 60000
+            },
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
             }
         }
     },
     "Log": {
         "Level": "info",
-        "LogPath": "/var/log"
+        "LogPath": "/var/log",
+        "LogFilePrefix": "dappctrl"
     },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {

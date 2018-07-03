@@ -16,28 +16,12 @@ import (
 )
 
 const (
-	account       = "Account"
-	ethAddress    = "EthAddr"
-	currentAPIKey = "c021f92e9c199c79d870adf34365e372"
-	currentStage  = alphaStage
-	mainRepo      = "github.com/privatix/dappctrl"
-
-	alpha = "alpha"
-	beta  = "beta"
-	rc    = "rc"
-	rtm   = "rtm"
-)
-
-// Stages of application.
-const (
-	alphaStage = iota
-	betaStage
-	rcStage
-	rtmStage
-)
-
-const (
-	key = "error.sendremote"
+	account             = "Account"
+	ethAddress          = "EthAddr"
+	defaultReleaseStage = "alpha"
+	currentAPIKey       = "c021f92e9c199c79d870adf34365e372"
+	mainRepo            = "github.com/privatix/dappctrl"
+	key                 = "error.sendremote"
 )
 
 var (
@@ -50,13 +34,13 @@ var (
 
 	// TODO(maxim) The list needs to be configured dynamically, before the application starts
 	// This slice is needed so that the full path is written to the log
-	pkgSlice = []string{"main", "agent/billing", "client/bill", "data",
-		"eth", "eth/contract", "eth/truffle", "eth/util",
-		"execsrv", "job", "messages", "messages/ept",
-		"messages/ept/config", "messages/offer",
-		"monitor", "pay", "proc", "worker", "sesssrv", "somc",
-		"svc/dappvpn", "svc/mon", "svc/pusher", "uisrv", "util",
-		"util/srv"}
+	pkgSlice = []string{"main", "agent/billing", "client/bill",
+		"client/svcrun", "data", "eth", "eth/contract",
+		"eth/truffle", "eth/util", "execsrv", "job", "messages",
+		"messages/ept", "messages/ept/config", "messages/offer",
+		"monitor", "pay", "proc", "proc/worker", "sesssrv", "somc",
+		"svc/dappvpn", "svc/dappvpn/mon", "svc/dappvpn/pusher",
+		"uisrv", "util", "util/srv"}
 )
 
 // Log interface for report.
@@ -68,7 +52,8 @@ type Log interface {
 
 // Config Bugsnag client config.
 type Config struct {
-	AppID string
+	AppID        string
+	ReleaseStage string
 }
 
 // Client Bugsnag client object.
@@ -82,7 +67,7 @@ type Client struct {
 
 // NewConfig generates a new default Bugsnag client Config.
 func NewConfig() *Config {
-	return &Config{AppID: defaultAppID}
+	return &Config{AppID: defaultAppID, ReleaseStage: defaultReleaseStage}
 }
 
 // NewClient initializing Bugsnag client.
@@ -107,7 +92,7 @@ func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 		Logger:          log,
 		PanicHandler:    func() {}, // we use our panic processor
 		ProjectPackages: pkgSlice,
-		ReleaseStage:    stageToStr(currentStage),
+		ReleaseStage:    cfg.ReleaseStage,
 	})
 
 	cli := new(Client)
@@ -160,24 +145,6 @@ func app(appID string) string {
 		return defaultAppID
 	}
 	return appID
-}
-
-func stageToStr(stage int) string {
-	var result string
-
-	switch stage {
-	case alphaStage:
-		result = alpha
-	case betaStage:
-		result = beta
-	case rcStage:
-		result = rc
-	case rtmStage:
-		result = rtm
-	default:
-		result = rtm
-	}
-	return result
 }
 
 // Notify takes three arguments:

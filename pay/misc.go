@@ -64,19 +64,6 @@ func (s *Server) validateChannelState(w http.ResponseWriter,
 	return true
 }
 
-func (s *Server) validateAmount(w http.ResponseWriter,
-	ch *data.Channel, pld *paymentPayload) bool {
-	if pld.Balance <= ch.ReceiptBalance || pld.Balance > ch.TotalDeposit {
-		s.RespondError(w, &srv.Error{
-			Status: http.StatusBadRequest,
-			Message: "Invalid balance amount",
-			Code: errCodeInvalidBalance,
-		})
-		return false
-	}
-	return true
-}
-
 func (s *Server) verifySignature(w http.ResponseWriter,
 	ch *data.Channel, pld *paymentPayload) bool {
 
@@ -140,7 +127,6 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 func (s *Server) validateChannelForPayment(w http.ResponseWriter,
 	ch *data.Channel, pld *paymentPayload) bool {
 	return s.validateChannelState(w, ch) &&
-		s.validateAmount(w, ch, pld) &&
 		s.verifySignature(w, ch, pld)
 }
 
@@ -148,9 +134,27 @@ func (s *Server) updateChannelWithPayment(w http.ResponseWriter,
 	ch *data.Channel, pld *paymentPayload) bool {
 	ch.ReceiptBalance = pld.Balance
 	ch.ReceiptSignature = &pld.BalanceMsgSig
-	if err := s.db.Update(ch); err != nil {
+	ret, err := s.db.Exec(`
+		UPDATE channels set receipt_balance=$1, receipt_signature=$2
+		 WHERE receipt_balance<$1 AND total_deposit>=$1 AND id=$3`,
+		pld.Balance, pld.BalanceMsgSig, ch.ID)
+	if err != nil {
 		s.Logger().Warn("failed to update channel: %v", err)
 		s.RespondError(w, errUnexpected)
+		return false
+	}
+	affected, err := ret.RowsAffected()
+	if err != nil {
+		s.Logger().Error("could not get rows affected number: %v", err)
+		s.RespondError(w, errUnexpected)
+		return false
+	}
+	if affected == 0 {
+		s.RespondError(w, &srv.Error{
+			Status: http.StatusBadRequest,
+			Code: errCodeInvalidBalance,
+			Message: "Invalid balance amount",
+		})
 		return false
 	}
 	return true

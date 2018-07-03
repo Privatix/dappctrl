@@ -384,6 +384,7 @@ type TestFixture struct {
 	DB             *reform.DB
 	Product        *Product
 	Account        *Account
+	UserAcc        *Account
 	User           *User
 	TemplateOffer  *Template
 	TemplateAccess *Template
@@ -401,7 +402,12 @@ const (
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod := NewTestProduct()
 	acc := NewTestAccount(TestPassword)
-	user := NewTestUser()
+	userAcc := NewTestAccount(TestPassword)
+	user := &User{
+		ID:        util.NewUUID(),
+		EthAddr:   userAcc.EthAddr,
+		PublicKey: userAcc.PublicKey,
+	}
 	tmpl := NewTestTemplate(TemplateOffer)
 	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
 	ch := NewTestChannel(
@@ -412,13 +418,14 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, user, off, ch, endp)
+	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, userAcc, user, off, ch, endp)
 
 	return &TestFixture{
 		T:              t,
 		DB:             db,
 		Product:        prod,
 		Account:        acc,
+		UserAcc: 	userAcc,
 		User:           user,
 		TemplateOffer:  tmpl,
 		TemplateAccess: endpTmpl,
@@ -461,5 +468,6 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
 	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,
-		f.User, f.Account, f.Product, f.TemplateAccess, f.TemplateOffer)
+		f.UserAcc, f.User, f.Account, f.Product,
+		f.TemplateAccess, f.TemplateOffer)
 }

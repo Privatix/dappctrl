@@ -157,6 +157,10 @@
         "TLS": null
     },
 
+    "PayServerTest": {
+        "ServerStartupDelay": 10
+    },
+
     "ServiceRunner": {
         "Services": {
             "VPN": {

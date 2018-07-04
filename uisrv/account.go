@@ -159,11 +159,12 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	if err := s.queue.Add(&data.Job{
 		RelatedType: data.JobAccount,
 		RelatedID:   acc.ID,
-		Type:        data.JobAccountAddCheckBalance,
+		Type:        data.JobAccountUpdateBalances,
 		CreatedBy:   data.JobUser,
 		Data:        []byte("{}"),
 	}); err != nil {
-		s.logger.Error("could not add %s job", data.JobAccountAddCheckBalance)
+		s.logger.Error("could not add %s job",
+			data.JobAccountUpdateBalances)
 		s.replyUnexpectedErr(w)
 		return
 	}

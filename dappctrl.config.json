@@ -105,11 +105,6 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "addCheckBalance": {
-                "Duplicated": true,
-                "TryLimit": 0,
-                "TryPeriod": 60000
-            },
             "clientPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,

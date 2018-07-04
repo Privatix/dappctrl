@@ -281,7 +281,8 @@ func launchOpenVPN() {
 	go func() {
 		scanner := bufio.NewScanner(io.MultiReader(stdout, stderr))
 		for scanner.Scan() {
-			io.WriteString(os.Stderr, scanner.Text()+"\n")
+			io.WriteString(
+				os.Stderr, "openvpn: "+scanner.Text()+"\n")
 		}
 		if err := scanner.Err(); err != nil {
 			msg := "failed to read from openVPN stdout/stderr: %s"

@@ -242,18 +242,22 @@ func handleMonitor(confFile string) {
 		}()
 	}
 
+	var ovpn *os.Process
 	if len(channel) != 0 {
-		launchOpenVPN()
+		ovpn = launchOpenVPN()
 		time.Sleep(conf.OpenVPN.StartDelay * time.Millisecond)
 	}
 
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, channel)
 
-	logger.Fatal("failed to monitor vpn traffic: %s",
-		monitor.MonitorTraffic())
+	err := monitor.MonitorTraffic()
+	if ovpn != nil {
+		ovpn.Kill()
+	}
+	logger.Fatal("failed to monitor vpn traffic: %s", err)
 }
 
-func launchOpenVPN() {
+func launchOpenVPN() *os.Process {
 	if len(conf.OpenVPN.Name) == 0 {
 		logger.Fatal("no OpenVPN command provided")
 	}
@@ -295,4 +299,6 @@ func launchOpenVPN() {
 	go func() {
 		logger.Fatal("OpenVPN exited: %v", cmd.Wait())
 	}()
+
+	return cmd.Process
 }

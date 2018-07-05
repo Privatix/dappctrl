@@ -1,0 +1,160 @@
+{
+    "AgentServer": {
+        "Addr": "localhost:3000",
+        "TLS": null,
+        "EthCallTimeout": 5
+    },
+    "BlockMonitor": {
+        "CollectPause": 6,
+        "SchedulePause": 6,
+        "Timeout": 5
+    },
+    "ClientMonitor": {
+        "CollectPeriod": 5000,
+        "RequestTLS": false,
+        "RequestTimeout": 2500
+    },
+    "DB": {
+        "Conn": {
+            "dbname": "dappctrl",
+            "sslmode": "disable",
+            "user": "postgres",
+            "host": "localhost",
+            "port": "5433"
+        }
+    },
+    "Eth": {
+        "Contract": {
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
+            "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
+        },
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+    },
+    "Gas": {
+        "PTC": {
+            "Approve": 100000
+        },
+        "PSC": {
+            "AddBalanceERC20": 100000,
+            "RegisterServiceOffering": 200000,
+            "CreateChannel": 200000,
+            "CooperativeClose": 200000,
+            "ReturnBalanceERC20": 100000,
+            "SetNetworkFee": 100000,
+            "UncooperativeClose": 100000,
+            "Settle": 100000,
+            "TopUp": 100000,
+            "GetChannelInfo": 100000,
+            "PublishServiceOfferingEndpoint": 100000,
+            "GetKey": 100000,
+            "BalanceOf": 100000,
+            "PopupServiceOffering": 100000,
+            "RemoveServiceOffering": 100000
+        }
+    },
+    "Job": {
+        "CollectJobs": 100,
+        "CollectPeriod": 1000,
+        "WorkerBufLen": 10,
+        "Workers": 0,
+        "TryLimit": 3,
+        "TryPeriod": 60000,
+        "Types": {
+            "clientPreChannelCreate": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "afterAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "addCheckBalance": {
+                "Duplicated": true,
+                "TryLimit": 0,
+                "TryPeriod": 60000
+            },
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            }
+        }
+    },
+    "Log": {
+        "Level": "info",
+        "LogPath": "/var/log",
+        "LogFilePrefix": "dappctrl"
+    },
+    "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
+    "PayServer": {
+        "Addr": "0.0.0.0:9000",
+        "TLS": null
+    },
+    "ServiceRunner": {
+        "Services": {
+            "VPN server": {
+                "Name": "/root/go/bin/dappvpn",
+                "Args": [
+                    "-config=/opt/privatix/config/dappvpn.config.json"
+                ],
+                "Single": true
+            },
+            "VPN client": {
+                "Name": "/root/go/bin/dappvpn",
+                "Args": [
+                    "-config=/opt/privatix/config/dappvpn.config.json"
+                ],
+                "Single": true
+            }
+        }
+    },
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+    "SOMC": {
+        "ReconnPeriod": 5000,
+        "URL": "wc://190.2.137.9:8080"
+    },
+    "StaticPassword": "",
+    "Report": {
+        "ReleaseStage": "develop"
+    }
+}

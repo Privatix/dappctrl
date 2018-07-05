@@ -271,24 +271,6 @@ func TestNewMonitor(t *testing.T) {
 	}
 }
 
-// TODO(maxim) The test sometimes does not work on CI
-/*func TestMonitorRun(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal(errTestResult)
-		}
-	}()
-
-	mon, err := NewMonitor(time.Second, &reform.DB{}, logger, pr)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := mon.Run(); err == nil {
-		t.Fatal(errTestResult)
-	}
-}*/
-
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()

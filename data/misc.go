@@ -1,10 +1,10 @@
 package data
 
 import (
-	"encoding/hex"
 	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"

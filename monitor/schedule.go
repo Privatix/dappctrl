@@ -30,22 +30,11 @@ var offeringRelatedEventsMap = map[common.Hash]bool{
 }
 
 // schedule creates a job for each unprocessed log event in the database.
-func (m *Monitor) schedule(ctx context.Context, timeout int64,
-	errCh chan error) {
+func (m *Monitor) schedule(ctx context.Context, timeout int64) {
 	ctx, cancel := context.WithTimeout(ctx,
 		time.Duration(timeout)*time.Second)
 	defer cancel()
 
-	// TODO: Move this logic into a database view? The query is just supposed to
-	// append two boolean columns calculated based on topics: whether the
-	// event is for agent, and the same for client.
-	//
-	// eth_logs.topics is a json array with '0x0..0deadbeef' encoding
-	// of addresses, whereas accounts.eth_addr is a base64 encoding of
-	// raw bytes of addresses.
-	// The encode-decode-substr is there to convert from one to another.
-	// coalesce() converts null into false for the case when topics->>n
-	// does not exist.
 	topicInAccExpr := `COALESCE(TRANSLATE(encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'), '+/', '-_') IN (SELECT eth_addr FROM accounts WHERE in_use), FALSE)`
 	columns := m.db.QualifiedColumns(data.EthLogTable)
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, topic1)) // topic[1] (agent) in active accounts
@@ -63,7 +52,7 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 	maxRetries, err := data.GetUint64Setting(m.db, maxRetryKey)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 	}
 
 	if maxRetries != 0 {
@@ -75,14 +64,13 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
-		m.errWrapper(ctx,
-			fmt.Errorf("failed to select log entries: %v", err))
+		m.errors <- fmt.Errorf("failed to select log entries: %v", err)
 		return
 	}
 
 	agent, err := data.IsAgent(m.db.Querier)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
@@ -91,9 +79,8 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		var forAgent, forClient bool
 		pointers := append(el.Pointers(), &forAgent, &forClient)
 		if err := rows.Scan(pointers...); err != nil {
-			m.errWrapper(ctx,
-				fmt.Errorf("failed to scan the selected log"+
-					" entries: %v", err))
+			m.errors <- fmt.Errorf("failed to scan the selected"+
+				" log entries: %v", err)
 			return
 		}
 
@@ -137,9 +124,8 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 	}
 
 	if err := rows.Err(); err != nil {
-		m.errWrapper(ctx,
-			fmt.Errorf("failed to fetch the next selected log"+
-				" entry: %v", err))
+		m.errors <- fmt.Errorf("failed to fetch the next selected log"+
+			" entry: %v", err)
 	}
 }
 

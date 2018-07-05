@@ -5,10 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
@@ -61,6 +62,7 @@ type Worker struct {
 	deployConfig   deployConfigFunc
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
+	ethConfig      *eth.Config
 }
 
 // NewWorker returns new instance of worker.
@@ -68,13 +70,15 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc,
-	clientVPN *config.Config) (*Worker, error) {
-	abi, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))
+	clientVPN *config.Config, eptConf *ept.Config,
+	ethConf *eth.Config) (*Worker, error) {
+	abi, err := abi.JSON(
+		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
 		return nil, err
 	}
 
-	eptService, err := ept.New(db, payAddr)
+	eptService, err := ept.New(db, payAddr, eptConf.Timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +90,7 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		decryptKeyFunc: decryptKeyFunc,
 		gasConf:        gasConc,
 		ept:            eptService,
+		ethConfig:      ethConf,
 		ethBack:        ethBack,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,

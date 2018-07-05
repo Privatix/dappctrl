@@ -71,9 +71,7 @@ func serviceEndpointAddress(config map[string]string,
 
 	if extIP, ok := config[externalIP]; ok {
 		ip := net.ParseIP(extIP)
-
-		// TODO(maxim) IPv4 only
-		if ip.To4() != nil {
+		if ip != nil {
 			return &extIP
 		}
 		return product.ServiceEndpointAddress

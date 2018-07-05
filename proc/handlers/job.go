@@ -8,7 +8,6 @@ import (
 
 // HandlersMap returns handlers map needed to construct job queue.
 func HandlersMap(worker *worker.Worker) job.HandlerMap {
-	// TODO: add clients
 	return job.HandlerMap{
 		// Agent jobs.
 		data.JobAgentAfterChannelCreate:             worker.AgentAfterChannelCreate,

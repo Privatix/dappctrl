@@ -277,7 +277,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	if err := s.queue.Add(&data.Job{
 		Type:        data.JobClientPreChannelCreate,
 		RelatedType: data.JobChannel,
-		RelatedID:   util.NewUUID(),
+		RelatedID:   id,
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
 	}); err != nil {

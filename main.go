@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/messages/ept"
 	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
@@ -32,6 +33,7 @@ type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
+	EptMsg        *ept.Config
 	Eth           *eth.Config
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
@@ -52,6 +54,7 @@ func newConfig() *config {
 	return &config{
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
@@ -102,7 +105,11 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	reporter := bugsnag.NewClient(conf.Report, db, logger)
+	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
+	if err != nil {
+		logger.Fatal("failed to create Bugsnag client: %s", err)
+	}
+
 	logger.Reporter(reporter)
 
 	gethConn, err := eth.NewEtherClient(conf.Eth)
@@ -149,7 +156,7 @@ func main() {
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		conf.VPNClient)
+		conf.VPNClient, conf.EptMsg, conf.Eth)
 	if err != nil {
 		logger.Fatal("failed to create worker: %s", err)
 	}

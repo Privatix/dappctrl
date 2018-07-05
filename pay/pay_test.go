@@ -24,10 +24,10 @@ import (
 var (
 	testServer *Server
 	testDB     *reform.DB
-	conf struct {
-		DB  *data.DBConfig
-		Log *util.LogConfig
-		PayServer *Config
+	conf       struct {
+		DB            *data.DBConfig
+		Log           *util.LogConfig
+		PayServer     *Config
 		PayServerTest struct {
 			ServerStartupDelay uint // In milliseconds.
 		}
@@ -181,7 +181,7 @@ func TestMain(m *testing.M) {
 	defer data.CloseDB(testDB)
 	testServer = NewServer(conf.PayServer, logger, testDB)
 	go func() {
-		err := testServer.ListenAndServe();
+		err := testServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Fatalf("failed to serve session requests: %s", err)
 		}

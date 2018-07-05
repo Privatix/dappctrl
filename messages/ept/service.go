@@ -16,6 +16,11 @@ const (
 	invalidTemplate = "invalid template"
 )
 
+// Config is a configuration for Endpoint Message Service.
+type Config struct {
+	Timeout uint
+}
+
 type result struct {
 	msg *Message
 	err error
@@ -49,6 +54,12 @@ type Service struct {
 	db      *reform.DB
 	msgChan chan *req
 	payAddr string
+	timeout time.Duration
+}
+
+// NewConfig creates a default Endpoint Message Service configuration.
+func NewConfig() *Config {
+	return &Config{1}
 }
 
 func newResult(tpl *Message, err error) *result {
@@ -57,17 +68,18 @@ func newResult(tpl *Message, err error) *result {
 
 // New function for initialize the service for generating
 // the Endpoint Message
-func New(db *reform.DB, payAddr string) (*Service, error) {
+func New(db *reform.DB, payAddr string,
+	timeout uint) (*Service, error) {
 	if db == nil {
 		return nil, ErrInput
 	}
 
-	return &Service{db, make(chan *req), payAddr}, nil
+	return &Service{db: db, msgChan: make(chan *req), payAddr: payAddr,
+		timeout: time.Duration(timeout) * time.Second}, nil
 }
 
 // EndpointMessage returns the endpoint message object
-func (s *Service) EndpointMessage(channelID string,
-	timeout time.Duration) (*Message, error) {
+func (s *Service) EndpointMessage(channelID string) (*Message, error) {
 	c := make(chan *result)
 	done := make(chan bool)
 
@@ -78,7 +90,7 @@ func (s *Service) EndpointMessage(channelID string,
 	select {
 	case result := <-c:
 		return result.msg, result.err
-	case <-time.After(timeout):
+	case <-time.After(s.timeout):
 		close(done)
 		return nil, ErrTimeOut
 	}

@@ -13,20 +13,20 @@ import (
 
 // Codes for unauthorized replies.
 const (
-	errCodeNoChannel = 1
+	errCodeNoChannel     = 1
 	errCodeClosedChannel = iota
 )
 
 // Codes for bad request replies.
 const (
 	errCodeNonParsablePayload = 1
-	errCodeInvalidBalance = iota
-	errCodeInvalidSignature = iota
+	errCodeInvalidBalance     = iota
+	errCodeInvalidSignature   = iota
 )
 
 var errUnexpected = &srv.Error{
-	Status: http.StatusBadRequest,
-	Code: errCodeInvalidSignature,
+	Status:  http.StatusBadRequest,
+	Code:    errCodeInvalidSignature,
 	Message: "Client signature does not match",
 }
 
@@ -41,9 +41,9 @@ func (s *Server) findChannel(w http.ResponseWriter, offeringHash string,
 	err := s.db.SelectOneTo(channel, tail, offeringHash, agentAddr, block)
 	if err != nil {
 		s.RespondError(w, &srv.Error{
-			Status: http.StatusUnauthorized,
+			Status:  http.StatusUnauthorized,
 			Message: "Channel is not found",
-			Code: errCodeNoChannel,
+			Code:    errCodeNoChannel,
 		})
 		return nil, false
 	}
@@ -55,9 +55,9 @@ func (s *Server) validateChannelState(w http.ResponseWriter,
 	ch *data.Channel) bool {
 	if ch.ChannelStatus != data.ChannelActive {
 		s.RespondError(w, &srv.Error{
-			Status: http.StatusUnauthorized,
+			Status:  http.StatusUnauthorized,
 			Message: "Channel is closed",
-			Code: errCodeClosedChannel,
+			Code:    errCodeClosedChannel,
 		})
 		return false
 	}
@@ -115,8 +115,8 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 
 	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
 		s.RespondError(w, &srv.Error{
-			Status: http.StatusBadRequest,
-			Code: errCodeInvalidSignature,
+			Status:  http.StatusBadRequest,
+			Code:    errCodeInvalidSignature,
 			Message: "Client signature does not match",
 		})
 		return false
@@ -151,8 +151,8 @@ func (s *Server) updateChannelWithPayment(w http.ResponseWriter,
 	}
 	if affected == 0 {
 		s.RespondError(w, &srv.Error{
-			Status: http.StatusBadRequest,
-			Code: errCodeInvalidBalance,
+			Status:  http.StatusBadRequest,
+			Code:    errCodeInvalidBalance,
 			Message: "Invalid balance amount",
 		})
 		return false

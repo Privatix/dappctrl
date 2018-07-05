@@ -18,7 +18,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
@@ -28,6 +27,7 @@ const (
 	clientPass     = "clientpass"
 	someAddressStr = "0xdeadbeef"
 	someHashStr    = "0xc0ffee"
+	txHashStr      = "0xd8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 
 	minDepositVal  = 123
 	chanDepositVal = 100
@@ -36,8 +36,6 @@ const (
 	clientOfferingPoppedUp   = "client offering popped up"
 	agentAfterChannelCreated = "agent after channel created"
 	clientAfterChannelTopUp  = "client after channel topup"
-
-	LogChannelTopUp = "LogChannelToppedUp"
 )
 
 var (
@@ -53,6 +51,10 @@ var (
 
 	someAddress = common.HexToAddress(someAddressStr)
 	someHash    = common.HexToHash(someHashStr)
+
+	txHash = data.FromBytes(common.HexToHash(txHashStr).Bytes())
+
+	blockNum uint64
 )
 
 type testConf struct {
@@ -71,6 +73,11 @@ type mockClient struct {
 
 type mockTicker struct {
 	C chan time.Time
+}
+
+func nextBlock() uint64 {
+	blockNum++
+	return blockNum
 }
 
 func newTestConf() *testConf {
@@ -201,51 +208,6 @@ func setUint64Setting(t *testing.T, db *reform.DB,
 	}
 }
 
-func toHashes(t *testing.T, topics []interface{}) []common.Hash {
-	hashes := make([]common.Hash, len(topics))
-	if len(topics) > 0 {
-		hashes[0] = common.HexToHash(topics[0].(string))
-	}
-	for i, topic := range topics[1:] {
-		switch v := topic.(type) {
-		case string:
-			if bs, err := data.ToBytes(v); err == nil {
-				hashes[i+1] = common.BytesToHash(bs)
-			} else {
-				t.Fatal(err)
-			}
-		case int:
-			hashes[i+1] = common.BigToHash(big.NewInt(int64(v)))
-		case common.Address:
-			hashes[i+1] = v.Hash()
-		case common.Hash:
-			hashes[i+1] = v
-		default:
-			t.Fatalf("unsupported type %T as topic", topic)
-		}
-	}
-	return hashes
-}
-
-func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
-	failures uint64, topics ...interface{}) *data.EthLog {
-	el := &data.EthLog{
-		ID:          util.NewUUID(),
-		TxHash:      data.FromBytes(genRandData(32)),
-		TxStatus:    txMinedStatus, // FIXME: is this field needed at all?
-		BlockNumber: blockNumber,
-		Addr:        data.FromBytes(pscAddr.Bytes()),
-		Data:        data.FromBytes(genRandData(32)),
-		Topics:      toHashes(t, topics),
-		Failures:    failures,
-	}
-	if err := db.Insert(el); err != nil {
-		t.Fatalf("failed to insert a log event into db: %v", err)
-	}
-
-	return el
-}
-
 type expectation struct {
 	condition func(j *data.Job) bool
 	comment   string
@@ -345,116 +307,9 @@ func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
 	return mon, queue, client
 }
 
-func newErrorChecker(t *testing.T) chan error {
-	ch := make(chan error)
-	go checkErr(t, ch)
-	return ch
-}
-
-func checkErr(t *testing.T, ch chan error) {
-	for {
-		err := <-ch
-		t.Fatal(err)
-	}
-}
-
 func setMaxRetryKey(t *testing.T) {
 	setting := &data.Setting{Key: maxRetryKey, Value: "0"}
 	data.InsertToTestDB(t, db, setting)
-}
-
-func TestMonitorLogCollect(t *testing.T) {
-	defer cleanDB(t)
-
-	mon, _, client := newTestObjects(t)
-
-	errCh := newErrorChecker(t)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ticker := newMockTicker()
-	mon.start(ctx, 5, ticker.C, nil, errCh)
-
-	_, agentAddress := insertNewAccount(t, db, agentPass)
-	_, clientAddress := insertNewAccount(t, db, clientPass)
-
-	eventAboutChannel := common.HexToHash(eth.EthDigestChannelCreated)
-	eventAboutOffering := common.HexToHash(eth.EthOfferingCreated)
-	eventAboutToken := common.HexToHash(eth.EthTokenApproval)
-
-	var block uint64 = 10
-
-	dataMap := make(map[string]bool)
-
-	type logToInject struct {
-		event  common.Hash
-		agent  common.Address
-		client common.Address
-	}
-	logsToInject := []logToInject{
-		{eventAboutOffering, someAddress, someAddress}, // 1 match all offerings
-		{someHash, someAddress, someAddress},           // 0 no match
-		{someHash, agentAddress, someAddress},          // 1 match agent
-		{someHash, someAddress, clientAddress},         // 0 match client, but not a client event
-		// ----- 6 confirmations
-		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
-		{eventAboutChannel, someAddress, someAddress},   // 0 no match
-		{eventAboutToken, someAddress, someAddress},     // 0 no match
-		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
-		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
-		// ----- 2 confirmations
-		{eventAboutOffering, agentAddress, someAddress}, // 1 match agent
-		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
-		// ----- 0 confirmations
-	}
-	for _, contractAddr := range []common.Address{someAddress, pscAddr} {
-		for _, log := range logsToInject {
-			d := genRandData(32 * 5)
-			dataMap[data.FromBytes(d)] = true
-			var txHash common.Hash
-			copy(txHash[:], genRandData(32))
-			client.injectEvent(&ethtypes.Log{
-				TxHash:      txHash,
-				Address:     contractAddr,
-				BlockNumber: block,
-				Topics: []common.Hash{
-					log.event,
-					log.agent.Hash(),
-					log.client.Hash(),
-				},
-				Data: d,
-			})
-			block++
-		}
-	}
-
-	cases := []struct {
-		confirmations uint64
-		freshnum      uint64
-		lognum        int
-	}{
-		{6, 2, 2}, // freshnum = 2: will skip the first offering event
-		{2, 0, 4}, // freshnum = 0: will include the second offering event
-		{0, 2, 6},
-	}
-
-	var logs []*data.EthLog
-	for _, c := range cases {
-		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
-		setUint64Setting(t, db, freshOfferingsKey, c.freshnum)
-		ticker.tick()
-		name := fmt.Sprintf("with %d confirmations and %d freshnum",
-			c.confirmations, c.freshnum)
-		logs = expectLogs(t, c.lognum, name, "")
-	}
-
-	for _, e := range logs {
-		if !dataMap[e.Data] {
-			t.Fatal("wrong data saved in a log entry")
-		}
-		delete(dataMap, e.Data)
-	}
 }
 
 type testData struct {
@@ -495,10 +350,29 @@ func generateTestData(t *testing.T) *testData {
 	)
 	channelX.Block = 8
 
+	createChanneljob := data.NewTestJob(data.JobClientPreChannelCreate,
+		data.JobUser, data.JobOffering)
+	createChanneljob.RelatedID = channelX.ID
+	createChanneljob.Status = data.JobDone
+
+	tx := &data.EthTx{
+		ID:          util.NewUUID(),
+		Hash:        txHash,
+		Method:      "CreateChannel",
+		Status:      data.TxSent,
+		JobID:       &createChanneljob.ID,
+		Issued:      time.Now(),
+		RelatedType: data.JobChannel,
+		RelatedID:   channelX.ID,
+		Gas:         1,
+		GasPrice:    uint64(1),
+		TxRaw:       []byte("{}"),
+	}
+
 	data.InsertToTestDB(t, db,
 		product, template,
 		offering1, offeringX, offeringU,
-		channel1, channelX)
+		channel1, channelX, createChanneljob, tx)
 
 	return &testData{
 		acc:      []*data.Account{acc1, acc2},
@@ -508,172 +382,6 @@ func generateTestData(t *testing.T) *testData {
 		offering: []*data.Offering{offering1, offeringX, offeringU},
 		channel:  []*data.Channel{channel1, channelX},
 	}
-}
-
-func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker, mon *Monitor) {
-	var blockNum uint64
-	nextBlock := func() uint64 {
-		blockNum++
-		return blockNum
-	}
-
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthTokenApproval,
-		td.addr[0],
-		pscAddr,
-		123)
-
-	queue.expect(data.JobPreAccountAddBalance, func(j *data.Job) bool {
-		return j.Type == data.JobPreAccountAddBalance
-	})
-
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthTokenTransfer,
-		td.addr[0],
-		someAddress,
-		123)
-
-	queue.expect(data.JobAfterAccountAddBalance, func(j *data.Job) bool {
-		return j.Type == data.JobAfterAccountAddBalance
-	})
-
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthTokenTransfer,
-		someAddress,
-		td.addr[0],
-		123)
-
-	queue.expect(data.JobAfterAccountAddBalance, func(j *data.Job) bool {
-		return j.Type == data.JobAfterAccountAddBalance
-	})
-
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthOfferingCreated,
-		td.addr[0],          // agent
-		td.offering[0].Hash, // offering hash
-		minDepositVal,       // min deposit
-	)
-	queue.expect(data.JobAgentAfterOfferingMsgBCPublish, func(j *data.Job) bool {
-		return j.Type == data.JobAgentAfterOfferingMsgBCPublish
-	})
-	// offering events containing agent address should be ignored
-
-	// TODO: uncomment, when client job handlers are completed
-	/*
-		insertEvent(t, db, nextBlock(), 0,
-			eth.EthOfferingCreated,
-			someAddress,         // agent
-			td.offering[2].Hash, // offering hash
-			minDepositVal,       // min deposit
-		)
-		queue.expect(unrelatedOfferingCreated, func(j *data.Job) bool {
-			return j.Type == data.JobClientAfterOfferingMsgBCPublish
-		})
-
-		insertEvent(t, db, nextBlock(), 0,
-			eth.EthOfferingPoppedUp,
-			someAddress,         // agent
-			td.offering[2].Hash, // offering hash
-		)
-		queue.expect(clientOfferingPoppedUp, func(j *data.Job) bool {
-			return j.Type == data.JobClientAfterOfferingMsgBCPublish
-		})
-
-		// Tick here on purpose, so that not all events are ignored because
-		// the offering's been deleted.
-		ticker.tick()
-		queue.awaitCompletion(time.Second)
-
-		insertEvent(t, db, nextBlock(), 0,
-			eth.EthOfferingDeleted,
-			someAddress,         // agent
-			td.offering[2].Hash, // offering hash
-		)
-		// should ignore the deletion event
-	*/
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthOfferingPoppedUp,
-		someAddress,         // agent
-		td.offering[2].Hash, // offering hash
-	)
-	// should ignore the creation event after deleting
-
-	insertEvent(t, db, nextBlock(), 0,
-		eth.EthDigestChannelCreated,
-		td.addr[0],          // agent
-		someAddress,         // client
-		td.offering[0].Hash, // offering
-	)
-	queue.expect(agentAfterChannelCreated, func(j *data.Job) bool {
-		return j.Type == data.JobAgentAfterChannelCreate
-	})
-	// TODO: uncomment, when client job handlers are completed
-	/*
-		el := insertEvent(t, db, nextBlock(), 0,
-			eth.EthDigestChannelToppedUp,
-			td.addr[0],          // agent
-			someAddress,         // client
-			td.offering[1].Hash, // offering
-		)
-		bs, err := mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-			uint32(td.channel[1].Block),
-			new(big.Int),
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-		el.Data = data.FromBytes(bs)
-		if err := db.Save(el); err != nil {
-			t.Fatal(err)
-		}
-		// channel does not exist, thus event ignored
-
-		el = insertEvent(t, db, nextBlock(), 0,
-			eth.EthDigestChannelToppedUp,
-			someAddress,         // agent
-			td.addr[1],          // client
-			td.offering[1].Hash, // offering
-		)
-
-		bs, err = mon.pscABI.Events[LogChannelTopUp].Inputs.NonIndexed().Pack(
-			uint32(td.channel[1].Block),
-			new(big.Int),
-		)
-		if err != nil {
-			t.Fatal(err)
-		}
-		el.Data = data.FromBytes(bs)
-		if err := db.Save(el); err != nil {
-			t.Fatal(err)
-		}
-		queue.expect(clientAfterChannelTopUp, func(j *data.Job) bool {
-			return j.Type == data.JobClientAfterChannelTopUp
-		})
-
-		ticker.tick()
-		queue.awaitCompletion(time.Second)
-	*/
-}
-
-func TestMonitorSchedule(t *testing.T) {
-	defer cleanDB(t)
-
-	setMaxRetryKey(t)
-
-	mon, queue, _ := newTestObjects(t)
-
-	errCh := newErrorChecker(t)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ticker := newMockTicker()
-	mon.start(ctx, conf.BlockMonitor.Timeout, nil, ticker.C, errCh)
-
-	td := generateTestData(t)
-
-	scheduleTest(t, td, queue, ticker, mon)
 }
 
 // TestMain reads config and run tests.

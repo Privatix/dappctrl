@@ -10,8 +10,10 @@ import (
 )
 
 func (w *Worker) getTransaction(hash common.Hash) (*types.Transaction, error) {
-	// TODO: move timeout to conf
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(
+			w.ethConfig.Timeout.ResponseHeaderTimeout)*
+			time.Second)
 	defer cancel()
 
 	ethTx, pen, err := w.ethBack.GetTransactionByHash(ctx, hash)
@@ -20,7 +22,8 @@ func (w *Worker) getTransaction(hash common.Hash) (*types.Transaction, error) {
 	}
 
 	if pen {
-		return nil, fmt.Errorf("unexpected pending state of transaction")
+		return nil, fmt.Errorf("unexpected pending state" +
+			" of transaction")
 	}
 
 	return ethTx, nil

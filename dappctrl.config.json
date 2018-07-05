@@ -28,7 +28,12 @@
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
-        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
+        "Timeout": {
+            "ResponseHeaderTimeout":20,
+            "TLSHandshakeTimeout":5,
+            "ExpectContinueTimeout":5
+        }
     },
     "Gas": {
         "PTC": {

@@ -1,12 +1,16 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"log"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
@@ -27,12 +31,23 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+var (
+	tlsConfig = &tls.Config{
+		ClientSessionCache: tls.NewLRUClientSessionCache(1024),
+	}
+)
+
 type ethConfig struct {
 	Contract struct {
 		PTCAddrHex string
 		PSCAddrHex string
 	}
 	GethURL string
+	Timeout struct {
+		ResponseHeaderTimeout uint
+		TLSHandshakeTimeout   uint
+		ExpectContinueTimeout uint
+	}
 }
 
 type config struct {
@@ -81,6 +96,53 @@ func readConfig(conf *config) {
 	}
 }
 
+// TODO(maxim) move to a separate package
+func newEtherClient(conf *ethConfig) (*ethclient.Client, error) {
+	u, err := url.Parse(conf.GethURL)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return ethclient.Dial(conf.GethURL)
+	}
+	httpClient := newHTTPClient(conf)
+	httpEthClient, err := rpc.DialHTTPWithClient(conf.GethURL, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return ethclient.NewClient(httpEthClient), nil
+}
+
+func newHTTPClient(conf *ethConfig) *http.Client {
+	if conf.Timeout.ResponseHeaderTimeout == 0 {
+		conf.Timeout.ResponseHeaderTimeout = 20
+	}
+
+	if conf.Timeout.TLSHandshakeTimeout == 0 {
+		conf.Timeout.TLSHandshakeTimeout = 5
+	}
+
+	if conf.Timeout.ExpectContinueTimeout == 0 {
+		conf.Timeout.ExpectContinueTimeout = 5
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: tlsConfig,
+			ResponseHeaderTimeout: time.Duration(
+				conf.Timeout.ResponseHeaderTimeout) * time.Second,
+			TLSHandshakeTimeout: time.Duration(
+				conf.Timeout.TLSHandshakeTimeout) * time.Second,
+			ExpectContinueTimeout: time.Duration(
+				conf.Timeout.ExpectContinueTimeout) * time.Second,
+		},
+		Timeout: time.Duration(
+			conf.Timeout.ResponseHeaderTimeout) * time.Second,
+	}
+}
+
 func getPWDStorage(conf *config) data.PWDGetSetter {
 	if conf.StaticPasword == "" {
 		return new(data.PWDStorage)
@@ -110,7 +172,7 @@ func main() {
 	reporter := bugsnag.NewClient(conf.Report, db, logger)
 	logger.Reporter(reporter)
 
-	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
+	gethConn, err := newEtherClient(conf.Eth)
 	if err != nil {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}

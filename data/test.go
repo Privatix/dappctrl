@@ -440,7 +440,12 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 	account *truffle.TestAccount) *TestFixture {
 	prod := NewTestProduct()
 	acc := NewEthTestAccount(TestPassword, account)
-	user := NewTestUser()
+	userAcc := NewTestAccount(TestPassword)
+	user := &User{
+		ID:        util.NewUUID(),
+		PublicKey: userAcc.PublicKey,
+		EthAddr:   userAcc.EthAddr,
+	}
 	tmpl := NewTestTemplate(TemplateOffer)
 	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
 	ch := NewTestChannel(
@@ -448,7 +453,7 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 	endpTmpl := NewTestTemplate(TemplateAccess)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, prod, acc, user, tmpl, off, ch, endpTmpl, endp)
+	InsertToTestDB(t, db, prod, acc, userAcc, user, tmpl, off, ch, endpTmpl, endp)
 
 	return &TestFixture{
 		T:              t,

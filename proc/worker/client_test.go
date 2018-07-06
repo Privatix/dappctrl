@@ -247,10 +247,6 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		data.JobClientPreChannelTopUp, data.JobChannel)
 	defer fxt.Close()
 
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	env.updateInTestDB(t, client)
-
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
 
@@ -279,7 +275,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Status != data.TxSent ||
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
-		tx.AddrFrom != client.EthAddr ||
+		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
@@ -292,30 +288,6 @@ func TestClientPreChannelTopUp(t *testing.T) {
 
 func TestClientAfterChannelTopUp(t *testing.T) {
 	testAfterChannelTopUp(t, false)
-}
-
-func clientPreUncooperativeCloseRequestNormFlow(t *testing.T, env *workerTest,
-	fxt *workerTestFixture) {
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	env.updateInTestDB(t, client)
-
-	fxt.job.RelatedType = data.JobChannel
-	fxt.job.RelatedID = util.NewUUID()
-
-	setJobData(t, fxt.DB, fxt.job, ClientPreUncooperativeCloseRequestData{
-		Channel:  fxt.Channel.ID,
-		GasPrice: uint64(testTXGasPrice),
-	})
-
-	fxt.Channel.TotalDeposit = 1
-	fxt.Channel.ReceiptBalance = 1
-	env.updateInTestDB(t, fxt.Channel)
-
-	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
-
-	checkChanStatus(t, env, fxt.Channel.ID,
-		data.ChannelWaitChallenge)
 }
 
 func checkChanStatus(t *testing.T, env *workerTest, channel string,
@@ -333,12 +305,23 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreChannelTopUp, data.JobChannel)
+		data.JobClientPreUncooperativeCloseRequest, data.JobChannel)
 	defer fxt.Close()
+
+	fxt.Channel.TotalDeposit = 1
+	fxt.Channel.ReceiptBalance = 1
+	env.updateInTestDB(t, fxt.Channel)
 
 	issued := time.Now()
 
-	clientPreUncooperativeCloseRequestNormFlow(t, env, fxt)
+	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
+
+	checkChanStatus(t, env, fxt.Channel.ID,
+		data.ChannelWaitChallenge)
 
 	var tx data.EthTx
 
@@ -387,6 +370,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		util.TestExpectResult(t, "Job run", ErrInvalidChStatus,
 			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
 	}
+
+	testCommonErrors(
+		t, env.worker.ClientPreUncooperativeCloseRequest, *fxt.job)
 }
 
 func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
@@ -438,12 +424,6 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		data.JobClientPreUncooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	if err := data.Save(db.Querier, client); err != nil {
-		t.Fatal(err)
-	}
-
 	issued := time.Now()
 
 	runJob(t, env.worker.ClientPreUncooperativeClose, fxt.job)
@@ -462,7 +442,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Status != data.TxSent ||
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
-		tx.AddrFrom != client.EthAddr ||
+		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||

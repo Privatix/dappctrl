@@ -46,7 +46,7 @@ func (w *Worker) checkDeposit(acc *data.Account,
 	return deposit, nil
 }
 
-func (w *Worker) clientPreUncooperativeCloseRequestCheckChannel(
+func (w *Worker) clientValidateChannelForClose(
 	ch *data.Channel) error {
 	// check channel status
 	if ch.ChannelStatus != data.ChannelActive &&
@@ -652,7 +652,7 @@ func (w *Worker) ClientAfterChannelTopUp(job *data.Job) error {
 	return w.afterChannelTopUp(job, data.JobClientAfterChannelTopUp)
 }
 
-func (w *Worker) clientPreUncooperativeCloseRequestSaveTx(job *data.Job,
+func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 	ch *data.Channel, acc *data.Account, offer *data.Offering,
 	gasPrice uint64) error {
 	agent, err := data.ToAddress(ch.Agent)
@@ -700,22 +700,15 @@ func (w *Worker) clientPreUncooperativeCloseRequestSaveTx(job *data.Job,
 	return data.Save(w.db.Querier, ch)
 }
 
-// ClientPreUncooperativeCloseRequestData is a job data
-// for ClientPreUncooperativeCloseRequest.
-type ClientPreUncooperativeCloseRequestData struct {
-	Channel  string `json:"channel"`
-	GasPrice uint64 `json:"gasPrice"`
-}
-
 // ClientPreUncooperativeCloseRequest requests the closing of the channel
 // and starts the challenge period.
 func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
-	var jdata ClientPreUncooperativeCloseRequestData
-	if err := parseJobData(job, &jdata); err != nil {
+	ch, err := w.relatedChannel(job, data.JobClientPreUncooperativeCloseRequest)
+	if err != nil {
 		return err
 	}
 
-	ch, err := w.channel(jdata.Channel)
+	jdata, err := w.publishData(job)
 	if err != nil {
 		return err
 	}
@@ -730,12 +723,11 @@ func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	if err := w.clientPreUncooperativeCloseRequestCheckChannel(
-		ch); err != nil {
+	if err := w.clientValidateChannelForClose(ch); err != nil {
 		return err
 	}
 
-	return w.clientPreUncooperativeCloseRequestSaveTx(job, ch, acc,
+	return w.doClientPreUncooperativeCloseRequestAndSaveTx(job, ch, acc,
 		offer, jdata.GasPrice)
 }
 

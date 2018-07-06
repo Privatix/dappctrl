@@ -18,7 +18,8 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type deployConfigFunc func(db *reform.DB, endpoint, dir string) error
+type deployConfigFunc func(db *reform.DB, endpoint, dir string,
+	managementInterfacePort uint16) error
 
 // GasConf amounts of gas limit to use for contracts calls.
 type GasConf struct {
@@ -61,6 +62,7 @@ type Worker struct {
 	deployConfig   deployConfigFunc
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
+	manageVpnPort  uint16
 }
 
 // NewWorker returns new instance of worker.

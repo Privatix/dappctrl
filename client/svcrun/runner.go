@@ -46,7 +46,7 @@ type Config struct {
 // NewConfig creates a new service runner configuration.
 func NewConfig() *Config {
 	return &Config{
-		Services: map[string]ServiceConfig{},
+		Services: make(map[string]ServiceConfig),
 	}
 }
 

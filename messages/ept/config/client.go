@@ -36,8 +36,9 @@ const (
 	defaultAccessFile   = "access.ovpn"
 
 	// DefaultServerAddress default OpenVpn server address.
-	DefaultServerAddress = "127.0.0.1"
-	defaultServerPort    = "443"
+	DefaultServerAddress  = "127.0.0.1"
+	defaultServerPort     = "443"
+	defaultManagementPort = 7506
 )
 
 var defaultConfig = newVpnConfig()
@@ -49,16 +50,17 @@ type Config struct {
 
 // vpnConf OpenVpn client model config
 type vpnConf struct {
-	Ca            string `json:"caData"`
-	Cipher        string `json:"cipher"`
-	ConnectRetry  string `json:"connect-retry"`
-	CompLZO       string `json:"comp-lzo"`
-	Ping          string `json:"ping"`
-	PingRestart   string `json:"ping-restart"`
-	Port          string `json:"port"`
-	Proto         string `json:"proto"`
-	ServerAddress string `json:"-"`
-	AccessFile    string `json:"-"`
+	Ca             string `json:"caData"`
+	Cipher         string `json:"cipher"`
+	ConnectRetry   string `json:"connect-retry"`
+	CompLZO        string `json:"comp-lzo"`
+	Ping           string `json:"ping"`
+	PingRestart    string `json:"ping-restart"`
+	Port           string `json:"port"`
+	Proto          string `json:"proto"`
+	ServerAddress  string `json:"-"`
+	AccessFile     string `json:"-"`
+	ManagementPort uint16 `json:"-"`
 }
 
 func newVpnConfig() *vpnConf {
@@ -88,7 +90,9 @@ func NewConfig() *Config {
 // endpoint.Channel and endpoint.Password parameters.
 // dir - information about the location of the directory in which
 // the directories with configuration files are stored.
-func DeployConfig(db *reform.DB, endpoint, dir string) error {
+// managementInterfacePort - port for incoming management client connections.
+func DeployConfig(db *reform.DB, endpoint, dir string,
+	managementInterfacePort uint16) error {
 	e := new(data.Endpoint)
 
 	if err := db.FindByPrimaryKeyTo(e, endpoint); err != nil {
@@ -109,12 +113,13 @@ func DeployConfig(db *reform.DB, endpoint, dir string) error {
 	}
 
 	return deploy(target, save(e.ServiceEndpointAddress),
-		save(e.Username), save(e.Password), e.AdditionalParams)
+		save(e.Username), save(e.Password), e.AdditionalParams,
+		managementInterfacePort)
 }
 
 func deploy(targetDir, srvAddr string,
-	login, pass string, params []byte) error {
-	cfg, err := clientConfig(srvAddr, params)
+	login, pass string, params []byte, managementPort uint16) error {
+	cfg, err := clientConfig(srvAddr, params, managementPort)
 	if err != nil {
 		return err
 	}
@@ -221,7 +226,7 @@ func (c *vpnConf) saveToFile(destPath string) error {
 
 // clientConfig returns config object
 func clientConfig(srvAddr string,
-	additionalParams []byte) (*vpnConf, error) {
+	additionalParams []byte, managementPort uint16) (*vpnConf, error) {
 	if !isHost(srvAddr) {
 		return nil, ErrInput
 	}
@@ -233,6 +238,12 @@ func clientConfig(srvAddr string,
 	}
 
 	config.ServerAddress = srvAddr
+
+	if managementPort == 0 {
+		config.ManagementPort = defaultManagementPort
+	} else {
+		config.ManagementPort = managementPort
+	}
 
 	if checkParam(nameCompLZO, additionalParams) {
 		config.CompLZO = nameCompLZO

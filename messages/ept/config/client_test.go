@@ -23,18 +23,21 @@ const (
 	errDeployConfig = "error deploy config"
 	errTestAddress  = "test network address are not available"
 
-	nameCipher        = "cipher"
-	nameConnectRetry  = "connect-retry"
-	namePing          = "ping"
-	namePingRestart   = "ping-restart"
-	nameServerAddress = "serverAddress"
+	nameCipher         = "cipher"
+	nameConnectRetry   = "connect-retry"
+	nameManagementPort = "management"
+	namePing           = "ping"
+	namePingRestart    = "ping-restart"
+	nameServerAddress  = "serverAddress"
 
-	testServerName = "testserver"
+	testManagementPort = 1234
+	testServerName     = "testserver"
 )
 
 type srvData struct {
-	addr  string
-	param []byte
+	addr       string
+	param      []byte
+	managePort uint16
 }
 
 func createSrvData(t *testing.T) *srvData {
@@ -52,7 +55,7 @@ func createSrvData(t *testing.T) *srvData {
 
 	address := strings.Split(conf.EptTest.ValidHost[0], ":")
 
-	return &srvData{address[0], param}
+	return &srvData{address[0], param, defaultManagementPort}
 }
 
 func checkAccess(t *testing.T, file, login, pass string) {
@@ -80,15 +83,14 @@ func checkCa(t *testing.T, fileConf string, ca []byte) {
 	}
 }
 
-func checkConf(t *testing.T, confFile string, srv *srvData) {
+func checkConf(t *testing.T, confFile string, srv *srvData, keys []string) {
 
-	cfg, err := clientConfig(srv.addr, srv.param)
+	cfg, err := clientConfig(srv.addr, srv.param, srv.managePort)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cliParams, err := parseConfig(confFile,
-		conf.EptTest.ExportConfigKeys, false)
+	cliParams, err := parseConfig(confFile, keys, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,13 +119,17 @@ func checkConf(t *testing.T, confFile string, srv *srvData) {
 		t.Fatal(errDeployConfig)
 	}
 
+	if _, ok := cliParams[nameManagementPort]; !ok {
+		t.Fatal(errDeployConfig)
+	}
+
 	checkCa(t, confFile, []byte(cfg.Ca))
 }
 
 func TestGetText(t *testing.T) {
 	srv := createSrvData(t)
 
-	conf, err := clientConfig(srv.addr, srv.param)
+	conf, err := clientConfig(srv.addr, srv.param, srv.managePort)
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +180,8 @@ func TestDeployClientConfig(t *testing.T) {
 
 	defer os.RemoveAll(rootDir)
 
-	if err := DeployConfig(db, fxt.Endpoint.ID, rootDir); err != nil {
+	if err := DeployConfig(db, fxt.Endpoint.ID, rootDir,
+		testManagementPort); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,5 +199,7 @@ func TestDeployClientConfig(t *testing.T) {
 	checkAccess(t, accessFile, *fxt.Endpoint.Username,
 		*fxt.Endpoint.Password)
 
-	checkConf(t, confFile, srv)
+	keys := append(conf.EptTest.ExportConfigKeys, nameManagementPort)
+
+	checkConf(t, confFile, srv, keys)
 }

@@ -1,21 +1,17 @@
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"log"
-	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	vpncli "github.com/privatix/dappctrl/messages/ept/config"
@@ -31,30 +27,11 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-var (
-	tlsConfig = &tls.Config{
-		ClientSessionCache: tls.NewLRUClientSessionCache(1024),
-	}
-)
-
-type ethConfig struct {
-	Contract struct {
-		PTCAddrHex string
-		PSCAddrHex string
-	}
-	GethURL string
-	Timeout struct {
-		ResponseHeaderTimeout uint
-		TLSHandshakeTimeout   uint
-		ExpectContinueTimeout uint
-	}
-}
-
 type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
-	Eth           *ethConfig
+	Eth           *eth.Config
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
@@ -74,6 +51,7 @@ func newConfig() *config {
 	return &config{
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		Eth:           eth.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
@@ -93,53 +71,6 @@ func readConfig(conf *config) {
 	flag.Parse()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s", err)
-	}
-}
-
-// TODO(maxim) move to a separate package
-func newEtherClient(conf *ethConfig) (*ethclient.Client, error) {
-	u, err := url.Parse(conf.GethURL)
-	if err != nil {
-		return nil, err
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return ethclient.Dial(conf.GethURL)
-	}
-	httpClient := newHTTPClient(conf)
-	httpEthClient, err := rpc.DialHTTPWithClient(conf.GethURL, httpClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return ethclient.NewClient(httpEthClient), nil
-}
-
-func newHTTPClient(conf *ethConfig) *http.Client {
-	if conf.Timeout.ResponseHeaderTimeout == 0 {
-		conf.Timeout.ResponseHeaderTimeout = 20
-	}
-
-	if conf.Timeout.TLSHandshakeTimeout == 0 {
-		conf.Timeout.TLSHandshakeTimeout = 5
-	}
-
-	if conf.Timeout.ExpectContinueTimeout == 0 {
-		conf.Timeout.ExpectContinueTimeout = 5
-	}
-
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: tlsConfig,
-			ResponseHeaderTimeout: time.Duration(
-				conf.Timeout.ResponseHeaderTimeout) * time.Second,
-			TLSHandshakeTimeout: time.Duration(
-				conf.Timeout.TLSHandshakeTimeout) * time.Second,
-			ExpectContinueTimeout: time.Duration(
-				conf.Timeout.ExpectContinueTimeout) * time.Second,
-		},
-		Timeout: time.Duration(
-			conf.Timeout.ResponseHeaderTimeout) * time.Second,
 	}
 }
 
@@ -172,7 +103,7 @@ func main() {
 	reporter := bugsnag.NewClient(conf.Report, db, logger)
 	logger.Reporter(reporter)
 
-	gethConn, err := newEtherClient(conf.Eth)
+	gethConn, err := eth.NewEtherClient(conf.Eth)
 	if err != nil {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}

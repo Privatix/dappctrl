@@ -30,9 +30,9 @@
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
         "Timeout": {
-            "ResponseHeaderTimeout":20,
-            "TLSHandshakeTimeout":5,
-            "ExpectContinueTimeout":5
+            "ResponseHeaderTimeout": 20,
+            "TLSHandshakeTimeout": 5,
+            "ExpectContinueTimeout": 5
         }
     },
     "Gas": {

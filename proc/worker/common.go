@@ -11,6 +11,62 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
+// DoPreAccountAddBalanceApprove is an actual logic behind the
+// PreAccountAddBalanceApprove handler.
+func (w *Worker) DoPreAccountAddBalanceApprove(acc *data.Account,
+	gasPrice uint64, amount uint, job *data.Job) (string, error) {
+	addr, err := data.ToAddress(acc.EthAddr)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse account's addr: %v", err)
+	}
+
+	balance, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
+	if err != nil {
+		return "", fmt.Errorf(
+			"could not get account's ptc balance: %v", err)
+	}
+
+	if balance.Uint64() < uint64(amount) {
+		return "", fmt.Errorf("insufficient ptc balance")
+	}
+
+	balance, err = w.ethBalance(addr)
+	if err != nil {
+		return "", fmt.Errorf("failed to get eth balance: %v", err)
+	}
+
+	wantedEthBalance := w.gasConf.PTC.Approve * gasPrice
+
+	if wantedEthBalance > balance.Uint64() {
+		return "", fmt.Errorf(
+			"unsufficient eth balance, wanted: %v, got: %v",
+			wantedEthBalance, balance.Uint64())
+	}
+
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return "", fmt.Errorf(
+			"unable to parse account's priv key: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PTC.Approve
+	auth.GasPrice = big.NewInt(int64(gasPrice))
+	tx, err := w.ethBack.PTCIncreaseApproval(auth,
+		w.pscAddr, big.NewInt(int64(amount)))
+	if err != nil {
+		return "", fmt.Errorf("could not ptc increase approve: %v", err)
+	}
+
+	err = w.saveEthTX(job, tx, "PTCIncreaseApproval", data.JobAccount,
+		acc.ID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+	if err != nil {
+		return "", err
+	}
+
+	return data.FromBytes(tx.Hash().Bytes()), nil
+}
+
 // PreAccountAddBalanceApprove approve balance if amount exists.
 func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	acc, err := w.relatedAccount(job,
@@ -24,48 +80,9 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return fmt.Errorf("failed to parse job data: %v", err)
 	}
 
-	addr, err := data.ToAddress(acc.EthAddr)
-	if err != nil {
-		return fmt.Errorf("unable to parse account's addr: %v", err)
-	}
-
-	amount, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
-	if err != nil {
-		return fmt.Errorf("could not get account's ptc balance: %v", err)
-	}
-
-	if amount.Uint64() < uint64(jobData.Amount) {
-		return fmt.Errorf("insufficient ptc balance")
-	}
-
-	ethBalance, err := w.ethBalance(addr)
-	if err != nil {
-		return fmt.Errorf("failed to get eth balance: %v", err)
-	}
-
-	wantedEthBalance := w.gasConf.PTC.Approve * jobData.GasPrice
-
-	if wantedEthBalance > ethBalance.Uint64() {
-		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
-			wantedEthBalance, ethBalance.Uint64())
-	}
-
-	key, err := w.key(acc.PrivateKey)
-	if err != nil {
-		return fmt.Errorf("unable to parse account's priv key: %v", err)
-	}
-
-	auth := bind.NewKeyedTransactor(key)
-	auth.GasLimit = w.gasConf.PTC.Approve
-	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
-	tx, err := w.ethBack.PTCIncreaseApproval(auth,
-		w.pscAddr, big.NewInt(int64(jobData.Amount)))
-	if err != nil {
-		return fmt.Errorf("could not ptc increase approve: %v", err)
-	}
-
-	return w.saveEthTX(job, tx, "PTCIncreaseApproval", job.RelatedType,
-		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+	_, err = w.DoPreAccountAddBalanceApprove(
+		acc, jobData.GasPrice, jobData.Amount, job)
+	return err
 }
 
 // PreAccountAddBalance adds balance to psc.
@@ -129,6 +146,60 @@ func (w *Worker) AfterAccountAddBalance(job *data.Job) error {
 	return w.updateAccountBalances(acc)
 }
 
+// DoPreAccountReturnBalance is an actual logic behind the
+// PreAccountReturnBalance handler.
+func (w *Worker) DoPreAccountReturnBalance(acc *data.Account,
+	gasPrice uint64, amount uint, job *data.Job) (string, error) {
+	key, err := w.key(acc.PrivateKey)
+	if err != nil {
+		return "", fmt.Errorf(
+			"unable to parse account's priv key: %v", err)
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+
+	balance, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
+	if err != nil {
+		return "", fmt.Errorf(
+			"could not get account's psc balance: %v", err)
+	}
+
+	if balance.Uint64() < uint64(amount) {
+		return "", fmt.Errorf("insufficient psc balance")
+	}
+
+	balance, err = w.ethBalance(auth.From)
+	if err != nil {
+		return "", fmt.Errorf("failed to get eth balance: %v", err)
+	}
+
+	wantedEthBalance := w.gasConf.PSC.ReturnBalanceERC20 * gasPrice
+
+	if wantedEthBalance > balance.Uint64() {
+		return "", fmt.Errorf(
+			"unsufficient eth balance, wanted: %v, got: %v",
+			wantedEthBalance, balance.Uint64())
+	}
+
+	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
+	auth.GasPrice = big.NewInt(int64(gasPrice))
+
+	tx, err := w.ethBack.PSCReturnBalanceERC20(
+		auth, big.NewInt(int64(amount)))
+	if err != nil {
+		return "", fmt.Errorf(
+			"could not return balance from psc: %v", err)
+	}
+
+	err = w.saveEthTX(job, tx, "PSCReturnBalanceERC20", data.JobAccount,
+		acc.ID, data.FromBytes(w.pscAddr.Bytes()), acc.EthAddr)
+	if err != nil {
+		return "", err
+	}
+
+	return data.FromBytes(tx.Hash().Bytes()), nil
+}
+
 // PreAccountReturnBalance returns from psc to ptc.
 func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	acc, err := w.relatedAccount(job, data.JobPreAccountReturnBalance)
@@ -136,50 +207,14 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return err
 	}
 
-	key, err := w.key(acc.PrivateKey)
-	if err != nil {
-		return fmt.Errorf("unable to parse account's priv key: %v", err)
-	}
-
 	jobData, err := w.balanceData(job)
 	if err != nil {
 		return fmt.Errorf("failed to parse job data: %v", err)
 	}
 
-	auth := bind.NewKeyedTransactor(key)
-
-	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
-	if err != nil {
-		return fmt.Errorf("could not get account's psc balance: %v", err)
-	}
-
-	if amount.Uint64() < uint64(jobData.Amount) {
-		return fmt.Errorf("insufficient psc balance")
-	}
-
-	ethAmount, err := w.ethBalance(auth.From)
-	if err != nil {
-		return fmt.Errorf("failed to get eth balance: %v", err)
-	}
-
-	wantedEthBalance := w.gasConf.PSC.ReturnBalanceERC20 * jobData.GasPrice
-
-	if wantedEthBalance > ethAmount.Uint64() {
-		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
-			wantedEthBalance, ethAmount.Uint64())
-	}
-
-	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
-	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
-
-	tx, err := w.ethBack.PSCReturnBalanceERC20(auth,
-		big.NewInt(int64(jobData.Amount)))
-	if err != nil {
-		return fmt.Errorf("could not return balance from psc: %v", err)
-	}
-
-	return w.saveEthTX(job, tx, "PSCReturnBalanceERC20", job.RelatedType,
-		job.RelatedID, data.FromBytes(w.pscAddr.Bytes()), acc.EthAddr)
+	_, err = w.DoPreAccountReturnBalance(
+		acc, jobData.GasPrice, jobData.Amount, job)
+	return err
 }
 
 // AfterAccountReturnBalance updates psc and ptc balance of an account.

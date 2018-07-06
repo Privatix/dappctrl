@@ -35,6 +35,8 @@ type testConfig struct {
 	ServerStartupDelay uint // In milliseconds.
 }
 
+const testTXHash = "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIA=="
+
 func TestMain(m *testing.M) {
 	var conf struct {
 		AgentServer     *Config
@@ -55,9 +57,16 @@ func TestMain(m *testing.M) {
 
 	pwdStorage := new(data.PWDStorage)
 	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,
-		proc.NewProcessor(proc.NewConfig(), queue))
+		proc.NewProcessor(proc.NewConfig(), queue), nil)
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
+
+	testServer.addBalance = func(acc *data.Account, gasPrice uint64,
+		amount uint, job *data.Job) (string, error) {
+		return testTXHash, nil
+	}
+	testServer.returnBalance = testServer.addBalance
+
 	go testServer.ListenAndServe()
 
 	time.Sleep(time.Duration(conf.AgentServerTest.ServerStartupDelay) *

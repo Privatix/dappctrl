@@ -8,6 +8,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -36,6 +37,9 @@ func NewConfig() *Config {
 	}
 }
 
+type updateAccountFunc func(acc *data.Account,
+	gasPrice uint64, amount uint, job *data.Job) (string, error)
+
 // Server is agent api server.
 type Server struct {
 	conf           *Config
@@ -46,23 +50,33 @@ type Server struct {
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
 	pr             *proc.Processor
+	addBalance     updateAccountFunc
+	returnBalance  updateAccountFunc
 }
 
 // NewServer creates a new agent server.
-func NewServer(conf *Config,
-	logger *util.Logger,
-	db *reform.DB,
-	queue *job.Queue,
-	pwdStorage data.PWDGetSetter, pr *proc.Processor) *Server {
-	return &Server{
-		conf,
-		logger,
-		db,
-		queue,
-		pwdStorage,
-		data.EncryptedKey,
-		data.ToPrivateKey,
-		pr}
+func NewServer(
+	conf *Config, logger *util.Logger, db *reform.DB,
+	queue *job.Queue, pwdStorage data.PWDGetSetter,
+	pr *proc.Processor, w *worker.Worker) *Server {
+
+	srv := &Server{
+		conf:           conf,
+		logger:         logger,
+		db:             db,
+		queue:          queue,
+		pwdStorage:     pwdStorage,
+		encryptKeyFunc: data.EncryptedKey,
+		decryptKeyFunc: data.ToPrivateKey,
+		pr:             pr,
+	}
+
+	if w != nil {
+		srv.addBalance = w.DoPreAccountAddBalanceApprove
+		srv.returnBalance = w.DoPreAccountReturnBalance
+	}
+
+	return srv
 }
 
 const (

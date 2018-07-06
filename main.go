@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	vpncli "github.com/privatix/dappctrl/messages/ept/config"
@@ -27,19 +27,11 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type ethConfig struct {
-	Contract struct {
-		PTCAddrHex string
-		PSCAddrHex string
-	}
-	GethURL string
-}
-
 type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
-	Eth           *ethConfig
+	Eth           *eth.Config
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
@@ -59,6 +51,7 @@ func newConfig() *config {
 	return &config{
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		Eth:           eth.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
@@ -110,7 +103,7 @@ func main() {
 	reporter := bugsnag.NewClient(conf.Report, db, logger)
 	logger.Reporter(reporter)
 
-	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
+	gethConn, err := eth.NewEtherClient(conf.Eth)
 	if err != nil {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}

@@ -15,6 +15,8 @@
     python initializer.py --update                         update all contaiter without GUI
     python initializer.py --mass-update                    update all contaiter with GUI
     python initializer.py --update-gui                     update only GUI
+    python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
+    python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
 """
 
 import sys
@@ -24,7 +26,7 @@ from signal import SIGINT, signal, pause
 from contextlib import closing
 from re import search, sub, findall
 from codecs import open
-from threading import Thread
+# from threading import Thread
 from shutil import copyfile, rmtree
 from json import load, dump
 from time import time, sleep
@@ -79,8 +81,8 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 main_conf = dict(
     branch='develop',
+    link_download='http://art.privatix.net/',
     iptables=dict(
-        link_download='http://art.privatix.net/',
         file_download=[
             'vpn.tar.xz',
             'common.tar.xz',
@@ -179,11 +181,19 @@ main_conf = dict(
         'cmd': 'psql -d dappctrl -h 127.0.0.1 -P 5433 -f {}'
     },
 
+    dnsmasq={
+        'conf': '/etc/NetworkManager/NetworkManager.conf',
+        'section': ['main', 'dns', 'dnsmasq'],
+        'disable': 'sudo sed -i \'s/^dns=dnsmasq/#&/\' /etc/NetworkManager/NetworkManager.conf && '
+                   'sudo service network-manager restart',
+    },
+
     addr='10.217.3.0',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
     wait_mess='{}.Please wait until completed.\n It may take about 5-10 minutes.\n Do not turn it off.',
-    ports=dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None))
+    ports=dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None)),
+    tmp_var = None
 )
 
 
@@ -230,6 +240,12 @@ class CMD:
         self.gui_npm_cmd_call = main_conf['gui']['npm_tmp_file_call']
 
         self.dappctrlgui = main_conf['gui']['dappctrlgui']
+
+        self.dns_conf = main_conf['dnsmasq']['conf']
+        self.dns_sect = main_conf['dnsmasq']['section']
+        self.dns_disable = main_conf['dnsmasq']['disable']
+
+        self.tmp_var = main_conf['tmp_var']
 
     def _reletive_path(self, name):
         dirname = path.dirname(__file__)
@@ -444,6 +460,23 @@ class CMD:
         logging.debug('Install systemd-container')
         self._sys_call('apt-get install systemd-container -y')
 
+    def __disable_dns(self):
+        logging.debug('Disable dnsmasq')
+        if isfile(self.dns_conf):
+            logging.debug('dnsmasq conf exist')
+            cfg = ConfigParser()
+            cfg.read(self.dns_conf)
+            if cfg.has_option(self.dns_sect[0], self.dns_sect[1]) and\
+                cfg.get(self.dns_sect[0], self.dns_sect[1]) == self.dns_sect[2]:
+                logging.debug('Section {}={} found.'.format(self.dns_sect[1], self.dns_sect[2]))
+
+                logging.debug('Disable dnsmasq !')
+                self._sys_call(self.dns_disable, rolback=False)
+            else:
+                logging.debug('dnsmasq conf has not {}'.format(self.dns_sect[0:2]))
+        else:
+            logging.debug('dnsmasq conf not exist')
+
     def _upgr_ub_pack(self, v):
         logging.info('Ubuntu: {}'.format(v))
 
@@ -456,10 +489,7 @@ class CMD:
         self._sys_call('apt-get update')
         logging.debug('Install systemd-container')
         self._sys_call('apt-get install systemd-container -y')
-
-        # logging.debug('Disable dnsmasq')
-        # self._sys_call('sudo sed -i \'s/^dns=dnsmasq/#&/\' /etc/NetworkManager/NetworkManager.conf')
-        # self._sys_call('sudo service network-manager restart')
+        self.__disable_dns()
 
     def __upgr_sysd(self, cmd):
         try:
@@ -539,6 +569,17 @@ class CMD:
         else:
             return self._cycle_ask(port, status, verb)
 
+    def __all_use_ports(self, d):
+        for k, v in d.iteritems():
+            if v is None:
+                continue
+            elif isinstance(v, dict):
+                self.__all_use_ports(v)
+            elif isinstance(v, list):
+                self.tmp_var += map(int,v)
+            else:
+                self.tmp_var.append(int(v))
+
     def check_port(self, port, auto=False):
 
         if self._ping_port(port=port):
@@ -546,6 +587,7 @@ class CMD:
             while True:
 
                 if auto and mark:
+                    port = int(port)
                     port += 1
                 else:
                     logging.info("Port: {} is busy or wrong."
@@ -553,11 +595,15 @@ class CMD:
                         port))
                     port = raw_input('>')
                 try:
+                    self.tmp_var = []
+                    self.__all_use_ports(self.use_ports)
+                    logging.debug('***{}'.format(self.use_ports))
+                    logging.debug('***{}'.format(self.tmp_var))
                     if int(port) in range(65535)[1:] and not self._ping_port(
-                            port=port):
+                            port=port) and int(port) not in self.tmp_var:
                         break
-                except BaseException:
-                    pass
+                except BaseException as bexpm:
+                    logging.error('Check port: {}'.format(bexpm))
 
                 finally:
                     mark = True
@@ -897,13 +943,15 @@ class Params(CMD):
                     delim = ' '
                     raw_row = row.split(delim)
                     port = int(raw_row[-1])
+                    logging.debug('Raw port: {}'.format(port))
 
                     self.use_ports['mangmt']['vpn'] = self.check_port(port,
                                                                       True)
+
                     self.use_ports['mangmt']['com'] = self.check_port(
                         int(self.use_ports['mangmt']['vpn']) + 1, True)
 
-                    raw_row[-1] = str(self.use_ports['mangmt']['vpn']) + '\n'
+                    raw_row[-1] = '{}\n'.format(self.use_ports['mangmt']['vpn'])
                     tmp_data[indx] = delim.join(raw_row)
             logging.debug('--server.conf')
             logging.debug(tmp_data)
@@ -945,7 +993,15 @@ class Params(CMD):
             raw_tmp = raw_data['Monitor']['Addr'].split(delim)
             raw_tmp[-1] = str(port)
             raw_data['Monitor']['Addr'] = delim.join(raw_tmp)
-            logging.debug('Addr: {}.'.format(raw_data['Monitor']['Addr']))
+            logging.debug('Monitor Addr: {}.'.format(raw_data['Monitor']['Addr']))
+
+            if hasattr(self, 'sessServPort'):
+                delim = ':'
+                raw_tmp = raw_data['Server']['Addr'].split(delim)
+                raw_tmp[-1] = str(self.sessServPort)
+                raw_data['Server']['Addr'] = delim.join(raw_tmp)
+                logging.debug(
+                    'Server Addr: {}.'.format(raw_data['Server']['Addr']))
 
             self.file_rw(p=p,
                          log='Rewrite {} conf'.format(servs),
@@ -1063,6 +1119,9 @@ class Params(CMD):
                     self.use_ports['comm_port'].append(port)
                     if k == 'AgentServer':
                         self.apiEndpoint = port
+                    if k == 'SessionServer':
+                        self.sessServPort = port
+
 
                 data[k]['Addr'] = delim.join(raw_row)
 
@@ -1074,7 +1133,7 @@ class Params(CMD):
 class Rdata(CMD):
     def __init__(self):
         CMD.__init__(self)
-        self.url = main_conf['iptables']['link_download']
+        self.url = main_conf['link_download']
         self.files = main_conf['iptables']['file_download']
         self.p_unpck = dict(vpn=self.path_vpn, common=self.path_com)
 
@@ -1494,6 +1553,13 @@ if __name__ == '__main__':
 
     parser.add_argument("--no-gui", nargs='?', default=True,
                         help='Full install without GUI')
+
+    parser.add_argument("--link", type=str, default=False, nargs='?',
+                        help='Enter different link for download. default "http://art.privatix.net/"')
+
+    parser.add_argument("--branch", type=str, default=False, nargs='?',
+                        help='Enter different branch for download. default "develop"')
+
     args = vars(parser.parse_args())
 
     check = Checker()
@@ -1509,8 +1575,19 @@ if __name__ == '__main__':
     logging.debug('Inside finalizer.pid: {}'.format(check.use_ports))
 
     signal(SIGINT, check.signal_handler)
+    if args['link']:
+        logging.debug('Change link from:{} '
+                      'to{}'.format(main_conf['link_download'],
+                                    args['link']))
+        main_conf['link_download'] = args['link']
 
-    if not args['build']:
+    elif args['branch']:
+        logging.debug('Change branch from:{} '
+                      'to{}'.format(main_conf['branch'],
+                                    args['branch']))
+        main_conf['branch'] = args['branch']
+
+    elif not args['build']:
         logging.info('Build mode.')
         check.build_cmd()
 

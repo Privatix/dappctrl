@@ -1,15 +1,15 @@
-// +build !nopaymenttest
+// +build !nopaytest
 
 package pay
 
 import (
-	"bytes"
 	"encoding/json"
+	"log"
 	"math/big"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,54 +18,35 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/srv"
 )
 
 var (
 	testServer *Server
 	testDB     *reform.DB
+	conf struct {
+		DB  *data.DBConfig
+		Log *util.LogConfig
+		PayServer *Config
+		PayServerTest struct {
+			ServerStartupDelay uint // In milliseconds.
+		}
+	}
 )
 
-type testFixture struct {
-	clientAcc *data.Account
-	client    *data.User
-	agent     *data.Account
-	offering  *data.Offering
-	channel   *data.Channel
-}
-
-func newFixture(t *testing.T) *testFixture {
-	clientAcc := data.NewTestAccount(data.TestPassword)
-
-	client := data.NewTestUser()
-	client.PublicKey = clientAcc.PublicKey
-	client.EthAddr = clientAcc.EthAddr
-
-	agent := data.NewTestAccount(data.TestPassword)
-
-	product := data.NewTestProduct()
-
-	template := data.NewTestTemplate(data.TemplateOffer)
-
-	offering := data.NewTestOffering(agent.EthAddr,
-		product.ID, template.ID)
-	offering.Hash = data.FromBytes([]byte("test-hash"))
-
-	channel := data.NewTestChannel(agent.EthAddr,
-		client.EthAddr, offering.ID, 0, 100,
-		data.ChannelActive)
-
-	data.InsertToTestDB(t, testDB, client, agent, product, template,
-		offering, channel)
-
-	return &testFixture{clientAcc, client, agent, offering, channel}
+func newFixture(t *testing.T) *data.TestFixture {
+	fxt := data.NewTestFixture(t, testDB)
+	fxt.Channel.TotalDeposit = 99999
+	data.SaveToTestDB(t, testDB, fxt.Channel)
+	return fxt
 }
 
 func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
-	offering *data.Offering, clientAcc *data.Account) *payload {
+	offering *data.Offering, clientAcc *data.Account) *paymentPayload {
 
 	testPSCAddr := common.HexToAddress("0x1")
 
-	pld := &payload{
+	pld := &paymentPayload{
 		AgentAddress:    channel.Agent,
 		OpenBlockNumber: channel.Block,
 		OfferingHash:    offering.Hash,
@@ -81,46 +62,48 @@ func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
 
 	key, err := data.TestToPrivateKey(clientAcc.PrivateKey, data.TestPassword)
-	if err != nil {
-		t.Fatal(err)
-	}
+	util.TestExpectResult(t, "to private key", nil, err)
 
 	sig, err := crypto.Sign(hash, key)
-	if err != nil {
-		t.Fatal(err)
-	}
+	util.TestExpectResult(t, "sign", nil, err)
 
 	pld.BalanceMsgSig = data.FromBytes(sig)
 
 	return pld
 }
 
-func sendTestRequest(pld *payload) *httptest.ResponseRecorder {
-	body := &bytes.Buffer{}
-	json.NewEncoder(body).Encode(pld)
-	r := httptest.NewRequest(http.MethodPost, payPath, body)
-	w := httptest.NewRecorder()
-	util.ValidateMethod(testServer.handlePay, http.MethodPost)(w, r)
-	return w
+func sendTestRequest(t *testing.T, pld *paymentPayload) *srv.Response {
+	data, err := json.Marshal(pld)
+	if err != nil {
+		t.Fatalf("%v, %v", err, util.Caller())
+	}
+	req, err := srv.NewHTTPRequest(conf.PayServer.Config, http.MethodPost, payPath,
+		&srv.Request{Args: data})
+	if err != nil {
+		t.Fatalf("%v, %v", err, util.Caller())
+	}
+	response, err := srv.Send(req)
+	if err != nil {
+		t.Fatalf("%v, %v", err, util.Caller())
+	}
+	return response
 }
 
 func TestValidPayment(t *testing.T) {
 	defer data.CleanTestDB(t, testDB)
-	fixture := newFixture(t)
+	fxt := newFixture(t)
 
 	// 100 is a test payment amount
-	payload := newTestPayload(t, 100, fixture.channel, fixture.offering, fixture.clientAcc)
-	w := sendTestRequest(payload)
-	if w.Code != http.StatusOK {
-		t.Errorf("expect response ok, got: %d", w.Code)
-		t.Log(w.Body)
+	payload := newTestPayload(t,
+		100, fxt.Channel, fxt.Offering, fxt.UserAcc)
+	res := sendTestRequest(t, payload)
+	if res.Error != nil {
+		t.Fatal(res.Error)
 	}
 
 	updated := &data.Channel{}
-	err := testDB.FindOneTo(updated, "block", payload.OpenBlockNumber)
-	if err != nil {
-		panic(err)
-	}
+	data.FindInTestDB(
+		t, testDB, updated, "block", payload.OpenBlockNumber)
 
 	if *updated.ReceiptSignature != payload.BalanceMsgSig {
 		t.Error("receipt signature is not updated")
@@ -133,10 +116,11 @@ func TestValidPayment(t *testing.T) {
 
 func TestInvalidPayments(t *testing.T) {
 	defer data.CleanTestDB(t, testDB)
-	fixture := newFixture(t)
+	fxt := newFixture(t)
 
-	validPayload := newTestPayload(t, 1, fixture.channel, fixture.offering, fixture.clientAcc)
-	wrongBlock := &payload{
+	validPayload := newTestPayload(
+		t, 1, fxt.Channel, fxt.Offering, fxt.UserAcc)
+	wrongBlock := &paymentPayload{
 		AgentAddress:    validPayload.AgentAddress,
 		OpenBlockNumber: validPayload.OpenBlockNumber + 1,
 		OfferingHash:    validPayload.OfferingHash,
@@ -145,26 +129,30 @@ func TestInvalidPayments(t *testing.T) {
 		ContractAddress: validPayload.ContractAddress,
 	}
 
-	closedChannel := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, fixture.offering.ID, 0, 100,
+	closedChannel := data.NewTestChannel(fxt.Account.EthAddr,
+		fxt.UserAcc.EthAddr, fxt.Offering.ID, 0, 100,
 		data.ChannelClosedCoop)
 
-	validCh := data.NewTestChannel(fixture.agent.EthAddr,
-		fixture.client.EthAddr, fixture.offering.ID, 10, 100,
+	validCh := data.NewTestChannel(fxt.Account.EthAddr,
+		fxt.User.EthAddr, fxt.Offering.ID, 10, 100,
 		data.ChannelActive)
 
 	data.InsertToTestDB(t, testDB, closedChannel, validCh)
 
-	closedState := newTestPayload(t, 1, closedChannel, fixture.offering, fixture.clientAcc)
+	closedState := newTestPayload(
+		t, 1, closedChannel, fxt.Offering, fxt.UserAcc)
 
-	lessBalance := newTestPayload(t, 9, validCh, fixture.offering, fixture.clientAcc)
+	lessBalance := newTestPayload(
+		t, 9, validCh, fxt.Offering, fxt.UserAcc)
 
-	overcharging := newTestPayload(t, 100+1, validCh, fixture.offering, fixture.clientAcc)
+	overcharging := newTestPayload(
+		t, 100+1, validCh, fxt.Offering, fxt.UserAcc)
 
 	otherUser := data.NewTestAccount(data.TestPassword)
-	otherUsersSignature := newTestPayload(t, 100, validCh, fixture.offering, otherUser)
+	otherUsersSignature := newTestPayload(
+		t, 100, validCh, fxt.Offering, otherUser)
 
-	for _, pld := range []*payload{
+	for _, pld := range []*paymentPayload{
 		// wrong block number
 		wrongBlock,
 		// channel state is "closed_coop"
@@ -176,27 +164,31 @@ func TestInvalidPayments(t *testing.T) {
 		// signature doesn't correspond to channels user
 		otherUsersSignature,
 	} {
-		w := sendTestRequest(pld)
-		if w.Code == http.StatusOK {
-			t.Logf("response: %d, %s", w.Code, w.Body)
-			t.Logf("payload: %+v\n", pld)
-			t.Errorf("expected server to fail, got: %d", w.Code)
+		res := sendTestRequest(t, pld)
+		if res.Error == nil {
+			t.Fatal("exected error, got success")
 		}
 	}
 }
 
 func TestMain(m *testing.M) {
-	var conf struct {
-		DB  *data.DBConfig
-		Log *util.LogConfig
-	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.PayServer = NewConfig()
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
 	testDB = data.NewTestDB(conf.DB, logger)
 	defer data.CloseDB(testDB)
-	testServer = NewServer(nil, logger, testDB)
+	testServer = NewServer(conf.PayServer, logger, testDB)
+	go func() {
+		err := testServer.ListenAndServe();
+		if err != http.ErrServerClosed {
+			log.Fatalf("failed to serve session requests: %s", err)
+		}
+	}()
+
+	time.Sleep(time.Duration(conf.PayServerTest.ServerStartupDelay) *
+		time.Millisecond)
 
 	os.Exit(m.Run())
 }

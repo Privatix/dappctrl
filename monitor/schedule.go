@@ -228,8 +228,8 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 		data.JobClientAfterOfferingMsgBCPublish,
 	},
 	common.HexToHash(eth.EthOfferingPoppedUp): {
-		(*Monitor).scheduleClientOfferingCreated,
-		data.JobClientAfterOfferingMsgBCPublish,
+		(*Monitor).scheduleClientOfferingPopUp,
+		data.JobClientAfterOfferingPopUp,
 	},
 	/* // FIXME: uncomment if monitor should actually delete the offering
 	common.HexToHash(eth.EthCOfferingDeleted): {
@@ -497,6 +497,17 @@ func (m *Monitor) scheduleClientOfferingCreated(el *data.EthLog,
 		return
 	}
 
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   util.NewUUID(),
+		RelatedType: data.JobOffering,
+	}
+
+	m.scheduleCommon(el, j)
+}
+
+func (m *Monitor) scheduleClientOfferingPopUp(el *data.EthLog,
+	jobType string) {
 	j := &data.Job{
 		Type:        jobType,
 		RelatedID:   util.NewUUID(),

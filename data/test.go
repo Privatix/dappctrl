@@ -425,7 +425,7 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 		DB:             db,
 		Product:        prod,
 		Account:        acc,
-		UserAcc: 	userAcc,
+		UserAcc:        userAcc,
 		User:           user,
 		TemplateOffer:  tmpl,
 		TemplateAccess: endpTmpl,

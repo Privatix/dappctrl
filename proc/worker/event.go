@@ -33,6 +33,11 @@ type logOfferingCreatedInput struct {
 	maxSupply    uint16
 }
 
+type logOfferingPopUpInput struct {
+	agentAddr    common.Address
+	offeringHash common.Hash
+}
+
 var (
 	logChannelTopUpDataArguments    abi.Arguments
 	logChannelCreatedDataArguments  abi.Arguments
@@ -207,5 +212,21 @@ func extractLogOfferingCreated(log *data.EthLog) (*logOfferingCreatedInput, erro
 		offeringHash: offeringHash,
 		minDeposit:   minDeposit,
 		maxSupply:    curSupply,
+	}, nil
+}
+
+func extractLogOfferingPopUp(log *data.EthLog) (*logOfferingPopUpInput, error) {
+	if len(log.Topics) != 3 {
+		return nil, fmt.Errorf(
+			"wrong number of topics, wanted: %v, got: %v",
+			3, len(log.Topics))
+	}
+
+	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	offeringHash := log.Topics[2]
+
+	return &logOfferingPopUpInput{
+		agentAddr:    agentAddr,
+		offeringHash: offeringHash,
 	}, nil
 }

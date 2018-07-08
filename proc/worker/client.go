@@ -789,15 +789,54 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
+	return w.clientRetrieveAndSaveOfferingFromSOMC(job, ethLog.BlockNumber,
+		logOfferingCreated.agentAddr, logOfferingCreated.offeringHash)
+}
+
+// ClientAfterOfferingPopUp updates offering in db or retrieves from somc
+// if new.
+func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return err
+	}
+
+	logOfferingPopUp, err := extractLogOfferingPopUp(ethLog)
+	if err != nil {
+		return err
+	}
+
+	offering := data.Offering{}
+	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	err = w.db.FindOneTo(&offering, "hash", hash)
+	if err == sql.ErrNoRows {
+		// New offering. Get from somc.
+		return w.clientRetrieveAndSaveOfferingFromSOMC(job,
+			ethLog.BlockNumber, logOfferingPopUp.agentAddr,
+			logOfferingPopUp.offeringHash)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Existing offering, just update offering status.
+	offering.BlockNumberUpdated = ethLog.BlockNumber
+
+	return w.db.Update(&offering)
+}
+
+
+func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
+	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
 	offeringsData, err := w.somc.FindOfferings([]string{
-		data.FromBytes(logOfferingCreated.offeringHash.Bytes())})
+		data.FromBytes(hash.Bytes())})
 	if err != nil {
 		return fmt.Errorf("failed to find offering: %v", err)
 	}
 
 	offering, err := w.fillOfferingFromSOMCReply(
-		job.RelatedID, data.FromBytes(logOfferingCreated.agentAddr.Bytes()),
-		ethLog.BlockNumber, offeringsData)
+		job.RelatedID, data.FromBytes(agentAddr.Bytes()),
+		block, offeringsData)
 	if err != nil {
 		return fmt.Errorf("failed to fill offering: %v", err)
 	}

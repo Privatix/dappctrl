@@ -690,7 +690,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreOfferingMsgSOMCGet, data.JobOffering)
+		data.JobClientAfterOfferingMsgBCPublish, data.JobOffering)
 	defer fxt.Close()
 
 	// Set id for offerring that is about to be created.
@@ -794,4 +794,123 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 	}
 
 	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
+func TestClientAfterOfferingPopUp(t *testing.T) {
+	testClientAfterExistingOfferingPopUp(t)
+	testClientAfterNewOfferingPopUp(t)
+}
+
+func testClientAfterExistingOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash([]byte{}),
+		offeringHash,
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
+
+	offering := data.Offering{}
+	env.findTo(t, &offering, fxt.Offering.ID)
+
+	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+		t.Fatal("offering block number was not updated")
+	}
+}
+
+func testClientAfterNewOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	var offeringHash common.Hash
+
+	// Create expected offering.
+	expectedOffering := *fxt.Offering
+	expectedOffering.ID = fxt.job.RelatedID
+	expectedOffering.Status = data.MsgChPublished
+	expectedOffering.OfferStatus = data.OfferRegister
+	expectedOffering.Country = "US"
+	msg := offer.OfferingMessage(fxt.Account,
+		fxt.TemplateOffer, &expectedOffering)
+	msgBytes, err := json.Marshal(msg)
+	util.TestExpectResult(t, "Marshall msg", nil, err)
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
+	packed, err := messages.PackWithSignature(msgBytes, key)
+	util.TestExpectResult(t, "PackWithSignature", nil, err)
+	expectedOffering.RawMsg = data.FromBytes(packed)
+	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
+	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	// Create eth log records used by job.
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash(agentAddr.Bytes()),
+		offeringHash,
+	}
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteFindOfferings(t,
+			[]string{expectedOffering.Hash}, [][]byte{packed})
+	}()
+
+	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
+
+	created := &data.Offering{}
+	env.selectOneTo(t, created, "WHERE hash=$1", expectedOffering.Hash)
+	defer env.deleteFromTestDB(t, created)
+
+	if expectedOffering.Template != created.Template ||
+		expectedOffering.Product != created.Product ||
+		created.Status != data.MsgChPublished ||
+		expectedOffering.Agent != created.Agent ||
+		expectedOffering.RawMsg != created.RawMsg ||
+		fxt.Product.Name != created.ServiceName ||
+		expectedOffering.Description != created.Description ||
+		expectedOffering.Country != created.Country ||
+		expectedOffering.Supply != created.Supply ||
+		expectedOffering.UnitName != created.UnitName ||
+		expectedOffering.BillingType != created.BillingType ||
+		expectedOffering.SetupPrice != created.SetupPrice ||
+		expectedOffering.UnitPrice != created.UnitPrice ||
+		expectedOffering.MinUnits != created.MinUnits ||
+		expectedOffering.BillingInterval != created.BillingInterval ||
+		expectedOffering.MaxBillingUnitLag != created.MaxBillingUnitLag ||
+		expectedOffering.MaxSuspendTime != created.MaxSuspendTime ||
+		expectedOffering.MaxInactiveTimeSec != created.MaxInactiveTimeSec ||
+		expectedOffering.FreeUnits != created.FreeUnits ||
+		!bytes.Equal(expectedOffering.AdditionalParams, created.AdditionalParams) {
+		t.Fatal("wrong offering created")
+	}
 }

@@ -103,7 +103,12 @@ func (w *Worker) addJobWithDelay(
 	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
 }
 
-func (w *Worker) updateAccountBalances(acc *data.Account) error {
+func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
+	acc, err := w.relatedAccount(job, jobType)
+	if err != nil {
+		return err
+	}
+
 	agentAddr, err := data.ToAddress(acc.EthAddr)
 	if err != nil {
 		return err

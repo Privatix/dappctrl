@@ -49,6 +49,6 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAfterAccountAddBalance:      worker.AfterAccountAddBalance,
 		data.JobPreAccountReturnBalance:     worker.PreAccountReturnBalance,
 		data.JobAfterAccountReturnBalance:   worker.AfterAccountReturnBalance,
-		data.JobAccountAddCheckBalance:      worker.AccountAddCheckBalance,
+		data.JobAccountUpdateBalances:       worker.AccountUpdateBalances,
 	}
 }

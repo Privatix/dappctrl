@@ -153,14 +153,6 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 		data.JobAfterAccountReturnBalance)
 }
 
-func TestAccountAddCheckBalancee(t *testing.T) {
-	t.Skip("TODO")
-	// env := newWorkerTest(t)
-	// defer env.close()
-	// testAccountBalancesUpdate(t, env, env.worker.AccountAddCheckBalance,
-	// 	data.JobAccountAddCheckBalance)
-}
-
 func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	worker func(*data.Job) error, jobType string) {
 	// update balances in DB.accounts.psc_balance and DB.account.ptc_balance

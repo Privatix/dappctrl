@@ -16,27 +16,32 @@ import (
 )
 
 func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		if c := strings.Split(r.URL.Path, "/"); len(c) > 1 {
-			id, format := c[len(c)-2], c[len(c)-1]
-			if format == "pkey" {
-				s.handleExportAccount(w, r, id)
-				return
-			}
+	if c := strings.Split(r.URL.Path, "/"); len(c) > 1 {
+		id, format := c[len(c)-2], c[len(c)-1]
+		if r.Method == http.MethodGet && format == "pkey" {
+			s.handleExportAccount(w, r, id)
+			return
 		}
+		if r.Method == http.MethodPut && format == "status" {
+			s.handleAccountTransferBalance(w, r, id)
+			return
+		}
+		if r.Method == http.MethodPost && format == "balances-update" {
+			s.handleCreateUpdateBalancesJob(w, r, id)
+			return
+		}
+	}
 
+	if r.Method == http.MethodGet {
 		s.handleGetAccounts(w, r)
 		return
 	}
+
 	if r.Method == http.MethodPost {
 		s.handleCreateAccount(w, r)
 		return
 	}
-	id := idFromStatusPath(accountsPath, r.URL.Path)
-	if id != "" && r.Method == http.MethodPut {
-		s.handleUpdateAccountBalance(w, r, id)
-		return
-	}
+
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
@@ -159,11 +164,12 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	if err := s.queue.Add(&data.Job{
 		RelatedType: data.JobAccount,
 		RelatedID:   acc.ID,
-		Type:        data.JobAccountAddCheckBalance,
+		Type:        data.JobAccountUpdateBalances,
 		CreatedBy:   data.JobUser,
 		Data:        []byte("{}"),
 	}); err != nil {
-		s.logger.Error("could not add %s job", data.JobAccountAddCheckBalance)
+		s.logger.Error("could not add %s job",
+			data.JobAccountUpdateBalances)
 		s.replyUnexpectedErr(w)
 		return
 	}
@@ -177,7 +183,8 @@ type accountBalancePayload struct {
 	GasPrice    uint64 `json:"gasPrice"`
 }
 
-func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Request, id string) {
+func (s *Server) handleAccountTransferBalance(
+	w http.ResponseWriter, r *http.Request, id string) {
 	payload := &accountBalancePayload{}
 	if !s.parsePayload(w, r, payload) {
 		return
@@ -219,6 +226,26 @@ func (s *Server) handleUpdateAccountBalance(w http.ResponseWriter, r *http.Reque
 		CreatedBy:   data.JobUser,
 	}); err != nil {
 		s.logger.Error("failed to add transfer job: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+}
+
+func (s *Server) handleCreateUpdateBalancesJob(
+	w http.ResponseWriter, r *http.Request, id string) {
+
+	if !s.findTo(w, &data.Account{}, id) {
+		return
+	}
+
+	if err := s.queue.Add(&data.Job{
+		Type:        data.JobAccountUpdateBalances,
+		RelatedType: data.JobAccount,
+		RelatedID:   id,
+		Data:        []byte("{}"),
+		CreatedBy:   data.JobUser,
+	}); err != nil {
+		s.logger.Error("failed to add update balances job: %v", err)
 		s.replyUnexpectedErr(w)
 		return
 	}

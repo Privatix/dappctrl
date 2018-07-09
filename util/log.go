@@ -141,7 +141,8 @@ func (l *Logger) Log(lvl int, fmt string, v ...interface{}) {
 	}
 
 	if lvl == LogFatal {
-		os.Exit(1)
+		// We cannot use os.Exit() not to ignore deferred calls.
+		panic(gofmt.Sprintf(fmt, v...))
 	}
 }
 

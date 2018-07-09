@@ -107,6 +107,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}
+	defer gethConn.Close()
 
 	ptcAddr := common.HexToAddress(conf.Eth.Contract.PTCAddrHex)
 	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
@@ -126,17 +127,20 @@ func main() {
 		logger.Fatal("failed to start pay server: %s",
 			paySrv.ListenAndServe())
 	}()
+	defer paySrv.Close()
 
 	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
 	go func() {
 		logger.Fatal("failed to start session server: %s",
 			sess.ListenAndServe())
 	}()
+	defer sess.Close()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		panic(err)
+		logger.Fatal("failed to connect to SOMC: %s", err)
 	}
+	defer somcConn.Close()
 
 	pwdStorage := getPWDStorage(conf)
 
@@ -149,16 +153,17 @@ func main() {
 	}
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
+	defer queue.Close()
 	worker.SetQueue(queue)
 
 	pr := proc.NewProcessor(conf.Proc, queue)
 	worker.SetProcessor(pr)
 
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
+	defer runner.StopAll()
 	worker.SetRunner(runner)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
-
 	go func() {
 		logger.Fatal("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
@@ -180,15 +185,14 @@ func main() {
 		logger.Fatal("failed to run client billing monitor: %s",
 			cmon.Run())
 	}()
+	defer cmon.Close()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
 		gethConn, pscAddr, ptcAddr)
-
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)
 	}
-
 	if err := mon.Start(); err != nil {
 		logger.Fatal("failed to start"+
 			" the blockchain monitor: %v", err)

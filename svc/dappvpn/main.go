@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -60,6 +61,7 @@ var (
 	conf    *config
 	channel string
 	logger  *util.Logger
+	fatal   = make(chan string)
 )
 
 func main() {
@@ -249,9 +251,12 @@ func handleMonitor(confFile string) {
 	}
 
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, channel)
+	go func() {
+		fatal <- fmt.Sprintf("failed to monitor vpn traffic: %s",
+			monitor.MonitorTraffic())
+	}()
 
-	logger.Fatal("failed to monitor vpn traffic: %s",
-		monitor.MonitorTraffic())
+	logger.Fatal(<-fatal)
 }
 
 func launchOpenVPN() *os.Process {
@@ -287,14 +292,14 @@ func launchOpenVPN() *os.Process {
 		}
 		if err := scanner.Err(); err != nil {
 			msg := "failed to read from openVPN stdout/stderr: %s"
-			logger.Fatal(msg, err)
+			fatal <- fmt.Sprintf(msg, err)
 		}
 		stdout.Close()
 		stderr.Close()
 	}()
 
 	go func() {
-		logger.Fatal("OpenVPN exited: %v", cmd.Wait())
+		fatal <- fmt.Sprintf("OpenVPN exited: %v", cmd.Wait())
 	}()
 
 	return cmd.Process

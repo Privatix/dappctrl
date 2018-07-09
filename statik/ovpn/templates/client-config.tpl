@@ -21,7 +21,7 @@ tls-client
 # If hostname resolve fails for --remote,
 # retry resolve for n seconds before failing.
 # Set n to "infinite" to retry indefinitely.
-resolv-retry infinite
+resolv-retry 30
 
 # Do not bind to local address and port.
 # The IP stack will allocate a dynamic
@@ -48,7 +48,7 @@ persist-key
 # Trigger a SIGUSR1 restart after n seconds
 # pass without reception of a ping
 # or other packet from remote.
-ping-restart {{if .PingRestart}}{{.PingRestart}}{{else}}10{{autogen}}{{end}}
+ping-restart {{if .PingRestart}}{{.PingRestart}}{{else}}25{{autogen}}{{end}}
 
 # Ping remote over the TCP/UDP control
 # channel if no packets have been sent for
@@ -61,36 +61,12 @@ auth-user-pass {{.AccessFile}}
 
 pull
 
-# or you can use directive below:
-# auth-user-pass /path/to/pass.file Authenticate
-# with server using username/password.
-# /path/to/pass.file is a file
-# containing username/password on 2 lines
-#(Note: OpenVPN will only read passwords
-# from a file if it has been
-# built with the --enable-password-save
-# configure option)
-
-# Client will retry the connection
-# without requerying for an
-# --auth-user-pass username/password.
-#auth-retry nointeract
-
-# Become a daemon after all initialization
-# functions are completed. This option will
-# cause all message and error output
-# to be sent to the log file
-#daemon
-
 # take n as the number of seconds
 # to wait between connection retries
-connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}2 120{{autogen}}{{end}}
+connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}5{{autogen}}{{end}}
 
-# uncomment this section
-# if you want use ca.crt file
-;ca /path/to/ca.crt
-# or you can include ca certificate
-# in this file like a below:
+# Server CA certificate for TLS validation
+
 <ca>
 {{.Ca}}</ca>
 
@@ -108,3 +84,6 @@ verb 3
 # Management interface settings
 management 0.0.0.0 7506
 management-hold
+
+# Remap SIGUSR1 to SIGTERM to prevent holding in unconnected state
+remap-usr1 SIGTERM

@@ -47,16 +47,16 @@ Exit code:
     2 - If version of Ubuntu lower than 16
     3 - If sysctl net.ipv4.ip_forward = 0 after sysctl -w net.ipv4.ip_forward=1
     4 - Problem when call system command from subprocess
-    5 - Problem with operation R/W unit file 
-    6 - Problem with operation download file 
-    7 - Problem with operation R/W server.conf 
+    5 - Problem with operation R/W unit file
+    6 - Problem with operation download file
+    7 - Problem with operation R/W server.conf
     8 - Default DB conf is empty, and no section 'DB' in dappctrl-test.config.json
     9 - Check the run of the database is negative
     10 - Problem with read dapp cmd from file
     11 - Problem NPM
     12 - Problem with run psql
-    13 - Problem with ready Vpn 
-    14 - Problem with ready Common 
+    13 - Problem with ready Vpn
+    14 - Problem with ready Common
     15 - The version npm is not satisfied. The user self reinstall
     16 - Problem with deleting one of the GUI pack
     17 - Exception in code, see logging
@@ -1580,6 +1580,12 @@ if __name__ == '__main__':
                       'to{}'.format(main_conf['link_download'],
                                     args['link']))
         main_conf['link_download'] = args['link']
+        checkdev = Checker()
+        logging.info('Begin init.')
+        checkdev.target = 'back'
+        checkdev.check_sudo()
+        checkdev.init_os(args)
+        logging.info('All done.')
 
     elif args['branch']:
         logging.debug('Change branch from:{} '

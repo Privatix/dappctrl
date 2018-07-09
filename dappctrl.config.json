@@ -114,6 +114,16 @@
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
+            },
+            "agentPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
             }
         }
     },

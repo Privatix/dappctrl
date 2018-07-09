@@ -1,6 +1,7 @@
 package data
 
 import (
+	"encoding/hex"
 	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
@@ -14,6 +15,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/reform.v1"
 )
+
+// FromBase64ToHex return hex of base 64 encoded.
+func FromBase64ToHex(s string) (string, error) {
+	b, err := ToBytes(s)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
 
 // ToBytes returns the bytes represented by the base64 string s.
 func ToBytes(s string) ([]byte, error) {

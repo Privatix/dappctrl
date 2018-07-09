@@ -591,3 +591,9 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 
 	return nil
 }
+
+// AgentAfterOfferingDelete set offering status to `remove`
+func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
+	return w.updateRelatedOffering(
+		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
+}

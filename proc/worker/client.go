@@ -877,13 +877,6 @@ func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber 
 
 // ClientAfterOfferingDelete sets offer status to `remove`;
 func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
-	offering, err := w.relatedOffering(
-		job, data.JobClientAfterOfferingDelete)
-	if err != nil {
-		return err
-	}
-
-	offering.OfferStatus = data.OfferRemove
-
-	return w.db.Update(offering)
+	return w.updateRelatedOffering(
+		job, data.JobClientAfterOfferingDelete, data.OfferRemove)
 }

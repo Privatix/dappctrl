@@ -580,3 +580,24 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 
 	testCommonErrors(t, workerF, *fixture.job)
 }
+
+func TestAgentAfterOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentAfterOfferingDelete, data.JobOffering)
+	defer fxt.Close()
+
+	runJob(t, env.worker.AgentAfterOfferingDelete, fxt.job)
+
+	updated := data.Offering{}
+	env.findTo(t, &updated, fxt.job.RelatedID)
+
+	if updated.OfferStatus != data.OfferRemove {
+		t.Fatalf("expected offering status: %s, got: %s",
+			data.OfferRemove, updated.OfferStatus)
+	}
+
+	testCommonErrors(t, env.worker.AgentAfterOfferingDelete, *fxt.job)
+}

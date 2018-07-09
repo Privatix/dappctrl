@@ -775,29 +775,23 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	}
 }
 
-func TestClientPreAccountAddBalanceApprove(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PTC.balanceOf()
-	// 2. PTC.approve()
-}
+func TestClientAfterOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
 
-func TestClientPreAccountAddBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PSC.addBalanceERC20()
-}
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingDelete, data.JobOffering)
+	defer fxt.Close()
 
-func TestClientAfterAccountAddBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. update balance in DB
-}
+	runJob(t, env.worker.ClientAfterOfferingDelete, fxt.job)
 
-func TestClientPreAccountReturnBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. check PSC balance PSC.balanceOf()
-	// 2. PSC.returnBalanceERC20()
-}
+	updated := data.Offering{}
+	env.findTo(t, &updated, fxt.job.RelatedID)
 
-func TestClientAfterAccountReturnBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. update balance in DB
+	if updated.OfferStatus != data.OfferRemove {
+		t.Fatalf("expected offering status: %s, got: %s",
+			data.OfferRemove, updated.OfferStatus)
+	}
+
+	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
 }

@@ -205,3 +205,14 @@ func (w *Worker) KeyFromChannelData(channel string) (string, error) {
 	}
 	return data.FromBytes(key), nil
 }
+
+func (w *Worker) updateRelatedOffering(job *data.Job, jobType, status string) error {
+	offering, err := w.relatedOffering(job, jobType)
+	if err != nil {
+		return err
+	}
+
+	offering.OfferStatus = status
+
+	return w.db.Update(offering)
+}

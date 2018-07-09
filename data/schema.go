@@ -291,6 +291,7 @@ const (
 	JobClientAfterEndpointMsgSOMCGet        = "clientAfterEndpointMsgSOMCGet"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientPreOfferingMsgSOMCGet          = "clientPreOfferingMsgSOMCGet"
+	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"

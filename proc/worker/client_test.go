@@ -496,6 +496,10 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 
 	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
+	// Test update balances job was created.
+	env.deleteJob(t,
+		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+
 	var jobTerm data.Job
 	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",
 		fxt.Channel.ID, fxt.job.ID)

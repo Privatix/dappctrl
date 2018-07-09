@@ -211,6 +211,10 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 
 	testChannelStatusChanged(t, fixture.job, env, data.ChannelClosedCoop)
 
+	// Test update balances job was created.
+	env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
+
 	testCommonErrors(t, env.worker.AgentAfterCooperativeClose, *fixture.job)
 }
 

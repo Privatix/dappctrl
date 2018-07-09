@@ -63,6 +63,9 @@ type EthBackend interface {
 
 	PSCRemoveServiceOffering(opts *bind.TransactOpts,
 		offeringHash [32]byte) (*types.Transaction, error)
+
+	PSCPopupServiceOffering(opts *bind.TransactOpts,
+		offeringHash [32]byte) (*types.Transaction, error)
 }
 
 type ethBackendInstance struct {
@@ -234,6 +237,16 @@ func (b *ethBackendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 	tx, err := b.psc.RemoveServiceOffering(opts, offeringHash)
 	if err != nil {
 		err = fmt.Errorf("failed to remove"+
+			" service offering: %v", err)
+	}
+	return tx, err
+}
+
+func (b *ethBackendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
+	offeringHash [32]byte) (*types.Transaction, error) {
+	tx, err := b.psc.PopupServiceOffering(opts, offeringHash)
+	if err != nil {
+		err = fmt.Errorf("failed to pop up"+
 			" service offering: %v", err)
 	}
 	return tx, err

@@ -603,13 +603,10 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 
 // AgentPreOfferingDelete calls psc remove offering.
 func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
-	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
+	offering, err := w.validateOfferingBeforeMutation(job,
+		data.JobAgentPreOfferingDelete)
 	if err != nil {
 		return err
-	}
-
-	if offering.OfferStatus != data.OfferRegister {
-		return fmt.Errorf("offering is not registered")
 	}
 
 	jobDate, err := w.publishData(job)
@@ -617,31 +614,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	var pendingJobs int
-	row := w.db.QueryRow(`SELECT COUNT(*)
-			FROM jobs
-			WHERE type IN ($1, $2)
-			AND status=$3
-			AND related_id=$4
-			AND id<>$5`,
-		data.JobAgentPreOfferingDelete, data.JobAgentPreOfferingPopUp,
-		data.JobActive,
-		job.RelatedID,
-		job.ID)
-	if err := row.Scan(&pendingJobs); err != nil {
-		return err
-	}
-
-	if pendingJobs > 0 {
-		return fmt.Errorf("conflicting jobs exist, can't proceed")
-	}
-
-	agent, err := w.account(offering.Agent)
-	if err != nil {
-		return err
-	}
-
-	key, err := w.key(agent.PrivateKey)
+	key, err := w.accountKey(offering.Agent)
 	if err != nil {
 		return err
 	}
@@ -661,5 +634,73 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
-		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+}
+
+// AgentPreOfferingPopUp pop ups an offering.
+func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
+	offering, err := w.validateOfferingBeforeMutation(job,
+		data.JobAgentPreOfferingPopUp)
+	if err != nil {
+		return err
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+}
+
+func (w *Worker) validateOfferingBeforeMutation(job *data.Job, jType string) (*data.Offering, error) {
+	offering, err := w.relatedOffering(job, jType)
+	if err != nil {
+		return nil, err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return nil, fmt.Errorf("offering is not registered")
+	}
+
+	var pendingJobs int
+	row := w.db.QueryRow(`SELECT COUNT(*)
+			FROM jobs
+			WHERE type IN ($1, $2)
+			AND status=$3
+			AND related_id=$4
+			AND id<>$5`,
+		data.JobAgentPreOfferingDelete, data.JobAgentPreOfferingPopUp,
+		data.JobActive,
+		job.RelatedID,
+		job.ID)
+	if err := row.Scan(&pendingJobs); err != nil {
+		return nil, err
+	}
+
+	if pendingJobs > 0 {
+		return nil, fmt.Errorf("conflicting jobs exist, can't proceed")
+	}
+
+	return offering, nil
 }

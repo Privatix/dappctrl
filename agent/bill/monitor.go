@@ -58,6 +58,7 @@ func (m *Monitor) Run() error {
 	}
 }
 
+/* TODO: uncomment when timebased billing will be implemented 
 // VerifySecondsBasedChannels checks all active seconds based channels
 // for not using more units, than provided by quota and not exceeding
 // over total deposit.
@@ -88,6 +89,7 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
 
 	return m.processEachChannel(query, m.terminateService)
 }
+*/
 
 // VerifyUnitsBasedChannels checks all active units based channels
 // for not using more units, than provided by quota

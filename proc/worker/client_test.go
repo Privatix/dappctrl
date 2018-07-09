@@ -794,6 +794,8 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 	}
 
 	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
+}
+
 func TestClientAfterOfferingPopUp(t *testing.T) {
 	testClientAfterExistingOfferingPopUp(t)
 	testClientAfterNewOfferingPopUp(t)

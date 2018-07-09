@@ -470,6 +470,10 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 
 	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
 
+	// Test update balances job was created.
+	env.deleteJob(t,
+		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
@@ -495,6 +499,10 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	env.updateInTestDB(t, fxt.Channel)
 
 	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
+
+	// Test update balances job was created.
+	env.deleteJob(t,
+		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
 
 	var jobTerm data.Job
 	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",

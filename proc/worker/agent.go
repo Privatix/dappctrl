@@ -139,12 +139,19 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update channel's status: %v", err)
 	}
 
-	return nil
+	agent, err := w.account(channel.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterCooperativeClose marks channel as closed coop.
 func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentAfterCooperativeClose)
+	channel, err := w.relatedChannel(
+		job, data.JobAgentAfterCooperativeClose)
 	if err != nil {
 		return err
 	}
@@ -154,7 +161,13 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", channel, err)
 	}
 
-	return nil
+	agent, err := w.account(channel.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentPreServiceSuspend marks service as suspended.

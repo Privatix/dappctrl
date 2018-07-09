@@ -601,7 +601,7 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
 }
 
-// AgentPreOfferingDelete calls psc remove offering.
+// AgentPreOfferingDelete calls psc remove an offering.
 func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	offering, err := w.validateOfferingBeforeMutation(job,
 		data.JobAgentPreOfferingDelete)
@@ -673,7 +673,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
 }
 
-func (w *Worker) validateOfferingBeforeMutation(job *data.Job, jType string) (*data.Offering, error) {
+func (w *Worker) validateOfferingBeforeMutation(
+	job *data.Job, jType string) (*data.Offering, error) {
 	offering, err := w.relatedOffering(job, jType)
 	if err != nil {
 		return nil, err
@@ -684,12 +685,11 @@ func (w *Worker) validateOfferingBeforeMutation(job *data.Job, jType string) (*d
 	}
 
 	var pendingJobs int
-	row := w.db.QueryRow(`SELECT COUNT(*)
-			FROM jobs
-			WHERE type IN ($1, $2)
-			AND status=$3
-			AND related_id=$4
-			AND id<>$5`,
+	row := w.db.QueryRow(
+		`SELECT COUNT(*)
+		   FROM jobs
+		  WHERE type IN ($1, $2)
+		    AND status=$3 AND related_id=$4 AND id<>$5`,
 		data.JobAgentPreOfferingDelete, data.JobAgentPreOfferingPopUp,
 		data.JobActive,
 		job.RelatedID,

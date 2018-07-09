@@ -214,14 +214,11 @@ func (s *Server) handlePutOfferingStatus(
 	var jobType string
 	if req.Action == PublishOffering {
 		jobType = data.JobAgentPreOfferingMsgBCPublish
-	}
-	if req.Action == PopupOffering {
+	} else if req.Action == PopupOffering {
 		jobType = data.JobAgentPreOfferingPopUp
-	}
-	if req.Action == DeactivateOffering {
+	} else if req.Action == DeactivateOffering {
 		jobType = data.JobAgentPreOfferingDelete
-	}
-	if jobType == "" {
+	} else {
 		s.replyInvalidAction(w)
 		return
 	}

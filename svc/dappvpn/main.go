@@ -232,9 +232,13 @@ func handleMonitor(confFile string) {
 
 			if err := pusher.PushConfig(ctx, c); err != nil {
 				logger.Error("failed to send OpenVpn"+
-					" server configuration: %s\n", err)
+					" server configuration to"+
+					" dappctrl: %s\n", err)
 				return
 			}
+
+			logger.Info("OpenVpn server configuration has been" +
+				" successfully sent to dappctrl")
 
 			if err := pusher.OVPNConfigUpdated(dir); err != nil {
 				logger.Error("failed to save %s file in %s"+

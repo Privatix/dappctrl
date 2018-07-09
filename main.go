@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"time"
 
@@ -83,6 +84,7 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func main() {
+	fatal := make(chan string)
 	defer bugsnag.PanicHunter()
 
 	conf := newConfig()
@@ -124,14 +126,14 @@ func main() {
 
 	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
-		logger.Fatal("failed to start pay server: %s",
+		fatal <- fmt.Sprintf("failed to start pay server: %s",
 			paySrv.ListenAndServe())
 	}()
 	defer paySrv.Close()
 
 	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
 	go func() {
-		logger.Fatal("failed to start session server: %s",
+		fatal <- fmt.Sprintf("failed to start session server: %s",
 			sess.ListenAndServe())
 	}()
 	defer sess.Close()
@@ -149,7 +151,7 @@ func main() {
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
 		conf.VPNClient)
 	if err != nil {
-		panic(err)
+		logger.Fatal("failed to create worker: %s", err)
 	}
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
@@ -165,7 +167,7 @@ func main() {
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 	go func() {
-		logger.Fatal("failed to run agent server: %s\n",
+		fatal <- fmt.Sprintf("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
 	}()
 
@@ -175,14 +177,14 @@ func main() {
 		logger.Fatal("failed to create agent billing monitor: %s", err)
 	}
 	go func() {
-		logger.Fatal("failed to run agent billing monitor: %s",
+		fatal <- fmt.Sprintf("failed to run agent billing monitor: %s",
 			amon.Run())
 	}()
 
 	cmon := cbill.NewMonitor(conf.ClientMonitor,
 		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 	go func() {
-		logger.Fatal("failed to run client billing monitor: %s",
+		fatal <- fmt.Sprintf("failed to run client billing monitor: %s",
 			cmon.Run())
 	}()
 	defer cmon.Close()
@@ -199,5 +201,10 @@ func main() {
 	}
 	defer mon.Stop()
 
-	logger.Fatal("failed to process job queue: %s", queue.Process())
+	go func() {
+		fatal <- fmt.Sprintf("failed to process job queue: %s",
+			queue.Process())
+	}()
+
+	logger.Fatal(<-fatal)
 }

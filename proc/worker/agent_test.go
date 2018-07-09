@@ -186,6 +186,10 @@ func TestAgentAfterUncooperativeClose(t *testing.T) {
 
 	runJob(t, env.worker.AgentAfterUncooperativeClose, fixture.job)
 
+	// Test update balances job was created.
+	env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
+
 	testChannelStatusChanged(t,
 		fixture.job,
 		env,

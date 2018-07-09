@@ -388,7 +388,17 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 	}
 
 	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	return err
+	if err != nil {
+		return err
+	}
+
+	agent, err := w.account(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // ClientAfterCooperativeClose changed channel status

@@ -600,3 +600,66 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 	return w.updateRelatedOffering(
 		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
 }
+
+// AgentPreOfferingDelete calls psc remove offering.
+func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
+	if err != nil {
+		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	var pendingJobs int
+	row := w.db.QueryRow(`SELECT COUNT(*)
+			FROM jobs
+			WHERE type IN ($1, $2)
+			AND status=$3
+			AND related_id=$4
+			AND id<>$5`,
+		data.JobAgentPreOfferingDelete, data.JobAgentPreOfferingPopUp,
+		data.JobActive,
+		job.RelatedID,
+		job.ID)
+	if err := row.Scan(&pendingJobs); err != nil {
+		return err
+	}
+
+	if pendingJobs > 0 {
+		return fmt.Errorf("conflicting jobs exist, can't proceed")
+	}
+
+	agent, err := w.account(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.key(agent.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCRemoveServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
+		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+}

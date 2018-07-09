@@ -1581,11 +1581,16 @@ if __name__ == '__main__':
                                     args['link']))
         main_conf['link_download'] = args['link']
         checkdev = Checker()
-        logging.info('Begin init.')
-        checkdev.target = 'back'
+        checkdev.target = 'both'
+        logging.info('Update All mode.')
         checkdev.check_sudo()
-        checkdev.init_os(args)
-        logging.info('All done.')
+        if checkdev.clear_contr():
+            checkdev.use_ports = dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None))
+            checkdev.init_os(args, True)
+        else:
+            logging.info('Problem with clear all old file.')
+
+
 
     elif args['branch']:
         logging.debug('Change branch from:{} '

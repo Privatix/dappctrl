@@ -210,14 +210,26 @@ func (s *Server) handlePutOfferingStatus(
 	if !s.parsePayload(w, r, req) {
 		return
 	}
-	// TODO: popup, deactivate
-	if req.Action != PublishOffering {
+
+	var jobType string
+	if req.Action == PublishOffering {
+		jobType = data.JobAgentPreOfferingMsgBCPublish
+	}
+	if req.Action == PopupOffering {
+		jobType = data.JobAgentPreOfferingPopUp
+	}
+	if req.Action == DeactivateOffering {
+		jobType = data.JobAgentPreOfferingDelete
+	}
+	if jobType == "" {
 		s.replyInvalidAction(w)
 		return
 	}
+
 	if !s.findTo(w, &data.Offering{}, id) {
 		return
 	}
+
 	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
 
 	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
@@ -228,7 +240,7 @@ func (s *Server) handlePutOfferingStatus(
 	}
 
 	if err := s.queue.Add(&data.Job{
-		Type:        data.JobAgentPreOfferingMsgBCPublish,
+		Type:        jobType,
 		RelatedType: data.JobOffering,
 		RelatedID:   id,
 		CreatedBy:   data.JobUser,

@@ -135,6 +135,10 @@ func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
 
 	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
+	now := time.Now()
+
+	acc.LastBalanceCheck = &now
+
 	return w.db.Update(acc)
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
+## -*- coding: utf-8 -*-
 
 """
     Initializer on pure Python 2.7

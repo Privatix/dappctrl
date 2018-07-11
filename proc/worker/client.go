@@ -387,9 +387,11 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	if err != nil {
-		return err
+	if ch.ServiceStatus != data.ServiceTerminated {
+		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	agent, err := w.account(ch.Agent)
@@ -414,9 +416,11 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	if err != nil {
-		return err
+	if ch.ServiceStatus != data.ServiceTerminated {
+		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	agent, err := w.account(ch.Agent)

@@ -461,26 +461,32 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 		data.JobClientAfterUncooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	var job data.Job
-	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
-	defer env.deleteFromTestDB(t, &job)
+	testUpdateBalancesJobCreatedAndStatusChanged := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
+		env.updateInTestDB(t, fxt.Channel)
 
-	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	env.updateInTestDB(t, fxt.Channel)
+		runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
 
-	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
+		// Test update balances job was created.
+		env.deleteJob(t,
+			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
 
-	// Test update balances job was created.
-	env.deleteJob(t,
-		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
 
-	var ch data.Channel
-	env.findTo(t, &ch, fxt.Channel.ID)
-
-	if ch.ChannelStatus != data.ChannelClosedUncoop {
-		t.Fatalf("expected %s channel status, but got %s",
-			data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+		if ch.ChannelStatus != data.ChannelClosedUncoop {
+			t.Fatalf("expected %s channel status, but got %s",
+				data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+		}
 	}
+
+	testUpdateBalancesJobCreatedAndStatusChanged(data.ServicePending)
+	env.deleteJob(t, data.JobClientPreServiceTerminate,
+		data.JobChannel, fxt.Channel.ID)
+
+	testUpdateBalancesJobCreatedAndStatusChanged(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
 func TestClientAfterCooperativeClose(t *testing.T) {
@@ -491,35 +497,33 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 		data.JobClientAfterCooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	var job data.Job
-	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
-	defer env.deleteFromTestDB(t, &job)
+	testJobCreatedAndStatusChanged := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ChannelStatus = data.ChannelWaitCoop
+		env.updateInTestDB(t, fxt.Channel)
 
-	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	env.updateInTestDB(t, fxt.Channel)
+		runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
-	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
+		// Test update balances job was created.
+		env.deleteJob(t,
+			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
 
-	// Test update balances job was created.
-	env.deleteJob(t,
-		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
 
-	var jobTerm data.Job
-	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",
-		fxt.Channel.ID, fxt.job.ID)
-	defer env.deleteFromTestDB(t, &jobTerm)
-
-	if jobTerm.Type != data.JobClientPreServiceTerminate {
-		t.Fatal("bad job type")
+		if ch.ChannelStatus != data.ChannelClosedCoop {
+			t.Fatalf("expected %s service status, but got %s",
+				data.ChannelClosedCoop, fxt.Channel.ChannelStatus)
+		}
 	}
 
-	var ch data.Channel
-	env.findTo(t, &ch, fxt.Channel.ID)
+	testJobCreatedAndStatusChanged(data.ServicePending)
+	// Test terminate job created.
+	env.deleteJob(t, data.JobClientPreServiceTerminate, data.JobChannel,
+		fxt.Channel.ID)
 
-	if ch.ChannelStatus != data.ChannelClosedCoop {
-		t.Fatalf("expected %s service status, but got %s",
-			data.ChannelClosedCoop, fxt.Channel.ChannelStatus)
-	}
+	testJobCreatedAndStatusChanged(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
 func runJobCheckingRunnerCall(t *testing.T, env *workerTest,

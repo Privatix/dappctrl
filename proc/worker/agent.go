@@ -101,16 +101,18 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	var jobType string
+	var jobToCreate string
 
 	if channel.ReceiptBalance > 0 {
-		jobType = data.JobAgentPreCooperativeClose
-	} else {
-		jobType = data.JobAgentPreServiceTerminate
+		jobToCreate = data.JobAgentPreCooperativeClose
+	} else if channel.ServiceStatus != data.ServiceTerminated {
+		jobToCreate = data.JobAgentPreServiceTerminate
 	}
 
-	if err = w.addJob(jobType, data.JobChannel, channel.ID); err != nil {
-		return fmt.Errorf("could not add %s job: %v", jobType, err)
+	if jobToCreate != "" {
+		if err = w.addJob(jobToCreate, data.JobChannel, channel.ID); err != nil {
+			return fmt.Errorf("could not add %s job: %v", jobToCreate, err)
+		}
 	}
 
 	channel.ChannelStatus = data.ChannelInChallenge
@@ -129,9 +131,11 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID); err != nil {
-		return err
+	if channel.ServiceStatus != data.ServiceTerminated {
+		if err = w.addJob(data.JobAgentPreServiceTerminate,
+			data.JobChannel, channel.ID); err != nil {
+			return err
+		}
 	}
 
 	channel.ChannelStatus = data.ChannelClosedUncoop

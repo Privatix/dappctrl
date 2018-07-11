@@ -135,72 +135,70 @@ func testChannelStatusChanged(t *testing.T,
 }
 
 func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
-	// set ch_status="in_challenge"
-	// "preServiceTerminate"
-
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
+	fxt := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
 		data.JobChannel)
 	defer env.close()
-	defer fixture.close()
+	defer fxt.close()
 
-	testChangesStatusAndCreatesJob := func(t *testing.T, balance uint64, jobType string) {
-		fixture.Channel.ReceiptBalance = balance
-		env.updateInTestDB(t, fixture.Channel)
+	testChangesStatus := func(svcStatus string, balance uint64) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ReceiptBalance = balance
+		env.updateInTestDB(t, fxt.Channel)
 		runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
-			fixture.job)
-		testChannelStatusChanged(t, fixture.job, env,
+			fxt.job)
+		testChannelStatusChanged(t, fxt.job, env,
 			data.ChannelInChallenge)
-		env.deleteJob(t,
-			jobType,
-			data.JobChannel,
-			fixture.Channel.ID)
 	}
 
-	t.Run("ChannelInChallengeAndServiceTerminateCreated", func(t *testing.T) {
-		testChangesStatusAndCreatesJob(t, 0, data.JobAgentPreServiceTerminate)
-	})
-
-	runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
-		fixture.job)
-	testChannelStatusChanged(t, fixture.job, env,
-		data.ChannelInChallenge)
+	// Channel in challenge and s ervice terminate created
+	testChangesStatus(data.ServiceSuspended, 0)
 	env.deleteJob(t,
 		data.JobAgentPreServiceTerminate,
 		data.JobChannel,
-		fixture.Channel.ID)
+		fxt.Channel.ID)
+
+	// Terminated channel in challenge and service terminate not created
+	testChangesStatus(data.ServiceTerminated, 0)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobAgentPreServiceTerminate)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeCloseRequest,
-		*fixture.job)
+		*fxt.job)
 }
 
 func TestAgentAfterUncooperativeClose(t *testing.T) {
-	// 1. set ch_status="closed_uncoop"
-	// 2. "preServiceTerminate"
-
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
+	fxt := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
 		data.JobChannel)
 	defer env.close()
-	defer fixture.close()
+	defer fxt.close()
 
-	runJob(t, env.worker.AgentAfterUncooperativeClose, fixture.job)
+	testStatusChangedAndUpdateBalancesJobCreated := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		env.updateInTestDB(t, fxt.Channel)
 
-	// Test update balances job was created.
-	env.deleteJob(t, data.JobAccountUpdateBalances,
-		data.JobAccount, fixture.Account.ID)
+		runJob(t, env.worker.AgentAfterUncooperativeClose, fxt.job)
 
-	testChannelStatusChanged(t,
-		fixture.job,
-		env,
-		data.ChannelClosedUncoop)
+		// Test update balances job was created.
+		env.deleteJob(t, data.JobAccountUpdateBalances,
+			data.JobAccount, fxt.Account.ID)
 
+		testChannelStatusChanged(t,
+			fxt.job,
+			env,
+			data.ChannelClosedUncoop)
+	}
+
+	testStatusChangedAndUpdateBalancesJobCreated(data.ServicePending)
 	// Test agent pre service terminate job created.
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel,
-		fixture.Channel.ID)
+		fxt.Channel.ID)
+
+	testStatusChangedAndUpdateBalancesJobCreated(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobAgentPreServiceTerminate)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeClose,
-		*fixture.job)
+		*fxt.job)
 }
 
 func TestAgentAfterCooperativeClose(t *testing.T) {

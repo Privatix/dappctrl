@@ -166,6 +166,14 @@ func (e *workerTest) selectOneTo(t *testing.T, rec reform.Record, tail string,
 	}
 }
 
+func (e *workerTest) jobNotCreated(t *testing.T, relID, jobType string) {
+	err := e.db.SelectOneTo(&data.Job{}, "WHERE related_id=$1 AND type=$2",
+		relID, jobType)
+	if err != sql.ErrNoRows {
+		t.Fatalf("channel terminate job must not be created")
+	}
+}
+
 func (e *workerTest) deleteJob(t *testing.T, jobType, relType, relID string) {
 	job := &data.Job{}
 	err := e.db.SelectOneTo(job,

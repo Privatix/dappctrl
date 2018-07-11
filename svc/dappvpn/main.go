@@ -14,51 +14,15 @@ import (
 	"time"
 
 	"github.com/privatix/dappctrl/sesssrv"
+	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
-	"github.com/privatix/dappctrl/svc/dappvpn/pusher"
+	"github.com/privatix/dappctrl/svc/dappvpn/msg"
+	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
 	"github.com/privatix/dappctrl/util"
-	"github.com/privatix/dappctrl/util/srv"
 )
 
-type ovpnConfig struct {
-	Name       string        // Name of OvenVPN executable.
-	Args       []string      // Extra arguments for OpenVPN executable.
-	ConfigRoot string        // Root path for OpenVPN channel configs.
-	StartDelay time.Duration // Delay to ensure OpenVPN is ready, in milliseconds.
-}
-
-type serverConfig struct {
-	*srv.Config
-	Password string
-	Username string
-}
-
-type config struct {
-	ChannelDir string // Directory for common-name -> channel mappings.
-	Log        *util.LogConfig
-	Monitor    *mon.Config
-	OpenVPN    *ovpnConfig // OpenVPN settings for client mode.
-	Pusher     *pusher.Config
-	Server     *serverConfig
-}
-
-func newConfig() *config {
-	return &config{
-		ChannelDir: ".",
-		Log:        util.NewLogConfig(),
-		Monitor:    mon.NewConfig(),
-		OpenVPN: &ovpnConfig{
-			Name:       "openvpn",
-			ConfigRoot: "/etc/openvpn/config",
-			StartDelay: 1000,
-		},
-		Pusher: pusher.NewConfig(),
-		Server: &serverConfig{Config: srv.NewConfig()},
-	}
-}
-
 var (
-	conf    *config
+	conf    *config.Config
 	channel string
 	logger  *util.Logger
 	fatal   = make(chan string)
@@ -71,7 +35,7 @@ func main() {
 	fchannel := flag.String("channel", "", "Channel ID for client mode")
 	flag.Parse()
 
-	conf = newConfig()
+	conf = config.NewConfig()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		log.Fatalf("failed to read configuration: %s\n", err)
 	}
@@ -221,34 +185,35 @@ func handleMonitor(confFile string) {
 
 	dir := filepath.Dir(confFile)
 
-	if len(channel) == 0 && !pusher.OVPNConfigPushed(dir) {
+	if len(channel) == 0 && !msg.IsDone(dir) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		go func() {
-			c := pusher.NewCollect(conf.Pusher, conf.Server.Config,
-				conf.Server.Username, conf.Server.Password,
-				logger)
+			pusher := msg.NewPusher(conf.Pusher,
+				conf.Server.Config, conf.Server.Username,
+				conf.Server.Password, logger)
 
-			if err := pusher.PushConfig(ctx, c); err != nil {
-				logger.Error("failed to send OpenVpn"+
-					" server configuration to"+
-					" dappctrl: %s\n", err)
+			if err := pusher.PushConfiguration(ctx); err != nil {
+				logger.Error("failed to push app config to"+
+					" dappctrl", err)
 				return
 			}
 
-			logger.Info("OpenVpn server configuration has been" +
-				" successfully sent to dappctrl")
-
-			if err := pusher.OVPNConfigUpdated(dir); err != nil {
+			if err := msg.Done(dir); err != nil {
 				logger.Error("failed to save %s file in %s"+
-					" directory: %s\n", pusher.PushedFile,
+					" directory: %s", msg.PushedFile,
 					dir, err)
 			}
 		}()
 	}
 
 	if len(channel) != 0 {
+		if err := prepare.ClientConfig(channel, conf); err != nil {
+			logger.Fatal("failed to prepare client"+
+				" configuration: %s", err)
+		}
+
 		ovpn := launchOpenVPN()
 		defer ovpn.Kill()
 		time.Sleep(conf.OpenVPN.StartDelay * time.Millisecond)

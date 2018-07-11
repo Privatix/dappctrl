@@ -27,6 +27,18 @@ func (s *Server) findProduct(
 	return &prod, true
 }
 
+func (s *Server) findEndpoint(w http.ResponseWriter,
+	channelID string) (*data.Endpoint, bool) {
+	var ept data.Endpoint
+	if err := data.FindOneTo(s.db.Querier, &ept, "channel",
+		channelID); err != nil {
+		s.Logger().Error("failed to find endpoint: %s", err)
+		s.RespondError(w, ErrEndpointNotFound)
+		return nil, false
+	}
+	return &ept, true
+}
+
 func (s *Server) updateProduct(
 	w http.ResponseWriter, prod *data.Product) bool {
 	if err := s.db.Update(prod); err != nil {

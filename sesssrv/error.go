@@ -11,6 +11,7 @@ const (
 	ErrCodeNonActiveChannel   = iota
 	ErrCodeSessionNotFound    = iota
 	ErrCodeInvalidProductConf = iota
+	ErrCodeEndpointNotFound   = iota
 )
 
 // Common session server errors.
@@ -34,5 +35,9 @@ var (
 	ErrInvalidProductConf = &srv.Error{
 		Code:    ErrCodeInvalidProductConf,
 		Message: "invalid product configuration",
+	}
+	ErrEndpointNotFound = &srv.Error{
+		Code:    ErrCodeEndpointNotFound,
+		Message: "endpoint not found",
 	}
 )

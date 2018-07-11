@@ -45,7 +45,7 @@ var (
 	server *Server
 
 	allPaths = []string{PathAuth, PathStart, PathStop, PathUpdate,
-		PathProductConfig}
+		PathProductConfig, PathEndpointMsg}
 )
 
 func newTestFixtures(t *testing.T) *data.TestFixture {

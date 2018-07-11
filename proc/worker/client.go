@@ -357,10 +357,6 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		return err
 	}
 
-	if err := w.deployConfig(w.db, job.RelatedID, w.clientVPN.ConfigDir); err != nil {
-		return err
-	}
-
 	return w.db.InTransaction(func(tx *reform.TX) error {
 		endp.Status = data.MsgChPublished
 		if err := data.Save(tx.Querier, &endp); err != nil {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
@@ -219,15 +218,6 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 		data.JobClientAfterEndpointMsgSOMCGet, data.JobEndpoint)
 	defer fxt.Close()
 
-	err := fmt.Errorf("some error")
-	env.worker.deployConfig = func(db *reform.DB, endpoint, dir string) error {
-		return err
-	}
-
-	util.TestExpectResult(t, "run job", err,
-		env.worker.ClientAfterEndpointMsgSOMCGet(fxt.job))
-
-	err = nil
 	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
 
 	var endp data.Endpoint

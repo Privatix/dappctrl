@@ -7,6 +7,8 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
+//go:generate chmod +x ./pkgList/gen.sh
+//go:generate ./pkgList/gen.sh
 //go:generate rm -f statik.go
 //go:generate statik -f -src=. -dest=..
 
@@ -22,7 +24,7 @@ func ReadFile(name string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to open statik FS: %s", err)
 	}
 
-	file, err := fs.Open(EndpointJSONSchema)
+	file, err := fs.Open(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open statik file: %s", err)
 	}

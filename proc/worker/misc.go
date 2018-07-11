@@ -150,13 +150,15 @@ func parseJobData(job *data.Job, data interface{}) error {
 }
 
 func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
-	// TODO: move timeout to conf
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(w.ethConfig.Timeout.ResponseHeaderTimeout)*
+			time.Second)
 	defer cancel()
 
 	amount, err := w.ethBack.EthBalanceAt(ctx, addr)
 	if err != nil {
-		return nil, fmt.Errorf("could not get eth balance: %v", err)
+		return nil, fmt.Errorf("could not get eth"+
+			" balance: %v", err)
 	}
 
 	return amount, nil

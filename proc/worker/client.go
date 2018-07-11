@@ -825,7 +825,6 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	return w.db.Update(&offering)
 }
 
-
 func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
 	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
 	offeringsData, err := w.somc.FindOfferings([]string{

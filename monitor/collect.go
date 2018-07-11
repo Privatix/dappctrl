@@ -57,21 +57,20 @@ var offeringRelatedEvents = hexesToHashes(
 
 // collect requests new logs and puts them into the database.
 // timeout variable in seconds.
-func (m *Monitor) collect(ctx context.Context, timeout int64,
-	errCh chan error) {
+func (m *Monitor) collect(ctx context.Context, timeout int64) {
 	ctx, cancel := context.WithTimeout(ctx,
 		time.Duration(timeout)*time.Second)
 	defer cancel()
 
 	firstBlock, freshBlock, lastBlock, err := m.getRangeOfInterest(ctx)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
 	addresses, err := m.getAddressesInUse()
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
@@ -132,7 +131,7 @@ func (m *Monitor) collect(ctx context.Context, timeout int64,
 		return nil
 	})
 	if err != nil {
-		m.errWrapper(ctx, fmt.Errorf("log collecting failed: %v", err))
+		m.errors <- fmt.Errorf("log collecting failed: %v", err)
 		return
 	}
 
@@ -143,7 +142,7 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) error {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(e.TxHash.Bytes()),
-		TxStatus:    txMinedStatus, // FIXME: is this field needed at all?
+		TxStatus:    txMinedStatus,
 		BlockNumber: e.BlockNumber,
 		Addr:        data.FromBytes(e.Address.Bytes()),
 		Data:        data.FromBytes(e.Data),
@@ -265,7 +264,8 @@ func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
 }
 
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) (uint64, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // FIXME: hardcoded timeout
+	ctx, cancel := context.WithTimeout(ctx,
+		time.Duration(m.cfg.Timeout)*time.Second)
 	defer cancel()
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)

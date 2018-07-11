@@ -255,7 +255,7 @@ func TestAccountCreateUpdateBalancesJob(t *testing.T) {
 
 	err := testServer.db.SelectOneTo(&data.Job{},
 		`WHERE related_id=$1 AND related_type=$2 AND type=$3`,
-		acc.ID, data.JobAccount, data.JobAccountUpdateBalances);
+		acc.ID, data.JobAccount, data.JobAccountUpdateBalances)
 	if err != nil {
 		t.Fatal("update balances job expected, got error: ", err)
 	}

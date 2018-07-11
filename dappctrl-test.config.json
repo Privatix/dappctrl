@@ -67,6 +67,9 @@
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
         "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
     },
+    "EptMsg": {
+        "Timeout": 1
+    },
 
     "Eth": {
         "Contract" : {
@@ -74,7 +77,10 @@
             "PSCAddrHex": ""
         },
         "GethURL": "http://localhost:8545",
-        "TruffleAPIURL": ""
+        "TruffleAPIURL": "",
+        "Timeout": {
+            "ResponseHeaderTimeout": 20
+        }
     },
 
     "JobHandlerTest": {

@@ -2,7 +2,7 @@ package bugsnag
 
 import (
 	"database/sql"
-	"path/filepath"
+	"fmt"
 	"strconv"
 
 	"github.com/bugsnag/bugsnag-go"
@@ -20,7 +20,6 @@ const (
 	ethAddress          = "EthAddr"
 	defaultReleaseStage = "alpha"
 	currentAPIKey       = "c021f92e9c199c79d870adf34365e372"
-	mainRepo            = "github.com/privatix/dappctrl"
 	key                 = "error.sendremote"
 )
 
@@ -31,16 +30,6 @@ var (
 	enable bool
 
 	notifier *bugsnag.Notifier
-
-	// TODO(maxim) The list needs to be configured dynamically, before the application starts
-	// This slice is needed so that the full path is written to the log
-	pkgSlice = []string{"main", "agent/billing", "client/bill",
-		"client/svcrun", "data", "eth", "eth/contract",
-		"eth/truffle", "eth/util", "execsrv", "job", "messages",
-		"messages/ept", "messages/ept/config", "messages/offer",
-		"monitor", "pay", "proc", "proc/worker", "sesssrv", "somc",
-		"svc/dappvpn", "svc/dappvpn/mon", "svc/dappvpn/pusher",
-		"uisrv", "util", "util/srv"}
 )
 
 // Log interface for report.
@@ -52,8 +41,9 @@ type Log interface {
 
 // Config Bugsnag client config.
 type Config struct {
-	AppID        string
-	ReleaseStage string
+	AppID            string
+	ReleaseStage     string
+	ExcludedPackages []string
 }
 
 // Client Bugsnag client object.
@@ -76,15 +66,20 @@ func NewConfig() *Config {
 // about the error and panic.
 // Service is activated if exist entry key = "error.sendremote"
 // and value = true in the database settings table.
-func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
+func NewClient(cfg *Config, db *reform.DB, log Log) (*Client, error) {
 	if log == nil {
-		return nil
+		return nil, fmt.Errorf("no log object specified")
 	}
 
-	for k, v := range pkgSlice {
-		// if you do not add an *,
-		// the full path will not be displayed in the dashboard
-		pkgSlice[k] = filepath.Join(mainRepo, v) + "*"
+	excludedPackagesMap := make(map[string]bool)
+
+	for _, pkg := range cfg.ExcludedPackages {
+		excludedPackagesMap[pkg] = true
+	}
+
+	pkgSlice, err := pkgList(excludedPackagesMap)
+	if err != nil {
+		return nil, err
 	}
 
 	bugsnag.Configure(bugsnag.Configuration{
@@ -105,7 +100,7 @@ func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 	cli.enable = e
 	enable = e
 	notifier = cli.notifier
-	return cli
+	return cli, nil
 }
 
 func emptyUUID() string {

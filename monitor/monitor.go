@@ -96,11 +96,24 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 }
 
 func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
-	scheduleTicker <-chan time.Time, errCh chan error) {
-	go m.repeatEvery(ctx, collectTicker, errCh, collectName,
-		func() { m.collect(ctx, timeout, errCh) })
-	go m.repeatEvery(ctx, scheduleTicker, errCh, scheduleName,
-		func() { m.schedule(ctx, timeout, errCh) })
+	scheduleTicker <-chan time.Time) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case err := <-m.errors:
+				m.logger.Error("blockchain monitor"+
+					": %s", err)
+			}
+
+		}
+	}()
+
+	go m.repeatEvery(ctx, collectTicker, collectName,
+		func() { m.collect(ctx, timeout) })
+	go m.repeatEvery(ctx, scheduleTicker, scheduleName,
+		func() { m.schedule(ctx, timeout) })
 
 	m.logger.Debug("monitor started")
 }
@@ -117,7 +130,7 @@ func (m *Monitor) Start() error {
 		time.Duration(m.cfg.SchedulePause) * time.Second)
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
 	m.start(ctx, m.cfg.Timeout, collectTicker.C,
-		scheduleTicker.C, m.errors)
+		scheduleTicker.C)
 	return nil
 }
 
@@ -135,15 +148,13 @@ func (m *Monitor) Stop() error {
 // repeatEvery calls a given action function repeatedly every time a read on
 // ticker channel succeeds. To stop the loop, cancel the context.
 func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
-	errCh chan error, name string, action func()) {
+	name string, action func()) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker:
 			action()
-		case err := <-errCh:
-			m.logger.Error("blockchain monitor: %s", err)
 		}
 	}
 }

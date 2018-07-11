@@ -28,6 +28,7 @@ var (
 		Log       *util.LogConfig
 		PayServer *pay.Config
 		EptTest   *eptTestConfig
+		EptMsg    *Config
 	}
 
 	testDB *reform.DB
@@ -131,6 +132,7 @@ func TestMain(m *testing.M) {
 	conf.Log = util.NewLogConfig()
 	conf.PayServer = &pay.Config{}
 	conf.EptTest = newEptTestConfig()
+	conf.EptMsg = NewConfig()
 
 	util.ReadTestConfig(&conf)
 
@@ -158,12 +160,12 @@ func TestValidEndpointMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr)
+	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	em, err := s.EndpointMessage(fxt.ch.ID, timeout)
+	em, err := s.EndpointMessage(fxt.ch.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,12 +184,12 @@ func TestBadProductConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr)
+	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := s.EndpointMessage(fxt.ch.ID, timeout); err == nil {
+	if _, err := s.EndpointMessage(fxt.ch.ID); err == nil {
 		t.Fatal(errValidateMsg)
 	}
 }
@@ -201,12 +203,12 @@ func TestBadProductOfferAccessID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr)
+	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := s.EndpointMessage(fxt.ch.ID, timeout); err == nil {
+	if _, err := s.EndpointMessage(fxt.ch.ID); err == nil {
 		t.Fatal(errValidateMsg)
 	}
 }

@@ -293,8 +293,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	// TODO: move timeout to conf.
-	msg, err := w.ept.EndpointMessage(channel.ID, time.Second)
+	msg, err := w.ept.EndpointMessage(channel.ID)
 	if err != nil {
 		return fmt.Errorf("could not make endpoint message: %v", err)
 	}

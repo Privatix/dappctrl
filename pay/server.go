@@ -25,7 +25,7 @@ func NewConfig() *Config {
 type Server struct {
 	*srv.Server
 
-	db     *reform.DB
+	db *reform.DB
 }
 
 const payPath = "/v1/pmtChannel/pay"
@@ -34,7 +34,7 @@ const payPath = "/v1/pmtChannel/pay"
 func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 	s := &Server{
 		Server: srv.NewServer(conf.Config, logger),
-		db:  db,
+		db:     db,
 	}
 
 	s.HandleFunc(payPath, s.RequireHTTPMethods(s.handlePay, http.MethodPost))

@@ -16,8 +16,10 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
@@ -34,6 +36,8 @@ type testConfig struct {
 		ReactionDelay time.Duration // In milliseconds.
 	}
 	Gas       *GasConf
+	EptMsg    *ept.Config
+	Eth       *eth.Config
 	Job       *job.Config
 	Log       *util.LogConfig
 	PayServer *pay.Config
@@ -46,6 +50,8 @@ func newTestConfig() *testConfig {
 	return &testConfig{
 		clientVPN: config.NewConfig(),
 		DB:        data.NewDBConfig(),
+		EptMsg:    ept.NewConfig(),
+		Eth:       eth.NewConfig(),
 		Job:       job.NewConfig(),
 		Log:       util.NewLogConfig(),
 		SOMC:      somc.NewConfig(),
@@ -88,7 +94,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack, conf.Gas,
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		data.TestToPrivateKey, conf.clientVPN)
+		data.TestToPrivateKey, conf.clientVPN, conf.EptMsg, conf.Eth)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

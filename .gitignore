@@ -9,6 +9,7 @@ dappctrl.config.local.json
 dappctrl-test.config.local.json
 
 statik/statik.go
+statik/pkgList/packages.txt
 vendor
 
 *.iml

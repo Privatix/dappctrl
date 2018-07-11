@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -356,8 +357,7 @@ func TestPutOfferingStatus(t *testing.T) {
 	data.DeleteFromTestDB(t, testServer.db, jobPublish)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestPutClientOfferingStatus(t *testing.T) {
+func TestPutClientOfferingStatus(t *testing.T) {
 	defer cleanDB(t)
 
 	setTestUserCredentials(t)
@@ -403,7 +403,7 @@ func TestPutOfferingStatus(t *testing.T) {
 	}
 
 	data.DeleteFromTestDB(t, testServer.db, job)
-}*/
+}
 
 func TestGetOfferingStatus(t *testing.T) {
 	defer cleanDB(t)

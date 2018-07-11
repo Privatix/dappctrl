@@ -172,9 +172,7 @@ func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
-	// TODO: Remove authHash.
-	authHash := [common.HashLength]byte{}
-	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit, authHash)
+	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit, common.Hash{})
 	if err != nil {
 		err = fmt.Errorf("failed to create PSC channel: %s", err)
 	}

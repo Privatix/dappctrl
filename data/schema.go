@@ -2,6 +2,8 @@ package data
 
 import (
 	"time"
+
+	"github.com/privatix/dappctrl/util/log"
 )
 
 //go:generate reform
@@ -375,4 +377,14 @@ type EthLog struct {
 	Topics      LogTopics `reform:"topics"`
 	Failures    uint64    `reform:"failures"`
 	Ignore      bool      `reform:"ignore"`
+}
+
+// LogEvent is a log event.
+//reform:log_events
+type LogEvent struct {
+	Time    time.Time `reform:"time"`
+	Level   log.Level `reform:"level"`
+	Message string    `reform:"message"`
+	Context []byte    `reform:"context"`
+	Stack   *string   `reform:"stack"`
 }

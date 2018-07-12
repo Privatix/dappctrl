@@ -331,4 +331,22 @@ CREATE TABLE eth_logs (
     ignore boolean NOT NULL DEFAULT FALSE
 );
 
+-- Log event severity.
+CREATE TYPE log_level AS ENUM (
+    'debug',
+    'info',
+    'warning',
+    'error',
+    'fatal'
+);
+
+-- Log events.
+CREATE TABLE log_events (
+    time timestamp with time zone NOT NULL,
+    level log_level NOT NULL,
+    message text NOT NULL,
+    context jsonb NOT NULL,
+    stack text
+);
+
 END TRANSACTION;

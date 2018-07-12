@@ -386,11 +386,6 @@ func TestPutClientOfferingStatus(t *testing.T) {
 	checkStatusCode(t, res, http.StatusOK,
 		"failed to put offering status: %d")
 
-	job := new(data.Job)
-
-	data.FindInTestDB(t, testServer.db, job, "related_id",
-		offer.ID)
-
 	expectedData, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: testGasPrice, Offering: offer.ID,
 		Account: testAgent.ID})
@@ -398,11 +393,25 @@ func TestPutClientOfferingStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(job.Data, expectedData) {
-		t.Fatal("job does not contain expected data")
+	jobs, err := testServer.db.SelectAllFrom(data.JobTable, "")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	data.DeleteFromTestDB(t, testServer.db, job)
+	var found bool
+
+	for _, j := range jobs {
+		if job, ok := j.(*data.Job); ok {
+			if bytes.Equal(job.Data, expectedData) {
+				found = true
+				data.DeleteFromTestDB(t, testServer.db, job)
+			}
+		}
+	}
+
+	if !found {
+		t.Fatal("job does not contain expected data")
+	}
 }
 
 func TestGetOfferingStatus(t *testing.T) {

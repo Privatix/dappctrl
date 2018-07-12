@@ -135,10 +135,10 @@ func (s *Server) filter(conds []string) (constraints string) {
 	return constraints
 }
 
-// func returns ethereum's address on string format from base 64 encoded string
+// ethAddrFromHex returns ethereum's address on string format from hex encoded string
 // if the address is not valid, it returns an empty string
-func ethAddrFromBase64(addr string) string {
-	ethAddr, err := data.ToAddress(addr)
+func ethAddrFromHex(addr string) string {
+	ethAddr, err := data.HexToAddress(addr)
 	if err != nil {
 		ethAddr = common.Address{}
 	}
@@ -214,8 +214,8 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 		formatTimeStr(&item.Job.CreatedAt)
 
 		// client ETH address conversion
-		item.Client = ethAddrFromBase64(item.Client)
-		item.Agent = ethAddrFromBase64(item.Agent)
+		item.Client = ethAddrFromHex(item.Client)
+		item.Agent = ethAddrFromHex(item.Agent)
 
 		// usage calculation
 		usageCalc(&item.Usage, i)
@@ -366,8 +366,8 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 
 		result := new(respGetClientChan)
 		result.ID = ch.ID
-		result.Agent = ethAddrFromBase64(ch.Agent)
-		result.Client = ethAddrFromBase64(ch.Client)
+		result.Agent = ethAddrFromHex(ch.Agent)
+		result.Client = ethAddrFromHex(ch.Client)
 		result.Offering = ch.Offering
 		result.Deposit = ch.TotalDeposit
 		result.ChStat.ChannelStatus = ch.ChannelStatus

@@ -138,7 +138,7 @@ func (m *Monitor) collect(ctx context.Context) {
 func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) error {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
-		TxHash:      data.FromBytes(e.TxHash.Bytes()),
+		TxHash:      data.HexFromBytes(e.TxHash.Bytes()),
 		TxStatus:    txMinedStatus,
 		BlockNumber: e.BlockNumber,
 		Addr:        data.FromBytes(e.Address.Bytes()),

@@ -69,7 +69,7 @@ func (w *Worker) unmarshalDataTo(jobData []byte, v interface{}) error {
 }
 
 func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
-	hash, err := data.ToHash(ethLog.TxHash)
+	hash, err := data.HexToHash(ethLog.TxHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode eth tx hash: %v", err)
 	}
@@ -119,7 +119,7 @@ func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
 		return err
 	}
 
-	agentAddr, err := data.ToAddress(acc.EthAddr)
+	agentAddr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		return err
 	}

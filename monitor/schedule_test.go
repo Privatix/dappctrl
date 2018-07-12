@@ -109,7 +109,7 @@ func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
 	failures uint64, topics ...interface{}) *data.EthLog {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
-		TxHash:      data.FromBytes(genRandData(32)),
+		TxHash:      data.HexFromBytes(genRandData(32)),
 		TxStatus:    txMinedStatus,
 		BlockNumber: blockNumber,
 		Addr:        data.FromBytes(pscAddr.Bytes()),

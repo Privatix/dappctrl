@@ -108,7 +108,7 @@ func genEthAddr(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return data.FromBytes(
+	return data.HexFromBytes(
 		crypto.PubkeyToAddress(key.PublicKey).Bytes())
 }
 

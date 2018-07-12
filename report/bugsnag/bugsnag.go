@@ -124,7 +124,7 @@ func accEthAddr(db *reform.DB) string {
                             LIMIT 1;`).Scan(&tempAddr); err != nil {
 		return defaultAccEth
 	}
-	addr, err := data.ToAddress(tempAddr)
+	addr, err := data.HexToAddress(tempAddr)
 	if err != nil {
 		return defaultAccEth
 	}

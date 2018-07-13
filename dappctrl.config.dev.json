@@ -23,12 +23,20 @@
             "port": "5433"
         }
     },
+	"EptMsg": {
+        "Timeout": 1
+    },
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
         },
-        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
+		"Timeout": {
+            "ResponseHeaderTimeout": 20,
+            "TLSHandshakeTimeout": 5,
+            "ExpectContinueTimeout": 5
+        }
     },
     "Gas": {
         "PTC": {
@@ -100,17 +108,22 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "addCheckBalance": {
-                "Duplicated": true,
-                "TryLimit": 0,
-                "TryPeriod": 60000
-            },
             "clientPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
             },
             "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
@@ -151,10 +164,16 @@
     },
     "SOMC": {
         "ReconnPeriod": 5000,
-        "URL": "wc://190.2.137.9:8080"
+        "URL": "ws://190.2.137.9:8080"
     },
     "StaticPassword": "",
     "Report": {
-        "ReleaseStage": "develop"
+        "ReleaseStage": "develop",
+        "ExcludedPackages": [
+            "github.com/privatix/dappctrl/tool/dappinst",
+            "github.com/privatix/dappctrl/svc/dappvpn",
+            "github.com/privatix/dappctrl/svc/dappvpn/mon",
+            "github.com/privatix/dappctrl/svc/dappvpn/pusher"
+        ]
     }
 }

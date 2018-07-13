@@ -76,7 +76,7 @@ func newPayload(db *reform.DB, channel,
 
 func postPayload(db *reform.DB, channel string,
 	pld *paymentPayload, tls bool, timeout uint) error {
-	body, err := json.Marshal(pld)
+	pldArgs, err := json.Marshal(pld)
 	if err != nil {
 		return err
 	}
@@ -94,6 +94,11 @@ func postPayload(db *reform.DB, channel string,
 
 	client := http.Client{
 		Timeout: time.Duration(timeout) * time.Millisecond,
+	}
+
+	body, err := json.Marshal(&srv.Request{Args: pldArgs})
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.Post(url, "application/json", bytes.NewReader(body))

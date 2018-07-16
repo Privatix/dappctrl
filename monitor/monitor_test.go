@@ -38,7 +38,7 @@ const (
 	agentAfterChannelCreated = "agent after channel created"
 	clientAfterChannelTopUp  = "client after channel topup"
 
-	txHash = "0xd8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
+	txHash = "d8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 )
 
 var (

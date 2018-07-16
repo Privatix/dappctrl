@@ -21,11 +21,14 @@ CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
+-- tx hash in hex
+CREATE DOMAIN tx_hash_hex as char(64);
+
 -- bcrypt hash in base64 (RFC-4648).
 CREATE DOMAIN bcrypt_hash AS char(80);
 
 -- Etehereum address
-CREATE DOMAIN eth_addr AS char(28);
+CREATE DOMAIN eth_addr AS char(40);
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
@@ -298,7 +301,7 @@ CREATE TABLE jobs (
 -- Ethereum transactions.
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
-    hash sha3_256 NOT NULL, -- transaction hash
+    hash tx_hash_hex NOT NULL, -- transaction hash
     method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id
@@ -321,7 +324,7 @@ CREATE TABLE eth_txs (
 -- Ethereum events.
 CREATE TABLE eth_logs (
     id uuid PRIMARY KEY,
-    tx_hash sha3_256, -- transaction hash
+    tx_hash tx_hash_hex, -- transaction hash
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id
     block_number bigint

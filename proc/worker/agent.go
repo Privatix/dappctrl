@@ -65,8 +65,8 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 
 	channel := &data.Channel{
 		ID:            job.RelatedID,
-		Client:        data.FromBytes(logChannelCreated.clientAddr.Bytes()),
-		Agent:         data.FromBytes(logChannelCreated.agentAddr.Bytes()),
+		Client:        data.HexFromBytes(logChannelCreated.clientAddr.Bytes()),
+		Agent:         data.HexFromBytes(logChannelCreated.agentAddr.Bytes()),
 		TotalDeposit:  logChannelCreated.deposit.Uint64(),
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
@@ -637,7 +637,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, offering.Agent,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentPreOfferingPopUp pop ups an offering.
@@ -676,5 +677,6 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, offering.Agent,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }

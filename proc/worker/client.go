@@ -849,7 +849,7 @@ func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
 	}
 
 	offering, err := w.fillOfferingFromSOMCReply(
-		job.RelatedID, data.FromBytes(agentAddr.Bytes()),
+		job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
 		block, offeringsData)
 	if err != nil {
 		return fmt.Errorf("failed to fill offering: %v", err)

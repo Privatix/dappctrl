@@ -85,7 +85,7 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 		return nil, false, err
 	}
 
-	addr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+	addr := data.HexFromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
 
 	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", addr)
 	if err != sql.ErrNoRows {
@@ -178,7 +178,7 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 
 	dtx := data.EthTx{
 		ID:          util.NewUUID(),
-		Hash:        data.FromBytes(tx.Hash().Bytes()),
+		Hash:        data.HexFromBytes(tx.Hash().Bytes()),
 		Method:      method,
 		Status:      data.TxSent,
 		JobID:       pointer.ToString(job.ID),

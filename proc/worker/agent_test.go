@@ -86,12 +86,12 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		t.Fatalf("wanted %s, got: %s", data.ServicePending,
 			channel.ServiceStatus)
 	}
-	expectedClient := data.FromBytes(clientAddr.Bytes())
+	expectedClient := data.HexFromBytes(clientAddr.Bytes())
 	if channel.Client != expectedClient {
 		t.Fatalf("wanted client addr: %v, got: %v", expectedClient,
 			channel.Client)
 	}
-	expectedAgent := data.FromBytes(agentAddr.Bytes())
+	expectedAgent := data.HexFromBytes(agentAddr.Bytes())
 	if channel.Agent != expectedAgent {
 		t.Fatalf("wanted agent addr: %v, got: %v", expectedAgent,
 			channel.Agent)

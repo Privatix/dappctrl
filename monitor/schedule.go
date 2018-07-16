@@ -41,7 +41,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 		time.Duration(m.cfg.ScheduleTimeout)*time.Second)
 	defer cancel()
 
-	topicInAccExpr := `COALESCE(TRANSLATE(encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'), '+/', '-_') IN (SELECT eth_addr FROM accounts WHERE in_use), FALSE)`
+	topicInAccExpr := `COALESCE(substr(topics->>%d, 27) IN (SELECT eth_addr FROM accounts WHERE in_use), FALSE)`
 	columns := m.db.QualifiedColumns(data.EthLogTable)
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, topic1)) // topic[1] (agent) in active accounts
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, topic2)) // topic[2] (client) in active accounts
@@ -342,8 +342,8 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	var query string
 	args := []interface{}{
 		data.FromBytes(offeringHash.Bytes()),
-		data.FromBytes(agentAddress.Bytes()),
-		data.FromBytes(clientAddress.Bytes()),
+		data.HexFromBytes(agentAddress.Bytes()),
+		data.HexFromBytes(clientAddress.Bytes()),
 	}
 	var row *sql.Row
 	if hasOpenBlockNumber {
@@ -430,7 +430,7 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 
 func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 	addr := common.BytesToAddress(el.Topics[topic1].Bytes())
-	addrHash := data.FromBytes(addr.Bytes())
+	addrHash := data.HexFromBytes(addr.Bytes())
 	acc := &data.Account{}
 	if err := m.db.FindOneTo(acc, "eth_addr", addrHash); err != nil {
 		if err == sql.ErrNoRows {
@@ -455,9 +455,9 @@ func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 
 func (m *Monitor) scheduleTokenTransfer(el *data.EthLog, jobType string) {
 	addr1 := common.BytesToAddress(el.Topics[topic1].Bytes())
-	addr1Hash := data.FromBytes(addr1.Bytes())
+	addr1Hash := data.HexFromBytes(addr1.Bytes())
 	addr2 := common.BytesToAddress(el.Topics[topic2].Bytes())
-	addr2Hash := data.FromBytes(addr2.Bytes())
+	addr2Hash := data.HexFromBytes(addr2.Bytes())
 
 	if addr1 == m.pscAddr {
 		jobType = data.JobAfterAccountReturnBalance

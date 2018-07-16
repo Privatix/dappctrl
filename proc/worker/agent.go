@@ -603,10 +603,13 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 
 // AgentPreOfferingDelete calls psc remove an offering.
 func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
-	offering, err := w.validateOfferingBeforeMutation(job,
-		data.JobAgentPreOfferingDelete)
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
 	if err != nil {
 		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
 	}
 
 	jobDate, err := w.publishData(job)
@@ -639,10 +642,13 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 
 // AgentPreOfferingPopUp pop ups an offering.
 func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
-	offering, err := w.validateOfferingBeforeMutation(job,
-		data.JobAgentPreOfferingPopUp)
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingPopUp)
 	if err != nil {
 		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
 	}
 
 	jobDate, err := w.publishData(job)
@@ -671,36 +677,4 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 
 	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
 		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
-}
-
-func (w *Worker) validateOfferingBeforeMutation(
-	job *data.Job, jType string) (*data.Offering, error) {
-	offering, err := w.relatedOffering(job, jType)
-	if err != nil {
-		return nil, err
-	}
-
-	if offering.OfferStatus != data.OfferRegister {
-		return nil, fmt.Errorf("offering is not registered")
-	}
-
-	var pendingJobs int
-	row := w.db.QueryRow(
-		`SELECT COUNT(*)
-		   FROM jobs
-		  WHERE type IN ($1, $2)
-		    AND status=$3 AND related_id=$4 AND id<>$5`,
-		data.JobAgentPreOfferingDelete, data.JobAgentPreOfferingPopUp,
-		data.JobActive,
-		job.RelatedID,
-		job.ID)
-	if err := row.Scan(&pendingJobs); err != nil {
-		return nil, err
-	}
-
-	if pendingJobs > 0 {
-		return nil, fmt.Errorf("conflicting jobs exist, can't proceed")
-	}
-
-	return offering, nil
 }

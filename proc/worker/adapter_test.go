@@ -258,3 +258,35 @@ func (b *testEthBackend) PSCUncooperativeClose(opts *bind.TransactOpts,
 
 	return tx, nil
 }
+
+func (b *testEthBackend) PSCRemoveServiceOffering(opts *bind.TransactOpts,
+	offeringHash [32]byte) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		txOpts: opts,
+		method: "RemoveServiceOffering",
+		caller: opts.From,
+		args:   []interface{}{offeringHash},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, b.pscAddr, nil, opts.GasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}
+
+func (b *testEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
+	offeringHash [32]byte) (*types.Transaction, error) {
+	b.callStack = append(b.callStack, testEthBackCall{
+		txOpts: opts,
+		method: "PopupServiceOffering",
+		caller: opts.From,
+		args:   []interface{}{offeringHash},
+	})
+
+	tx := types.NewTransaction(
+		testTXNonce, b.pscAddr, nil, opts.GasLimit,
+		opts.GasPrice, []byte{})
+
+	return tx, nil
+}

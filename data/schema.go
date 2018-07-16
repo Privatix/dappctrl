@@ -310,6 +310,8 @@ const (
 	JobAgentPreOfferingMsgBCPublish         = "agentPreOfferingMsgBCPublish"
 	JobAgentAfterOfferingMsgBCPublish       = "agentAfterOfferingMsgBCPublish"
 	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
+	JobAgentPreOfferingDelete               = "agentPreOfferingDelete"
+	JobAgentPreOfferingPopUp                = "agentPreOfferingPopUp"
 	JobAgentAfterOfferingDelete             = "agentAfterOfferingDelete"
 	JobPreAccountAddBalanceApprove          = "preAccountAddBalanceApprove"
 	JobPreAccountAddBalance                 = "preAccountAddBalance"

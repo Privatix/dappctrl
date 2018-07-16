@@ -328,33 +328,52 @@ func sendClientOfferingAction(t *testing.T, id, action,
 }
 
 func TestPutOfferingStatus(t *testing.T) {
-	fixture := data.NewTestFixture(t, testServer.db)
-	defer fixture.Close()
+	fxt := data.NewTestFixture(t, testServer.db)
+	defer fxt.Close()
 	defer setTestUserCredentials(t)()
 
-	testGasPrice := uint64(1)
-
-	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
+	res := sendOfferingAction(t, fxt.Offering.ID, "wrong-action",
+		uint64(1))
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("wanted: %d, got: %v",
 			http.StatusBadRequest, res.Status)
 	}
 
-	res = sendOfferingAction(t, fixture.Offering.ID, PublishOffering,
+	testPutOfferingStatusCreatesJob(t, fxt, PublishOffering,
+		data.JobAgentPreOfferingMsgBCPublish)
+
+	testPutOfferingStatusCreatesJob(t, fxt, PopupOffering,
+		data.JobAgentPreOfferingPopUp)
+
+	testPutOfferingStatusCreatesJob(t, fxt, DeactivateOffering,
+		data.JobAgentPreOfferingDelete)
+}
+
+func testPutOfferingStatusCreatesJob(t *testing.T, fxt *data.TestFixture,
+	action string, jobType string) {
+	testGasPrice := uint64(1)
+
+	res := sendOfferingAction(t, fxt.Offering.ID, action,
 		testGasPrice)
 	if res.StatusCode != http.StatusOK {
-		t.Fatal("got: ", res.Status)
+		t.Fatalf("got: %v (%s)", res.Status, util.Caller())
 	}
-	jobPublish := &data.Job{}
-	data.FindInTestDB(t, testServer.db, jobPublish, "related_id",
-		fixture.Offering.ID)
+	job := &data.Job{}
+	data.FindInTestDB(t, testServer.db, job, "related_id",
+		fxt.Offering.ID)
+	defer data.DeleteFromTestDB(t, testServer.db, job)
+
+	if job.Type != jobType {
+		t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
+			jobType, job.Type, util.Caller())
+	}
+
 	expectedData, _ := json.Marshal(&data.JobPublishData{
 		GasPrice: testGasPrice,
 	})
-	if !bytes.Equal(jobPublish.Data, expectedData) {
-		t.Fatal("job does not contain expected data")
+	if !bytes.Equal(job.Data, expectedData) {
+		t.Fatalf("job does not contain expected data (%s)", util.Caller())
 	}
-	data.DeleteFromTestDB(t, testServer.db, jobPublish)
 }
 
 func TestPutClientOfferingStatus(t *testing.T) {

@@ -600,3 +600,81 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 	return w.updateRelatedOffering(
 		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
 }
+
+// AgentPreOfferingDelete calls psc remove an offering.
+func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
+	if err != nil {
+		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCRemoveServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+}
+
+// AgentPreOfferingPopUp pop ups an offering.
+func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingPopUp)
+	if err != nil {
+		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+}

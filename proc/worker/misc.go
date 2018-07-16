@@ -20,6 +20,15 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+func (w *Worker) accountKey(ethAddr string) (*ecdsa.PrivateKey, error) {
+	acc, err := w.account(ethAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.key(acc.PrivateKey)
+}
+
 func (w *Worker) key(key string) (*ecdsa.PrivateKey, error) {
 	return w.decryptKeyFunc(key, w.pwdGetter.Get())
 }

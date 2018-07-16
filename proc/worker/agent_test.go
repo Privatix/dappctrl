@@ -599,3 +599,67 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingDelete, *fxt.job)
 }
+
+func TestAgentPreOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentPreOfferingDelete, data.JobOffering)
+	defer fxt.close()
+
+	setJobData(t, env.db, fxt.job, &data.JobPublishData{
+		GasPrice: 123,
+	})
+
+	// Offering must be registered.
+	if env.worker.AgentPreOfferingDelete(fxt.job) == nil {
+		t.Fatal("offering status not validated")
+	}
+
+	fxt.Offering.OfferStatus = data.OfferRegister
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.AgentPreOfferingDelete, fxt.job)
+
+	// Test transaction was recorded.
+	env.deleteEthTx(t, fxt.job.ID)
+
+	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	env.ethBack.testCalled(t, "RemoveServiceOffering", agentAddr,
+		env.worker.gasConf.PSC.RemoveServiceOffering,
+		[common.HashLength]byte(offeringHash))
+}
+
+func TestAgentPreOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentPreOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	setJobData(t, env.db, fxt.job, &data.JobPublishData{
+		GasPrice: 123,
+	})
+
+	// Offering must be registered.
+	if env.worker.AgentPreOfferingPopUp(fxt.job) == nil {
+		t.Fatal("offering status not validated")
+	}
+
+	fxt.Offering.OfferStatus = data.OfferRegister
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
+
+	// Test transaction was recorded.
+	env.deleteEthTx(t, fxt.job.ID)
+
+	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
+		env.worker.gasConf.PSC.PopupServiceOffering,
+		[common.HashLength]byte(offeringHash))
+}

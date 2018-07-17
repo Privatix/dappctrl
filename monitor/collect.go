@@ -40,17 +40,17 @@ func hexesToHashes(hexes ...string) []common.Hash {
 }
 
 var clientRelatedEvents = hexesToHashes(
-	eth.EthDigestChannelCreated,
 	eth.EthDigestChannelToppedUp,
 	eth.EthChannelCloseRequested,
 	eth.EthOfferingEndpoint,
-	eth.EthCooperativeChannelClose,
-	eth.EthUncooperativeChannelClose,
 	eth.EthTokenApproval,
 	eth.EthTokenTransfer,
 )
 
 var offeringRelatedEvents = hexesToHashes(
+	eth.EthDigestChannelCreated,
+	eth.EthCooperativeChannelClose,
+	eth.EthUncooperativeChannelClose,
 	eth.EthOfferingCreated,
 	eth.EthOfferingDeleted,
 	eth.EthOfferingPoppedUp,
@@ -81,7 +81,7 @@ func (m *Monitor) collect(ctx context.Context) {
 	}
 
 	if firstBlock > lastBlock {
-		m.logger.Warn("monitor has nothing to collect")
+		m.logger.Debug("monitor has nothing to collect")
 		return
 	}
 	m.logger.Debug(

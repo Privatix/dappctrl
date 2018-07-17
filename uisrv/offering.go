@@ -24,7 +24,8 @@ const (
 const (
 	clientGetOfferFilter = `offer_status = 'register'
                                 AND status = 'msg_channel_published'
-                                AND NOT is_local
+				AND NOT is_local
+				AND offerings.current_supply > 0
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
                                    FROM accounts)`

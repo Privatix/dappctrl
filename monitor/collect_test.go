@@ -48,7 +48,7 @@ func TestMonitorLogCollect(t *testing.T) {
 		{someHash, someAddress, clientAddress},         // 0 match client, but not a client event
 		// ----- 6 confirmations
 		{eventAboutOffering, someAddress, someAddress},  // 1 match all offerings
-		{eventAboutChannel, someAddress, someAddress},   // 0 no match
+		{eventAboutChannel, someAddress, someAddress},   // 1 match (for current_supply updates)
 		{eventAboutToken, someAddress, someAddress},     // 0 no match
 		{eventAboutChannel, agentAddress, someAddress},  // 1 match agent
 		{eventAboutChannel, someAddress, clientAddress}, // 1 match client
@@ -84,8 +84,8 @@ func TestMonitorLogCollect(t *testing.T) {
 		lognum        int
 	}{
 		{6, 2, 2}, // freshnum = 2: will skip the first offering event
-		{2, 0, 4}, // freshnum = 0: will include the second offering event
-		{0, 2, 6},
+		{2, 0, 5}, // freshnum = 0: will include the second offering event and channel event
+		{0, 2, 7},
 	}
 
 	var logs []*data.EthLog

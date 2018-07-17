@@ -576,6 +576,10 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		t.Fatal("timeout")
 	}
 
+	// Test update balances job created.
+	env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
+
 	testCommonErrors(t, workerF, *fixture.job)
 }
 

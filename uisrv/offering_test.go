@@ -273,7 +273,14 @@ func TestGetClientOffering(t *testing.T) {
 	off5.IsLocal = false
 	off5.Country = "SU"
 
-	insertItems(t, off1, off2, off3, off4, off5)
+	off6 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
+	off6.OfferStatus = data.OfferRegister
+	off6.Status = data.MsgChPublished
+	off6.IsLocal = false
+	off6.Country = "US"
+	off6.CurrentSupply = 0
+
+	insertItems(t, off1, off2, off3, off4, off5, off6)
 
 	// all non-local offerings
 	testGetClientOfferings(t, "", "", "", 2)

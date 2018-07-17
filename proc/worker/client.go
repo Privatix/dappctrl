@@ -243,7 +243,13 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 			"JobClientPreEndpointMsgSOMCGet job: %s", err)
 	}
 
-	return nil
+	client, err := w.account(ch.Client)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
 func (w *Worker) decodeEndpoint(
@@ -901,6 +907,7 @@ func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber 
 		ServiceName:        product.Name,
 		Country:            msg.Country,
 		Supply:             msg.ServiceSupply,
+		CurrentSupply:      msg.ServiceSupply,
 		UnitName:           msg.UnitName,
 		UnitType:           msg.UnitType,
 		BillingType:        msg.BillingType,

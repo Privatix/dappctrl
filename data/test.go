@@ -184,6 +184,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		Hash:               FromBytes(crypto.Keccak256(fakeMsg)),
 		Product:            product,
 		Supply:             1,
+		CurrentSupply:      1,
 		Status:             MsgUnpublished,
 		UnitType:           UnitSeconds,
 		BillingType:        BillingPostpaid,

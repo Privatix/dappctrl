@@ -592,7 +592,12 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", offering, err)
 	}
 
-	return nil
+	agent, err := w.account(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterOfferingDelete set offering status to `remove`

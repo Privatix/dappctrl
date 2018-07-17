@@ -94,17 +94,9 @@ func postPayload(db *reform.DB, channel string,
 		http.MethodPost, url, &srv.Request{Args: pldArgs})
 
 	resp, err := srv.Send(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		var err srv.Error
-		if err := json.NewDecoder(resp.Body).Decode(&err); err != nil {
-			return err
-		}
-		return fmt.Errorf("%s (%d)", err.Message, err.Code)
+	if resp.Error != nil {
+		return fmt.Errorf("%s (%d)", resp.Error.Message, resp.Error.Code)
 	}
 
 	return nil

@@ -119,6 +119,9 @@ func TestClientAfterChannelCreate(t *testing.T) {
 
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
 
+	// Test account balance update job was created.
+	env.deleteJob(t, data.JobAccountUpdateBalances, data.JobAccount, fxt.UserAcc.ID)
+
 	data.ReloadFromTestDB(t, db, fxt.Channel)
 	if fxt.Channel.ChannelStatus != data.ChannelActive {
 		t.Fatalf("expected %s service status, but got %s",

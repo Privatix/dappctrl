@@ -103,6 +103,11 @@ func (m *Monitor) schedule(ctx context.Context) {
 						agentSchedulers[eventHash]
 				}
 			} else {
+				procedure, ok := clientNonScheduleProcedurs[eventHash]
+				if ok {
+					procedure(m, &el)
+				}
+
 				if isOfferingRelated(&el) {
 					scheduler, found =
 						offeringSchedulers[eventHash]
@@ -225,6 +230,12 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 	*/
 }
 
+var clientNonScheduleProcedurs = map[common.Hash]func(*Monitor, *data.EthLog){
+	common.HexToHash(eth.EthDigestChannelCreated):      (*Monitor).decrementOfferingCurrentSupply,
+	common.HexToHash(eth.EthCooperativeChannelClose):   (*Monitor).incrementOfferingCurrentSupply,
+	common.HexToHash(eth.EthUncooperativeChannelClose): (*Monitor).incrementOfferingCurrentSupply,
+}
+
 func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
 	arg, err := m.pscABI.Events[event].
 		Inputs.NonIndexed().UnpackValues(bs)
@@ -298,14 +309,14 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	clientAddress := common.BytesToAddress(el.Topics[topic2].Bytes())
 	offeringHash := el.Topics[topic3]
 
-	openBlockNumber, haveOpenBlockNumber, err := m.getOpenBlockNumber(el)
+	openBlockNumber, hasOpenBlockNumber, err := m.getOpenBlockNumber(el)
 	if err != nil {
 		m.logger.Warn(err.Error())
 		return ""
 	}
 
-	m.logger.Info("bn = %d, hbn = %t", openBlockNumber,
-		haveOpenBlockNumber)
+	m.logger.Debug("block number = %d, has block number = %t",
+		openBlockNumber, hasOpenBlockNumber)
 
 	var query string
 	args := []interface{}{
@@ -314,7 +325,7 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		data.FromBytes(clientAddress.Bytes()),
 	}
 	var row *sql.Row
-	if haveOpenBlockNumber {
+	if hasOpenBlockNumber {
 		query = `SELECT c.id
                            FROM channels AS c, offerings AS o
                           WHERE c.offering = o.id
@@ -341,6 +352,35 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	}
 
 	return id
+}
+
+func (m *Monitor) decrementOfferingCurrentSupply(el *data.EthLog) {
+	m.updateCurrentSupply(el, func(cur uint16) uint16 {
+		return cur - 1
+	})
+}
+
+func (m *Monitor) incrementOfferingCurrentSupply(el *data.EthLog) {
+	m.updateCurrentSupply(el, func(cur uint16) uint16 {
+		return cur + 1
+	})
+}
+
+func (m *Monitor) updateCurrentSupply(
+	el *data.EthLog, updateCurSupply func(uint16) uint16) {
+	// HACK: using scheduler to update current supply without creating job,
+	// despite its initial desing
+	offeringHash := data.FromBytes(el.Topics[3].Bytes())
+	var offering data.Offering
+	if err := data.FindOneTo(m.db.Querier, &offering, "hash", offeringHash); err != nil {
+		m.logger.Error(err.Error())
+		return
+	}
+	offering.CurrentSupply = updateCurSupply(offering.CurrentSupply)
+	if err := data.Save(m.db.Querier, &offering); err != nil {
+		m.logger.Error(err.Error())
+		return
+	}
 }
 
 func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {

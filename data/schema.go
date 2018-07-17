@@ -120,6 +120,7 @@ type Offering struct {
 	Description        *string `json:"description" reform:"description"`
 	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
 	Supply             uint16  `json:"supply" reform:"supply" validate:"required"`
+	CurrentSupply      uint16  `json:"currentSupply" reform:"current_supply"`
 	UnitName           string  `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
 	UnitType           string  `json:"unitType" reform:"unit_type" validate:"required"`
 	BillingType        string  `json:"billingType" reform:"billing_type" validate:"required"`

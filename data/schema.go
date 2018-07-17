@@ -237,8 +237,9 @@ type Endpoint struct {
 // EndpointUI contains only certain fields of endpoints table.
 //reform:endpoints
 type EndpointUI struct {
-	ID               string `json:"id" reform:"id,pk"`
-	AdditionalParams []byte `json:"additionalParams" reform:"additional_params"`
+	ID                     string  `json:"id" reform:"id,pk"`
+	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
+	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 }
 
 // Job creators.

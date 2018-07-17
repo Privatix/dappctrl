@@ -127,6 +127,11 @@
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
+            },
+            "accountUpdateBalances": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             }
         }
     },

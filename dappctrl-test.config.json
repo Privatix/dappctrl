@@ -143,8 +143,10 @@
             "afterAccountReturnBalance": {
                 "Duplicated": true
             },
-            "addCheckBalance": {
-                "Duplicated": true
+            "accountUpdateBalances": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             }
         }
     },

@@ -22,7 +22,7 @@ type ProductArgs struct {
 func (s *Server) handleProductConfig(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
 	var args ProductArgs
-	if !s.ParseRequest(w, r, &args) {
+	if _, ok := s.ParseRequest(w, r, &args); !ok {
 		return
 	}
 

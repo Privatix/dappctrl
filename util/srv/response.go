@@ -5,10 +5,12 @@ import (
 	"net/http"
 )
 
-// Response is a server reply.
+// Response is a server response, compatible with JSON-RPC 2.0.
 type Response struct {
-	Error  *Error          `json:"error,omitempty"`
-	Result json.RawMessage `json:"result,omitempty"`
+	JSONRPC string          `json:"jsonrpc,omitempty"`
+	ID      string          `json:"id,omitempty"`
+	Error   *Error          `json:"error,omitempty"`
+	Result  json.RawMessage `json:"result,omitempty"`
 }
 
 func (s *Server) respond(w http.ResponseWriter, r *Response) {

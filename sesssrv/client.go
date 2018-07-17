@@ -16,7 +16,7 @@ func Post(conf *srv.Config, username, password, path string,
 	}
 
 	req, err := srv.NewHTTPRequest(
-		conf, http.MethodPost, path, &srv.Request{Args: data})
+		conf, http.MethodPost, path, &srv.Request{Params: data})
 	if err != nil {
 		return err
 	}

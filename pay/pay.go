@@ -21,7 +21,7 @@ type paymentPayload struct {
 func (s *Server) handlePay(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
 	payload := &paymentPayload{}
-	if !s.ParseRequest(w, r, payload) {
+	if _, ok := s.ParseRequest(w, r, payload); !ok {
 		return
 	}
 	ch, ok := s.findChannel(w,

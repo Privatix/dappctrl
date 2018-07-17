@@ -96,7 +96,7 @@ func postPayload(db *reform.DB, channel string,
 		Timeout: time.Duration(timeout) * time.Millisecond,
 	}
 
-	body, err := json.Marshal(&srv.Request{Args: pldArgs})
+	body, err := json.Marshal(&srv.Request{Params: pldArgs})
 	if err != nil {
 		return err
 	}

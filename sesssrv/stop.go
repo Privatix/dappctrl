@@ -18,7 +18,7 @@ type updateStopArgs struct {
 func (s *Server) handleUpdateStop(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context, stop bool) {
 	var args updateStopArgs
-	if !s.ParseRequest(w, r, &args) {
+	if _, ok := s.ParseRequest(w, r, &args); !ok {
 		return
 	}
 

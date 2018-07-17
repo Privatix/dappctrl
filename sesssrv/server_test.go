@@ -61,7 +61,7 @@ func TestBadMethod(t *testing.T) {
 	client := &http.Client{}
 	for _, v := range allPaths {
 		req, err := srv.NewHTTPRequest(conf.SessionServer.Config,
-			http.MethodPut, v, &srv.Request{Args: nil})
+			http.MethodPut, v, &srv.Request{Params: nil})
 		if err != nil {
 			t.Fatalf("failed to create request: %s", err)
 		}

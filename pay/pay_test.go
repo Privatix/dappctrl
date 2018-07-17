@@ -77,8 +77,8 @@ func sendTestRequest(t *testing.T, pld *paymentPayload) *srv.Response {
 	if err != nil {
 		t.Fatalf("%v, %v", err, util.Caller())
 	}
-	req, err := srv.NewHTTPRequest(conf.PayServer.Config, http.MethodPost, payPath,
-		&srv.Request{Args: data})
+	req, err := srv.NewHTTPRequest(conf.PayServer.Config, http.MethodPost,
+		payPath, &srv.Request{Params: data})
 	if err != nil {
 		t.Fatalf("%v, %v", err, util.Caller())
 	}

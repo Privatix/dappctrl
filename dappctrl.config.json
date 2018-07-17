@@ -7,7 +7,8 @@
     "BlockMonitor": {
         "CollectPause": 6,
         "SchedulePause": 6,
-        "Timeout": 5
+        "CollectTimeout": 60,
+        "ScheduleTimeout": 5
     },
     "ClientMonitor": {
         "CollectPeriod": 5000,
@@ -32,11 +33,7 @@
             "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
-        "Timeout": {
-            "ResponseHeaderTimeout": 20,
-            "TLSHandshakeTimeout": 5,
-            "ExpectContinueTimeout": 5
-        }
+        "Timeout": 10
     },
     "Gas": {
         "PTC": {

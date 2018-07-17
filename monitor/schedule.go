@@ -30,9 +30,9 @@ var offeringRelatedEventsMap = map[common.Hash]bool{
 }
 
 // schedule creates a job for each unprocessed log event in the database.
-func (m *Monitor) schedule(ctx context.Context, timeout int64) {
+func (m *Monitor) schedule(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx,
-		time.Duration(timeout)*time.Second)
+		time.Duration(m.cfg.ScheduleTimeout)*time.Second)
 	defer cancel()
 
 	topicInAccExpr := `COALESCE(TRANSLATE(encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'), '+/', '-_') IN (SELECT eth_addr FROM accounts WHERE in_use), FALSE)`

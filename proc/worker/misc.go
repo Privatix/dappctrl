@@ -159,12 +159,7 @@ func parseJobData(job *data.Job, data interface{}) error {
 }
 
 func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(w.ethConfig.Timeout.ResponseHeaderTimeout)*
-			time.Second)
-	defer cancel()
-
-	amount, err := w.ethBack.EthBalanceAt(ctx, addr)
+	amount, err := w.ethBack.EthBalanceAt(context.Background(), addr)
 	if err != nil {
 		return nil, fmt.Errorf("could not get eth"+
 			" balance: %v", err)

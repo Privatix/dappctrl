@@ -27,9 +27,10 @@ var (
 
 // Config for blockchain monitor.
 type Config struct {
-	CollectPause  int64 // pause between collect iterations
-	SchedulePause int64 // pause between schedule iterations
-	Timeout       int64 // maximum time of one operation
+	CollectPause    int64 // pause between collect iterations
+	SchedulePause   int64 // pause between schedule iterations
+	CollectTimeout  uint64
+	ScheduleTimeout uint64
 }
 
 // Queue is a job processing queue.
@@ -55,24 +56,26 @@ type Monitor struct {
 	cancel  context.CancelFunc
 	errors  chan error
 	tickers []*time.Ticker
+
+	callTimeout uint64
 }
 
 // NewConfig creates a default blockchain monitor configuration.
 func NewConfig() *Config {
 	return &Config{
-		CollectPause:  6,
-		SchedulePause: 6,
-		Timeout:       5,
+		CollectPause:    6,
+		SchedulePause:   6,
+		CollectTimeout:  60,
+		ScheduleTimeout: 5,
 	}
 }
 
 // NewMonitor creates a Monitor with specified settings.
 func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 	queue Queue, eth Client, pscAddr common.Address,
-	ptcAddr common.Address) (*Monitor, error) {
+	ptcAddr common.Address, callTimeout uint64) (*Monitor, error) {
 	if logger == nil || db == nil || queue == nil || eth == nil ||
-		cfg.CollectPause <= 0 || cfg.SchedulePause <= 0 ||
-		cfg.Timeout <= 0 || !common.IsHexAddress(pscAddr.String()) {
+		!common.IsHexAddress(pscAddr.String()) {
 		return nil, ErrInput
 	}
 
@@ -82,20 +85,21 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 	}
 
 	return &Monitor{
-		cfg:     cfg,
-		logger:  logger,
-		db:      db,
-		queue:   queue,
-		eth:     eth,
-		pscAddr: pscAddr,
-		pscABI:  pscABI,
-		ptcAddr: ptcAddr,
-		mu:      sync.Mutex{},
-		errors:  make(chan error),
+		cfg:         cfg,
+		logger:      logger,
+		db:          db,
+		queue:       queue,
+		eth:         eth,
+		pscAddr:     pscAddr,
+		pscABI:      pscABI,
+		ptcAddr:     ptcAddr,
+		mu:          sync.Mutex{},
+		errors:      make(chan error),
+		callTimeout: callTimeout,
 	}, nil
 }
 
-func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
+func (m *Monitor) start(ctx context.Context, collectTicker,
 	scheduleTicker <-chan time.Time) {
 	go func() {
 		for {
@@ -111,9 +115,9 @@ func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
 	}()
 
 	go m.repeatEvery(ctx, collectTicker, collectName,
-		func() { m.collect(ctx, timeout) })
+		func() { m.collect(ctx) })
 	go m.repeatEvery(ctx, scheduleTicker, scheduleName,
-		func() { m.schedule(ctx, timeout) })
+		func() { m.schedule(ctx) })
 
 	m.logger.Debug("monitor started")
 }
@@ -129,8 +133,7 @@ func (m *Monitor) Start() error {
 	scheduleTicker := time.NewTicker(
 		time.Duration(m.cfg.SchedulePause) * time.Second)
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
-	m.start(ctx, m.cfg.Timeout, collectTicker.C,
-		scheduleTicker.C)
+	m.start(ctx, collectTicker.C, scheduleTicker.C)
 	return nil
 }
 

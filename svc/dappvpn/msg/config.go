@@ -122,14 +122,18 @@ func accessDestination(dir string) string {
 
 func makeClientConfig(dir, serviceEndpointAddress string,
 	params []byte, options map[string]interface{}) error {
+	// fill client configuration from service endpoint address and
+	// and parameters received from a agent
 	cfg, err := fillClientConfig(serviceEndpointAddress, params)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill"+
 			" client configuration")
 	}
 
+	// add full path to a access file to the configuration
 	cfg.AccessFile = accessDestination(dir)
 
+	// add vpn management port to the configuration
 	mPort, ok := options[VpnManagementPort]
 	if ok {
 		if port, ok := mPort.(uint16); ok {
@@ -143,6 +147,7 @@ func makeClientConfig(dir, serviceEndpointAddress string,
 			" template file")
 	}
 
+	// fill configuration template
 	config, err := genClientConfig(string(data), cfg)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate"+
@@ -157,6 +162,7 @@ func makeClientConfig(dir, serviceEndpointAddress string,
 	return nil
 }
 
+// makes access file with username and password
 func makeAccess(dir, username, password string) error {
 	data := fmt.Sprintf("%s\n%s\n", username, password)
 
@@ -174,17 +180,23 @@ func MakeFiles(dir, serviceEndpointAddress, username, password string,
 	configDst := configDestination(dir)
 	accessDst := accessDestination(dir)
 
+	// if the target directory does not exists,
+	// then creates target directory
 	if notExist(dir) {
 		if err := makeDir(dir); err != nil {
 			return errors.Wrap(err, "failed to make"+
 				" directory "+dir)
 		}
 	} else {
+		// if the configuration file and the access file exist,
+		// then complete the function execution
 		if checkFile(configDst) && checkFile(accessDst) {
 			return nil
 		}
 	}
 
+	// if the configuration file does not exists,
+	// then makes and fill client configuration file
 	if !checkFile(configDst) {
 		if err := makeClientConfig(dir, serviceEndpointAddress,
 			params, options); err != nil {
@@ -192,6 +204,8 @@ func MakeFiles(dir, serviceEndpointAddress, username, password string,
 		}
 	}
 
+	// if the access file does not exists,
+	// then makes and fill access file
 	if !checkFile(accessDst) {
 		if err := makeAccess(dir, username, password); err != nil {
 			return err
@@ -223,6 +237,7 @@ func proto(data []byte) string {
 		return defaultProto
 	}
 
+	// if proto = tcp-server or tcp then replaces to tcp-client
 	if val == tcpServer || val == tcp {
 		return defaultProto
 	}

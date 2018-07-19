@@ -12,6 +12,8 @@ import (
 )
 
 // ClientConfig prepares configuration for Client.
+// By the channel ID, finds a endpoint on a session server.
+// Creates client configuration files for using a product.
 func ClientConfig(channel string, adapterConfig *config.Config) error {
 	args := sesssrv.EndpointMsgArgs{ChannelID: channel}
 

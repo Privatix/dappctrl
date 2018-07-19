@@ -17,11 +17,12 @@ import (
 
 var (
 	conf struct {
-		BillingTest *billingTestConfig
-		DB          *data.DBConfig
-		Job         *job.Config
-		Log         *util.LogConfig
-		Pc          *proc.Config
+		AgentMonitor *Config
+		BillingTest  *billingTestConfig
+		DB           *data.DBConfig
+		Job          *job.Config
+		Log          *util.LogConfig
+		Pc           *proc.Config
 	}
 
 	db     *reform.DB
@@ -84,7 +85,7 @@ type testFixture struct {
 	chs      []*data.Channel
 }
 
-func newTestMonitor(interval time.Duration, db *reform.DB,
+func newTestMonitor(interval uint64, db *reform.DB,
 	logger *util.Logger, pc *proc.Processor) *Monitor {
 	mon, err := NewMonitor(interval, db, logger, pc)
 	if err != nil {
@@ -249,29 +250,8 @@ func accNotUse(t *testing.T, acc *data.Account) {
 	}
 }
 
-func TestNewMonitor(t *testing.T) {
-	_, err := NewMonitor(-1, db, logger, pr)
-	if err == nil || err != ErrInput {
-		t.Fatal(errTestResult)
-	}
-
-	_, err = NewMonitor(time.Second, nil, logger, pr)
-	if err == nil || err != ErrInput {
-		t.Fatal(errTestResult)
-	}
-
-	_, err = NewMonitor(time.Second, db, nil, pr)
-	if err == nil || err != ErrInput {
-		t.Fatal(errTestResult)
-	}
-
-	_, err = NewMonitor(time.Second, db, logger, nil)
-	if err == nil || err != ErrInput {
-		t.Fatal(errTestResult)
-	}
-}
-
 func TestMain(m *testing.M) {
+	conf.AgentMonitor = NewConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
 	conf.Log = util.NewLogConfig()
@@ -288,7 +268,7 @@ func TestMain(m *testing.M) {
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pr = proc.NewProcessor(conf.Pc, queue)
 
-	mon = newTestMonitor(time.Second, db, logger, pr)
+	mon = newTestMonitor(conf.AgentMonitor.Interval, db, logger, pr)
 
 	os.Exit(m.Run())
 }

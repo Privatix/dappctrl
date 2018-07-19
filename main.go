@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -30,6 +29,7 @@ import (
 )
 
 type config struct {
+	AgentMonitor  *abill.Config
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
@@ -52,6 +52,7 @@ type config struct {
 
 func newConfig() *config {
 	return &config{
+		AgentMonitor:  abill.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
 		EptMsg:        ept.NewConfig(),
@@ -178,8 +179,8 @@ func main() {
 			uiSrv.ListenAndServe())
 	}()
 
-	amon, err := abill.NewMonitor(
-		time.Duration(5)*time.Second, db, logger, pr)
+	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
+		db, logger, pr)
 	if err != nil {
 		logger.Fatal("failed to create agent billing monitor: %s", err)
 	}

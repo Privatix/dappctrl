@@ -292,6 +292,7 @@ class CMD(Init):
 
     def _reletive_path(self, name):
         dirname = path.dirname(__file__)
+        logging.debug('Dir name: {}'.format(dirname))
         return path.join(dirname, name)
 
     def signal_handler(self, sign, frm):
@@ -1540,10 +1541,11 @@ class Checker(Params, Rdata, GUI):
 
     def init_os(self, args, pass_check=False):
         if self._finalizer(pass_check=pass_check):
-            if not isfile(main_conf['build']['cmd_path']):
+            if not isfile(self._reletive_path(main_conf['build']['cmd_path'])):
                 logging.info('There is no .dapp_cmd file for further work.\n'
                              'To create it, you must run '
                              './initializer.py --build')
+                logging.debug(self._reletive_path(main_conf['build']['cmd_path']))
                 sys.exit(28)
             dist_name, ver, name_ver = linux_distribution()
             upgr_pack = self.task.get(dist_name.lower(), False)

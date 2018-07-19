@@ -74,14 +74,6 @@ Exit code:
 
 """
 
-# log_conf = dict(
-#     filename='/var/log/initializer.log',
-#     datefmt='%m/%d %H:%M:%S',
-#     format='%(levelname)7s [%(lineno)3s] %(message)s')
-# log_conf.update(level='DEBUG')
-# logging.basicConfig(**log_conf)
-# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-
 logging.getLogger().setLevel('DEBUG')  # console debug
 form_console = logging.Formatter(
     '%(message)s',
@@ -1653,25 +1645,27 @@ class Checker(Params, Rdata, GUI):
             back()
         elif args['update_gui']:
             gui()
-        elif args['update_mass']:
-            back_gui()
         else:
-            logging.info('You have entered a new address.\n'
-                         'Choose what you want to apply it for.\n'
-                         'Make your choice:\n'
-                         '1 - Back\n'
-                         '2 - GUI\n'
-                         '3 - Back and GUI\n')
-            choise_task = {1: back, 2: gui, 3: back_gui}
-            while True:
-                choise_code = raw_input('>')
-
-                if choise_code.isdigit() and int(choise_code) in choise_task:
-                    choise_task[int(choise_code)]()
-                    break
-                else:
-                    logging.info('Wrong choice. Make a choice between: '
-                                 '{}'.format(choise_task.keys()))
+            back_gui()
+        # elif args['update_mass']:
+        #     back_gui()
+        # else:
+        #     logging.info('You have entered a new address.\n'
+        #                  'Choose what you want to apply it for.\n'
+        #                  'Make your choice:\n'
+        #                  '1 - Back\n'
+        #                  '2 - GUI\n'
+        #                  '3 - Back and GUI\n')
+        #     choise_task = {1: back, 2: gui, 3: back_gui}
+        #     while True:
+        #         choise_code = raw_input('>')
+        #
+        #         if choise_code.isdigit() and int(choise_code) in choise_task:
+        #             choise_task[int(choise_code)]()
+        #             break
+        #         else:
+        #             logging.info('Wrong choice. Make a choice between: '
+        #                          '{}'.format(choise_task.keys()))
 
     def validate_url(self, url):
         regex_url = compile(

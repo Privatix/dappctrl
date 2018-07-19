@@ -12,8 +12,8 @@
     python initializer.py --mass start/stop/restart/status control common + vpn servise
     python initializer.py --test                           start in test mode
     python initializer.py --no-gui                         install without GUI
-    python initializer.py --update                         update all contaiter without GUI
-    python initializer.py --mass-update                    update all contaiter with GUI
+    python initializer.py --update-back                    update all contaiter without GUI
+    python initializer.py --update-mass                    update all contaiter with GUI
     python initializer.py --update-gui                     update only GUI
     python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
@@ -24,7 +24,7 @@ import logging
 import socket
 from signal import SIGINT, signal, pause
 from contextlib import closing
-from re import search, sub, findall
+from re import search, sub, findall, compile, match, IGNORECASE
 from codecs import open
 # from threading import Thread
 from shutil import copyfile, rmtree
@@ -47,16 +47,16 @@ Exit code:
     2 - If version of Ubuntu lower than 16
     3 - If sysctl net.ipv4.ip_forward = 0 after sysctl -w net.ipv4.ip_forward=1
     4 - Problem when call system command from subprocess
-    5 - Problem with operation R/W unit file
-    6 - Problem with operation download file
-    7 - Problem with operation R/W server.conf
+    5 - Problem with operation R/W unit file 
+    6 - Problem with operation download file 
+    7 - Problem with operation R/W server.conf 
     8 - Default DB conf is empty, and no section 'DB' in dappctrl-test.config.json
     9 - Check the run of the database is negative
     10 - Problem with read dapp cmd from file
     11 - Problem NPM
     12 - Problem with run psql
-    13 - Problem with ready Vpn
-    14 - Problem with ready Common
+    13 - Problem with ready Vpn 
+    14 - Problem with ready Common 
     15 - The version npm is not satisfied. The user self reinstall
     16 - Problem with deleting one of the GUI pack
     17 - Exception in code, see logging
@@ -67,22 +67,43 @@ Exit code:
     22 - Problem with read dappctrl.config.json
     23 - Problem with read dappvpn.config.json
     24 - Attempt to install gui on a system without gui
-    25 - Problem with write dappctrlgui/settings.json
+    25 - Problem with R/W dappctrlgui/settings.json
+    26 - Problem with download dappctrlgui.tar.xz
+    27 - The dappctrlgui package is not installed correctly.Missing file settings.json
+    28 - Absent .dapp_cmd file
 
 """
 
-log_conf = dict(
-    filename='/var/log/initializer.log',
-    datefmt='%m/%d %H:%M:%S',
-    format='%(levelname)7s [%(lineno)3s] %(message)s')
-log_conf.update(level='INFO')
-logging.basicConfig(**log_conf)
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+# log_conf = dict(
+#     filename='/var/log/initializer.log',
+#     datefmt='%m/%d %H:%M:%S',
+#     format='%(levelname)7s [%(lineno)3s] %(message)s')
+# log_conf.update(level='DEBUG')
+# logging.basicConfig(**log_conf)
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+logging.getLogger().setLevel('DEBUG')  # console debug
+formatter = logging.Formatter(
+    '%(levelname)7s [%(lineno)3s] %(message)s',
+    datefmt='%m/%d %H:%M:%S')
+
+fh = logging.FileHandler('/var/log/initializer.log')  # file debug
+fh.setLevel('DEBUG')
+fh.setFormatter(formatter)
+logging.getLogger().addHandler(fh)
+
+ch = logging.StreamHandler()  # console debug
+ch.setLevel('INFO')
+ch.setFormatter(formatter)
+logging.getLogger().addHandler(ch)
+
+
 
 main_conf = dict(
     branch='develop',
     link_download='http://art.privatix.net/',
-    iptables=dict(
+
+    back=dict(
         file_download=[
             'vpn.tar.xz',
             'common.tar.xz',
@@ -137,8 +158,9 @@ main_conf = dict(
     },
 
     gui={
+        'gui_arch': 'dappctrlgui.tar.xz',
         'gui_path': '/opt/privatix/gui/',
-
+        'link_dev_gui': 'dappctrlgui/',
         'icon_name': 'privatix-dappgui.desktop',
         'icon_sh': 'privatix-dappgui.sh',
         'icon_dir': '{}{}/Desktop/',
@@ -148,11 +170,12 @@ main_conf = dict(
             'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
             'Terminal': 'false',
             'Name': 'Privatix Dapp',
-            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/node_modules/dappctrlgui/"',
+            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/"',
             'Type': 'Application',
             'Icon': '/opt/privatix/gui/node_modules/dappctrlgui/icon_64.png',
         },
 
+        'icon_exec_prod': 'node_modules/dappctrlgui/',
         'dappctrlgui': '/opt/privatix/gui/node_modules/dappctrlgui/settings.json',
 
         'npm_tmp_f': 'tmp_nodesource',
@@ -193,24 +216,32 @@ main_conf = dict(
     mark_final='/var/run/installer.pid',
     wait_mess='{}.Please wait until completed.\n It may take about 5-10 minutes.\n Do not turn it off.',
     ports=dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None)),
-    tmp_var = None
+    tmp_var=None
 )
 
 
-class CMD:
+class Init:
     recursion = 0
     target = None  # may will be back,gui,both
     sysctl = False
     waiting = True
 
     def __init__(self):
-        self.f_vpn = main_conf['iptables']['unit_vpn']
-        self.f_com = main_conf['iptables']['unit_com']
-        self.p_dest = main_conf['iptables']['path_unit']
-        self.p_dwld = main_conf['iptables']['path_download']
-        self.params = main_conf['iptables']['unit_field']
-        self.path_vpn = main_conf['iptables']['path_vpn']
-        self.path_com = main_conf['iptables']['path_com']
+        self.url_dwnld = main_conf['link_download']
+
+        self.f_vpn = main_conf['back']['unit_vpn']
+        self.f_com = main_conf['back']['unit_com']
+        self.p_dest = main_conf['back']['path_unit']
+        self.p_dwld = main_conf['back']['path_download']
+        self.params = main_conf['back']['unit_field']
+        self.path_vpn = main_conf['back']['path_vpn']
+        self.path_com = main_conf['back']['path_com']
+        self.ovpn_port = main_conf['back']['openvpn_port']
+        self.ovpn_conf = main_conf['back']['openvpn_conf']
+        self.ovpn_fields = main_conf['back']['openvpn_fields']
+        self.ovpn_tun = main_conf['back']['openvpn_tun']
+        self.f_dwnld = main_conf['back']['file_download']
+
         self.dupp_conf_url = main_conf['build']['conf_link'].format(
             main_conf['branch'])
         self.dupp_vpn_templ = main_conf['build']['templ'].format(
@@ -233,11 +264,14 @@ class CMD:
         self.gui_icon_path = main_conf['gui']['icon_dir']
         self.gui_icon_path_sh = main_conf['gui']['icon_tmpl_f_sh']
         self.gui_icon_tmpl = main_conf['gui']['icon_tmpl']
+        self.gui_icon_prod = main_conf['gui']['icon_exec_prod']
         self.gui_icon_chown = main_conf['gui']['chown']
         self.gui_npm_tmp_f = main_conf['gui']['npm_tmp_f']
         self.gui_npm_url = main_conf['gui']['npm_url']
         self.gui_npm_node = main_conf['gui']['npm_node']
+        self.gui_arch = main_conf['gui']['gui_arch']
         self.gui_npm_cmd_call = main_conf['gui']['npm_tmp_file_call']
+        self.gui_dev_link = main_conf['gui']['link_dev_gui']
 
         self.dappctrlgui = main_conf['gui']['dappctrlgui']
 
@@ -246,6 +280,15 @@ class CMD:
         self.dns_disable = main_conf['dnsmasq']['disable']
 
         self.tmp_var = main_conf['tmp_var']
+        self.fin_file = main_conf['mark_final']
+
+    def re_init(self):
+        self.__init__()
+
+
+class CMD(Init):
+    def __init__(self):
+        Init.__init__(self)
 
     def _reletive_path(self, name):
         dirname = path.dirname(__file__)
@@ -348,10 +391,11 @@ class CMD:
         # Stop container.Check it if pass_check True.Clear conteiner path
         if pass_check:
             logging.info('\n\n   --- Attention! ---\n'
-                         ' During installation, a failure occurred. \n'
-                         ' All installed will be removed and returned to '
-                         'the initial state.\n Wait for the end.\n '
-                         'And try again.\n   ------------------\n')
+                         ' During installation a failure occurred'
+                         ' or you pressed Ctrl+C\n'
+                         ' All installed will be removed and returned to'
+                         ' the initial state.\n Wait for the end!\n '
+                         ' And try again.\n   ------------------\n')
         self.service('vpn', 'stop', self.use_ports['vpn_port'])
         self.service('comm', 'stop', self.use_ports['comm_port'])
         sleep(3)
@@ -362,9 +406,9 @@ class CMD:
                 not self.service('comm', 'status',
                                  self.use_ports['comm_port'], True):
             self._clear_dir(self.p_dwld)
-            # rmtree(p_dowld + main_conf['iptables']['path_vpn'],
+            # rmtree(p_dowld + main_conf['back']['path_vpn'],
             #        ignore_errors=True)
-            # rmtree(p_dowld + main_conf['iptables']['path_com'],
+            # rmtree(p_dowld + main_conf['back']['path_com'],
             #        ignore_errors=True)
             return True
         return False
@@ -466,14 +510,18 @@ class CMD:
             logging.debug('dnsmasq conf exist')
             cfg = ConfigParser()
             cfg.read(self.dns_conf)
-            if cfg.has_option(self.dns_sect[0], self.dns_sect[1]) and\
-                cfg.get(self.dns_sect[0], self.dns_sect[1]) == self.dns_sect[2]:
-                logging.debug('Section {}={} found.'.format(self.dns_sect[1], self.dns_sect[2]))
+            if cfg.has_option(self.dns_sect[0], self.dns_sect[1]) and \
+                            cfg.get(self.dns_sect[0], self.dns_sect[1]) == \
+                            self.dns_sect[2]:
+                logging.debug('Section {}={} found.'.format(self.dns_sect[1],
+                                                            self.dns_sect[
+                                                                2]))
 
                 logging.debug('Disable dnsmasq !')
                 self._sys_call(self.dns_disable, rolback=False)
             else:
-                logging.debug('dnsmasq conf has not {}'.format(self.dns_sect[0:2]))
+                logging.debug(
+                    'dnsmasq conf has not {}'.format(self.dns_sect[0:2]))
         else:
             logging.debug('dnsmasq conf not exist')
 
@@ -576,7 +624,7 @@ class CMD:
             elif isinstance(v, dict):
                 self.__all_use_ports(v)
             elif isinstance(v, list):
-                self.tmp_var += map(int,v)
+                self.tmp_var += map(int, v)
             else:
                 self.tmp_var.append(int(v))
 
@@ -590,15 +638,13 @@ class CMD:
                     port = int(port)
                     port += 1
                 else:
-                    logging.info("Port: {} is busy or wrong."
+                    logging.info("\nPort: {} is busy or wrong.\n"
                                  "Select a different port,in range 1 - 65535.".format(
                         port))
                     port = raw_input('>')
                 try:
                     self.tmp_var = []
                     self.__all_use_ports(self.use_ports)
-                    logging.debug('***{}'.format(self.use_ports))
-                    logging.debug('***{}'.format(self.tmp_var))
                     if int(port) in range(65535)[1:] and not self._ping_port(
                             port=port) and int(port) not in self.tmp_var:
                         break
@@ -637,18 +683,17 @@ class CMD:
         if pass_check:
             return True
 
-        f_path = main_conf['mark_final']
-        if not isfile(f_path):
-            self.file_rw(p=f_path, w=True, log='First start')
+        if not isfile(self.fin_file):
+            self.file_rw(p=self.fin_file, w=True, log='First start')
             return True
 
         if rw:
             self.__wait_up()
-            self.file_rw(p=f_path, w=True, data=self.use_ports,
+            self.file_rw(p=self.fin_file, w=True, data=self.use_ports,
                          log='Finalizer.Write port info', json_r=True)
             return True
 
-        mark = self.file_rw(p=f_path)
+        mark = self.file_rw(p=self.fin_file)
         logging.debug('Start marker: {}'.format(mark))
         if not mark:
             logging.info('First start')
@@ -657,7 +702,7 @@ class CMD:
         logging.info('Second start.'
                      'This is protection against restarting the program.'
                      'If you need to re-run the script, '
-                     'you need to delete the file {}'.format(f_path))
+                     'you need to delete the file {}'.format(self.fin_file))
         return False
 
     def _byteify(self, data, ignore_dicts=False):
@@ -755,7 +800,7 @@ class Params(CMD):
         infs = self.interfase()
         tun = self.check_tun()
 
-        port = main_conf['iptables']['openvpn_port'][0]
+        port = self.ovpn_port[0]
         port = findall('\d+', port)[0]
 
         port = self.check_port(port)
@@ -904,13 +949,11 @@ class Params(CMD):
     def _rw_openvpn_conf(self, new_ip, new_tun, new_port, code):
         # rewrite in /var/lib/container/vpn/etc/openvpn/config/server.conf
         # two fields: server,push "route",  if ip =! default addr.
-        conf_file = "{}{}{}".format(self.p_dwld, self.path_vpn,
-                                    main_conf['iptables']['openvpn_conf'])
+        conf_file = "{}{}{}".format(self.p_dwld,
+                                    self.path_vpn,
+                                    self.ovpn_conf)
         def_ip = main_conf['addr']
         def_mask = main_conf['mask'][1]
-        search_fields = main_conf['iptables']['openvpn_fields']
-        search_tun = main_conf['iptables']['openvpn_tun']
-        search_port = main_conf['iptables']['openvpn_port']
         try:
             # read a list of lines into data
             tmp_data = self.file_rw(
@@ -920,24 +963,24 @@ class Params(CMD):
 
             # replace all search fields
             for row in tmp_data:
-                for field in search_fields:
+                for field in self.ovpn_fields:
                     if field.format(def_ip, def_mask) in row:
                         indx = tmp_data.index(row)
                         tmp_data[indx] = field.format(new_ip,
                                                       def_mask) + '\n'
 
-                if search_tun.format('tun') in row:
+                if self.ovpn_tun.format('tun') in row:
                     logging.debug(
                         'Rewrite tun interface on: {}'.format(new_tun))
                     indx = tmp_data.index(row)
-                    tmp_data[indx] = search_tun.format(new_tun) + '\n'
+                    tmp_data[indx] = self.ovpn_tun.format(new_tun) + '\n'
 
-                elif search_port[0] in row:
+                elif self.ovpn_port[0] in row:
                     logging.debug('Rewrite port on: {}'.format(new_port))
                     indx = tmp_data.index(row)
                     tmp_data[indx] = 'port {}\n'.format(new_port)
 
-                elif search_port[1] in row:
+                elif self.ovpn_port[1] in row:
                     # management 127.0.0.1 7505
                     indx = tmp_data.index(row)
                     delim = ' '
@@ -951,7 +994,8 @@ class Params(CMD):
                     self.use_ports['mangmt']['com'] = self.check_port(
                         int(self.use_ports['mangmt']['vpn']) + 1, True)
 
-                    raw_row[-1] = '{}\n'.format(self.use_ports['mangmt']['vpn'])
+                    raw_row[-1] = '{}\n'.format(
+                        self.use_ports['mangmt']['vpn'])
                     tmp_data[indx] = delim.join(raw_row)
             logging.debug('--server.conf')
             logging.debug(tmp_data)
@@ -993,7 +1037,8 @@ class Params(CMD):
             raw_tmp = raw_data['Monitor']['Addr'].split(delim)
             raw_tmp[-1] = str(port)
             raw_data['Monitor']['Addr'] = delim.join(raw_tmp)
-            logging.debug('Monitor Addr: {}.'.format(raw_data['Monitor']['Addr']))
+            logging.debug(
+                'Monitor Addr: {}.'.format(raw_data['Monitor']['Addr']))
 
             if hasattr(self, 'sessServPort'):
                 delim = ':'
@@ -1068,8 +1113,6 @@ class Params(CMD):
         self.file_rw(p=self.dappvpnconf, w=True,
                      data=raw_tmpl, log='Create file with test sql data.')
 
-
-
     def ip_port_dapp(self):
         """Check ip addr, free ports and replace it in
         dappctrl.config.local.json"""
@@ -1119,9 +1162,9 @@ class Params(CMD):
                     self.use_ports['comm_port'].append(port)
                     if k == 'AgentServer':
                         self.apiEndpoint = port
+                        self.use_ports['apiEndpoint'] = port
                     if k == 'SessionServer':
                         self.sessServPort = port
-
 
                 data[k]['Addr'] = delim.join(raw_row)
 
@@ -1133,40 +1176,46 @@ class Params(CMD):
 class Rdata(CMD):
     def __init__(self):
         CMD.__init__(self)
-        self.url = main_conf['link_download']
-        self.files = main_conf['iptables']['file_download']
+
         self.p_unpck = dict(vpn=self.path_vpn, common=self.path_com)
 
     def download(self, code):
         try:
             logging.info('Begin download files.')
-
+            dev_url = ''
             if not isdir(self.p_dwld):
                 mkdir(self.p_dwld)
 
             obj = URLopener()
-            for f in self.files:
+            if hasattr(self, 'back_route'):
+                dev_url = self.back_route + '/'
+                logging.debug('Back dev rout: "{}"'.format(self.back_route))
+
+            for f in self.f_dwnld:
                 logging.info(
                     self.wait_mess.format('Start download {}'.format(f)))
 
                 # st = Thread(target=self.long_waiting)
                 # st.daemon = True
                 # st.start()
-
-                obj.retrieve(self.url + f, self.p_dwld + f)
+                logging.debug('url_dwnld:{}, dev_url:{} ,f: {}'.format(self.url_dwnld,dev_url,f))
+                dwnld_url = self.url_dwnld + '/' + dev_url + f
+                dwnld_url = dwnld_url.replace('///', '/')
+                logging.debug(' - dwnld url: "{}"'.format(dwnld_url))
+                obj.retrieve(dwnld_url, self.p_dwld + f)
                 self.waiting = False
                 sleep(0.1)
                 logging.info('Download {} done.'.format(f))
             return True
 
         except BaseException as down:
-            logging.error('Download {}.'.format(down))
+            logging.error('Download: {}.'.format(down))
             self._rolback(code)
 
     def unpacking(self):
         logging.info('Begin unpacking download files.')
         try:
-            for f in self.files:
+            for f in self.f_dwnld:
                 if '.tar.xz' == f[-7:]:
                     logging.info('Unpacking {}.'.format(f))
                     # self.long_waiting()
@@ -1187,7 +1236,7 @@ class Rdata(CMD):
     def clean(self):
         logging.info('Delete downloaded files.')
 
-        for f in self.files:
+        for f in self.f_dwnld:
             logging.info('Delete {}'.format(f))
             remove(self.p_dwld + f)
 
@@ -1240,7 +1289,8 @@ class GUI(CMD):
 
     def __check_desctop_dir(self, p, u):
         if not isdir(self.gui_icon_path.format(p, u)):
-            logging.debug('{} not exist'.format(self.gui_icon_path.format(p, u)))
+            logging.debug(
+                '{} not exist'.format(self.gui_icon_path.format(p, u)))
             return False
         logging.debug('{} exist'.format(self.gui_icon_path.format(p, u)))
         return True
@@ -1253,9 +1303,11 @@ class GUI(CMD):
                      'After the installation is complete, to run the program\n'
                      'you will need to run the file "sudo {}".\n'
                      'Press enter to continue.'.format(self.gui_icon))
+
         raw_input('')
         with open(self.gui_icon, 'w') as icon:
             cmd = self.gui_icon_tmpl['Exec']
+
             icon.writelines(cmd)
 
         self.__icon_rights()
@@ -1284,15 +1336,49 @@ class GUI(CMD):
         self.__icon_rights()
 
     def __get_gui(self):
-        cmds = self.gui_installer
-        for cmd in cmds:
-            self._sys_call(cmd, s_exit=11)
+        if hasattr(self, 'gui_route'):
+            try:
+
+                dev_url = self.url_dwnld + self.gui_dev_link + self.gui_route + '/' + self.gui_arch
+                self._sys_call(self.gui_installer[0], s_exit=11)
+                logging.debug('Gui dev rout: "{}"'.format(dev_url))
+                obj = URLopener()
+                obj.retrieve(dev_url, self.gui_path + self.gui_arch)
+                logging.info('Download {} done.'.format(self.gui_arch))
+                logging.info('Begin unpacking download file.')
+
+                cmd = 'tar xpf {} -C {} --numeric-owner'.format(
+                    self.gui_path + self.gui_arch, self.gui_path)
+                self._sys_call(cmd)
+                logging.info('Unpacking {} done.'.format(self.gui_arch))
+
+                cmd = 'cd / && sudo npm install --prefix /opt/privatix/gui && sudo chown -R root:root /opt/privatix/gui'
+                self._sys_call(cmd)
+                self.dappctrlgui = '/opt/privatix/gui/settings.json'
+
+
+            except BaseException as down:
+                logging.error('Download {}.'.format(down))
+                self._rolback(26)
+
+        else:
+            self.gui_icon_tmpl['Exec'] = self.gui_icon_tmpl['Exec'] + \
+                                         self.gui_icon_prod
+
+            for cmd in self.gui_installer:
+                self._sys_call(cmd, s_exit=11)
+
+        if not isfile(self.dappctrlgui):
+            logging.info(
+                'The dappctrlgui package is not installed correctly')
+            self._rolback(27)
         self._prepare_icon()
         self.__rewrite_config()
 
     def __rewrite_config(self):
-        # path =/opt/privatix/gui/node_modules/dappctrlgui/settings.json
-        '''
+        """
+        /opt/privatix/gui/node_modules/dappctrlgui/settings.json
+        example data structure:
         {
             "firstStart": false,
             "accountCreated": true,
@@ -1304,21 +1390,26 @@ class GUI(CMD):
             },
             "network": "rinkeby"
         }
-        '''
-        raw_data = self.file_rw(p=self.dappctrlgui,
-                                log='Read settings.json',
-                                json_r=True)
-        delim = ':'
-        raw_link = raw_data['apiEndpoint'].split(delim)
-        raw_link[-1] = self.apiEndpoint
-        raw_data['apiEndpoint'] = delim.join(raw_link)
+        """
+        try:
+            raw_data = self.file_rw(p=self.dappctrlgui,
+                                    log='Read settings.json',
+                                    json_r=True)
+            delim = ':'
+            raw_link = raw_data['apiEndpoint'].split(delim)
+            raw_link[-1] = self.apiEndpoint
+            raw_data['apiEndpoint'] = delim.join(raw_link)
 
-        if not self.file_rw(p=self.dappctrlgui,
-                            w=True,
-                            data=raw_data,
-                            json_r=True,
-                            log='Rewrite settings.json'):
-            sys.exit(25)
+            if not self.file_rw(p=self.dappctrlgui,
+                                w=True,
+                                data=raw_data,
+                                json_r=True,
+                                log='Rewrite settings.json'):
+                raise BaseException(
+                    '{} was not found.'.format(self.dappctrlgui))
+        except BaseException as rwconf:
+            logging.error('R\W settings.json: {}'.format(rwconf))
+            self._rolback(25)
 
     def __get_npm(self):
         # install npm and nodejs
@@ -1414,13 +1505,18 @@ class GUI(CMD):
     def _clear_gui(self):
         logging.info('Clear GUI.')
         p = self.gui_path
-        logging.debug('Clear: {}'.format(p))
         self._clear_dir(p)
         # rmtree(p, ignore_errors=True)
         # mkdir(p)
 
     def update_gui(self):
         logging.info('Update GUI.')
+        self.apiEndpoint = self.use_ports.get('apiEndpoint')
+        if not self.use_ports.get('apiEndpoint'):
+            logging.info('You can not upgrade GUI before '
+                         'you not complete the installation.')
+            sys.exit()
+
         self._clear_gui()
         self.__get_gui()
 
@@ -1444,6 +1540,11 @@ class Checker(Params, Rdata, GUI):
 
     def init_os(self, args, pass_check=False):
         if self._finalizer(pass_check=pass_check):
+            if not isfile(main_conf['build']['cmd_path']):
+                logging.info('There is no .dapp_cmd file for further work.\n'
+                             'To create it, you must run '
+                             './initializer.py --build')
+                sys.exit(28)
             dist_name, ver, name_ver = linux_distribution()
             upgr_pack = self.task.get(dist_name.lower(), False)
             if not upgr_pack:
@@ -1471,7 +1572,7 @@ class Checker(Params, Rdata, GUI):
                     self._check_dapp_conf()
 
                 self.run_service()
-                if args['no_gui']:
+                if not args['no_gui']:
                     logging.info('GUI mode.')
                     check.target = 'both'
                     if pass_check:
@@ -1499,17 +1600,91 @@ class Checker(Params, Rdata, GUI):
             return False
 
     def check_graph(self):
-        if not isdir(self.gui_icon_path) and args['no_gui']:
+        if not isdir(self.gui_icon_path) and not args['no_gui']:
             mess = 'You chosen a full installation with a GUI,\n' \
                    'but did not find a GUI on your computer.\n' \
                    'Y - I understand. Continue the installation but without GUI\n' \
                    'N - Stop the installation.'
 
             if self.prompt(mess=mess):
-                args['no_gui'] = False
+                args['no_gui'] = True
             else:
                 sys.exit(24)
         logging.debug('Path exist: {}'.format(self.gui_icon_path))
+
+    def __select_sources(self):
+
+        def back():
+            logging.info('Enter the Back build number for downloading')
+            back_build = raw_input('>')
+            mess = "You enter '{}'\n" \
+                   "Please enter N and try again or " \
+                   "Y if everything is correct".format(back_build)
+
+            if not self.prompt(mess):
+                back()
+            self.back_route = back_build
+
+        def gui():
+            logging.info('Enter the GUI build number for downloading')
+            gui_build = raw_input('>')
+            mess = "You enter '{}'\n" \
+                   "Please enter N and try again or " \
+                   "Y if everything is correct".format(gui_build)
+
+            if not self.prompt(mess):
+                gui()
+
+            self.gui_route = gui_build
+
+        def back_gui():
+            back()
+            gui()
+
+        if args['update_back'] or args['no_gui']:
+            back()
+        elif args['update_gui']:
+            gui()
+        elif args['update_mass']:
+            back_gui()
+        else:
+            logging.info('You have entered a new address.\n'
+                         'Choose what you want to apply it for.\n'
+                         'Make your choice:\n'
+                         '1 - Back\n'
+                         '2 - GUI\n'
+                         '3 - Back and GUI\n')
+            choise_task = {1: back, 2: gui, 3: back_gui}
+            while True:
+                choise_code = raw_input('>')
+
+                if choise_code.isdigit() and int(choise_code) in choise_task:
+                    choise_task[int(choise_code)]()
+                    break
+                else:
+                    logging.info('Wrong choice. Make a choice between: '
+                                 '{}'.format(choise_task.keys()))
+
+    def validate_url(self, url):
+        regex_url = compile(
+            r'^(?:http|https)s?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', IGNORECASE)
+
+        while True:
+            if match(regex_url, url):
+                logging.info('The address: {} is correct.'.format(url))
+                check.url_dwnld = url + '/'
+                self.__select_sources()
+                break
+            else:
+                logging.info('\nThe address: {} was entered incorrectly.\n'
+                             'Please enter it according to the example:\n'
+                             'http://www.example.com/'.format(url))
+                url = raw_input('>')
 
     def check_sudo(self):
         mess = 'Make sure that the user from which you are installing\n' \
@@ -1522,22 +1697,22 @@ class Checker(Params, Rdata, GUI):
         if not self.prompt(mess=mess):
             sys.exit(21)
 
-        # self.check_graph()
+            # self.check_graph()
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=' *** Installer *** ')
-    parser.add_argument("--build", nargs='?', default=True,
-                        help='')
+    parser.add_argument("--build", action='store_true', default=False,
+                        help='Create .dapp_cmd file.')
 
-    parser.add_argument("--update", nargs='?', default=True,
-                        help='Update containers and rerun initializer')
+    parser.add_argument("--update-back", action='store_true', default=False,
+                        help='Update containers and rerun initializer.')
 
-    parser.add_argument("--update-gui", nargs='?', default=True,
-                        help='Update GUI')
+    parser.add_argument("--update-gui", action='store_true', default=False,
+                        help='Update GUI.')
 
-    parser.add_argument("--mass-update", nargs='?', default=True,
-                        help='Update All')
+    parser.add_argument("--update-mass", action='store_true', default=False,
+                        help='Update All.')
 
     parser.add_argument('--vpn', type=str, default=False,
                         help='[start,stop,restart,status]')
@@ -1551,11 +1726,14 @@ if __name__ == '__main__':
     parser.add_argument("--test", nargs='?', default=True,
                         help='')
 
-    parser.add_argument("--no-gui", nargs='?', default=True,
-                        help='Full install without GUI')
+    parser.add_argument("--no-gui", action='store_true', default=False,
+                        help='Full install without GUI.')
+
+    parser.add_argument("--clean", action='store_true', default=False,
+                        help='Cleaning after the initialization process. Removing GUI, downloaded files, initialization pid file, stopping containers.')
 
     parser.add_argument("--link", type=str, default=False, nargs='?',
-                        help='Enter different link for download. default "http://art.privatix.net/"')
+                        help='Enter link for download. default "http://art.privatix.net/"')
 
     parser.add_argument("--branch", type=str, default=False, nargs='?',
                         help='Enter different branch for download. default "develop"')
@@ -1564,8 +1742,8 @@ if __name__ == '__main__':
 
     check = Checker()
 
-    if isfile(main_conf['mark_final']):
-        raw = check.file_rw(p=main_conf['mark_final'],
+    if isfile(check.fin_file):
+        raw = check.file_rw(p=check.fin_file,
                             json_r=True,
                             log='Search port in finalizer.pid')
         if raw:
@@ -1575,32 +1753,30 @@ if __name__ == '__main__':
     logging.debug('Inside finalizer.pid: {}'.format(check.use_ports))
 
     signal(SIGINT, check.signal_handler)
+
     if args['link']:
-        logging.debug('Change link from:{} '
-                      'to{}'.format(main_conf['link_download'],
-                                    args['link']))
-        main_conf['link_download'] = args['link']
-        checkdev = Checker()
-        checkdev.target = 'both'
-        logging.info('Update All mode.')
-        checkdev.check_sudo()
-        if checkdev.clear_contr():
-            checkdev.use_ports = dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None))
-            checkdev.init_os(args, True)
-        else:
-            logging.info('Problem with clear all old file.')
+        logging.info('You chose was to change link from: {}   to: {}'.format(
+            main_conf['link_download'], args['link']))
 
+        check.validate_url(args['link'])
 
+    if args['branch']:
+        logging.debug('Change branch from: {}, to: {}'.format(
+            main_conf['branch'], args['branch']))
 
-    elif args['branch']:
-        logging.debug('Change branch from:{} '
-                      'to{}'.format(main_conf['branch'],
-                                    args['branch']))
         main_conf['branch'] = args['branch']
+        check.re_init()
 
-    elif not args['build']:
+    if args['build']:
         logging.info('Build mode.')
         check.build_cmd()
+
+    elif args['clean']:
+        logging.info('Clean mode.')
+        check.clear_contr()
+        check._clear_dir(check.p_dwld)
+        if isfile(check.fin_file):
+            remove(check.fin_file)
 
     elif args['vpn']:
         logging.debug('Vpn mode.')
@@ -1622,29 +1798,31 @@ if __name__ == '__main__':
                                  check.use_ports['vpn_port'])
         sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
 
-    elif not args['update']:
+    elif args['update_back']:
         logging.info('Update containers mode.')
         check.check_sudo()
         check.target = 'back'
         if check.clear_contr():
-            check.use_ports = dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None))
-            args['no_gui'] = False
+            check.use_ports = dict(vpn_port=[], comm_port=[],
+                                   mangmt=dict(vpn=None, com=None))
+            args['no_gui'] = True
             check.init_os(args, True)
         else:
             logging.info('Problem with clear all old file.')
 
-    elif not args['update_gui']:
+    elif args['update_gui']:
         logging.info('Update GUI mode.')
         check.target = 'gui'
         check.check_sudo()
         check.update_gui()
 
-    elif not args['mass_update']:
+    elif args['update_mass']:
         check.target = 'both'
         logging.info('Update All mode.')
         check.check_sudo()
         if check.clear_contr():
-            check.use_ports = dict(vpn_port=[], comm_port=[], mangmt=dict(vpn=None, com=None))
+            check.use_ports = dict(vpn_port=[], comm_port=[],
+                                   mangmt=dict(vpn=None, com=None))
             check.init_os(args, True)
         else:
             logging.info('Problem with clear all old file.')

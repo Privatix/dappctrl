@@ -83,18 +83,22 @@ Exit code:
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 logging.getLogger().setLevel('DEBUG')  # console debug
-formatter = logging.Formatter(
+form_console = logging.Formatter(
+    '%(message)s',
+    datefmt='%m/%d %H:%M:%S')
+
+form_file = logging.Formatter(
     '%(levelname)7s [%(lineno)3s] %(message)s',
     datefmt='%m/%d %H:%M:%S')
 
 fh = logging.FileHandler('/var/log/initializer.log')  # file debug
 fh.setLevel('DEBUG')
-fh.setFormatter(formatter)
+fh.setFormatter(form_file)
 logging.getLogger().addHandler(fh)
 
 ch = logging.StreamHandler()  # console debug
 ch.setLevel('INFO')
-ch.setFormatter(formatter)
+ch.setFormatter(form_console)
 logging.getLogger().addHandler(ch)
 
 
@@ -170,12 +174,12 @@ main_conf = dict(
             'Comment': 'First Internet Broadband Marketplace powered by P2P VPN Network on Blockchain',
             'Terminal': 'false',
             'Name': 'Privatix Dapp',
-            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/"',
+            'Exec': 'sh -c "sudo /opt/privatix/initializer/initializer.py --mass start && sudo npm start --prefix /opt/privatix/gui/{}"',
             'Type': 'Application',
-            'Icon': '/opt/privatix/gui/node_modules/dappctrlgui/icon_64.png',
+            'Icon': '/opt/privatix/gui/{}icon_64.png',
         },
 
-        'icon_exec_prod': 'node_modules/dappctrlgui/',
+        'icon_prod': 'node_modules/dappctrlgui/',
         'dappctrlgui': '/opt/privatix/gui/node_modules/dappctrlgui/settings.json',
 
         'npm_tmp_f': 'tmp_nodesource',
@@ -264,7 +268,7 @@ class Init:
         self.gui_icon_path = main_conf['gui']['icon_dir']
         self.gui_icon_path_sh = main_conf['gui']['icon_tmpl_f_sh']
         self.gui_icon_tmpl = main_conf['gui']['icon_tmpl']
-        self.gui_icon_prod = main_conf['gui']['icon_exec_prod']
+        self.gui_icon_prod = main_conf['gui']['icon_prod']
         self.gui_icon_chown = main_conf['gui']['chown']
         self.gui_npm_tmp_f = main_conf['gui']['npm_tmp_f']
         self.gui_npm_url = main_conf['gui']['npm_url']
@@ -1357,15 +1361,17 @@ class GUI(CMD):
                 self._sys_call(cmd)
                 self.dappctrlgui = '/opt/privatix/gui/settings.json'
 
+                self.gui_icon_tmpl['Exec'] = self.gui_icon_tmpl['Exec'].format('')
+                self.gui_icon_tmpl['Icon'] = self.gui_icon_tmpl['Icon'].format('')
 
             except BaseException as down:
                 logging.error('Download {}.'.format(down))
                 self._rolback(26)
 
         else:
-            self.gui_icon_tmpl['Exec'] = self.gui_icon_tmpl['Exec'] + \
-                                         self.gui_icon_prod
+            self.gui_icon_tmpl['Exec'] = self.gui_icon_tmpl['Exec'].format(self.gui_icon_prod)
 
+            self.gui_icon_tmpl['Icon'] = self.gui_icon_tmpl['Icon'].format(self.gui_icon_prod)
             for cmd in self.gui_installer:
                 self._sys_call(cmd, s_exit=11)
 

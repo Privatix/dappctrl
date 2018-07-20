@@ -50,13 +50,12 @@ type Monitor struct {
 	pscABI  abi.ABI
 	ptcAddr common.Address
 
-	mu                 sync.Mutex
+	mtx                sync.Mutex
 	lastProcessedBlock uint64
 
-	cancel  context.CancelFunc
-	errors  chan error
-	tickers []*time.Ticker
-
+	cancel      context.CancelFunc
+	errors      chan error
+	tickers     []*time.Ticker
 	callTimeout uint64
 }
 
@@ -93,7 +92,7 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 		pscAddr:     pscAddr,
 		pscABI:      pscABI,
 		ptcAddr:     ptcAddr,
-		mu:          sync.Mutex{},
+		mtx:         sync.Mutex{},
 		errors:      make(chan error),
 		callTimeout: callTimeout,
 	}, nil

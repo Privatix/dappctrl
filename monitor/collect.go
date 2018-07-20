@@ -255,9 +255,9 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 			return 0, fmt.Errorf("failed to scan rows: %v", err)
 		}
 		if v != nil {
-			m.mu.Lock()
+			m.mtx.Lock()
 			m.lastProcessedBlock = *v
-			m.mu.Unlock()
+			m.mtx.Unlock()
 		}
 	}
 
@@ -265,8 +265,8 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 }
 
 func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 	m.lastProcessedBlock = number
 }
 

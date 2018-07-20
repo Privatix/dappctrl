@@ -1,12 +1,10 @@
 package pay
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
@@ -92,16 +90,10 @@ func postPayload(db *reform.DB, channel string,
 	//TODO: add URL validation and TLS support
 	url := *endp.PaymentReceiverAddress
 
-	client := http.Client{
-		Timeout: time.Duration(timeout) * time.Millisecond,
-	}
+	req, err := srv.NewHTTPRequestWithURL(
+		http.MethodPost, url, &srv.Request{Args: pldArgs})
 
-	body, err := json.Marshal(&srv.Request{Args: pldArgs})
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+	resp, err := srv.Send(req)
 	if err != nil {
 		return err
 	}

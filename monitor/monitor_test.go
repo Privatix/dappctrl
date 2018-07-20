@@ -18,6 +18,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
@@ -62,6 +63,7 @@ type testConf struct {
 	DB           *data.DBConfig
 	Log          *util.LogConfig
 	Job          *job.Config
+	Eth          *eth.Config
 }
 
 type mockClient struct {
@@ -86,6 +88,7 @@ func newTestConf() *testConf {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
 	conf.Job = job.NewConfig()
+	conf.Eth = eth.NewConfig()
 	return conf
 }
 
@@ -300,7 +303,7 @@ func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
 	client := newMockClient()
 
 	mon, err := NewMonitor(conf.BlockMonitor, logger, db,
-		queue, client, pscAddr, ptcAddr)
+		queue, client, pscAddr, ptcAddr, conf.Eth.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -38,7 +38,7 @@ func TestMonitorSchedule(t *testing.T) {
 	defer cancel()
 
 	ticker := newMockTicker()
-	mon.start(ctx, conf.BlockMonitor.Timeout, nil, ticker.C)
+	mon.start(ctx, nil, ticker.C)
 
 	td := generateTestData(t)
 

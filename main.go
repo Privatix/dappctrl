@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
@@ -113,7 +114,7 @@ func main() {
 
 	logger.Reporter(reporter)
 
-	gethConn, err := eth.NewEtherClient(conf.Eth)
+	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
 	if err != nil {
 		logger.Fatal("failed to dial geth node: %v", err)
 	}
@@ -155,9 +156,9 @@ func main() {
 	pwdStorage := getPWDStorage(conf)
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		conf.VPNClient, conf.EptMsg, conf.Eth)
+		worker.NewEthBackend(psc, ptc, gethConn, conf.Eth.Timeout),
+		conf.Gas, pscAddr, conf.PayAddress, pwdStorage,
+		data.ToPrivateKey, conf.VPNClient, conf.EptMsg, conf.Eth)
 	if err != nil {
 		logger.Fatal("failed to create worker: %s", err)
 	}
@@ -198,7 +199,7 @@ func main() {
 	defer cmon.Close()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		gethConn, pscAddr, ptcAddr)
+		gethConn, pscAddr, ptcAddr, conf.Eth.Timeout)
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)

@@ -43,7 +43,8 @@
     "BlockMonitor": {
         "CollectPause": 6,
         "SchedulePause": 6,
-        "Timeout": 5
+        "CollectTimeout": 60,
+        "ScheduleTimeout": 5
     },
 
     "DB": {
@@ -81,9 +82,7 @@
         },
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": "",
-        "Timeout": {
-            "ResponseHeaderTimeout": 20
-        }
+        "Timeout": 10
     },
 
     "JobHandlerTest": {

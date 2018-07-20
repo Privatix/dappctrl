@@ -18,7 +18,8 @@ import (
 
 const (
 	minConfirmationsKey = "eth.min.confirmations"
-	freshOfferingsKey   = "eth.event.freshofferings"
+	freshBlocksKey      = "eth.event.freshblocks"
+	blockLimitKey       = "eth.event.blocklimit"
 	txMinedStatus       = "mined"
 )
 
@@ -57,12 +58,12 @@ var offeringRelatedEvents = hexesToHashes(
 
 // collect requests new logs and puts them into the database.
 // timeout variable in seconds.
-func (m *Monitor) collect(ctx context.Context, timeout int64) {
+func (m *Monitor) collect(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx,
-		time.Duration(timeout)*time.Second)
+		time.Duration(m.cfg.CollectTimeout)*time.Second)
 	defer cancel()
 
-	firstBlock, freshBlock, lastBlock, err := m.getRangeOfInterest(ctx)
+	firstBlock, lastBlock, err := m.getRangeOfInterest(ctx)
 	if err != nil {
 		m.errors <- err
 		return
@@ -80,7 +81,7 @@ func (m *Monitor) collect(ctx context.Context, timeout int64) {
 	}
 
 	if firstBlock > lastBlock {
-		m.logger.Debug("monitor has nothing to collect")
+		m.logger.Warn("monitor has nothing to collect")
 		return
 	}
 	m.logger.Debug(
@@ -99,7 +100,6 @@ func (m *Monitor) collect(ctx context.Context, timeout int64) {
 	clientQ.Topics = [][]common.Hash{clientRelatedEvents, nil, addresses}
 
 	offeringQ := agentQ
-	offeringQ.FromBlock = new(big.Int).SetUint64(freshBlock)
 	offeringQ.Topics = [][]common.Hash{offeringRelatedEvents}
 
 	queries := []*ethereum.FilterQuery{&agentQ, &clientQ, &offeringQ}
@@ -190,38 +190,45 @@ func (m *Monitor) getAddressesInUse() ([]common.Hash, error) {
 // that need to be scanned for new logs. It respects
 // the min confirmations setting.
 func (m *Monitor) getRangeOfInterest(
-	ctx context.Context) (first, fresh, last uint64, err error) {
+	ctx context.Context) (first, last uint64, err error) {
 	unreliableNum, err := data.GetUint64Setting(m.db, minConfirmationsKey)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
-	freshNum, err := data.GetUint64Setting(m.db, freshOfferingsKey)
+	freshNum, err := data.GetUint64Setting(m.db, freshBlocksKey)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	first, err = m.getLastProcessedBlockNumber()
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	first = first + 1
 
 	latestBlock, err := m.getLatestBlockNumber(ctx)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	last = safeSub(latestBlock, unreliableNum)
 
-	if freshNum == 0 {
-		fresh = first
-	} else {
-		fresh = max(first, safeSub(last, freshNum))
+	if freshNum != 0 {
+		first = max(first, safeSub(last, freshNum))
 	}
 
-	return first, fresh, last, nil
+	limitNum, err := data.GetUint64Setting(m.db, blockLimitKey)
+	if err != nil {
+		return first, last, nil
+	}
+
+	if limitNum != 0 && last > first && (last-first) > limitNum {
+		last = first + limitNum
+	}
+
+	return first, last, nil
 }
 
 func safeSub(a, b uint64) uint64 {
@@ -248,9 +255,9 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 			return 0, fmt.Errorf("failed to scan rows: %v", err)
 		}
 		if v != nil {
-			m.mu.Lock()
+			m.mtx.Lock()
 			m.lastProcessedBlock = *v
-			m.mu.Unlock()
+			m.mtx.Unlock()
 		}
 	}
 
@@ -258,14 +265,14 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 }
 
 func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 	m.lastProcessedBlock = number
 }
 
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) (uint64, error) {
 	ctx, cancel := context.WithTimeout(ctx,
-		time.Duration(m.cfg.Timeout)*time.Second)
+		time.Duration(m.callTimeout)*time.Second)
 	defer cancel()
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)

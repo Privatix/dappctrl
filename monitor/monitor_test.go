@@ -300,13 +300,15 @@ func (c *mockClient) injectEvent(e *ethtypes.Log) {
 
 func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
 	queue := newMockQueue(t, db)
+
 	client := newMockClient()
 
 	mon, err := NewMonitor(conf.BlockMonitor, logger, db,
-		queue, client, pscAddr, ptcAddr, conf.Eth.Timeout)
+		queue, conf.Eth, pscAddr, ptcAddr, client, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return mon, queue, client
 }
 

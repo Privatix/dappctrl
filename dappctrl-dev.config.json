@@ -35,10 +35,14 @@
             "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
-		"Timeout": {
-            "ResponseHeaderTimeout": 20,
-            "TLSHandshakeTimeout": 5,
-            "ExpectContinueTimeout": 5
+        "Timeout": 10,
+        "HttpClient": {
+            "DialTimeout": 5,
+            "TLSHandshakeTimeout": 2,
+            "ResponseHeaderTimeout": 10,
+            "RequestTimeout": 10,
+            "IdleConnTimeout": 30,
+            "KeepAliveTimeout": 60
         }
     },
     "Gas": {

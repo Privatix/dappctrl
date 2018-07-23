@@ -236,3 +236,27 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 
 	return nil
 }
+
+// DecrementCurrentSupply finds offering and decrements its current supply.
+func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobDecrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply--
+
+	return data.Save(w.db.Querier, offering)
+}
+
+// IncrementCurrentSupply finds offering and increments its current supply.
+func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobIncrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply++
+
+	return data.Save(w.db.Querier, offering)
+}

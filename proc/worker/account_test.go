@@ -248,3 +248,44 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 
 	testCommonErrors(t, job, *fixture.job)
 }
+
+func TestDecrementCurrentSupply(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	fxt := env.newTestFixture(t,
+		data.JobDecrementCurrentSupply, data.JobOffering)
+	defer fxt.close()
+
+	runJob(t, env.worker.DecrementCurrentSupply, fxt.job)
+
+	offering := &data.Offering{}
+	env.findTo(t, offering, fxt.Offering.ID)
+
+	if offering.CurrentSupply+1 != fxt.Offering.CurrentSupply {
+		t.Fatal("offering's current supply was not decremented")
+	}
+
+	testCommonErrors(t, env.worker.DecrementCurrentSupply, *fxt.job)
+}
+
+func TestIncrementCurrentSupply(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	fxt := env.newTestFixture(t,
+		data.JobIncrementCurrentSupply, data.JobOffering)
+	defer fxt.close()
+
+	fxt.Offering.CurrentSupply--
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.IncrementCurrentSupply, fxt.job)
+
+	offering := &data.Offering{}
+	env.findTo(t, offering, fxt.Offering.ID)
+
+	if offering.CurrentSupply-1 != fxt.Offering.CurrentSupply {
+		t.Fatal("offering's current supply was not incremented")
+	}
+
+	testCommonErrors(t, env.worker.IncrementCurrentSupply, *fxt.job)
+}

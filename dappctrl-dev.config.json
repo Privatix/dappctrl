@@ -139,6 +139,16 @@
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "decrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "incrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             }
         }
     },

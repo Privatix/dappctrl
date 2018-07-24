@@ -1,9 +1,7 @@
 package proc
 
 import (
-	"time"
-
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 )
@@ -91,7 +89,6 @@ func (p *Processor) alterServiceStatus(id, jobCreator, jobType,
 		Type:        jobType,
 		RelatedID:   ch.ID,
 		RelatedType: data.JobChannel,
-		CreatedAt:   time.Now(),
 		CreatedBy:   jobCreator,
 		Data:        []byte("{}"),
 	}

@@ -92,8 +92,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 	env.deleteFromTestDB(t, &agentUserRec)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestClientAfterChannelCreate(t *testing.T) {
+func TestClientAfterChannelCreate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
 
@@ -102,20 +101,26 @@ func TestClientPreChannelCreate(t *testing.T) {
 	defer fxt.Close()
 
 	ethLog := data.NewTestEthLog()
-	ethLog.JobID = pointer.ToString(fxt.job.ID)
+	ethLog.JobID = &fxt.job.ID
 	data.SaveToTestDB(t, db, ethLog)
 
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
 	defer data.DeleteFromTestDB(t, db, ethLog)
 
+	channelKey, _ := data.ChannelKey(fxt.Channel.Client, fxt.Channel.Agent,
+		uint32(ethLog.BlockNumber), fxt.Offering.Hash)
+
 	go func() {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
-		env.fakeSOMC.WriteGetEndpoint(t, fxt.Channel.ID, nil)
+		env.fakeSOMC.WriteGetEndpoint(t, data.FromBytes(channelKey), nil)
 	}()
 
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
+
+	// Test account balance update job was created.
+	env.deleteJob(t, data.JobAccountUpdateBalances, data.JobAccount, fxt.UserAcc.ID)
 
 	data.ReloadFromTestDB(t, db, fxt.Channel)
 	if fxt.Channel.ChannelStatus != data.ChannelActive {
@@ -131,7 +136,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		t.Fatalf("no new job created")
 	}
 	defer data.DeleteFromTestDB(t, db, &job)
-}*/
+}
 
 func swapAgentWithClient(t *testing.T, fxt *workerTestFixture) {
 	addr := fxt.Channel.Client
@@ -245,10 +250,6 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		data.JobClientPreChannelTopUp, data.JobChannel)
 	defer fxt.Close()
 
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	env.updateInTestDB(t, client)
-
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
 
@@ -277,7 +278,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Status != data.TxSent ||
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
-		tx.AddrFrom != client.EthAddr ||
+		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
@@ -290,30 +291,6 @@ func TestClientPreChannelTopUp(t *testing.T) {
 
 func TestClientAfterChannelTopUp(t *testing.T) {
 	testAfterChannelTopUp(t, false)
-}
-
-func clientPreUncooperativeCloseRequestNormFlow(t *testing.T, env *workerTest,
-	fxt *workerTestFixture) {
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	env.updateInTestDB(t, client)
-
-	fxt.job.RelatedType = data.JobChannel
-	fxt.job.RelatedID = util.NewUUID()
-
-	setJobData(t, fxt.DB, fxt.job, ClientPreUncooperativeCloseRequestData{
-		Channel:  fxt.Channel.ID,
-		GasPrice: uint64(testTXGasPrice),
-	})
-
-	fxt.Channel.TotalDeposit = 1
-	fxt.Channel.ReceiptBalance = 1
-	env.updateInTestDB(t, fxt.Channel)
-
-	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
-
-	checkChanStatus(t, env, fxt.Channel.ID,
-		data.ChannelWaitChallenge)
 }
 
 func checkChanStatus(t *testing.T, env *workerTest, channel string,
@@ -331,12 +308,23 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreChannelTopUp, data.JobChannel)
+		data.JobClientPreUncooperativeCloseRequest, data.JobChannel)
 	defer fxt.Close()
+
+	fxt.Channel.TotalDeposit = 1
+	fxt.Channel.ReceiptBalance = 1
+	env.updateInTestDB(t, fxt.Channel)
 
 	issued := time.Now()
 
-	clientPreUncooperativeCloseRequestNormFlow(t, env, fxt)
+	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
+		GasPrice: uint64(testTXGasPrice),
+	})
+
+	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
+
+	checkChanStatus(t, env, fxt.Channel.ID,
+		data.ChannelWaitChallenge)
 
 	var tx data.EthTx
 
@@ -385,6 +373,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		util.TestExpectResult(t, "Job run", ErrInvalidChStatus,
 			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
 	}
+
+	testCommonErrors(
+		t, env.worker.ClientPreUncooperativeCloseRequest, *fxt.job)
 }
 
 func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
@@ -436,12 +427,6 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		data.JobClientPreUncooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	client := data.NewTestAccount(data.TestPassword)
-	client.EthAddr = fxt.Channel.Client
-	if err := data.Save(db.Querier, client); err != nil {
-		t.Fatal(err)
-	}
-
 	issued := time.Now()
 
 	runJob(t, env.worker.ClientPreUncooperativeClose, fxt.job)
@@ -460,7 +445,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Status != data.TxSent ||
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
-		tx.AddrFrom != client.EthAddr ||
+		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
@@ -479,22 +464,32 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 		data.JobClientAfterUncooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	var job data.Job
-	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
-	defer env.deleteFromTestDB(t, &job)
+	testUpdateBalancesJobCreatedAndStatusChanged := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
+		env.updateInTestDB(t, fxt.Channel)
 
-	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	env.updateInTestDB(t, fxt.Channel)
+		runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
 
-	runJob(t, env.worker.ClientAfterUncooperativeClose, fxt.job)
+		// Test update balances job was created.
+		env.deleteJob(t,
+			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
 
-	var ch data.Channel
-	env.findTo(t, &ch, fxt.Channel.ID)
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ChannelStatus != data.ChannelClosedUncoop {
-		t.Fatalf("expected %s channel status, but got %s",
-			data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+		if ch.ChannelStatus != data.ChannelClosedUncoop {
+			t.Fatalf("expected %s channel status, but got %s",
+				data.ChannelClosedUncoop, fxt.Channel.ChannelStatus)
+		}
 	}
+
+	testUpdateBalancesJobCreatedAndStatusChanged(data.ServicePending)
+	env.deleteJob(t, data.JobClientPreServiceTerminate,
+		data.JobChannel, fxt.Channel.ID)
+
+	testUpdateBalancesJobCreatedAndStatusChanged(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
 func TestClientAfterCooperativeClose(t *testing.T) {
@@ -505,31 +500,33 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 		data.JobClientAfterCooperativeClose, data.JobChannel)
 	defer fxt.Close()
 
-	var job data.Job
-	env.selectOneTo(t, &job, "WHERE related_id = $1", fxt.Channel.ID)
-	defer env.deleteFromTestDB(t, &job)
+	testJobCreatedAndStatusChanged := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ChannelStatus = data.ChannelWaitCoop
+		env.updateInTestDB(t, fxt.Channel)
 
-	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
-	env.updateInTestDB(t, fxt.Channel)
+		runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
-	runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
+		// Test update balances job was created.
+		env.deleteJob(t,
+			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
 
-	var jobTerm data.Job
-	env.selectOneTo(t, &jobTerm, "WHERE related_id = $1 AND id != $2",
-		fxt.Channel.ID, fxt.job.ID)
-	defer env.deleteFromTestDB(t, &jobTerm)
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
 
-	if jobTerm.Type != data.JobClientPreServiceTerminate {
-		t.Fatal("bad job type")
+		if ch.ChannelStatus != data.ChannelClosedCoop {
+			t.Fatalf("expected %s service status, but got %s",
+				data.ChannelClosedCoop, fxt.Channel.ChannelStatus)
+		}
 	}
 
-	var ch data.Channel
-	env.findTo(t, &ch, fxt.Channel.ID)
+	testJobCreatedAndStatusChanged(data.ServicePending)
+	// Test terminate job created.
+	env.deleteJob(t, data.JobClientPreServiceTerminate, data.JobChannel,
+		fxt.Channel.ID)
 
-	if ch.ChannelStatus != data.ChannelClosedCoop {
-		t.Fatalf("expected %s service status, but got %s",
-			data.ChannelClosedCoop, fxt.Channel.ChannelStatus)
-	}
+	testJobCreatedAndStatusChanged(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
 func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
@@ -700,7 +697,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreOfferingMsgSOMCGet, data.JobOffering)
+		data.JobClientAfterOfferingMsgBCPublish, data.JobOffering)
 	defer fxt.Close()
 
 	// Set id for offerring that is about to be created.
@@ -785,29 +782,144 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	}
 }
 
-func TestClientPreAccountAddBalanceApprove(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PTC.balanceOf()
-	// 2. PTC.approve()
+func TestClientAfterOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingDelete, data.JobOffering)
+	defer fxt.Close()
+
+	runJob(t, env.worker.ClientAfterOfferingDelete, fxt.job)
+
+	updated := data.Offering{}
+	env.findTo(t, &updated, fxt.job.RelatedID)
+
+	if updated.OfferStatus != data.OfferRemove {
+		t.Fatalf("expected offering status: %s, got: %s",
+			data.OfferRemove, updated.OfferStatus)
+	}
+
+	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
 }
 
-func TestClientPreAccountAddBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. PSC.addBalanceERC20()
+func TestClientAfterOfferingPopUp(t *testing.T) {
+	testClientAfterExistingOfferingPopUp(t)
+	testClientAfterNewOfferingPopUp(t)
 }
 
-func TestClientAfterAccountAddBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. update balance in DB
+func testClientAfterExistingOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash([]byte{}),
+		offeringHash,
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
+
+	offering := data.Offering{}
+	env.findTo(t, &offering, fxt.Offering.ID)
+
+	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+		t.Fatal("offering block number was not updated")
+	}
 }
 
-func TestClientPreAccountReturnBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. check PSC balance PSC.balanceOf()
-	// 2. PSC.returnBalanceERC20()
-}
+func testClientAfterNewOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
 
-func TestClientAfterAccountReturnBalance(t *testing.T) {
-	t.Skip("TODO")
-	// 1. update balance in DB
+	fxt := env.newTestFixture(t,
+		data.JobClientAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	var offeringHash common.Hash
+
+	// Create expected offering.
+	expectedOffering := *fxt.Offering
+	expectedOffering.ID = fxt.job.RelatedID
+	expectedOffering.Status = data.MsgChPublished
+	expectedOffering.OfferStatus = data.OfferRegister
+	expectedOffering.Country = "US"
+	msg := offer.OfferingMessage(fxt.Account,
+		fxt.TemplateOffer, &expectedOffering)
+	msgBytes, err := json.Marshal(msg)
+	util.TestExpectResult(t, "Marshall msg", nil, err)
+	key, err := env.worker.key(fxt.Account.PrivateKey)
+	util.TestExpectResult(t, "Get key", nil, err)
+	packed, err := messages.PackWithSignature(msgBytes, key)
+	util.TestExpectResult(t, "PackWithSignature", nil, err)
+	expectedOffering.RawMsg = data.FromBytes(packed)
+	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
+	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	// Create eth log records used by job.
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	topics := data.LogTopics{
+		common.BytesToHash([]byte{}),
+		common.BytesToHash(agentAddr.Bytes()),
+		offeringHash,
+	}
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	go func() {
+		// Mock reply from SOMC.
+		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
+		env.fakeSOMC.WriteFindOfferings(t,
+			[]string{expectedOffering.Hash}, [][]byte{packed})
+	}()
+
+	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
+
+	created := &data.Offering{}
+	env.selectOneTo(t, created, "WHERE hash=$1", expectedOffering.Hash)
+	defer env.deleteFromTestDB(t, created)
+
+	if expectedOffering.Template != created.Template ||
+		expectedOffering.Product != created.Product ||
+		created.Status != data.MsgChPublished ||
+		expectedOffering.Agent != created.Agent ||
+		expectedOffering.RawMsg != created.RawMsg ||
+		fxt.Product.Name != created.ServiceName ||
+		expectedOffering.Description != created.Description ||
+		expectedOffering.Country != created.Country ||
+		expectedOffering.Supply != created.Supply ||
+		expectedOffering.UnitName != created.UnitName ||
+		expectedOffering.BillingType != created.BillingType ||
+		expectedOffering.SetupPrice != created.SetupPrice ||
+		expectedOffering.UnitPrice != created.UnitPrice ||
+		expectedOffering.MinUnits != created.MinUnits ||
+		expectedOffering.BillingInterval != created.BillingInterval ||
+		expectedOffering.MaxBillingUnitLag != created.MaxBillingUnitLag ||
+		expectedOffering.MaxSuspendTime != created.MaxSuspendTime ||
+		expectedOffering.MaxInactiveTimeSec != created.MaxInactiveTimeSec ||
+		expectedOffering.FreeUnits != created.FreeUnits ||
+		!bytes.Equal(expectedOffering.AdditionalParams, created.AdditionalParams) {
+		t.Fatal("wrong offering created")
+	}
 }

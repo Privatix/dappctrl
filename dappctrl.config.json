@@ -1,4 +1,7 @@
 {
+    "AgentMonitor": {
+        "Interval": 5000
+    },
     "AgentServer": {
         "Addr": "localhost:3000",
         "TLS": null,
@@ -7,7 +10,8 @@
     "BlockMonitor": {
         "CollectPause": 6,
         "SchedulePause": 6,
-        "Timeout": 5
+        "CollectTimeout": 60,
+        "ScheduleTimeout": 5
     },
     "ClientMonitor": {
         "CollectPeriod": 5000,
@@ -23,12 +27,24 @@
             "port": "5433"
         }
     },
+    "EptMsg": {
+        "Timeout": 1
+    },
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
-        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
+        "Timeout": 10,
+        "HttpClient": {
+            "DialTimeout": 5,
+            "TLSHandshakeTimeout": 2,
+            "ResponseHeaderTimeout": 10,
+            "RequestTimeout": 10,
+            "IdleConnTimeout": 30,
+            "KeepAliveTimeout": 60
+        }
     },
     "Gas": {
         "PTC": {
@@ -61,8 +77,19 @@
         "TryPeriod": 60000,
         "Types": {
             "clientPreChannelCreate": {
+                "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "clientAfterChannelCreate": {
+                "TryLimit": 10,
+                "TryPeriod": 30000,
+                "FirstStartDelay": 25000
+            },
+            "agentPreOfferingMsgSOMCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
             },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
@@ -89,15 +116,47 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "addCheckBalance": {
-                "TryLimit": 0,
+            "clientPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "accountUpdateBalances": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "decrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "incrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
                 "TryPeriod": 60000
             }
         }
     },
     "Log": {
         "Level": "info",
-        "LogPath": "/var/log"
+        "LogPath": "/var/log",
+        "LogFilePrefix": "dappctrl"
     },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
@@ -130,5 +189,14 @@
         "ReconnPeriod": 5000,
         "URL": "ws://89.38.96.53:8080"
     },
-    "StaticPassword": ""
+    "StaticPassword": "",
+    "Report": {
+        "ReleaseStage": "alpha",
+        "ExcludedPackages": [
+            "github.com/privatix/dappctrl/tool/dappinst",
+            "github.com/privatix/dappctrl/svc/dappvpn",
+            "github.com/privatix/dappctrl/svc/dappvpn/mon",
+            "github.com/privatix/dappctrl/svc/dappvpn/pusher"
+        ]
+    }
 }

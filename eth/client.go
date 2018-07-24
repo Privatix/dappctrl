@@ -1,111 +1,112 @@
 package eth
 
-// Implements client for ethereum network.
-//
-// For details about contracts methods calling:
-// https://github.com/ethereum/go-ethereum/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts
-//
-// Note:
-// "abigen_linux" is available in contract/tools, no need for building it itself.
-//
-// For details about events (logs in EthereumConf terminology) fetching:
-// https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html
-
 import (
-	"encoding/json"
-	"errors"
+	"context"
 	"fmt"
-	"io/ioutil"
+	"net"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
+
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// Block labels.
 const (
-	BlockLatest = "latest"
+	httpProtocol = "http"
+	https        = "https"
+	ws           = "ws"
+	wss          = "wss"
+	stdIO        = "stdio"
+	ipc          = ""
 )
 
-// EthereumClient implementation of client logic for the ethereum geth node.
-// Uses JSON RPC API of geth for communication with remote node.
-type EthereumClient struct {
-	GethURL string
-
-	client    http.Client
-	requestID uint64
+// Client client for connection to the Ethereum.
+type Client struct {
+	cfg           *Config
+	c             *ethclient.Client
+	httpTransport *http.Transport
 }
 
-// NewEthereumClient creates and returns instance of client for remote ethereum node,
-// that is available via specified host and port.
-func NewEthereumClient(gethURL string) *EthereumClient {
-	return &EthereumClient{
-		GethURL: gethURL,
-
-		// By default, standard http-client does not uses any timeout for its operations.
-		// But, there is non zero probability, that remote geth-node would hang for a long time.
-		// To avoid cascade client/agent side application hangs - custom timeout is used.
-		client: http.Client{
-			Timeout: time.Second * 5,
-		},
-	}
-}
-
-// apiResponse is a base geth API response.
-type apiResponse struct {
-	ID      uint64 `json:"id"`
-	JSONRPC string `json:"jsonrpc"`
-
-	// All responses also contain "result" field,
-	// but from method to method it might have various different types,
-	// so it is delegated to the specified response types.
-}
-
-// Fills common parameters "method" and "params",
-// and calls json-RPC API of the remote geth-node.
-// In case of success - tries to unmarshal received data
-// to the appropriate structure type ("result" argument).
-//
-// Tests: this is a base method for all raw API calls
-// so, it is automatically covered by the all tests of all low-level methods,
-// for example, GetBlockNumber()
-func (e *EthereumClient) fetch(method, params string, result interface{}) error {
-	body := fmt.Sprintf(`{"jsonrpc":"2.0","method":"%s","params":[%s]}`, method, params)
-	httpResponse, err := e.client.Post(e.GethURL, "application/json", strings.NewReader(body))
+// NewClient creates client for connection to the Ethereum.
+func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
+	u, err := url.Parse(cfg.GethURL)
 	if err != nil {
-		return errors.New("can't do API call: " + err.Error())
+		return nil, err
 	}
 
-	defer httpResponse.Body.Close()
+	client := &Client{}
 
-	if httpResponse.StatusCode != http.StatusOK {
-		return errors.New("can't do API call. API responded with code: " +
-			fmt.Sprint(httpResponse.StatusCode))
+	var rpcClient *rpc.Client
+
+	switch u.Scheme {
+	case httpProtocol, https:
+		httpTransport := transport(cfg.HttpClient)
+
+		rpcClient, err = rpc.DialHTTPWithClient(cfg.GethURL,
+			httpClient(cfg.HttpClient, httpTransport))
+
+		client.httpTransport = httpTransport
+	case ws, wss:
+		rpcClient, err = rpc.DialWebsocket(ctx, cfg.GethURL, "")
+	case stdIO:
+		rpcClient, err = rpc.DialStdIO(ctx)
+	case ipc:
+		rpcClient, err = rpc.DialIPC(ctx, cfg.GethURL)
+	default:
+		return nil, fmt.Errorf("no known transport"+
+			" for URL scheme %q", u.Scheme)
 	}
-
-	response, err := ioutil.ReadAll(httpResponse.Body)
 	if err != nil {
-		return errors.New("can't read response data: " + err.Error())
+		return nil, fmt.Errorf("failed to create"+
+			" rpc client %s", err)
 	}
 
-	err = json.Unmarshal(response, result)
-	if err != nil {
-		return errors.New("can't unmarshal response data: " + err.Error())
-	}
-
-	return nil
+	client.c = ethclient.NewClient(rpcClient)
+	return client, nil
 }
 
-// BlockNumberAPIResponse implements wrapper for ethereum JSON RPC API response.
-// Please see corresponding web3.js method for the details.
-type BlockNumberAPIResponse struct {
-	apiResponse
-	Result string `json:"result"`
+// Close closes client.
+func (c *Client) Close() {
+	c.c.Close()
 }
 
-// GetBlockNumber returns the number of most recent block in blockchain.
-// For the details, please, refer to:
-// https://ethereumbuilders.gitbooks.io/guide/content/en/ethereum_json_rpc.html#eth_blocknumber
-func (e *EthereumClient) GetBlockNumber() (*BlockNumberAPIResponse, error) {
-	response := &BlockNumberAPIResponse{}
-	return response, e.fetch("eth_blockNumber", "", response)
+// CloseIdleConnections closes any connections which were previously
+// connected from previous requests.
+func (c *Client) CloseIdleConnections() {
+	if c.httpTransport != nil {
+		c.httpTransport.CloseIdleConnections()
+	}
+}
+
+// EthClient returns client needed to work with contracts on a read-write basis.
+func (c *Client) EthClient() *ethclient.Client {
+	return c.c
+}
+
+func httpClient(cfg *httpClientConf, transport *http.Transport) *http.Client {
+	return &http.Client{
+		Transport: transport,
+		Timeout:   toTime(cfg.RequestTimeout),
+	}
+}
+
+func toTime(val uint64) time.Duration {
+	return time.Duration(time.Duration(val) * time.Second)
+}
+
+func transport(config *httpClientConf) *http.Transport {
+	return &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: toTime(
+				config.DialTimeout),
+			DualStack: true,
+			KeepAlive: toTime(config.KeepAliveTimeout),
+		}).DialContext,
+		IdleConnTimeout: toTime(config.IdleConnTimeout),
+		TLSHandshakeTimeout: toTime(
+			config.TLSHandshakeTimeout),
+		ResponseHeaderTimeout: toTime(
+			config.ResponseHeaderTimeout),
+	}
 }

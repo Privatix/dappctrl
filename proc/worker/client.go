@@ -46,7 +46,7 @@ func (w *Worker) checkDeposit(acc *data.Account,
 	return deposit, nil
 }
 
-func (w *Worker) clientPreUncooperativeCloseRequestCheckChannel(
+func (w *Worker) clientValidateChannelForClose(
 	ch *data.Channel) error {
 	// check channel status
 	if ch.ChannelStatus != data.ChannelActive &&
@@ -243,7 +243,13 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 			"JobClientPreEndpointMsgSOMCGet job: %s", err)
 	}
 
-	return nil
+	client, err := w.account(ch.Client)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
 func (w *Worker) decodeEndpoint(
@@ -387,8 +393,20 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	return err
+	if ch.ServiceStatus != data.ServiceTerminated {
+		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	agent, err := w.account(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // ClientAfterCooperativeClose changed channel status
@@ -404,8 +422,20 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-	return err
+	if ch.ServiceStatus != data.ServiceTerminated {
+		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	agent, err := w.account(ch.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 func (w *Worker) stopService(channel string) error {
@@ -652,7 +682,7 @@ func (w *Worker) ClientAfterChannelTopUp(job *data.Job) error {
 	return w.afterChannelTopUp(job, data.JobClientAfterChannelTopUp)
 }
 
-func (w *Worker) clientPreUncooperativeCloseRequestSaveTx(job *data.Job,
+func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 	ch *data.Channel, acc *data.Account, offer *data.Offering,
 	gasPrice uint64) error {
 	agent, err := data.ToAddress(ch.Agent)
@@ -700,22 +730,15 @@ func (w *Worker) clientPreUncooperativeCloseRequestSaveTx(job *data.Job,
 	return data.Save(w.db.Querier, ch)
 }
 
-// ClientPreUncooperativeCloseRequestData is a job data
-// for ClientPreUncooperativeCloseRequest.
-type ClientPreUncooperativeCloseRequestData struct {
-	Channel  string `json:"channel"`
-	GasPrice uint64 `json:"gasPrice"`
-}
-
 // ClientPreUncooperativeCloseRequest requests the closing of the channel
 // and starts the challenge period.
 func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
-	var jdata ClientPreUncooperativeCloseRequestData
-	if err := parseJobData(job, &jdata); err != nil {
+	ch, err := w.relatedChannel(job, data.JobClientPreUncooperativeCloseRequest)
+	if err != nil {
 		return err
 	}
 
-	ch, err := w.channel(jdata.Channel)
+	jdata, err := w.publishData(job)
 	if err != nil {
 		return err
 	}
@@ -730,12 +753,11 @@ func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	if err := w.clientPreUncooperativeCloseRequestCheckChannel(
-		ch); err != nil {
+	if err := w.clientValidateChannelForClose(ch); err != nil {
 		return err
 	}
 
-	return w.clientPreUncooperativeCloseRequestSaveTx(job, ch, acc,
+	return w.doClientPreUncooperativeCloseRequestAndSaveTx(job, ch, acc,
 		offer, jdata.GasPrice)
 }
 
@@ -777,15 +799,53 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
+	return w.clientRetrieveAndSaveOfferingFromSOMC(job, ethLog.BlockNumber,
+		logOfferingCreated.agentAddr, logOfferingCreated.offeringHash)
+}
+
+// ClientAfterOfferingPopUp updates offering in db or retrieves from somc
+// if new.
+func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
+	ethLog, err := w.ethLog(job)
+	if err != nil {
+		return err
+	}
+
+	logOfferingPopUp, err := extractLogOfferingPopUp(ethLog)
+	if err != nil {
+		return err
+	}
+
+	offering := data.Offering{}
+	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	err = w.db.FindOneTo(&offering, "hash", hash)
+	if err == sql.ErrNoRows {
+		// New offering. Get from somc.
+		return w.clientRetrieveAndSaveOfferingFromSOMC(job,
+			ethLog.BlockNumber, logOfferingPopUp.agentAddr,
+			logOfferingPopUp.offeringHash)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Existing offering, just update offering status.
+	offering.BlockNumberUpdated = ethLog.BlockNumber
+
+	return w.db.Update(&offering)
+}
+
+func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
+	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
 	offeringsData, err := w.somc.FindOfferings([]string{
-		data.FromBytes(logOfferingCreated.offeringHash.Bytes())})
+		data.FromBytes(hash.Bytes())})
 	if err != nil {
 		return fmt.Errorf("failed to find offering: %v", err)
 	}
 
 	offering, err := w.fillOfferingFromSOMCReply(
-		job.RelatedID, data.FromBytes(logOfferingCreated.agentAddr.Bytes()),
-		ethLog.BlockNumber, offeringsData)
+		job.RelatedID, data.FromBytes(agentAddr.Bytes()),
+		block, offeringsData)
 	if err != nil {
 		return fmt.Errorf("failed to fill offering: %v", err)
 	}
@@ -847,6 +907,7 @@ func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber 
 		ServiceName:        product.Name,
 		Country:            msg.Country,
 		Supply:             msg.ServiceSupply,
+		CurrentSupply:      msg.ServiceSupply,
 		UnitName:           msg.UnitName,
 		UnitType:           msg.UnitType,
 		BillingType:        msg.BillingType,
@@ -861,4 +922,10 @@ func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber 
 		FreeUnits:          msg.FreeUnits,
 		AdditionalParams:   msg.ServiceSpecificParameters,
 	}, nil
+}
+
+// ClientAfterOfferingDelete sets offer status to `remove`;
+func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
+	return w.updateRelatedOffering(
+		job, data.JobClientAfterOfferingDelete, data.OfferRemove)
 }

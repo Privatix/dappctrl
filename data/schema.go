@@ -2,6 +2,8 @@ package data
 
 import (
 	"time"
+
+	"github.com/privatix/dappctrl/util/log"
 )
 
 //go:generate reform
@@ -118,6 +120,7 @@ type Offering struct {
 	Description        *string `json:"description" reform:"description"`
 	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
 	Supply             uint16  `json:"supply" reform:"supply" validate:"required"`
+	CurrentSupply      uint16  `json:"currentSupply" reform:"current_supply"`
 	UnitName           string  `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
 	UnitType           string  `json:"unitType" reform:"unit_type" validate:"required"`
 	BillingType        string  `json:"billingType" reform:"billing_type" validate:"required"`
@@ -235,8 +238,9 @@ type Endpoint struct {
 // EndpointUI contains only certain fields of endpoints table.
 //reform:endpoints
 type EndpointUI struct {
-	ID               string `json:"id" reform:"id,pk"`
-	AdditionalParams []byte `json:"additionalParams" reform:"additional_params"`
+	ID                     string  `json:"id" reform:"id,pk"`
+	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
+	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 }
 
 // Job creators.
@@ -290,7 +294,9 @@ const (
 	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"
 	JobClientAfterEndpointMsgSOMCGet        = "clientAfterEndpointMsgSOMCGet"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
+	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientPreOfferingMsgSOMCGet          = "clientPreOfferingMsgSOMCGet"
+	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
@@ -306,12 +312,17 @@ const (
 	JobAgentPreOfferingMsgBCPublish         = "agentPreOfferingMsgBCPublish"
 	JobAgentAfterOfferingMsgBCPublish       = "agentAfterOfferingMsgBCPublish"
 	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
+	JobAgentPreOfferingDelete               = "agentPreOfferingDelete"
+	JobAgentPreOfferingPopUp                = "agentPreOfferingPopUp"
+	JobAgentAfterOfferingDelete             = "agentAfterOfferingDelete"
 	JobPreAccountAddBalanceApprove          = "preAccountAddBalanceApprove"
 	JobPreAccountAddBalance                 = "preAccountAddBalance"
 	JobAfterAccountAddBalance               = "afterAccountAddBalance"
 	JobPreAccountReturnBalance              = "preAccountReturnBalance"
 	JobAfterAccountReturnBalance            = "afterAccountReturnBalance"
-	JobAccountAddCheckBalance               = "addCheckBalance"
+	JobAccountUpdateBalances                = "accountUpdateBalances"
+	JobDecrementCurrentSupply               = "decrementCurrentSupply"
+	JobIncrementCurrentSupply               = "incrementCurrentSupply"
 )
 
 // JobBalanceData is a data required for transfer jobs.
@@ -372,4 +383,14 @@ type EthLog struct {
 	Topics      LogTopics `reform:"topics"`
 	Failures    uint64    `reform:"failures"`
 	Ignore      bool      `reform:"ignore"`
+}
+
+// LogEvent is a log event.
+//reform:log_events
+type LogEvent struct {
+	Time    time.Time `reform:"time"`
+	Level   log.Level `reform:"level"`
+	Message string    `reform:"message"`
+	Context []byte    `reform:"context"`
+	Stack   *string   `reform:"stack"`
 }

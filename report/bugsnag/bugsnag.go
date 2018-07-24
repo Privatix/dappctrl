@@ -2,7 +2,7 @@ package bugsnag
 
 import (
 	"database/sql"
-	"path/filepath"
+	"fmt"
 	"strconv"
 
 	"github.com/bugsnag/bugsnag-go"
@@ -16,28 +16,11 @@ import (
 )
 
 const (
-	account       = "Account"
-	ethAddress    = "EthAddr"
-	currentAPIKey = "c021f92e9c199c79d870adf34365e372"
-	currentStage  = alphaStage
-	mainRepo      = "github.com/privatix/dappctrl"
-
-	alpha = "alpha"
-	beta  = "beta"
-	rc    = "rc"
-	rtm   = "rtm"
-)
-
-// Stages of application.
-const (
-	alphaStage = iota
-	betaStage
-	rcStage
-	rtmStage
-)
-
-const (
-	key = "error.sendremote"
+	account             = "Account"
+	ethAddress          = "EthAddr"
+	defaultReleaseStage = "alpha"
+	currentAPIKey       = "c021f92e9c199c79d870adf34365e372"
+	key                 = "error.sendremote"
 )
 
 var (
@@ -47,16 +30,6 @@ var (
 	enable bool
 
 	notifier *bugsnag.Notifier
-
-	// TODO(maxim) The list needs to be configured dynamically, before the application starts
-	// This slice is needed so that the full path is written to the log
-	pkgSlice = []string{"main", "agent/billing", "client/bill", "data",
-		"eth", "eth/contract", "eth/truffle", "eth/util",
-		"execsrv", "job", "messages", "messages/ept",
-		"messages/ept/config", "messages/offer",
-		"monitor", "pay", "proc", "worker", "sesssrv", "somc",
-		"svc/dappvpn", "svc/mon", "svc/pusher", "uisrv", "util",
-		"util/srv"}
 )
 
 // Log interface for report.
@@ -68,7 +41,9 @@ type Log interface {
 
 // Config Bugsnag client config.
 type Config struct {
-	AppID string
+	AppID            string
+	ReleaseStage     string
+	ExcludedPackages []string
 }
 
 // Client Bugsnag client object.
@@ -82,7 +57,7 @@ type Client struct {
 
 // NewConfig generates a new default Bugsnag client Config.
 func NewConfig() *Config {
-	return &Config{AppID: defaultAppID}
+	return &Config{AppID: defaultAppID, ReleaseStage: defaultReleaseStage}
 }
 
 // NewClient initializing Bugsnag client.
@@ -91,15 +66,20 @@ func NewConfig() *Config {
 // about the error and panic.
 // Service is activated if exist entry key = "error.sendremote"
 // and value = true in the database settings table.
-func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
+func NewClient(cfg *Config, db *reform.DB, log Log) (*Client, error) {
 	if log == nil {
-		return nil
+		return nil, fmt.Errorf("no log object specified")
 	}
 
-	for k, v := range pkgSlice {
-		// if you do not add an *,
-		// the full path will not be displayed in the dashboard
-		pkgSlice[k] = filepath.Join(mainRepo, v) + "*"
+	excludedPackagesMap := make(map[string]bool)
+
+	for _, pkg := range cfg.ExcludedPackages {
+		excludedPackagesMap[pkg] = true
+	}
+
+	pkgSlice, err := pkgList(excludedPackagesMap)
+	if err != nil {
+		return nil, err
 	}
 
 	bugsnag.Configure(bugsnag.Configuration{
@@ -107,7 +87,7 @@ func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 		Logger:          log,
 		PanicHandler:    func() {}, // we use our panic processor
 		ProjectPackages: pkgSlice,
-		ReleaseStage:    stageToStr(currentStage),
+		ReleaseStage:    cfg.ReleaseStage,
 	})
 
 	cli := new(Client)
@@ -120,7 +100,7 @@ func NewClient(cfg *Config, db *reform.DB, log Log) *Client {
 	cli.enable = e
 	enable = e
 	notifier = cli.notifier
-	return cli
+	return cli, nil
 }
 
 func emptyUUID() string {
@@ -160,24 +140,6 @@ func app(appID string) string {
 		return defaultAppID
 	}
 	return appID
-}
-
-func stageToStr(stage int) string {
-	var result string
-
-	switch stage {
-	case alphaStage:
-		result = alpha
-	case betaStage:
-		result = beta
-	case rcStage:
-		result = rc
-	case rtmStage:
-		result = rtm
-	default:
-		result = rtm
-	}
-	return result
 }
 
 // Notify takes three arguments:

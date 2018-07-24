@@ -184,6 +184,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		Hash:               FromBytes(crypto.Keccak256(fakeMsg)),
 		Product:            product,
 		Supply:             1,
+		CurrentSupply:      1,
 		Status:             MsgUnpublished,
 		UnitType:           UnitSeconds,
 		BillingType:        BillingPostpaid,
@@ -384,6 +385,7 @@ type TestFixture struct {
 	DB             *reform.DB
 	Product        *Product
 	Account        *Account
+	UserAcc        *Account
 	User           *User
 	TemplateOffer  *Template
 	TemplateAccess *Template
@@ -401,7 +403,12 @@ const (
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod := NewTestProduct()
 	acc := NewTestAccount(TestPassword)
-	user := NewTestUser()
+	userAcc := NewTestAccount(TestPassword)
+	user := &User{
+		ID:        util.NewUUID(),
+		EthAddr:   userAcc.EthAddr,
+		PublicKey: userAcc.PublicKey,
+	}
 	tmpl := NewTestTemplate(TemplateOffer)
 	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
 	ch := NewTestChannel(
@@ -412,13 +419,14 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, user, off, ch, endp)
+	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, userAcc, user, off, ch, endp)
 
 	return &TestFixture{
 		T:              t,
 		DB:             db,
 		Product:        prod,
 		Account:        acc,
+		UserAcc:        userAcc,
 		User:           user,
 		TemplateOffer:  tmpl,
 		TemplateAccess: endpTmpl,
@@ -433,7 +441,12 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 	account *truffle.TestAccount) *TestFixture {
 	prod := NewTestProduct()
 	acc := NewEthTestAccount(TestPassword, account)
-	user := NewTestUser()
+	userAcc := NewTestAccount(TestPassword)
+	user := &User{
+		ID:        util.NewUUID(),
+		PublicKey: userAcc.PublicKey,
+		EthAddr:   userAcc.EthAddr,
+	}
 	tmpl := NewTestTemplate(TemplateOffer)
 	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
 	ch := NewTestChannel(
@@ -441,7 +454,7 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 	endpTmpl := NewTestTemplate(TemplateAccess)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
 
-	InsertToTestDB(t, db, prod, acc, user, tmpl, off, ch, endpTmpl, endp)
+	InsertToTestDB(t, db, prod, acc, userAcc, user, tmpl, off, ch, endpTmpl, endp)
 
 	return &TestFixture{
 		T:              t,
@@ -461,5 +474,6 @@ func NewEthTestFixture(t *testing.T, db *reform.DB,
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
 	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,
-		f.User, f.Account, f.Product, f.TemplateAccess, f.TemplateOffer)
+		f.UserAcc, f.User, f.Account, f.Product,
+		f.TemplateAccess, f.TemplateOffer)
 }

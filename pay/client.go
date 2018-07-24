@@ -1,22 +1,21 @@
 package pay
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/util/srv"
 )
 
-func newPayload(db *reform.DB,
-	channel, pscAddr, pass string, amount uint64) (*payload, error) {
+func newPayload(db *reform.DB, channel,
+	pscAddr, pass string, amount uint64) (*paymentPayload, error) {
 	var ch data.Channel
 	if err := db.FindByPrimaryKeyTo(&ch, channel); err != nil {
 		return nil, err
@@ -32,7 +31,7 @@ func newPayload(db *reform.DB,
 		return nil, err
 	}
 
-	pld := &payload{
+	pld := &paymentPayload{
 		AgentAddress:    ch.Agent,
 		OpenBlockNumber: ch.Block,
 		OfferingHash:    offer.Hash,
@@ -74,8 +73,8 @@ func newPayload(db *reform.DB,
 }
 
 func postPayload(db *reform.DB, channel string,
-	pld *payload, tls bool, timeout uint) error {
-	body, err := json.Marshal(pld)
+	pld *paymentPayload, tls bool, timeout uint) error {
+	pldArgs, err := json.Marshal(pld)
 	if err != nil {
 		return err
 	}
@@ -91,22 +90,13 @@ func postPayload(db *reform.DB, channel string,
 	//TODO: add URL validation and TLS support
 	url := *endp.PaymentReceiverAddress
 
-	client := http.Client{
-		Timeout: time.Duration(timeout) * time.Millisecond,
-	}
+	req, err := srv.NewHTTPRequestWithURL(
+		http.MethodPost, url, &srv.Request{Args: pldArgs})
 
-	resp, err := client.Post(url, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	resp, err := srv.Send(req)
 
-	if resp.StatusCode != http.StatusOK {
-		var err serverError
-		if err := json.NewDecoder(resp.Body).Decode(&err); err != nil {
-			return err
-		}
-		return fmt.Errorf("%s (%d)", err.Message, err.Code)
+	if resp.Error != nil {
+		return fmt.Errorf("%s (%d)", resp.Error.Message, resp.Error.Code)
 	}
 
 	return nil

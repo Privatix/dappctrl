@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
@@ -27,9 +29,10 @@ var (
 
 // Config for blockchain monitor.
 type Config struct {
-	CollectPause  int64 // pause between collect iterations
-	SchedulePause int64 // pause between schedule iterations
-	Timeout       int64 // maximum time of one operation
+	CollectPause    int64 // pause between collect iterations
+	SchedulePause   int64 // pause between schedule iterations
+	CollectTimeout  uint64
+	ScheduleTimeout uint64
 }
 
 // Queue is a job processing queue.
@@ -41,6 +44,8 @@ type Queue interface {
 // and creates jobs accordingly.
 type Monitor struct {
 	cfg     *Config
+	ctx     context.Context
+	ethCfg  *eth.Config
 	logger  *util.Logger
 	db      *reform.DB
 	queue   Queue
@@ -49,30 +54,33 @@ type Monitor struct {
 	pscABI  abi.ABI
 	ptcAddr common.Address
 
-	mu                 sync.Mutex
+	mtx                sync.Mutex
 	lastProcessedBlock uint64
 
-	cancel  context.CancelFunc
-	errors  chan error
-	tickers []*time.Ticker
+	cancel               context.CancelFunc
+	errors               chan error
+	tickers              []*time.Ticker
+	callTimeout          uint64
+	closeIdleConnections func()
 }
 
 // NewConfig creates a default blockchain monitor configuration.
 func NewConfig() *Config {
 	return &Config{
-		CollectPause:  6,
-		SchedulePause: 6,
-		Timeout:       5,
+		CollectPause:    6,
+		SchedulePause:   6,
+		CollectTimeout:  60,
+		ScheduleTimeout: 5,
 	}
 }
 
 // NewMonitor creates a Monitor with specified settings.
 func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
-	queue Queue, eth Client, pscAddr common.Address,
-	ptcAddr common.Address) (*Monitor, error) {
-	if logger == nil || db == nil || queue == nil || eth == nil ||
-		cfg.CollectPause <= 0 || cfg.SchedulePause <= 0 ||
-		cfg.Timeout <= 0 || !common.IsHexAddress(pscAddr.String()) {
+	queue Queue, ethConfig *eth.Config, pscAddr common.Address,
+	ptcAddr common.Address, ethClient Client,
+	closeIdleConnections func()) (*Monitor, error) {
+	if logger == nil || db == nil || queue == nil ||
+		!common.IsHexAddress(pscAddr.String()) {
 		return nil, ErrInput
 	}
 
@@ -82,25 +90,43 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 	}
 
 	return &Monitor{
-		cfg:     cfg,
-		logger:  logger,
-		db:      db,
-		queue:   queue,
-		eth:     eth,
-		pscAddr: pscAddr,
-		pscABI:  pscABI,
-		ptcAddr: ptcAddr,
-		mu:      sync.Mutex{},
-		errors:  make(chan error),
+		cfg:                  cfg,
+		ethCfg:               ethConfig,
+		eth:                  ethClient,
+		logger:               logger,
+		db:                   db,
+		queue:                queue,
+		pscAddr:              pscAddr,
+		pscABI:               pscABI,
+		ptcAddr:              ptcAddr,
+		mtx:                  sync.Mutex{},
+		errors:               make(chan error),
+		callTimeout:          ethConfig.Timeout,
+		closeIdleConnections: closeIdleConnections,
 	}, nil
 }
 
-func (m *Monitor) start(ctx context.Context, timeout int64, collectTicker,
-	scheduleTicker <-chan time.Time, errCh chan error) {
-	go m.repeatEvery(ctx, collectTicker, errCh, collectName,
-		func() { m.collect(ctx, timeout, errCh) })
-	go m.repeatEvery(ctx, scheduleTicker, errCh, scheduleName,
-		func() { m.schedule(ctx, timeout, errCh) })
+func (m *Monitor) start(ctx context.Context, collectTicker,
+	scheduleTicker <-chan time.Time) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case err := <-m.errors:
+				m.closeConnect(err)
+				m.logger.Error("blockchain monitor"+
+					": %s", err)
+				continue
+			}
+
+		}
+	}()
+
+	go m.repeatEvery(ctx, collectTicker, collectName,
+		func() { m.collect(ctx) })
+	go m.repeatEvery(ctx, scheduleTicker, scheduleName,
+		func() { m.schedule(ctx) })
 
 	m.logger.Debug("monitor started")
 }
@@ -116,8 +142,7 @@ func (m *Monitor) Start() error {
 	scheduleTicker := time.NewTicker(
 		time.Duration(m.cfg.SchedulePause) * time.Second)
 	m.tickers = append(m.tickers, collectTicker, scheduleTicker)
-	m.start(ctx, m.cfg.Timeout, collectTicker.C,
-		scheduleTicker.C, m.errors)
+	m.start(ctx, collectTicker.C, scheduleTicker.C)
 	return nil
 }
 
@@ -135,15 +160,21 @@ func (m *Monitor) Stop() error {
 // repeatEvery calls a given action function repeatedly every time a read on
 // ticker channel succeeds. To stop the loop, cancel the context.
 func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
-	errCh chan error, name string, action func()) {
+	name string, action func()) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker:
 			action()
-		case err := <-errCh:
-			m.logger.Error("blockchain monitor: %s", err)
 		}
+	}
+}
+
+func (m *Monitor) closeConnect(err error) {
+	if strings.Contains(err.Error(),
+		fmt.Sprintf("Post %s", m.ethCfg.GethURL)) &&
+		m.closeIdleConnections != nil {
+		m.closeIdleConnections()
 	}
 }

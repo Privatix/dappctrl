@@ -2,7 +2,8 @@
 
 package billing
 
-import (
+// TODO: uncomment when timebased billing will be implemented
+/*import (
 	"testing"
 
 	"gopkg.in/reform.v1"
@@ -123,4 +124,4 @@ func TestSecondsBasedChannelsUnitLimitExceeded(t *testing.T) {
 
 	fixture.checkAcc(t, 0, verifySecondsBasedChannels,
 		data.JobAgentPreServiceTerminate)
-}
+}*/

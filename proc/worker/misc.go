@@ -20,6 +20,15 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+func (w *Worker) accountKey(ethAddr string) (*ecdsa.PrivateKey, error) {
+	acc, err := w.account(ethAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.key(acc.PrivateKey)
+}
+
 func (w *Worker) key(key string) (*ecdsa.PrivateKey, error) {
 	return w.decryptKeyFunc(key, w.pwdGetter.Get())
 }
@@ -103,7 +112,12 @@ func (w *Worker) addJobWithDelay(
 	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
 }
 
-func (w *Worker) updateAccountBalances(acc *data.Account) error {
+func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
+	acc, err := w.relatedAccount(job, jobType)
+	if err != nil {
+		return err
+	}
+
 	agentAddr, err := data.ToAddress(acc.EthAddr)
 	if err != nil {
 		return err
@@ -130,6 +144,10 @@ func (w *Worker) updateAccountBalances(acc *data.Account) error {
 
 	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
 
+	now := time.Now()
+
+	acc.LastBalanceCheck = &now
+
 	return w.db.Update(acc)
 }
 
@@ -141,13 +159,10 @@ func parseJobData(job *data.Job, data interface{}) error {
 }
 
 func (w *Worker) ethBalance(addr common.Address) (*big.Int, error) {
-	// TODO: move timeout to conf
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	amount, err := w.ethBack.EthBalanceAt(ctx, addr)
+	amount, err := w.ethBack.EthBalanceAt(context.Background(), addr)
 	if err != nil {
-		return nil, fmt.Errorf("could not get eth balance: %v", err)
+		return nil, fmt.Errorf("could not get eth"+
+			" balance: %v", err)
 	}
 
 	return amount, nil
@@ -199,4 +214,15 @@ func (w *Worker) KeyFromChannelData(channel string) (string, error) {
 		return "", err
 	}
 	return data.FromBytes(key), nil
+}
+
+func (w *Worker) updateRelatedOffering(job *data.Job, jobType, status string) error {
+	offering, err := w.relatedOffering(job, jobType)
+	if err != nil {
+		return err
+	}
+
+	offering.OfferStatus = status
+
+	return w.db.Update(offering)
 }

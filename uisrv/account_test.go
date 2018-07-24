@@ -238,3 +238,25 @@ func TestGetAccounts(t *testing.T) {
 	res = getResources(t, accountsPath, map[string]string{"id": acc1.ID})
 	testGetResources(t, res, 1)
 }
+
+func TestAccountCreateUpdateBalancesJob(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	acc := data.NewTestAccount(testPassword)
+	insertItems(t, acc)
+
+	res := sendPayload(
+		t, http.MethodPost, accountsPath+acc.ID+"/balances-update", nil)
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("response: %d, wanted: %d", res.StatusCode, http.StatusOK)
+	}
+
+	err := testServer.db.SelectOneTo(&data.Job{},
+		`WHERE related_id=$1 AND related_type=$2 AND type=$3`,
+		acc.ID, data.JobAccount, data.JobAccountUpdateBalances)
+	if err != nil {
+		t.Fatal("update balances job expected, got error: ", err)
+	}
+}

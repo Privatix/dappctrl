@@ -1,15 +1,12 @@
 package worker
 
 import (
-	"database/sql"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
 )
 
 // PreAccountAddBalanceApprove approve balance if amount exists.
@@ -122,12 +119,17 @@ func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
 func (w *Worker) AfterAccountAddBalance(job *data.Job) error {
-	acc, err := w.relatedAccount(job, data.JobAfterAccountAddBalance)
-	if err != nil {
-		return err
-	}
+	return w.updateAccountBalances(job, data.JobAfterAccountAddBalance)
+}
 
-	return w.updateAccountBalances(acc)
+// AfterAccountReturnBalance updates psc and ptc balance of an account.
+func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
+	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
+}
+
+// AccountUpdateBalances updates ptc, psc and eth balance values.
+func (w *Worker) AccountUpdateBalances(job *data.Job) error {
+	return w.updateAccountBalances(job, data.JobAccountUpdateBalances)
 }
 
 // PreAccountReturnBalance returns from psc to ptc.
@@ -183,38 +185,6 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		job.RelatedID, data.FromBytes(w.pscAddr.Bytes()), acc.EthAddr)
 }
 
-// AfterAccountReturnBalance updates psc and ptc balance of an account.
-func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
-	acc, err := w.relatedAccount(job, data.JobAfterAccountReturnBalance)
-	if err != nil {
-		return err
-	}
-
-	return w.updateAccountBalances(acc)
-}
-
-// AccountAddCheckBalance updates ptc, psc and eth balance values.
-func (w *Worker) AccountAddCheckBalance(job *data.Job) error {
-	acc, err := w.relatedAccount(job, data.JobAccountAddCheckBalance)
-	if err != nil {
-		// Account was deleted, stop updating.
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		return err
-	}
-
-	if err = w.updateAccountBalances(acc); err != nil {
-		return err
-	}
-
-	// Repeat job after a minute.
-	newJob := *job
-	newJob.ID = util.NewUUID()
-	newJob.NotBefore = time.Now().Add(time.Minute)
-	return w.queue.Add(&newJob)
-}
-
 func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 	channel, err := w.relatedChannel(job, jobType)
 	if err != nil {
@@ -265,4 +235,28 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 	}
 
 	return nil
+}
+
+// DecrementCurrentSupply finds offering and decrements its current supply.
+func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobDecrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply--
+
+	return data.Save(w.db.Querier, offering)
+}
+
+// IncrementCurrentSupply finds offering and increments its current supply.
+func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobIncrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply++
+
+	return data.Save(w.db.Querier, offering)
 }

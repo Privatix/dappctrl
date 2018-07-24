@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -272,7 +273,14 @@ func TestGetClientOffering(t *testing.T) {
 	off5.IsLocal = false
 	off5.Country = "SU"
 
-	insertItems(t, off1, off2, off3, off4, off5)
+	off6 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
+	off6.OfferStatus = data.OfferRegister
+	off6.Status = data.MsgChPublished
+	off6.IsLocal = false
+	off6.Country = "US"
+	off6.CurrentSupply = 0
+
+	insertItems(t, off1, off2, off3, off4, off5, off6)
 
 	// all non-local offerings
 	testGetClientOfferings(t, "", "", "", 2)
@@ -327,37 +335,55 @@ func sendClientOfferingAction(t *testing.T, id, action,
 }
 
 func TestPutOfferingStatus(t *testing.T) {
-	fixture := data.NewTestFixture(t, testServer.db)
-	defer fixture.Close()
+	fxt := data.NewTestFixture(t, testServer.db)
+	defer fxt.Close()
 	defer setTestUserCredentials(t)()
 
-	testGasPrice := uint64(1)
-
-	res := sendOfferingAction(t, fixture.Offering.ID, "wrong-action", testGasPrice)
+	res := sendOfferingAction(t, fxt.Offering.ID, "wrong-action",
+		uint64(1))
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("wanted: %d, got: %v",
 			http.StatusBadRequest, res.Status)
 	}
 
-	res = sendOfferingAction(t, fixture.Offering.ID, PublishOffering,
+	testPutOfferingStatusCreatesJob(t, fxt, PublishOffering,
+		data.JobAgentPreOfferingMsgBCPublish)
+
+	testPutOfferingStatusCreatesJob(t, fxt, PopupOffering,
+		data.JobAgentPreOfferingPopUp)
+
+	testPutOfferingStatusCreatesJob(t, fxt, DeactivateOffering,
+		data.JobAgentPreOfferingDelete)
+}
+
+func testPutOfferingStatusCreatesJob(t *testing.T, fxt *data.TestFixture,
+	action string, jobType string) {
+	testGasPrice := uint64(1)
+
+	res := sendOfferingAction(t, fxt.Offering.ID, action,
 		testGasPrice)
 	if res.StatusCode != http.StatusOK {
-		t.Fatal("got: ", res.Status)
+		t.Fatalf("got: %v (%s)", res.Status, util.Caller())
 	}
-	jobPublish := &data.Job{}
-	data.FindInTestDB(t, testServer.db, jobPublish, "related_id",
-		fixture.Offering.ID)
+	job := &data.Job{}
+	data.FindInTestDB(t, testServer.db, job, "related_id",
+		fxt.Offering.ID)
+	defer data.DeleteFromTestDB(t, testServer.db, job)
+
+	if job.Type != jobType {
+		t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
+			jobType, job.Type, util.Caller())
+	}
+
 	expectedData, _ := json.Marshal(&data.JobPublishData{
 		GasPrice: testGasPrice,
 	})
-	if !bytes.Equal(jobPublish.Data, expectedData) {
-		t.Fatal("job does not contain expected data")
+	if !bytes.Equal(job.Data, expectedData) {
+		t.Fatalf("job does not contain expected data (%s)", util.Caller())
 	}
-	data.DeleteFromTestDB(t, testServer.db, jobPublish)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestPutClientOfferingStatus(t *testing.T) {
+func TestPutClientOfferingStatus(t *testing.T) {
 	defer cleanDB(t)
 
 	setTestUserCredentials(t)
@@ -386,11 +412,6 @@ func TestPutOfferingStatus(t *testing.T) {
 	checkStatusCode(t, res, http.StatusOK,
 		"failed to put offering status: %d")
 
-	job := new(data.Job)
-
-	data.FindInTestDB(t, testServer.db, job, "related_id",
-		offer.ID)
-
 	expectedData, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: testGasPrice, Offering: offer.ID,
 		Account: testAgent.ID})
@@ -398,12 +419,26 @@ func TestPutOfferingStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(job.Data, expectedData) {
-		t.Fatal("job does not contain expected data")
+	jobs, err := testServer.db.SelectAllFrom(data.JobTable, "")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	data.DeleteFromTestDB(t, testServer.db, job)
-}*/
+	var found bool
+
+	for _, j := range jobs {
+		if job, ok := j.(*data.Job); ok {
+			if bytes.Equal(job.Data, expectedData) {
+				found = true
+				data.DeleteFromTestDB(t, testServer.db, job)
+			}
+		}
+	}
+
+	if !found {
+		t.Fatal("job does not contain expected data")
+	}
+}
 
 func TestGetOfferingStatus(t *testing.T) {
 	defer cleanDB(t)

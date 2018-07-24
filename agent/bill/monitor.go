@@ -20,6 +20,18 @@ var (
 	ErrInput = errors.New("one or more input parameters is wrong")
 )
 
+// Config is a billing monitor configuration for agent.
+type Config struct {
+	Interval uint64 // In milliseconds.
+}
+
+// NewConfig creates a new billing monitor configuration for agent.
+func NewConfig() *Config {
+	return &Config{
+		Interval: 5000,
+	}
+}
+
 // Monitor provides logic for checking channels for various cases,
 // in which service(s) must be suspended/terminated/or unsuspended (continued).
 // All conditions are checked on the DB level,
@@ -30,18 +42,23 @@ type Monitor struct {
 	pr     *proc.Processor
 
 	// Interval between next round checks.
-	interval time.Duration
+	interval uint64
 }
 
 // NewMonitor creates new instance of billing monitor.
 // 'interval' specifies how often channels checks must be performed.
-func NewMonitor(interval time.Duration, db *reform.DB,
-	logger *util.Logger, pc *proc.Processor) (*Monitor, error) {
-	if db == nil || logger == nil || pc == nil || interval <= 0 {
+func NewMonitor(interval uint64, db *reform.DB,
+	logger *util.Logger, pr *proc.Processor) (*Monitor, error) {
+	if db == nil || logger == nil || pr == nil || interval == 0 {
 		return nil, ErrInput
 	}
 
-	return &Monitor{db, logger, pc, interval}, nil
+	return &Monitor{
+		db:       db,
+		logger:   logger,
+		pr:       pr,
+		interval: interval,
+	}, nil
 }
 
 // Run begins monitoring of channels.
@@ -54,10 +71,11 @@ func (m *Monitor) Run() error {
 			return err
 		}
 
-		time.Sleep(m.interval)
+		time.Sleep(time.Duration(m.interval) * time.Millisecond)
 	}
 }
 
+/* TODO: uncomment when timebased billing will be implemented
 // VerifySecondsBasedChannels checks all active seconds based channels
 // for not using more units, than provided by quota and not exceeding
 // over total deposit.
@@ -88,6 +106,7 @@ func (m *Monitor) VerifySecondsBasedChannels() error {
 
 	return m.processEachChannel(query, m.terminateService)
 }
+*/
 
 // VerifyUnitsBasedChannels checks all active units based channels
 // for not using more units, than provided by quota
@@ -138,8 +157,9 @@ func (m *Monitor) VerifyBillingLags() error {
                GROUP BY channels.id, offer.billing_interval,
                      offer.setup_price, offer.unit_price,
                      offer.max_billing_unit_lag
-              HAVING COALESCE(SUM(ses.units_used), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price ) / offer.unit_price > offer.max_billing_unit_lag
-                  OR COALESCE(SUM(ses.seconds_consumed), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price > offer.max_billing_unit_lag;`
+              HAVING COALESCE(SUM(ses.units_used), 0) / 
+	      offer.billing_interval - (channels.receipt_balance - offer.setup_price ) / 
+	      offer.unit_price > offer.max_billing_unit_lag;`
 
 	return m.processEachChannel(query, m.suspendService)
 }
@@ -167,8 +187,9 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
                GROUP BY channels.id, offer.billing_interval,
                      offer.setup_price, offer.unit_price,
                      offer.max_billing_unit_lag
-              HAVING COALESCE(SUM(ses.units_used), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price <= offer.max_billing_unit_lag
-                  OR COALESCE(SUM(ses.seconds_consumed), 0) / offer.billing_interval - (channels.receipt_balance - offer.setup_price) / offer.unit_price <= offer.max_billing_unit_lag;`
+              HAVING COALESCE(SUM(ses.units_used), 0) / 
+	      offer.billing_interval - (channels.receipt_balance - offer.setup_price) / 
+	      offer.unit_price <= offer.max_billing_unit_lag;`
 
 	return m.processEachChannel(query, m.unsuspendService)
 }
@@ -216,7 +237,8 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
 
 func (m *Monitor) processRound() error {
 	return m.callChecksAndReportErrorIfAny(
-		m.VerifySecondsBasedChannels,
+		// TODO: uncomment when timebased billing will be implemented
+		/*m.VerifySecondsBasedChannels,*/
 		m.VerifyUnitsBasedChannels,
 		m.VerifyChannelsForInactivity,
 		m.VerifySuspendedChannelsAndTryToUnsuspend,

@@ -1,19 +1,21 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"log"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/messages/ept"
 	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
@@ -27,19 +29,13 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-type ethConfig struct {
-	Contract struct {
-		PTCAddrHex string
-		PSCAddrHex string
-	}
-	GethURL string
-}
-
 type config struct {
+	AgentMonitor  *abill.Config
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
-	Eth           *ethConfig
+	EptMsg        *ept.Config
+	Eth           *eth.Config
 	DB            *data.DBConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
@@ -57,8 +53,11 @@ type config struct {
 
 func newConfig() *config {
 	return &config{
+		AgentMonitor:  abill.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		EptMsg:        ept.NewConfig(),
+		Eth:           eth.NewConfig(),
 		DB:            data.NewDBConfig(),
 		AgentServer:   uisrv.NewConfig(),
 		Job:           job.NewConfig(),
@@ -90,6 +89,7 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func main() {
+	fatal := make(chan string)
 	defer bugsnag.PanicHunter()
 
 	conf := newConfig()
@@ -107,100 +107,116 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	reporter := bugsnag.NewClient(conf.Report, db, logger)
-	logger.Reporter(reporter)
-
-	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
+	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
 	if err != nil {
-		logger.Fatal("failed to dial geth node: %v", err)
+		logger.Fatal("failed to create Bugsnag client: %s", err)
 	}
 
+	logger.Reporter(reporter)
+
+	ethClient, err := eth.NewClient(context.Background(), conf.Eth)
+	if err != nil {
+		logger.Fatal("failed to dial Ethereum node: %v", err)
+	}
+	defer ethClient.Close()
+
 	ptcAddr := common.HexToAddress(conf.Eth.Contract.PTCAddrHex)
-	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
+	ptc, err := contract.NewPrivatixTokenContract(
+		ptcAddr, ethClient.EthClient())
 	if err != nil {
 		logger.Fatal("failed to create ptc instance: %v", err)
 	}
 
 	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
-
-	psc, err := contract.NewPrivatixServiceContract(pscAddr, gethConn)
+	psc, err := contract.NewPrivatixServiceContract(
+		pscAddr, ethClient.EthClient())
 	if err != nil {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
 
 	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
-		logger.Fatal("failed to start pay server: %s",
+		fatal <- fmt.Sprintf("failed to start pay server: %s",
 			paySrv.ListenAndServe())
 	}()
+	defer paySrv.Close()
 
 	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
 	go func() {
-		logger.Fatal("failed to start session server: %s",
+		fatal <- fmt.Sprintf("failed to start session server: %s",
 			sess.ListenAndServe())
 	}()
+	defer sess.Close()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		panic(err)
+		logger.Fatal("failed to connect to SOMC: %s", err)
 	}
+	defer somcConn.Close()
 
 	pwdStorage := getPWDStorage(conf)
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, gethConn), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		conf.VPNClient)
+		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
+			conf.Eth.Timeout),
+		conf.Gas, pscAddr, conf.PayAddress, pwdStorage,
+		data.ToPrivateKey, conf.VPNClient, conf.EptMsg)
 	if err != nil {
-		panic(err)
+		logger.Fatal("failed to create worker: %s", err)
 	}
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
+	defer queue.Close()
 	worker.SetQueue(queue)
 
 	pr := proc.NewProcessor(conf.Proc, queue)
 	worker.SetProcessor(pr)
 
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
+	defer runner.StopAll()
 	worker.SetRunner(runner)
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
-
 	go func() {
-		logger.Fatal("failed to run agent server: %s\n",
+		fatal <- fmt.Sprintf("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
 	}()
 
-	amon, err := abill.NewMonitor(
-		time.Duration(5)*time.Second, db, logger, pr)
+	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
+		db, logger, pr)
 	if err != nil {
 		logger.Fatal("failed to create agent billing monitor: %s", err)
 	}
 	go func() {
-		logger.Fatal("failed to run agent billing monitor: %s",
+		fatal <- fmt.Sprintf("failed to run agent billing monitor: %s",
 			amon.Run())
 	}()
 
 	cmon := cbill.NewMonitor(conf.ClientMonitor,
 		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 	go func() {
-		logger.Fatal("failed to run client billing monitor: %s",
+		fatal <- fmt.Sprintf("failed to run client billing monitor: %s",
 			cmon.Run())
 	}()
+	defer cmon.Close()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		gethConn, pscAddr, ptcAddr)
-
+		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
+		ethClient.CloseIdleConnections)
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)
 	}
-
 	if err := mon.Start(); err != nil {
 		logger.Fatal("failed to start"+
 			" the blockchain monitor: %v", err)
 	}
 	defer mon.Stop()
 
-	logger.Fatal("failed to process job queue: %s", queue.Process())
+	go func() {
+		fatal <- fmt.Sprintf("failed to process job queue: %s",
+			queue.Process())
+	}()
+
+	logger.Fatal(<-fatal)
 }

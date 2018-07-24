@@ -29,9 +29,9 @@ const (
 	nameProto   = "proto"
 
 	defaultCipher       = "AES-256-CBC"
-	defaultConnectRetry = "2 120"
+	defaultConnectRetry = "5"
 	defaultPing         = "10"
-	defaultPingRestart  = "10"
+	defaultPingRestart  = "25"
 	defaultProto        = "tcp-client"
 	defaultAccessFile   = "access.ovpn"
 

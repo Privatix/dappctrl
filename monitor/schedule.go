@@ -30,22 +30,11 @@ var offeringRelatedEventsMap = map[common.Hash]bool{
 }
 
 // schedule creates a job for each unprocessed log event in the database.
-func (m *Monitor) schedule(ctx context.Context, timeout int64,
-	errCh chan error) {
+func (m *Monitor) schedule(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx,
-		time.Duration(timeout)*time.Second)
+		time.Duration(m.cfg.ScheduleTimeout)*time.Second)
 	defer cancel()
 
-	// TODO: Move this logic into a database view? The query is just supposed to
-	// append two boolean columns calculated based on topics: whether the
-	// event is for agent, and the same for client.
-	//
-	// eth_logs.topics is a json array with '0x0..0deadbeef' encoding
-	// of addresses, whereas accounts.eth_addr is a base64 encoding of
-	// raw bytes of addresses.
-	// The encode-decode-substr is there to convert from one to another.
-	// coalesce() converts null into false for the case when topics->>n
-	// does not exist.
 	topicInAccExpr := `COALESCE(TRANSLATE(encode(decode(substr(topics->>%d, 27), 'hex'), 'base64'), '+/', '-_') IN (SELECT eth_addr FROM accounts WHERE in_use), FALSE)`
 	columns := m.db.QualifiedColumns(data.EthLogTable)
 	columns = append(columns, fmt.Sprintf(topicInAccExpr, topic1)) // topic[1] (agent) in active accounts
@@ -63,7 +52,7 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 	maxRetries, err := data.GetUint64Setting(m.db, maxRetryKey)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 	}
 
 	if maxRetries != 0 {
@@ -75,14 +64,13 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
-		m.errWrapper(ctx,
-			fmt.Errorf("failed to select log entries: %v", err))
+		m.errors <- fmt.Errorf("failed to select log entries: %v", err)
 		return
 	}
 
 	agent, err := data.IsAgent(m.db.Querier)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
@@ -91,9 +79,8 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 		var forAgent, forClient bool
 		pointers := append(el.Pointers(), &forAgent, &forClient)
 		if err := rows.Scan(pointers...); err != nil {
-			m.errWrapper(ctx,
-				fmt.Errorf("failed to scan the selected log"+
-					" entries: %v", err))
+			m.errors <- fmt.Errorf("failed to scan the selected"+
+				" log entries: %v", err)
 			return
 		}
 
@@ -116,6 +103,11 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 						agentSchedulers[eventHash]
 				}
 			} else {
+				procedure, ok := clientUpdateCurrentSupplySchedulers[eventHash]
+				if ok {
+					procedure.f(m, &el, procedure.t)
+				}
+
 				if isOfferingRelated(&el) {
 					scheduler, found =
 						offeringSchedulers[eventHash]
@@ -137,9 +129,8 @@ func (m *Monitor) schedule(ctx context.Context, timeout int64,
 	}
 
 	if err := rows.Err(); err != nil {
-		m.errWrapper(ctx,
-			fmt.Errorf("failed to fetch the next selected log"+
-				" entry: %v", err))
+		m.errors <- fmt.Errorf("failed to fetch the next selected log"+
+			" entry: %v", err)
 	}
 }
 
@@ -228,8 +219,8 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 		data.JobClientAfterOfferingMsgBCPublish,
 	},
 	common.HexToHash(eth.EthOfferingPoppedUp): {
-		(*Monitor).scheduleClientOfferingCreated,
-		data.JobClientAfterOfferingMsgBCPublish,
+		(*Monitor).scheduleClientOfferingPopUp,
+		data.JobClientAfterOfferingPopUp,
 	},
 	/* // FIXME: uncomment if monitor should actually delete the offering
 	common.HexToHash(eth.EthCOfferingDeleted): {
@@ -237,6 +228,21 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 		"",
 	},
 	*/
+}
+
+var clientUpdateCurrentSupplySchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthDigestChannelCreated): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobDecrementCurrentSupply,
+	},
+	common.HexToHash(eth.EthCooperativeChannelClose): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobIncrementCurrentSupply,
+	},
+	common.HexToHash(eth.EthUncooperativeChannelClose): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobIncrementCurrentSupply,
+	},
 }
 
 func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
@@ -312,14 +318,14 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	clientAddress := common.BytesToAddress(el.Topics[topic2].Bytes())
 	offeringHash := el.Topics[topic3]
 
-	openBlockNumber, haveOpenBlockNumber, err := m.getOpenBlockNumber(el)
+	openBlockNumber, hasOpenBlockNumber, err := m.getOpenBlockNumber(el)
 	if err != nil {
 		m.logger.Warn(err.Error())
 		return ""
 	}
 
-	m.logger.Info("bn = %d, hbn = %t", openBlockNumber,
-		haveOpenBlockNumber)
+	m.logger.Debug("block number = %d, has block number = %t",
+		openBlockNumber, hasOpenBlockNumber)
 
 	var query string
 	args := []interface{}{
@@ -328,7 +334,7 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		data.FromBytes(clientAddress.Bytes()),
 	}
 	var row *sql.Row
-	if haveOpenBlockNumber {
+	if hasOpenBlockNumber {
 		query = `SELECT c.id
                            FROM channels AS c, offerings AS o
                           WHERE c.offering = o.id
@@ -355,6 +361,51 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	}
 
 	return id
+}
+
+func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
+	var relID string
+
+	// First try to take related id from offering in db.
+	topic := el.Topics[3]
+	offeringHash := data.FromBytes(topic.Bytes())
+	var offering data.Offering
+	err := m.db.FindOneTo(&offering, "hash", offeringHash)
+	if err == sql.ErrNoRows {
+		// Try to take related id from after offering publish job.
+		jobsLog := &data.EthLog{}
+		topicHex := fmt.Sprintf("0x%064v", topic.Hex())
+		err = m.db.SelectOneTo(jobsLog, `WHERE topics->>2 = $1
+						AND type IN ($2, $3)`, topicHex,
+			data.JobAgentAfterOfferingMsgBCPublish,
+			data.JobClientAfterOfferingMsgBCPublish)
+		if err != nil && err != sql.ErrNoRows {
+			m.logger.Error("failed to find %T: %v", jobsLog, err)
+		}
+		if jobsLog.JobID != nil {
+			relID = *jobsLog.JobID
+		}
+	} else {
+		relID = offering.ID
+	}
+
+	if relID == "" {
+		m.logger.Info("not found offering by hash (%s) to schedule "+
+			"current supply update, skipping", topic.Hex())
+		return
+	}
+
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   relID,
+		RelatedType: data.JobOffering,
+		Data:        []byte("{}"),
+		CreatedBy:   data.JobBCMonitor,
+	}
+
+	if err := m.queue.Add(j); err != nil {
+		m.logger.Error("failed to add %s: %v", jobType, err)
+	}
 }
 
 func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
@@ -506,6 +557,17 @@ func (m *Monitor) scheduleClientOfferingCreated(el *data.EthLog,
 	m.scheduleCommon(el, j)
 }
 
+func (m *Monitor) scheduleClientOfferingPopUp(el *data.EthLog,
+	jobType string) {
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   util.NewUUID(),
+		RelatedType: data.JobOffering,
+	}
+
+	m.scheduleCommon(el, j)
+}
+
 /* // FIXME: uncomment if monitor should actually delete the offering
 
 // scheduleClient_OfferingDeleted is a special case, which does not
@@ -523,7 +585,6 @@ func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string
 
 func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor
-	j.CreatedAt = time.Now()
 	if j.Data == nil {
 		j.Data = []byte("{}")
 	}

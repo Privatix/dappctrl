@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -134,68 +135,70 @@ func testChannelStatusChanged(t *testing.T,
 }
 
 func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
-	// set ch_status="in_challenge"
-	// "preServiceTerminate"
-
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
+	fxt := env.newTestFixture(t, data.JobAgentAfterUncooperativeCloseRequest,
 		data.JobChannel)
 	defer env.close()
-	defer fixture.close()
+	defer fxt.close()
 
-	testChangesStatusAndCreatesJob := func(t *testing.T, balance uint64, jobType string) {
-		fixture.Channel.ReceiptBalance = balance
-		env.updateInTestDB(t, fixture.Channel)
+	testChangesStatus := func(svcStatus string, balance uint64) {
+		fxt.Channel.ServiceStatus = svcStatus
+		fxt.Channel.ReceiptBalance = balance
+		env.updateInTestDB(t, fxt.Channel)
 		runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
-			fixture.job)
-		testChannelStatusChanged(t, fixture.job, env,
+			fxt.job)
+		testChannelStatusChanged(t, fxt.job, env,
 			data.ChannelInChallenge)
-		env.deleteJob(t,
-			jobType,
-			data.JobChannel,
-			fixture.Channel.ID)
 	}
 
-	t.Run("ChannelInChallengeAndServiceTerminateCreated", func(t *testing.T) {
-		testChangesStatusAndCreatesJob(t, 0, data.JobAgentPreServiceTerminate)
-	})
-
-	runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
-		fixture.job)
-	testChannelStatusChanged(t, fixture.job, env,
-		data.ChannelInChallenge)
+	// Channel in challenge and s ervice terminate created
+	testChangesStatus(data.ServiceSuspended, 0)
 	env.deleteJob(t,
 		data.JobAgentPreServiceTerminate,
 		data.JobChannel,
-		fixture.Channel.ID)
+		fxt.Channel.ID)
+
+	// Terminated channel in challenge and service terminate not created
+	testChangesStatus(data.ServiceTerminated, 0)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobAgentPreServiceTerminate)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeCloseRequest,
-		*fixture.job)
+		*fxt.job)
 }
 
 func TestAgentAfterUncooperativeClose(t *testing.T) {
-	// 1. set ch_status="closed_uncoop"
-	// 2. "preServiceTerminate"
-
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
+	fxt := env.newTestFixture(t, data.JobAgentAfterUncooperativeClose,
 		data.JobChannel)
 	defer env.close()
-	defer fixture.close()
+	defer fxt.close()
 
-	runJob(t, env.worker.AgentAfterUncooperativeClose, fixture.job)
+	testStatusChangedAndUpdateBalancesJobCreated := func(svcStatus string) {
+		fxt.Channel.ServiceStatus = svcStatus
+		env.updateInTestDB(t, fxt.Channel)
 
-	testChannelStatusChanged(t,
-		fixture.job,
-		env,
-		data.ChannelClosedUncoop)
+		runJob(t, env.worker.AgentAfterUncooperativeClose, fxt.job)
 
+		// Test update balances job was created.
+		env.deleteJob(t, data.JobAccountUpdateBalances,
+			data.JobAccount, fxt.Account.ID)
+
+		testChannelStatusChanged(t,
+			fxt.job,
+			env,
+			data.ChannelClosedUncoop)
+	}
+
+	testStatusChangedAndUpdateBalancesJobCreated(data.ServicePending)
 	// Test agent pre service terminate job created.
 	env.deleteJob(t, data.JobAgentPreServiceTerminate, data.JobChannel,
-		fixture.Channel.ID)
+		fxt.Channel.ID)
+
+	testStatusChangedAndUpdateBalancesJobCreated(data.ServiceTerminated)
+	env.jobNotCreated(t, fxt.Channel.ID, data.JobAgentPreServiceTerminate)
 
 	testCommonErrors(t, env.worker.AgentAfterUncooperativeClose,
-		*fixture.job)
+		*fxt.job)
 }
 
 func TestAgentAfterCooperativeClose(t *testing.T) {
@@ -209,6 +212,10 @@ func TestAgentAfterCooperativeClose(t *testing.T) {
 	runJob(t, env.worker.AgentAfterCooperativeClose, fixture.job)
 
 	testChannelStatusChanged(t, fixture.job, env, data.ChannelClosedCoop)
+
+	// Test update balances job was created.
+	env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
 
 	testCommonErrors(t, env.worker.AgentAfterCooperativeClose, *fixture.job)
 }
@@ -358,8 +365,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
 }
 
-// TODO(maxim) fix text. It ceased to function after BV-430
-/*func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
+func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
 	// 1. publish to SOMC
 	// 2. set msg_status="msg_channel_published"
 	// 3. "afterEndpointMsgSOMCPublish"
@@ -377,9 +383,13 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
 	runJob(t, workerF, fixture.job)
 
+	channelKey, _ := data.ChannelKey(fixture.Channel.Client,
+		fixture.Channel.Agent, fixture.Channel.Block,
+		fixture.Offering.Hash)
+
 	select {
 	case ret := <-somcEndpointChan:
-		if ret.Channel != fixture.Endpoint.Channel {
+		if ret.Channel != data.FromBytes(channelKey) {
 			t.Fatal("wrong channel used to publish endpoint")
 		}
 		msgBytes := data.TestToBytes(t, fixture.Endpoint.RawMsg)
@@ -401,7 +411,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 		data.JobChannel, endpoint.Channel)
 
 	testCommonErrors(t, workerF, *fixture.job)
-}*/
+}
 
 func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
 	fixture *workerTestFixture, env *workerTest,
@@ -566,5 +576,94 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		t.Fatal("timeout")
 	}
 
+	// Test update balances job created.
+	env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
+
 	testCommonErrors(t, workerF, *fixture.job)
+}
+
+func TestAgentAfterOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentAfterOfferingDelete, data.JobOffering)
+	defer fxt.Close()
+
+	runJob(t, env.worker.AgentAfterOfferingDelete, fxt.job)
+
+	updated := data.Offering{}
+	env.findTo(t, &updated, fxt.job.RelatedID)
+
+	if updated.OfferStatus != data.OfferRemove {
+		t.Fatalf("expected offering status: %s, got: %s",
+			data.OfferRemove, updated.OfferStatus)
+	}
+
+	testCommonErrors(t, env.worker.AgentAfterOfferingDelete, *fxt.job)
+}
+
+func TestAgentPreOfferingDelete(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentPreOfferingDelete, data.JobOffering)
+	defer fxt.close()
+
+	setJobData(t, env.db, fxt.job, &data.JobPublishData{
+		GasPrice: 123,
+	})
+
+	// Offering must be registered.
+	if env.worker.AgentPreOfferingDelete(fxt.job) == nil {
+		t.Fatal("offering status not validated")
+	}
+
+	fxt.Offering.OfferStatus = data.OfferRegister
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.AgentPreOfferingDelete, fxt.job)
+
+	// Test transaction was recorded.
+	env.deleteEthTx(t, fxt.job.ID)
+
+	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	env.ethBack.testCalled(t, "RemoveServiceOffering", agentAddr,
+		env.worker.gasConf.PSC.RemoveServiceOffering,
+		[common.HashLength]byte(offeringHash))
+}
+
+func TestAgentPreOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentPreOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	setJobData(t, env.db, fxt.job, &data.JobPublishData{
+		GasPrice: 123,
+	})
+
+	// Offering must be registered.
+	if env.worker.AgentPreOfferingPopUp(fxt.job) == nil {
+		t.Fatal("offering status not validated")
+	}
+
+	fxt.Offering.OfferStatus = data.OfferRegister
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
+
+	// Test transaction was recorded.
+	env.deleteEthTx(t, fxt.job.ID)
+
+	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
+		env.worker.gasConf.PSC.PopupServiceOffering,
+		[common.HashLength]byte(offeringHash))
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -60,6 +61,7 @@ var (
 	conf    *config
 	channel string
 	logger  *util.Logger
+	fatal   = make(chan string)
 )
 
 func main() {
@@ -230,9 +232,13 @@ func handleMonitor(confFile string) {
 
 			if err := pusher.PushConfig(ctx, c); err != nil {
 				logger.Error("failed to send OpenVpn"+
-					" server configuration: %s\n", err)
+					" server configuration to"+
+					" dappctrl: %s\n", err)
 				return
 			}
+
+			logger.Info("OpenVpn server configuration has been" +
+				" successfully sent to dappctrl")
 
 			if err := pusher.OVPNConfigUpdated(dir); err != nil {
 				logger.Error("failed to save %s file in %s"+
@@ -243,17 +249,21 @@ func handleMonitor(confFile string) {
 	}
 
 	if len(channel) != 0 {
-		launchOpenVPN()
+		ovpn := launchOpenVPN()
+		defer ovpn.Kill()
 		time.Sleep(conf.OpenVPN.StartDelay * time.Millisecond)
 	}
 
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, channel)
+	go func() {
+		fatal <- fmt.Sprintf("failed to monitor vpn traffic: %s",
+			monitor.MonitorTraffic())
+	}()
 
-	logger.Fatal("failed to monitor vpn traffic: %s",
-		monitor.MonitorTraffic())
+	logger.Fatal(<-fatal)
 }
 
-func launchOpenVPN() {
+func launchOpenVPN() *os.Process {
 	if len(conf.OpenVPN.Name) == 0 {
 		logger.Fatal("no OpenVPN command provided")
 	}
@@ -281,17 +291,20 @@ func launchOpenVPN() {
 	go func() {
 		scanner := bufio.NewScanner(io.MultiReader(stdout, stderr))
 		for scanner.Scan() {
-			io.WriteString(os.Stderr, scanner.Text()+"\n")
+			io.WriteString(
+				os.Stderr, "openvpn: "+scanner.Text()+"\n")
 		}
 		if err := scanner.Err(); err != nil {
 			msg := "failed to read from openVPN stdout/stderr: %s"
-			logger.Fatal(msg, err)
+			fatal <- fmt.Sprintf(msg, err)
 		}
 		stdout.Close()
 		stderr.Close()
 	}()
 
 	go func() {
-		logger.Fatal("OpenVPN exited: %v", cmd.Wait())
+		fatal <- fmt.Sprintf("OpenVPN exited: %v", cmd.Wait())
 	}()
+
+	return cmd.Process
 }

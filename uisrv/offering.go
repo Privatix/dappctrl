@@ -3,7 +3,6 @@ package uisrv
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc/worker"
@@ -25,7 +24,8 @@ const (
 const (
 	clientGetOfferFilter = `offer_status = 'register'
                                 AND status = 'msg_channel_published'
-                                AND NOT is_local
+				AND NOT is_local
+				AND offerings.current_supply > 0
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
                                    FROM accounts)`
@@ -211,14 +211,23 @@ func (s *Server) handlePutOfferingStatus(
 	if !s.parsePayload(w, r, req) {
 		return
 	}
-	// TODO: popup, deactivate
-	if req.Action != PublishOffering {
+
+	var jobType string
+	if req.Action == PublishOffering {
+		jobType = data.JobAgentPreOfferingMsgBCPublish
+	} else if req.Action == PopupOffering {
+		jobType = data.JobAgentPreOfferingPopUp
+	} else if req.Action == DeactivateOffering {
+		jobType = data.JobAgentPreOfferingDelete
+	} else {
 		s.replyInvalidAction(w)
 		return
 	}
+
 	if !s.findTo(w, &data.Offering{}, id) {
 		return
 	}
+
 	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
 
 	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
@@ -229,7 +238,7 @@ func (s *Server) handlePutOfferingStatus(
 	}
 
 	if err := s.queue.Add(&data.Job{
-		Type:        data.JobAgentPreOfferingMsgBCPublish,
+		Type:        jobType,
 		RelatedType: data.JobOffering,
 		RelatedID:   id,
 		CreatedBy:   data.JobUser,
@@ -279,7 +288,6 @@ func (s *Server) handlePutClientOfferingStatus(
 		Type:        data.JobClientPreChannelCreate,
 		RelatedType: data.JobChannel,
 		RelatedID:   util.NewUUID(),
-		CreatedAt:   time.Now(),
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
 	}); err != nil {

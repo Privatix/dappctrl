@@ -75,9 +75,9 @@ func TestPreAccountAddBalance(t *testing.T) {
 	defer env.deleteFromTestDB(t, ethLog)
 
 	tx := &data.EthTx{
-		ID: util.NewUUID(),
-		JobID: &approveJob.ID,
-		Hash: txHash,
+		ID:          util.NewUUID(),
+		JobID:       &approveJob.ID,
+		Hash:        txHash,
 		RelatedType: data.JobAccount,
 		RelatedID:   fixture.Account.ID,
 		Status:      data.TxSent,
@@ -151,14 +151,6 @@ func TestAfterAccountReturnBalance(t *testing.T) {
 	testAccountBalancesUpdate(t, env,
 		env.worker.AfterAccountReturnBalance,
 		data.JobAfterAccountReturnBalance)
-}
-
-func TestAccountAddCheckBalancee(t *testing.T) {
-	t.Skip("TODO")
-	// env := newWorkerTest(t)
-	// defer env.close()
-	// testAccountBalancesUpdate(t, env, env.worker.AccountAddCheckBalance,
-	// 	data.JobAccountAddCheckBalance)
 }
 
 func testAccountBalancesUpdate(t *testing.T, env *workerTest,
@@ -255,4 +247,45 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 	}
 
 	testCommonErrors(t, job, *fixture.job)
+}
+
+func TestDecrementCurrentSupply(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	fxt := env.newTestFixture(t,
+		data.JobDecrementCurrentSupply, data.JobOffering)
+	defer fxt.close()
+
+	runJob(t, env.worker.DecrementCurrentSupply, fxt.job)
+
+	offering := &data.Offering{}
+	env.findTo(t, offering, fxt.Offering.ID)
+
+	if offering.CurrentSupply+1 != fxt.Offering.CurrentSupply {
+		t.Fatal("offering's current supply was not decremented")
+	}
+
+	testCommonErrors(t, env.worker.DecrementCurrentSupply, *fxt.job)
+}
+
+func TestIncrementCurrentSupply(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	fxt := env.newTestFixture(t,
+		data.JobIncrementCurrentSupply, data.JobOffering)
+	defer fxt.close()
+
+	fxt.Offering.CurrentSupply--
+	env.updateInTestDB(t, fxt.Offering)
+
+	runJob(t, env.worker.IncrementCurrentSupply, fxt.job)
+
+	offering := &data.Offering{}
+	env.findTo(t, offering, fxt.Offering.ID)
+
+	if offering.CurrentSupply-1 != fxt.Offering.CurrentSupply {
+		t.Fatal("offering's current supply was not incremented")
+	}
+
+	testCommonErrors(t, env.worker.IncrementCurrentSupply, *fxt.job)
 }

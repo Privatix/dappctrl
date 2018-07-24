@@ -1,7 +1,10 @@
 package svcrun
 
 import (
+	"bufio"
 	"errors"
+	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -107,7 +110,14 @@ func (r *serviceRunner) Start(channel string) error {
 	}
 
 	cmd := r.newCmd(conf.Name, conf.Args, channel)
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -116,7 +126,7 @@ func (r *serviceRunner) Start(channel string) error {
 
 	r.cmds[key] = cmd
 
-	go r.wait(channel, key, cmd)
+	go r.wait(channel, key, cmd, stderr)
 
 	return nil
 }
@@ -146,7 +156,17 @@ func (r *serviceRunner) getKey(channel string) (*ServiceConfig, string, error) {
 	return &conf, channel, nil
 }
 
-func (r *serviceRunner) wait(channel, key string, cmd *exec.Cmd) {
+func (r *serviceRunner) wait(
+	channel, key string, cmd *exec.Cmd, stderr io.ReadCloser) {
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			io.WriteString(
+				os.Stderr, "dappvpn: "+scanner.Text()+"\n")
+		}
+		stderr.Close()
+	}()
+
 	r.logger.Warn("service adapter for channel %s has exited: %v",
 		channel, cmd.Wait())
 

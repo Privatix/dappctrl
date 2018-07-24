@@ -1,4 +1,7 @@
 {
+    "AgentMonitor": {
+        "Interval": 5000
+    },
     "AgentServer": {
         "Addr": "localhost:3000",
         "TLS": null,
@@ -23,12 +26,24 @@
             "port": "5433"
         }
     },
+	"EptMsg": {
+        "Timeout": 1
+    },
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
+            "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
         },
-        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z"
+        "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
+        "Timeout": 10,
+        "HttpClient": {
+            "DialTimeout": 5,
+            "TLSHandshakeTimeout": 2,
+            "ResponseHeaderTimeout": 10,
+            "RequestTimeout": 10,
+            "IdleConnTimeout": 30,
+            "KeepAliveTimeout": 60
+        }
     },
     "Gas": {
         "PTC": {
@@ -100,11 +115,6 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "addCheckBalance": {
-                "Duplicated": true,
-                "TryLimit": 0,
-                "TryPeriod": 60000
-            },
             "clientPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
@@ -114,6 +124,31 @@
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
+            },
+            "agentPreServiceUnsuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "agentPreServiceSuspend": {
+                "Duplicated": true,
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "accountUpdateBalances": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "decrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "incrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             }
         }
     },
@@ -151,7 +186,16 @@
     },
     "SOMC": {
         "ReconnPeriod": 5000,
-        "URL": "ws://89.38.96.53:8080"
+        "URL": "ws://190.2.137.9:8080"
     },
-    "StaticPassword": ""
+    "StaticPassword": "",
+    "Report": {
+        "ReleaseStage": "develop",
+        "ExcludedPackages": [
+            "github.com/privatix/dappctrl/tool/dappinst",
+            "github.com/privatix/dappctrl/svc/dappvpn",
+            "github.com/privatix/dappctrl/svc/dappvpn/mon",
+            "github.com/privatix/dappctrl/svc/dappvpn/pusher"
+        ]
+    }
 }

@@ -182,6 +182,8 @@ CREATE TABLE offerings (
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
     supply int NOT NULL, -- maximum identical offerings for concurrent use through different state channels
+    current_supply int NOT NULL, -- number of available offerings for concurrent use through different state channels
+    CONSTRAINT valid_current_supply CHECK(offerings.current_supply >= 0 AND offerings.current_supply <= offerings.supply),
     unit_name varchar(10) NOT NULL, -- like megabytes, minutes, etc
     unit_type unit_type NOT NULL, -- type of unit. Time or material.
     billing_type bill_type NOT NULL, -- prepaid/postpaid
@@ -329,6 +331,24 @@ CREATE TABLE eth_logs (
     topics jsonb, -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
     failures int NOT NULL DEFAULT 0, -- how many times we failed to schedule a job
     ignore boolean NOT NULL DEFAULT FALSE
+);
+
+-- Log event severity.
+CREATE TYPE log_level AS ENUM (
+    'debug',
+    'info',
+    'warning',
+    'error',
+    'fatal'
+);
+
+-- Log events.
+CREATE TABLE log_events (
+    time timestamp with time zone NOT NULL,
+    level log_level NOT NULL,
+    message text NOT NULL,
+    context jsonb NOT NULL,
+    stack text
 );
 
 END TRANSACTION;

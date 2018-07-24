@@ -101,16 +101,18 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	var jobType string
+	var jobToCreate string
 
 	if channel.ReceiptBalance > 0 {
-		jobType = data.JobAgentPreCooperativeClose
-	} else {
-		jobType = data.JobAgentPreServiceTerminate
+		jobToCreate = data.JobAgentPreCooperativeClose
+	} else if channel.ServiceStatus != data.ServiceTerminated {
+		jobToCreate = data.JobAgentPreServiceTerminate
 	}
 
-	if err = w.addJob(jobType, data.JobChannel, channel.ID); err != nil {
-		return fmt.Errorf("could not add %s job: %v", jobType, err)
+	if jobToCreate != "" {
+		if err = w.addJob(jobToCreate, data.JobChannel, channel.ID); err != nil {
+			return fmt.Errorf("could not add %s job: %v", jobToCreate, err)
+		}
 	}
 
 	channel.ChannelStatus = data.ChannelInChallenge
@@ -129,9 +131,11 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	if err = w.addJob(data.JobAgentPreServiceTerminate, data.JobChannel,
-		channel.ID); err != nil {
-		return err
+	if channel.ServiceStatus != data.ServiceTerminated {
+		if err = w.addJob(data.JobAgentPreServiceTerminate,
+			data.JobChannel, channel.ID); err != nil {
+			return err
+		}
 	}
 
 	channel.ChannelStatus = data.ChannelClosedUncoop
@@ -139,12 +143,19 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update channel's status: %v", err)
 	}
 
-	return nil
+	agent, err := w.account(channel.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterCooperativeClose marks channel as closed coop.
 func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentAfterCooperativeClose)
+	channel, err := w.relatedChannel(
+		job, data.JobAgentAfterCooperativeClose)
 	if err != nil {
 		return err
 	}
@@ -154,7 +165,13 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", channel, err)
 	}
 
-	return nil
+	agent, err := w.account(channel.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentPreServiceSuspend marks service as suspended.
@@ -280,8 +297,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	// TODO: move timeout to conf.
-	msg, err := w.ept.EndpointMessage(channel.ID, time.Second)
+	msg, err := w.ept.EndpointMessage(channel.ID)
 	if err != nil {
 		return fmt.Errorf("could not make endpoint message: %v", err)
 	}
@@ -576,5 +592,94 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return fmt.Errorf("could not update %T: %v", offering, err)
 	}
 
-	return nil
+	agent, err := w.account(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+}
+
+// AgentAfterOfferingDelete set offering status to `remove`
+func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
+	return w.updateRelatedOffering(
+		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
+}
+
+// AgentPreOfferingDelete calls psc remove an offering.
+func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
+	if err != nil {
+		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCRemoveServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+}
+
+// AgentPreOfferingPopUp pop ups an offering.
+func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
+	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingPopUp)
+	if err != nil {
+		return err
+	}
+
+	if offering.OfferStatus != data.OfferRegister {
+		return fmt.Errorf("offering is not registered")
+	}
+
+	jobDate, err := w.publishData(job)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
+	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
+		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
 }

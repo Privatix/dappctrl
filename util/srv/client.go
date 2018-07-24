@@ -19,13 +19,18 @@ func GetURL(conf *Config, path string) string {
 // NewHTTPRequest creates a new HTTP request from a given server request.
 func NewHTTPRequest(conf *Config, method,
 	path string, req *Request) (*http.Request, error) {
+	return NewHTTPRequestWithURL(method, GetURL(conf, path), req)
+}
+
+// NewHTTPRequestWithURL creates a new HTTP request for a given url.
+func NewHTTPRequestWithURL(method, url string, req *Request) (*http.Request, error) {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
 	return http.NewRequest(
-		method, GetURL(conf, path), bytes.NewReader(data))
+		method, url, bytes.NewReader(data))
 }
 
 // Send sends an HTTP request and returns a server response.

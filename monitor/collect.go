@@ -18,7 +18,8 @@ import (
 
 const (
 	minConfirmationsKey = "eth.min.confirmations"
-	freshOfferingsKey   = "eth.event.freshofferings"
+	freshBlocksKey      = "eth.event.freshblocks"
+	blockLimitKey       = "eth.event.blocklimit"
 	txMinedStatus       = "mined"
 )
 
@@ -39,17 +40,17 @@ func hexesToHashes(hexes ...string) []common.Hash {
 }
 
 var clientRelatedEvents = hexesToHashes(
-	eth.EthDigestChannelCreated,
 	eth.EthDigestChannelToppedUp,
 	eth.EthChannelCloseRequested,
 	eth.EthOfferingEndpoint,
-	eth.EthCooperativeChannelClose,
-	eth.EthUncooperativeChannelClose,
 	eth.EthTokenApproval,
 	eth.EthTokenTransfer,
 )
 
 var offeringRelatedEvents = hexesToHashes(
+	eth.EthDigestChannelCreated,
+	eth.EthCooperativeChannelClose,
+	eth.EthUncooperativeChannelClose,
 	eth.EthOfferingCreated,
 	eth.EthOfferingDeleted,
 	eth.EthOfferingPoppedUp,
@@ -57,21 +58,20 @@ var offeringRelatedEvents = hexesToHashes(
 
 // collect requests new logs and puts them into the database.
 // timeout variable in seconds.
-func (m *Monitor) collect(ctx context.Context, timeout int64,
-	errCh chan error) {
+func (m *Monitor) collect(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx,
-		time.Duration(timeout)*time.Second)
+		time.Duration(m.cfg.CollectTimeout)*time.Second)
 	defer cancel()
 
-	firstBlock, freshBlock, lastBlock, err := m.getRangeOfInterest(ctx)
+	firstBlock, lastBlock, err := m.getRangeOfInterest(ctx)
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
 	addresses, err := m.getAddressesInUse()
 	if err != nil {
-		m.errWrapper(ctx, err)
+		m.errors <- err
 		return
 	}
 
@@ -100,7 +100,6 @@ func (m *Monitor) collect(ctx context.Context, timeout int64,
 	clientQ.Topics = [][]common.Hash{clientRelatedEvents, nil, addresses}
 
 	offeringQ := agentQ
-	offeringQ.FromBlock = new(big.Int).SetUint64(freshBlock)
 	offeringQ.Topics = [][]common.Hash{offeringRelatedEvents}
 
 	queries := []*ethereum.FilterQuery{&agentQ, &clientQ, &offeringQ}
@@ -132,7 +131,7 @@ func (m *Monitor) collect(ctx context.Context, timeout int64,
 		return nil
 	})
 	if err != nil {
-		m.errWrapper(ctx, fmt.Errorf("log collecting failed: %v", err))
+		m.errors <- fmt.Errorf("log collecting failed: %v", err)
 		return
 	}
 
@@ -143,7 +142,7 @@ func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) error {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
 		TxHash:      data.FromBytes(e.TxHash.Bytes()),
-		TxStatus:    txMinedStatus, // FIXME: is this field needed at all?
+		TxStatus:    txMinedStatus,
 		BlockNumber: e.BlockNumber,
 		Addr:        data.FromBytes(e.Address.Bytes()),
 		Data:        data.FromBytes(e.Data),
@@ -191,38 +190,45 @@ func (m *Monitor) getAddressesInUse() ([]common.Hash, error) {
 // that need to be scanned for new logs. It respects
 // the min confirmations setting.
 func (m *Monitor) getRangeOfInterest(
-	ctx context.Context) (first, fresh, last uint64, err error) {
+	ctx context.Context) (first, last uint64, err error) {
 	unreliableNum, err := data.GetUint64Setting(m.db, minConfirmationsKey)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
-	freshNum, err := data.GetUint64Setting(m.db, freshOfferingsKey)
+	freshNum, err := data.GetUint64Setting(m.db, freshBlocksKey)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	first, err = m.getLastProcessedBlockNumber()
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	first = first + 1
 
 	latestBlock, err := m.getLatestBlockNumber(ctx)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, err
 	}
 
 	last = safeSub(latestBlock, unreliableNum)
 
-	if freshNum == 0 {
-		fresh = first
-	} else {
-		fresh = max(first, safeSub(last, freshNum))
+	if freshNum != 0 {
+		first = max(first, safeSub(last, freshNum))
 	}
 
-	return first, fresh, last, nil
+	limitNum, err := data.GetUint64Setting(m.db, blockLimitKey)
+	if err != nil {
+		return first, last, nil
+	}
+
+	if limitNum != 0 && last > first && (last-first) > limitNum {
+		last = first + limitNum
+	}
+
+	return first, last, nil
 }
 
 func safeSub(a, b uint64) uint64 {
@@ -249,9 +255,9 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 			return 0, fmt.Errorf("failed to scan rows: %v", err)
 		}
 		if v != nil {
-			m.mu.Lock()
+			m.mtx.Lock()
 			m.lastProcessedBlock = *v
-			m.mu.Unlock()
+			m.mtx.Unlock()
 		}
 	}
 
@@ -259,13 +265,14 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 }
 
 func (m *Monitor) setLastProcessedBlockNumber(number uint64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 	m.lastProcessedBlock = number
 }
 
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) (uint64, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) // FIXME: hardcoded timeout
+	ctx, cancel := context.WithTimeout(ctx,
+		time.Duration(m.callTimeout)*time.Second)
 	defer cancel()
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)

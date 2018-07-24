@@ -36,7 +36,15 @@
             "PSCAddrHex": "0x7442875d5336894cf2db5f4e295f80538b7b14c0"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
-        "Timeout": 10
+        "Timeout": 10,
+        "HttpClient": {
+            "DialTimeout": 5,
+            "TLSHandshakeTimeout": 2,
+            "ResponseHeaderTimeout": 10,
+            "RequestTimeout": 10,
+            "IdleConnTimeout": 30,
+            "KeepAliveTimeout": 60
+        }
     },
     "Gas": {
         "PTC": {
@@ -129,6 +137,16 @@
                 "TryPeriod": 20000
             },
             "accountUpdateBalances": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "decrementCurrentSupply": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "incrementCurrentSupply": {
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000

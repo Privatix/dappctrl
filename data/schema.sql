@@ -182,8 +182,8 @@ CREATE TABLE offerings (
     description text, -- description for UI
     country char(2) NOT NULL, -- ISO 3166-1 alpha-2
     supply int NOT NULL, -- maximum identical offerings for concurrent use through different state channels
-    current_supply int NOT NULL -- number of available offerings for concurrent use through different state channels
-        CONSTRAINT valid_current_supply CHECK(offerings.current_supply >= 0 AND offerings.current_supply <= offerings.supply),
+    current_supply int NOT NULL, -- number of available offerings for concurrent use through different state channels
+    CONSTRAINT valid_current_supply CHECK(offerings.current_supply >= 0 AND offerings.current_supply <= offerings.supply),
     unit_name varchar(10) NOT NULL, -- like megabytes, minutes, etc
     unit_type unit_type NOT NULL, -- type of unit. Time or material.
     billing_type bill_type NOT NULL, -- prepaid/postpaid

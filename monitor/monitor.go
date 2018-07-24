@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
@@ -42,6 +44,8 @@ type Queue interface {
 // and creates jobs accordingly.
 type Monitor struct {
 	cfg     *Config
+	ctx     context.Context
+	ethCfg  *eth.Config
 	logger  *util.Logger
 	db      *reform.DB
 	queue   Queue
@@ -53,10 +57,11 @@ type Monitor struct {
 	mtx                sync.Mutex
 	lastProcessedBlock uint64
 
-	cancel      context.CancelFunc
-	errors      chan error
-	tickers     []*time.Ticker
-	callTimeout uint64
+	cancel               context.CancelFunc
+	errors               chan error
+	tickers              []*time.Ticker
+	callTimeout          uint64
+	closeIdleConnections func()
 }
 
 // NewConfig creates a default blockchain monitor configuration.
@@ -71,9 +76,10 @@ func NewConfig() *Config {
 
 // NewMonitor creates a Monitor with specified settings.
 func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
-	queue Queue, eth Client, pscAddr common.Address,
-	ptcAddr common.Address, callTimeout uint64) (*Monitor, error) {
-	if logger == nil || db == nil || queue == nil || eth == nil ||
+	queue Queue, ethConfig *eth.Config, pscAddr common.Address,
+	ptcAddr common.Address, ethClient Client,
+	closeIdleConnections func()) (*Monitor, error) {
+	if logger == nil || db == nil || queue == nil ||
 		!common.IsHexAddress(pscAddr.String()) {
 		return nil, ErrInput
 	}
@@ -84,17 +90,19 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 	}
 
 	return &Monitor{
-		cfg:         cfg,
-		logger:      logger,
-		db:          db,
-		queue:       queue,
-		eth:         eth,
-		pscAddr:     pscAddr,
-		pscABI:      pscABI,
-		ptcAddr:     ptcAddr,
-		mtx:         sync.Mutex{},
-		errors:      make(chan error),
-		callTimeout: callTimeout,
+		cfg:                  cfg,
+		ethCfg:               ethConfig,
+		eth:                  ethClient,
+		logger:               logger,
+		db:                   db,
+		queue:                queue,
+		pscAddr:              pscAddr,
+		pscABI:               pscABI,
+		ptcAddr:              ptcAddr,
+		mtx:                  sync.Mutex{},
+		errors:               make(chan error),
+		callTimeout:          ethConfig.Timeout,
+		closeIdleConnections: closeIdleConnections,
 	}, nil
 }
 
@@ -106,8 +114,10 @@ func (m *Monitor) start(ctx context.Context, collectTicker,
 			case <-ctx.Done():
 				return
 			case err := <-m.errors:
+				m.closeConnect(err)
 				m.logger.Error("blockchain monitor"+
 					": %s", err)
+				continue
 			}
 
 		}
@@ -158,5 +168,13 @@ func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
 		case <-ticker:
 			action()
 		}
+	}
+}
+
+func (m *Monitor) closeConnect(err error) {
+	if strings.Contains(err.Error(),
+		fmt.Sprintf("Post %s", m.ethCfg.GethURL)) &&
+		m.closeIdleConnections != nil {
+		m.closeIdleConnections()
 	}
 }

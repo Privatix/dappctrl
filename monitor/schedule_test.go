@@ -313,6 +313,10 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 		td.offering[1].Hash, // offering
 	}, nil)
 
+	queue.expect(data.JobDecrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobDecrementCurrentSupply
+	})
+
 	queue.expect(data.JobClientAfterChannelCreate, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterChannelCreate
 	})
@@ -323,6 +327,10 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 		td.addr[0],          // client
 		td.offering[1].Hash, // offering
 	}, nil)
+
+	queue.expect(data.JobDecrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobDecrementCurrentSupply
+	})
 
 	// LogChannelToppedUp good
 	pscEvent(t, mon, "", LogChannelTopUp, []interface{}{
@@ -426,6 +434,10 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.offering[1].Hash, // offering
 		}, []interface{}{uint32(td.channel[1].Block), new(big.Int)})
 
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
+
 	queue.expect(data.JobClientAfterCooperativeClose, func(j *data.Job) bool {
 		return j.Type == data.JobClientAfterCooperativeClose
 	})
@@ -438,6 +450,10 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.offering[1].Hash, // offering
 		}, []interface{}{uint32(td.channel[0].Block), new(big.Int)})
 
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
+
 	// LogUnCooperativeChannelClose good
 	pscEvent(t, mon, "", LogUnCooperativeChannelClose,
 		[]interface{}{
@@ -446,11 +462,19 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.offering[1].Hash, // offering
 		}, []interface{}{uint32(td.channel[1].Block), new(big.Int)})
 
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
+
 	queue.expect(data.JobClientAfterUncooperativeClose,
 		func(j *data.Job) bool {
 			return j.Type ==
 				data.JobClientAfterUncooperativeClose
 		})
+
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
 
 	// LogUnCooperativeChannelClose ignored
 	pscEvent(t, mon, "", LogUnCooperativeChannelClose,

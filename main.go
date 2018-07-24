@@ -1,12 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
@@ -114,21 +114,22 @@ func main() {
 
 	logger.Reporter(reporter)
 
-	gethConn, err := ethclient.Dial(conf.Eth.GethURL)
+	ethClient, err := eth.NewClient(context.Background(), conf.Eth)
 	if err != nil {
-		logger.Fatal("failed to dial geth node: %v", err)
+		logger.Fatal("failed to dial Ethereum node: %v", err)
 	}
-	defer gethConn.Close()
+	defer ethClient.Close()
 
 	ptcAddr := common.HexToAddress(conf.Eth.Contract.PTCAddrHex)
-	ptc, err := contract.NewPrivatixTokenContract(ptcAddr, gethConn)
+	ptc, err := contract.NewPrivatixTokenContract(
+		ptcAddr, ethClient.EthClient())
 	if err != nil {
 		logger.Fatal("failed to create ptc instance: %v", err)
 	}
 
 	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
-
-	psc, err := contract.NewPrivatixServiceContract(pscAddr, gethConn)
+	psc, err := contract.NewPrivatixServiceContract(
+		pscAddr, ethClient.EthClient())
 	if err != nil {
 		logger.Fatal("failed to create psc intance: %v", err)
 	}
@@ -156,9 +157,10 @@ func main() {
 	pwdStorage := getPWDStorage(conf)
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, gethConn, conf.Eth.Timeout),
+		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
+			conf.Eth.Timeout),
 		conf.Gas, pscAddr, conf.PayAddress, pwdStorage,
-		data.ToPrivateKey, conf.VPNClient, conf.EptMsg, conf.Eth)
+		data.ToPrivateKey, conf.VPNClient, conf.EptMsg)
 	if err != nil {
 		logger.Fatal("failed to create worker: %s", err)
 	}
@@ -199,7 +201,8 @@ func main() {
 	defer cmon.Close()
 
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		gethConn, pscAddr, ptcAddr, conf.Eth.Timeout)
+		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
+		ethClient.CloseIdleConnections)
 	if err != nil {
 		logger.Fatal("failed to initialize"+
 			" the blockchain monitor: %v", err)

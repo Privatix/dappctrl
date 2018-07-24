@@ -6,13 +6,31 @@ type Config struct {
 		PTCAddrHex string
 		PSCAddrHex string
 	}
-	GethURL string
-	Timeout uint64
+	GethURL    string
+	Timeout    uint64
+	HttpClient *httpClientConf
+}
+
+type httpClientConf struct {
+	DialTimeout           uint64
+	TLSHandshakeTimeout   uint64
+	ResponseHeaderTimeout uint64
+	RequestTimeout        uint64
+	IdleConnTimeout       uint64
+	KeepAliveTimeout      uint64
 }
 
 // NewConfig creates a default Ethereum client configuration.
 func NewConfig() *Config {
 	return &Config{
 		Timeout: 10,
+		HttpClient: &httpClientConf{
+			DialTimeout:           5,
+			TLSHandshakeTimeout:   2,
+			ResponseHeaderTimeout: 8,
+			RequestTimeout:        10,
+			IdleConnTimeout:       30,
+			KeepAliveTimeout:      60,
+		},
 	}
 }

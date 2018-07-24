@@ -70,8 +70,7 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc,
-	clientVPN *config.Config, eptConf *ept.Config,
-	ethConf *eth.Config) (*Worker, error) {
+	clientVPN *config.Config, eptConf *ept.Config) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {

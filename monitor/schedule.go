@@ -103,9 +103,9 @@ func (m *Monitor) schedule(ctx context.Context) {
 						agentSchedulers[eventHash]
 				}
 			} else {
-				procedure, ok := clientNonScheduleProcedurs[eventHash]
+				procedure, ok := clientUpdateCurrentSupplySchedulers[eventHash]
 				if ok {
-					procedure(m, &el)
+					procedure.f(m, &el, procedure.t)
 				}
 
 				if isOfferingRelated(&el) {
@@ -230,10 +230,19 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 	*/
 }
 
-var clientNonScheduleProcedurs = map[common.Hash]func(*Monitor, *data.EthLog){
-	common.HexToHash(eth.EthDigestChannelCreated):      (*Monitor).decrementOfferingCurrentSupply,
-	common.HexToHash(eth.EthCooperativeChannelClose):   (*Monitor).incrementOfferingCurrentSupply,
-	common.HexToHash(eth.EthUncooperativeChannelClose): (*Monitor).incrementOfferingCurrentSupply,
+var clientUpdateCurrentSupplySchedulers = map[common.Hash]funcAndType{
+	common.HexToHash(eth.EthDigestChannelCreated): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobDecrementCurrentSupply,
+	},
+	common.HexToHash(eth.EthCooperativeChannelClose): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobIncrementCurrentSupply,
+	},
+	common.HexToHash(eth.EthUncooperativeChannelClose): {
+		(*Monitor).scheduleUpdateCurrentSupply,
+		data.JobIncrementCurrentSupply,
+	},
 }
 
 func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
@@ -354,32 +363,48 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 	return id
 }
 
-func (m *Monitor) decrementOfferingCurrentSupply(el *data.EthLog) {
-	m.updateCurrentSupply(el, func(cur uint16) uint16 {
-		return cur - 1
-	})
-}
+func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
+	var relID string
 
-func (m *Monitor) incrementOfferingCurrentSupply(el *data.EthLog) {
-	m.updateCurrentSupply(el, func(cur uint16) uint16 {
-		return cur + 1
-	})
-}
-
-func (m *Monitor) updateCurrentSupply(
-	el *data.EthLog, updateCurSupply func(uint16) uint16) {
-	// HACK: using scheduler to update current supply without creating job,
-	// despite its initial desing
-	offeringHash := data.FromBytes(el.Topics[3].Bytes())
+	// First try to take related id from offering in db.
+	topic := el.Topics[3]
+	offeringHash := data.FromBytes(topic.Bytes())
 	var offering data.Offering
-	if err := data.FindOneTo(m.db.Querier, &offering, "hash", offeringHash); err != nil {
-		m.logger.Error(err.Error())
+	err := m.db.FindOneTo(&offering, "hash", offeringHash)
+	if err == sql.ErrNoRows {
+		// Try to take related id from after offering publish job.
+		jobsLog := &data.EthLog{}
+		topicHex := fmt.Sprintf("0x%064v", topic.Hex())
+		err = m.db.SelectOneTo(jobsLog, `WHERE topics->>2 = $1
+						AND type IN ($2, $3)`, topicHex,
+			data.JobAgentAfterOfferingMsgBCPublish,
+			data.JobClientAfterOfferingMsgBCPublish)
+		if err != nil && err != sql.ErrNoRows {
+			m.logger.Error("failed to find %T: %v", jobsLog, err)
+		}
+		if jobsLog.JobID != nil {
+			relID = *jobsLog.JobID
+		}
+	} else {
+		relID = offering.ID
+	}
+
+	if relID == "" {
+		m.logger.Info("not found offering by hash (%s) to schedule "+
+			"current supply update, skipping", topic.Hex())
 		return
 	}
-	offering.CurrentSupply = updateCurSupply(offering.CurrentSupply)
-	if err := data.Save(m.db.Querier, &offering); err != nil {
-		m.logger.Error(err.Error())
-		return
+
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   relID,
+		RelatedType: data.JobOffering,
+		Data:        []byte("{}"),
+		CreatedBy:   data.JobBCMonitor,
+	}
+
+	if err := m.queue.Add(j); err != nil {
+		m.logger.Error("failed to add %s: %v", jobType, err)
 	}
 }
 

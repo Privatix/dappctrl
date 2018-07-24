@@ -74,7 +74,7 @@ Exit code:
 
 """
 
-logging.getLogger().setLevel('DEBUG')  # console debug
+logging.getLogger().setLevel('DEBUG')
 form_console = logging.Formatter(
     '%(message)s',
     datefmt='%m/%d %H:%M:%S')

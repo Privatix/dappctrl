@@ -9,7 +9,7 @@ from urllib import URLopener
 from platform import linux_distribution
 from subprocess import Popen, PIPE, STDOUT
 
-log_path = '/var/log/preparation.log'
+log_path = './preparation.log'
 pack_name = 'dapp-privatix.deb'
 dwnld_url = 'http://art.privatix.net/{}'.format(pack_name)
 dst_path = '{}'.format(pack_name)

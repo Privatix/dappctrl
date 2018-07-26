@@ -180,7 +180,11 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return fmt.Errorf("failed to decode agent pub key")
 	}
 
-	pubkey := crypto.ToECDSAPub(pubkB)
+	pubkey, err := crypto.UnmarshalPubkey(pubkB)
+	if err != nil {
+		return fmt.Errorf("failed to converts bytes to a secp256k1" +
+			" public key")
+	}
 
 	agentEthAddr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
 

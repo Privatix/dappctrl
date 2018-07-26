@@ -210,11 +210,19 @@ const (
 	IsAgentKey = "user.isagent" // specifies user role. "true" - agent. "false" - client.
 )
 
+// Permissions for settings.
+const (
+	AccessDenied = iota
+	ReadOnly
+	ReadWrite
+)
+
 // Setting is a user setting.
 //reform:settings
 type Setting struct {
 	Key         string  `json:"key" reform:"key,pk"`
 	Value       string  `json:"value" reform:"value"`
+	Permissions int     `json:"permissions" reform:"permissions"`
 	Description *string `json:"description" reform:"description"`
 	Name        string  `json:"name" reform:"name"`
 }

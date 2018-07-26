@@ -98,6 +98,7 @@ CREATE TYPE related_type AS ENUM (
 CREATE TABLE settings (
     key text PRIMARY KEY,
     value text NOT NULL,
+    permissions int NOT NULL,
     description text, -- extended description
     name varchar(30) NOT NULL -- display name
       CONSTRAINT unique_setting_name UNIQUE

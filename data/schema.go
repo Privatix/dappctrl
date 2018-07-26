@@ -309,7 +309,6 @@ const (
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
 	JobAgentAfterUncooperativeClose         = "agentAfterUncooperativeClose"
-	JobAgentPreCooperativeClose             = "agentPreCooperativeClose"
 	JobAgentAfterCooperativeClose           = "agentAfterCooperativeClose"
 	JobAgentPreServiceSuspend               = "agentPreServiceSuspend"
 	JobAgentPreServiceUnsuspend             = "agentPreServiceUnsuspend"

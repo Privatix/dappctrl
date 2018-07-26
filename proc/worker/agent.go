@@ -101,17 +101,11 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	var jobToCreate string
-
-	if channel.ReceiptBalance > 0 {
-		jobToCreate = data.JobAgentPreCooperativeClose
-	} else if channel.ServiceStatus != data.ServiceTerminated {
-		jobToCreate = data.JobAgentPreServiceTerminate
-	}
-
-	if jobToCreate != "" {
-		if err = w.addJob(jobToCreate, data.JobChannel, channel.ID); err != nil {
-			return fmt.Errorf("could not add %s job: %v", jobToCreate, err)
+	if channel.ServiceStatus != data.ServiceTerminated {
+		if err = w.addJob(data.JobAgentPreServiceTerminate,
+			data.JobChannel, channel.ID); err != nil {
+			return fmt.Errorf("could not add %s job: %v",
+				data.JobAgentPreServiceTerminate, err)
 		}
 	}
 
@@ -188,7 +182,7 @@ func (w *Worker) AgentPreServiceUnsuspend(job *data.Job) error {
 	return err
 }
 
-// AgentPreServiceTerminate marks service as active.
+// AgentPreServiceTerminate terminates the service.
 func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
 	channel, err := w.agentUpdateServiceStatus(job,
 		data.JobAgentPreServiceTerminate)

@@ -3,7 +3,7 @@ package sesssrv
 import (
 	"net/http"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/srv"
@@ -36,6 +36,7 @@ const (
 	PathUpdate = "/session/update"
 
 	PathProductConfig = "/product/config"
+	PathEndpointMsg   = "/endpoint/message"
 )
 
 // NewServer creates a new session server.
@@ -56,6 +57,7 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 	s.HandleFunc(PathStart, modifyHandler(s.handleStart))
 	s.HandleFunc(PathStop, modifyHandler(s.handleStop))
 	s.HandleFunc(PathUpdate, modifyHandler(s.handleUpdate))
+	s.HandleFunc(PathEndpointMsg, modifyHandler(s.handleEndpointMsg))
 	s.HandleFunc(PathProductConfig, modifyHandler(s.handleProductConfig))
 
 	return s

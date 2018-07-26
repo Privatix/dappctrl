@@ -16,7 +16,6 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
-	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
@@ -48,7 +47,6 @@ type config struct {
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
-	VPNClient     *vpncli.Config
 }
 
 func newConfig() *config {
@@ -67,7 +65,6 @@ func newConfig() *config {
 		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
-		VPNClient:     vpncli.NewConfig(),
 	}
 }
 
@@ -158,9 +155,9 @@ func main() {
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout),
-		conf.Gas, pscAddr, conf.PayAddress, pwdStorage,
-		data.ToPrivateKey, conf.VPNClient, conf.EptMsg)
+			conf.Eth.Timeout), conf.Gas,
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
+		 conf.EptMsg)
 	if err != nil {
 		logger.Fatal("failed to create worker: %s", err)
 	}

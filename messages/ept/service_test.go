@@ -2,18 +2,15 @@ package ept
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/rakyll/statik/fs"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/pay"
-	_ "github.com/privatix/dappctrl/statik"
+	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -32,8 +29,6 @@ var (
 	}
 
 	testDB *reform.DB
-
-	timeout = time.Second * 30
 )
 
 type testFixture struct {
@@ -46,7 +41,7 @@ type testFixture struct {
 
 type eptTestConfig struct {
 	ServerConfig map[string]string
-	ValidHost    []string
+	Host         string
 }
 
 func newFixture(t *testing.T) *testFixture {
@@ -66,18 +61,7 @@ func newFixture(t *testing.T) *testFixture {
 }
 
 func newTemplate(t *testing.T) *data.Template {
-	statikFS, err := fs.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tpl, err := statikFS.Open(eptTempFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tpl.Close()
-
-	schema, err := ioutil.ReadAll(tpl)
+	schema, err := statik.ReadFile(eptTempFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +107,7 @@ func newChan(offer string) *data.Channel {
 func newEptTestConfig() *eptTestConfig {
 	return &eptTestConfig{
 		ServerConfig: make(map[string]string),
-		ValidHost:    []string{"localhost"},
+		Host:         "localhost:80",
 	}
 }
 
@@ -149,12 +133,8 @@ func TestValidEndpointMessage(t *testing.T) {
 	fxt := newFixture(t)
 	defer fxt.clean()
 
-	if conf.EptTest.ValidHost == nil {
-		t.Fatal("test data is incorrect")
-	}
-
 	fxt.product.ServiceEndpointAddress = &strings.Split(
-		conf.EptTest.ValidHost[0], ":")[0]
+		conf.EptTest.Host, ":")[0]
 
 	if err := testDB.Update(fxt.product); err != nil {
 		t.Fatal(err)

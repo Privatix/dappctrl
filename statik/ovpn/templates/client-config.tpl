@@ -4,10 +4,10 @@ dev tun
 
 # Use protocol tcp for communicating
 # with remote host
-proto {{if .Proto}}{{.Proto}}{{else}}tcp-client{{autogen}}{{end}}
+proto {{if .Proto}}{{.Proto}}{{else}}tcp-client{{end}}
 
 # Encrypt packets with AES-256-CBC algorithm
-cipher {{if .Cipher}}{{.Cipher}}{{else}}AES-256-CBC{{autogen}}{{end}}
+cipher {{if .Cipher}}{{.Cipher}}{{else}}AES-256-CBC{{end}}
 
 # Enable TLS and assume client role
 # during TLS handshake.
@@ -48,12 +48,12 @@ persist-key
 # Trigger a SIGUSR1 restart after n seconds
 # pass without reception of a ping
 # or other packet from remote.
-ping-restart {{if .PingRestart}}{{.PingRestart}}{{else}}25{{autogen}}{{end}}
+ping-restart {{if .PingRestart}}{{.PingRestart}}{{else}}25{{end}}
 
 # Ping remote over the TCP/UDP control
 # channel if no packets have been sent for
 # at least n seconds
-ping {{if .Ping}}{{.Ping}}{{else}}10{{autogen}}{{end}}
+ping {{if .Ping}}{{.Ping}}{{else}}10{{end}}
 
 # Authenticate with server using
 # username/password in interactive mode
@@ -63,7 +63,7 @@ pull
 
 # take n as the number of seconds
 # to wait between connection retries
-connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}5{{autogen}}{{end}}
+connect-retry {{if .ConnectRetry}}{{.ConnectRetry}}{{else}}5{{end}}
 
 # Server CA certificate for TLS validation
 
@@ -82,7 +82,7 @@ verb 3
 #log-append /var/log/openvpn/openvpn-tcp.log
 
 # Management interface settings
-management 0.0.0.0 7506
+management 0.0.0.0 {{if .ManagementPort}}{{.ManagementPort}}{{else}}7506{{end}}
 management-hold
 
 # Remap SIGUSR1 to SIGTERM to prevent holding in unconnected state

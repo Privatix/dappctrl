@@ -20,7 +20,6 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
-	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
@@ -29,7 +28,6 @@ import (
 )
 
 type testConfig struct {
-	clientVPN      *config.Config
 	DB             *data.DBConfig
 	JobHandlerTest *struct {
 		SOMCTimeout   time.Duration // In seconds.
@@ -48,15 +46,14 @@ type testConfig struct {
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		clientVPN: config.NewConfig(),
-		DB:        data.NewDBConfig(),
-		EptMsg:    ept.NewConfig(),
-		Eth:       eth.NewConfig(),
-		Job:       job.NewConfig(),
-		Log:       util.NewLogConfig(),
-		SOMC:      somc.NewConfig(),
-		SOMCTest:  somc.NewTestConfig(),
-		pscAddr:   common.HexToAddress("0x1"),
+		DB:       data.NewDBConfig(),
+		EptMsg:   ept.NewConfig(),
+		Eth:      eth.NewConfig(),
+		Job:      job.NewConfig(),
+		Log:      util.NewLogConfig(),
+		SOMC:     somc.NewConfig(),
+		SOMCTest: somc.NewTestConfig(),
+		pscAddr:  common.HexToAddress("0x1"),
 	}
 }
 
@@ -94,7 +91,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack, conf.Gas,
 		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		data.TestToPrivateKey, conf.clientVPN, conf.EptMsg)
+		data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

@@ -13,13 +13,10 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
-	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
-
-type deployConfigFunc func(db *reform.DB, endpoint, dir string) error
 
 // GasConf amounts of gas limit to use for contracts calls.
 type GasConf struct {
@@ -58,8 +55,6 @@ type Worker struct {
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
 	queue          *job.Queue
-	clientVPN      *config.Config
-	deployConfig   deployConfigFunc
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
@@ -69,8 +64,7 @@ type Worker struct {
 func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
-	decryptKeyFunc data.ToPrivateKeyFunc,
-	clientVPN *config.Config, eptConf *ept.Config) (*Worker, error) {
+	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -93,8 +87,6 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
-		deployConfig:   config.DeployConfig,
-		clientVPN:      clientVPN,
 	}, nil
 }
 

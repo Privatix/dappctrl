@@ -1,7 +1,9 @@
 package uisrv
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,28 +14,17 @@ import (
 )
 
 const (
-	channelTerminate = "terminate"
-	channelPause     = "pause"
-	channelResume    = "resume"
+	channelTerminate   = "terminate"
+	channelPause       = "pause"
+	channelResume      = "resume"
+	clientChannelClose = "close"
 )
 
 var (
 	channelsGetParams = []queryParam{
 		{Name: "id", Field: "id"},
-		{Name: "channelStatus", Field: "channel_status"},
+		{Name: "channfelStatus", Field: "channel_status"},
 		{Name: "serviceStatus", Field: "service_status"},
-	}
-
-	agentJobTypes = map[string]string{
-		channelTerminate: data.JobAgentPreServiceTerminate,
-		channelPause:     data.JobAgentPreServiceSuspend,
-		channelResume:    data.JobAgentPreServiceUnsuspend,
-	}
-
-	clientJobTypes = map[string]string{
-		channelTerminate: data.JobClientPreServiceTerminate,
-		channelPause:     data.JobClientPreServiceSuspend,
-		channelResume:    data.JobClientPreServiceUnsuspend,
 	}
 
 	clientStatusFilter   = `WHERE id = $1 AND channels.agent NOT IN (SELECT eth_addr FROM accounts)`
@@ -433,7 +424,7 @@ func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, 
 func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	r *http.Request, id string) {
 	channel := new(data.Channel)
-	if err := s.selectOneTo(w, channel, clientStatusFilter, id); err != nil {
+	if !s.selectOneTo(w, channel, clientStatusFilter, id) {
 		return
 	}
 
@@ -470,63 +461,84 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	var jobType string
-	var ok bool
-
-	if agent {
-		jobType, ok = agentJobTypes[payload.Action]
-
-	} else {
-		jobType, ok = clientJobTypes[payload.Action]
-	}
-
-	if !ok {
-		s.replyInvalidAction(w)
-		return
-	}
-
 	s.logger.Info("action ( %v )  request for channel with id:"+
 		" %v received.", payload.Action, id)
 
 	if agent {
-		// TODO(maxim) need refactor after refactor agent jobs
 		if !s.findTo(w, &data.Channel{}, id) {
 			return
 		}
-
-		if err := s.queue.Add(&data.Job{
-			Type:        jobType,
-			RelatedType: data.JobChannel,
-			RelatedID:   id,
-			CreatedBy:   data.JobUser,
-			Data:        []byte("{}"),
-		}); err != nil {
-			s.logger.Error("failed to add job %s: %v", jobType, err)
-			s.replyUnexpectedErr(w)
-		}
-
 	} else {
-		if err := s.selectOneTo(w, &data.Channel{}, clientStatusFilter,
-			id); err != nil {
+		if !s.selectOneTo(w, &data.Channel{}, clientStatusFilter, id) {
 			return
 		}
-		if _, err := s.clientChannelAction(jobType, id, false); err != nil {
-			s.logger.Error("failed to add job %s: %v", jobType, err)
-			s.replyUnexpectedErr(w)
+	}
+
+	var err error
+
+	switch payload.Action {
+	case channelPause:
+		_, err = s.pr.SuspendChannel(id, data.JobUser, agent)
+	case channelResume:
+		_, err = s.pr.ActivateChannel(id, data.JobUser, agent)
+	case channelTerminate:
+		_, err = s.pr.TerminateChannel(id, data.JobUser, agent)
+	case clientChannelClose:
+		if !agent {
+			s.createPreUncooperativeCloseRequest(w, id)
+			return
 		}
+		s.replyInvalidPayload(w)
+		return
+	default:
+		s.replyInvalidAction(w)
+		return
+	}
+
+	if err != nil {
+		s.logger.Error("failed to add job: %v", err)
+		s.replyUnexpectedErr(w)
 	}
 }
 
-func (s *Server) clientChannelAction(action, channel string, agent bool) (job string, err error) {
-	switch action {
-	case data.JobClientPreServiceSuspend:
-		return s.pr.SuspendChannel(channel, data.JobUser, agent)
-	case data.JobClientPreServiceUnsuspend:
-		return s.pr.ActivateChannel(channel, data.JobUser, agent)
-	case data.JobClientPreServiceTerminate:
-		return s.pr.TerminateChannel(channel, data.JobUser, agent)
+func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id string) {
+	gasPriceSettings := &data.Setting{}
+	if err := data.FindOneTo(s.db.Querier, gasPriceSettings,
+		"key", data.DefaultGasPriceKey); err != nil {
+		s.logger.Error("%v", err)
+		s.replyUnexpectedErr(w)
+		return
 	}
-	return
+
+	val, err := strconv.ParseInt(gasPriceSettings.Value, 10, 64)
+	if err != nil {
+		s.logger.Error("failed to parse default gas price: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	publishData, err := json.Marshal(&data.JobPublishData{
+		GasPrice: uint64(val),
+	})
+	if err != nil {
+		s.logger.Error("failed to marshal job publish data: %v", err)
+		s.replyUnexpectedErr(w)
+		return
+	}
+
+	err = s.queue.Add(&data.Job{
+		Type:        data.JobClientPreUncooperativeCloseRequest,
+		CreatedBy:   data.JobUser,
+		RelatedID:   id,
+		RelatedType: data.JobChannel,
+		Data:        publishData,
+	})
+	if err != nil {
+		s.logger.Error("failed to add job %s: %v",
+			data.JobClientPreUncooperativeCloseRequest, err)
+		s.replyUnexpectedErr(w)
+		return
+	}
 }
 
 func (s *Server) handlePutChannelStatus(w http.ResponseWriter, r *http.Request, id string) {

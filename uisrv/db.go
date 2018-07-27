@@ -13,6 +13,7 @@ func (s *Server) findTo(w http.ResponseWriter, v reform.Record, id string) bool 
 			s.replyNotFound(w)
 			return false
 		}
+		s.logger.Error("failed to find %T: %v", v, err)
 		s.replyUnexpectedErr(w)
 		return false
 	}
@@ -20,15 +21,17 @@ func (s *Server) findTo(w http.ResponseWriter, v reform.Record, id string) bool 
 }
 
 func (s *Server) selectOneTo(w http.ResponseWriter, v reform.Record,
-	filter string, args ...interface{}) (err error) {
-	if err = s.db.SelectOneTo(v, filter, args...); err != nil {
+	filter string, args ...interface{}) bool {
+	if err := s.db.SelectOneTo(v, filter, args...); err != nil {
 		if err == sql.ErrNoRows {
 			s.replyNotFound(w)
-			return
+			return false
 		}
+		s.logger.Error("failed to find %T: %v", v, err)
 		s.replyUnexpectedErr(w)
+		return false
 	}
-	return
+	return true
 }
 
 func (s *Server) insert(w http.ResponseWriter, rec reform.Struct) bool {

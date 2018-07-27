@@ -1,6 +1,5 @@
 [![Go report](https://goreportcard.com/badge/github.com/Privatix/dappctrl)](https://goreportcard.com/badge/github.com/Privatix/dappctrl)
 [![Maintainability](https://api.codeclimate.com/v1/badges/7e76f071e5408b13ea53/maintainability)](https://codeclimate.com/github/Privatix/dappctrl/maintainability)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FPrivatix%2Fdappctrl?ref=badge_shield)
 [![GoDoc](https://godoc.org/github.com/Privatix/dappctrl?status.svg)](https://godoc.org/github.com/Privatix/dappctrl)
 
 [develop](https://github.com/Privatix/dappctrl/tree/develop):

@@ -62,6 +62,17 @@ func (s *Server) insertTx(w http.ResponseWriter, rec reform.Record, tx *reform.T
 	return true
 }
 
+func (s *Server) updateTx(w http.ResponseWriter, rec reform.Record,
+	tx *reform.TX) bool {
+	if err := tx.Update(rec); err != nil {
+		tx.Rollback()
+		s.logger.Error("failed to update: %v", err)
+		s.replyUnexpectedErr(w)
+		return false
+	}
+	return true
+}
+
 func (s *Server) deleteTx(w http.ResponseWriter, rec reform.Record, tx *reform.TX) bool {
 	if err := tx.Delete(rec); err != nil {
 		tx.Rollback()

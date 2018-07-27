@@ -4,76 +4,137 @@ package uisrv
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
 )
 
-func getSettings(t *testing.T) *http.Response {
-	return getResources(t, settingsPath, nil)
-}
+const (
+	keyRO  = "fooRO"
+	keyRW  = "fooRW"
+	keyAD  = "fooAD"
+	keyNew = "fooNew"
 
-func testGetSettings(t *testing.T, exp int) {
-	res := getSettings(t)
-	testGetResources(t, res, exp)
-}
+	testValue    = "bar"
+	changedValue = "changed"
+)
+
+var (
+	settings = []data.Setting{
+		{
+			Key:         keyRO,
+			Value:       testValue,
+			Permissions: data.ReadOnly,
+			Description: nil,
+			Name:        keyRO,
+		},
+		{
+			Key:         keyRW,
+			Value:       testValue,
+			Permissions: data.ReadWrite,
+			Description: nil,
+			Name:        keyRW,
+		},
+		{
+			Key:         keyAD,
+			Value:       testValue,
+			Permissions: data.AccessDenied,
+			Description: nil,
+			Name:        keyAD,
+		},
+		{
+			Key:         keyNew,
+			Value:       testValue,
+			Permissions: data.AccessDenied,
+			Description: nil,
+			Name:        keyNew,
+		},
+	}
+)
 
 func TestGetSettings(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
 	// get empty list.
-	testGetSettings(t, 0)
+	testGetSettings(t, 0, "")
 
-	// get settings.
-	setting := &data.Setting{
-		Key:         "foo",
-		Value:       "bar",
-		Description: nil,
-	}
-	insertItems(t, setting)
-	testGetSettings(t, 1)
-}
+	insertSettings(t)
 
-func putSetting(t *testing.T, pld settingPayload) *http.Response {
-	return sendPayload(t, "PUT", settingsPath, pld)
+	testGetSettings(t, 2, "")
+	testGetSettings(t, 1, keyRO)
+	testGetSettings(t, 1, keyRW)
+	testGetSettings(t, 0, keyAD)
 }
 
 func TestUpdateSettingsSuccess(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
 
-	settings := []data.Setting{
-		{
-			Key:         "name1",
-			Value:       "value1",
-			Description: nil,
-			Name:        "Name 1",
-		},
-		{
-			Key:         "name2",
-			Value:       "value2",
-			Description: nil,
-			Name:        "Name 2",
-		},
-	}
-	insertItems(t, &settings[0], &settings[1])
+	insertSettings(t)
 
-	settings[0].Value = "changed"
-	settings[1].Value = "changed"
+	settings[0].Value = changedValue
+	settings[1].Value = changedValue
+	settings[2].Value = changedValue
+	settings[3].Value = changedValue
+
 	res := putSetting(t, settingPayload(settings))
 	if res.StatusCode != http.StatusOK {
 		t.Fatal("failed to put setting: ", res.StatusCode)
 	}
-	updatedSettings, err := testServer.db.SelectAllFrom(
-		data.SettingTable,
-		"order by key")
+
+	result := allSettings(t)
+
+	validateSetting(result, keyRO, testValue)
+	validateSetting(result, keyRW, changedValue)
+	validateSetting(result, keyAD, testValue)
+
+	// can add a setting with settings.permissions = 0,
+	// but can not read or change it
+	testGetSettings(t, 0, keyNew)
+	validateSetting(result, keyNew, testValue)
+}
+
+func allSettings(t *testing.T) (result map[string]data.Setting) {
+	result = make(map[string]data.Setting)
+
+	all, err := testServer.db.SelectAllFrom(data.SettingTable,
+		"ORDER BY key")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(&settings[0], updatedSettings[0]) ||
-		!reflect.DeepEqual(&settings[1], updatedSettings[1]) {
-		t.Fatal("settings not updated")
+	for _, v := range all {
+		setting, ok := v.(*data.Setting)
+		if !ok {
+			continue
+		}
+		result[setting.Key] = *setting
 	}
+	return result
+}
+
+func insertSettings(t *testing.T) {
+	insertItems(t, &settings[0], &settings[1], &settings[2], &settings[3])
+}
+
+func getSettings(t *testing.T, key string) *http.Response {
+	return getResources(t, settingsPath, map[string]string{"key": key})
+}
+
+func testGetSettings(t *testing.T, exp int, key string) {
+	res := getSettings(t, key)
+	testGetResources(t, res, exp)
+}
+
+func putSetting(t *testing.T, pld settingPayload) *http.Response {
+	return sendPayload(t, "PUT", settingsPath, pld)
+}
+
+func validateSetting(settings map[string]data.Setting,
+	key, value string) bool {
+	setting, ok := settings[key]
+	if !ok {
+		return false
+	}
+	return setting.Value == value
 }

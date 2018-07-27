@@ -180,7 +180,8 @@ func (s *Server) setPasswordAllowed(w http.ResponseWriter) bool {
 
 func (s *Server) setPassword(w http.ResponseWriter, password string, tx *reform.TX) bool {
 	salt := util.NewUUID()
-	passwordSetting := &data.Setting{Key: saltKey, Value: salt, Name: "Password"}
+	passwordSetting := &data.Setting{Key: saltKey, Value: salt,
+		Permissions: data.AccessDenied, Name: "Password"}
 	if !s.insertTx(w, passwordSetting, tx) {
 		return false
 	}
@@ -192,7 +193,8 @@ func (s *Server) setPassword(w http.ResponseWriter, password string, tx *reform.
 		return false
 	}
 
-	saltSetting := &data.Setting{Key: passwordKey, Value: string(hashed), Name: "Salt"}
+	saltSetting := &data.Setting{Key: passwordKey, Value: string(hashed),
+		Permissions: data.AccessDenied, Name: "Salt"}
 	if !s.insertTx(w, saltSetting, tx) || !s.commit(w, tx) {
 		return false
 	}

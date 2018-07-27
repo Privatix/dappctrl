@@ -157,7 +157,7 @@ func main() {
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		 conf.EptMsg)
+		conf.EptMsg)
 	if err != nil {
 		logger.Fatal("failed to create worker: %s", err)
 	}

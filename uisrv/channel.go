@@ -23,7 +23,7 @@ const (
 var (
 	channelsGetParams = []queryParam{
 		{Name: "id", Field: "id"},
-		{Name: "channfelStatus", Field: "channel_status"},
+		{Name: "channelStatus", Field: "channel_status"},
 		{Name: "serviceStatus", Field: "service_status"},
 	}
 

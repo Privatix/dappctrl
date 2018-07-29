@@ -4,10 +4,10 @@ package svcrun
 
 // Mock methods.
 const (
-	MockStart     = iota
-	MockIsRunning = iota
-	MockStop      = iota
-	MockStopAll   = iota
+	MockStart = iota
+	MockIsRunning
+	MockStop
+	MockStopAll
 )
 
 // Mock is a ServiceRunner method handler.

@@ -348,15 +348,20 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			return err
 		}
 
-		return w.addJob(data.JobClientAfterEndpointMsgSOMCGet,
-			data.JobEndpoint, endp.ID)
+		return w.addJobWithData(data.JobClientAfterEndpointMsgSOMCGet,
+			data.JobChannel, ch.ID, endp.ID)
 	})
 }
 
 // ClientAfterEndpointMsgSOMCGet cofigures a product.
 func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
+	var epid string
+	if err := parseJobData(job, &epid); err != nil {
+		return err
+	}
+
 	var endp data.Endpoint
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, job.RelatedID)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, epid)
 	if err != nil {
 		return err
 	}

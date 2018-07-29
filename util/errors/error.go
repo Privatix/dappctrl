@@ -7,11 +7,17 @@ import (
 // Error is an error code supporting the standard error interface.
 type Error int
 
+// Error returns an error message of a given error.
 func (e Error) Error() string {
 	if msg, ok := Message(e); ok {
 		return fmt.Sprintf("%s (%d)", msg, e)
 	}
 	return "unknown error"
+}
+
+// ErrorCode returns an error code of a given error.
+func (e Error) ErrorCode() int {
+	return int(e)
 }
 
 // Messages is a mapping between error codes and error messages.

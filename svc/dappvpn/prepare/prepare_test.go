@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 
 	logger = util.NewTestLogger(conf.Log)
 
-	db = data.NewTestDB(conf.DB, logger)
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())

@@ -26,6 +26,10 @@
             "port": "5433"
         }
     },
+    "DBLog": {
+        "Level": "info",
+        "StackLevel": "error"
+    },
 	"EptMsg": {
         "Timeout": 1
     },
@@ -44,6 +48,12 @@
             "IdleConnTimeout": 30,
             "KeepAliveTimeout": 60
         }
+    },
+    "FileLog": {
+        "Level": "info",
+        "StackLevel": "error",
+        "Prefix": "",
+        "UTC": false
     },
     "Gas": {
         "PTC": {
@@ -197,5 +207,11 @@
             "github.com/privatix/dappctrl/svc/dappvpn/mon",
             "github.com/privatix/dappctrl/svc/dappvpn/pusher"
         ]
+    },
+    "UI": {
+        "Addr": "localhost:8888",
+        "AllowedOrigins": ["*"],
+        "Handler": {},
+        "TLS": null
     }
 }

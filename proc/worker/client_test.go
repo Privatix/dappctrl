@@ -215,8 +215,10 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientAfterEndpointMsgSOMCGet, data.JobEndpoint)
+		data.JobClientAfterEndpointMsgSOMCGet, data.JobChannel)
 	defer fxt.Close()
+
+	fxt.job.Data = []byte("\"" + fxt.Endpoint.ID + "\"")
 
 	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
 

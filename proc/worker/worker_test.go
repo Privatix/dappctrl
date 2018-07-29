@@ -99,7 +99,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	}
 
 	worker.SetQueue(jobQueue)
-	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), jobQueue))
+	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), db, jobQueue))
 
 	return &workerTest{
 		db:       db,
@@ -128,10 +128,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	db, err = data.NewDB(conf.DB, logger)
-	if err != nil {
-		panic(err)
-	}
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())

@@ -7,10 +7,10 @@ func NewMultiLogger(loggers ...Logger) Logger {
 	return multiLogger(loggers)
 }
 
-func (l multiLogger) Add(key string, val interface{}) Logger {
+func (l multiLogger) Add(vars ...interface{}) Logger {
 	res := make(multiLogger, len(l))
 	for k, v := range l {
-		res[k] = v.Add(key, val)
+		res[k] = v.Add(vars...)
 	}
 	return res
 }

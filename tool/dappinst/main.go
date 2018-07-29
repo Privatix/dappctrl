@@ -36,7 +36,7 @@ func main() {
 	}
 	defer logger.GracefulStop()
 
-	db, err := data.NewDBFromConnStr(*connStr, logger)
+	db, err := data.NewDBFromConnStr(*connStr)
 	if err != nil {
 		logger.Fatal("failed to open db connection: %s", err)
 	}

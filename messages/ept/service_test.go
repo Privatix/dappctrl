@@ -113,16 +113,13 @@ func newEptTestConfig() *eptTestConfig {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
 	conf.PayServer = &pay.Config{}
 	conf.EptTest = newEptTestConfig()
 	conf.EptMsg = NewConfig()
 
 	util.ReadTestConfig(&conf)
 
-	logger := util.NewTestLogger(conf.Log)
-
-	testDB = data.NewTestDB(conf.DB, logger)
+	testDB = data.NewTestDB(conf.DB)
 
 	defer data.CloseDB(testDB)
 

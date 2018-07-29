@@ -57,6 +57,11 @@
         }
     },
 
+    "DBLog": {
+        "Level": "info",
+        "StackLevel": "error"
+    },
+
     "EptTest": {
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
         "Host": "privatix.io:443"
@@ -73,6 +78,13 @@
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": "",
         "Timeout": 10
+    },
+
+    "FileLog": {
+        "Level": "info",
+        "StackLevel": "error",
+        "Prefix": "",
+        "UTC": false
     },
 
     "JobHandlerTest": {
@@ -219,5 +231,12 @@
 
     "VPNMonitorTest": {
         "ServerStartupDelay": 10
+    },
+
+    "UI": {
+        "Addr": "localhost:8888",
+        "AllowedOrigins": ["*"],
+        "Handler": {},
+        "TLS": null
     }
 }

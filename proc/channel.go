@@ -59,7 +59,7 @@ func cancelJobs(tx *reform.TX, rel string) error {
 
 func (p *Processor) alterServiceStatus(id, jobCreator, jobType,
 	jobTypeToCheck string, trans transition, cancel bool) (string, error) {
-	tx, err := p.queue.DB().Begin()
+	tx, err := p.db.Begin()
 	if err != nil {
 		return "", err
 	}

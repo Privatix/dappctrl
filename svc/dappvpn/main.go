@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
@@ -19,6 +20,12 @@ import (
 	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
+)
+
+// Values for versioning.
+var (
+	Commit  string
+	Version string
 )
 
 var (
@@ -30,11 +37,15 @@ var (
 )
 
 func main() {
+	v := flag.Bool("version", false, "Prints current dappctrl version")
+
 	fconfig := flag.String(
 		"config", "dappvpn.config.json", "Configuration file")
 	// Client mode is active when the parameter below is set.
 	fchannel := flag.String("channel", "", "Channel ID for client mode")
 	flag.Parse()
+
+	version.Print(*v, Commit, Version)
 
 	conf = config.NewConfig()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {

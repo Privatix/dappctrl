@@ -12,6 +12,8 @@ const (
 	SettingEthChallengePeriod = "eth.challenge.period"
 	SettingPasswordHash       = "system.password"
 	SettingPasswordSalt       = "system.salt"
+	DappCTRLVersion           = "system.version.dappctrl"
+	DBVersion                 = "system.version.db"
 )
 
 // ReadSetting reads value of a given setting.

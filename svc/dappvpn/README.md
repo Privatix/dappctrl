@@ -19,7 +19,11 @@ project `README.md`.
 Build the adapter:
 
 ```bash
-go install $DAPPCTRL/svc/dappvpn
+export GIT_COMMIT=$(git rev-list -1 HEAD) && \
+export GIT_RELEASE=$(git tag -l --points-at HEAD) && \
+  go install -ldflags "-X main.Commit=$GIT_COMMIT \
+   -X main.Version=$GIT_RELEASE"
+
 ```
 
 #### Additional steps for agent

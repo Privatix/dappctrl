@@ -60,6 +60,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 	if err != nil {
 		m.logger.Add("setting", maxRetryKey).Error(err.Error())
 		m.errors <- err
+		return
 	}
 
 	if maxRetries != 0 {

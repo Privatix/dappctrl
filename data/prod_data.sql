@@ -310,25 +310,11 @@ VALUES ('eth.max.deposit',
         'maximum deposit');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('system.version.dappctrl',
-        '0.0.5',
+VALUES ('system.version.db',
+        '0.7.1',
         1,
-        'Version of dappctrl.',
-        'dappctrl version');
-
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('system.version.dappgui',
-        '0.0.4',
-        1,
-        'Version of dappgui.',
-        'dappgui version');
-
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('system.version.dappvpn',
-        '0.0.2',
-        1,
-        'Version of dappvpn.',
-        'dappvpn version');
+        'Version of database.',
+        'db version');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('user.isagent',

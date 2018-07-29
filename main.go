@@ -15,6 +15,7 @@ import (
 	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/monitor"
@@ -30,6 +31,12 @@ import (
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
+)
+
+// Values for versioning.
+var (
+	Commit  string
+	Version string
 )
 
 type config struct {
@@ -78,10 +85,15 @@ func newConfig() *config {
 	}
 }
 
-func readConfig(conf *config) {
+func readFlags(conf *config) {
 	fconfig := flag.String(
 		"config", "dappctrl.config.json", "Configuration file")
+	v := flag.Bool("version", false, "Prints current dappctrl version")
+
 	flag.Parse()
+
+	version.Print(*v, Commit, Version)
+
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		panic(fmt.Sprintf("failed to read configuration: %s", err))
 	}
@@ -129,7 +141,7 @@ func main() {
 	defer bugsnag.PanicHunter()
 
 	conf := newConfig()
-	readConfig(conf)
+	readFlags(conf)
 
 	logger, err := util.NewLogger(conf.Log)
 	if err != nil {

@@ -177,7 +177,7 @@ func TestMain(m *testing.M) {
 	conf.PayServer = NewConfig()
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
-	testDB = data.NewTestDB(conf.DB, logger)
+	testDB = data.NewTestDB(conf.DB)
 	defer data.CloseDB(testDB)
 	testServer = NewServer(conf.PayServer, logger, testDB)
 	go func() {

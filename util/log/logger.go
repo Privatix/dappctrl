@@ -18,7 +18,7 @@ const (
 
 // Logger is an interface for loggers.
 type Logger interface {
-	Add(key string, val interface{}) Logger
+	Add(vars ...interface{}) Logger
 
 	Log(lvl Level, msg string)
 
@@ -71,15 +71,28 @@ func NewLoggerBase(conf *BaseConfig, log LoggerFunc) (*LoggerBase, error) {
 	return &LoggerBase{conf: conf, log: log, ctx: ctx}, nil
 }
 
-// Add returns a new logger with a new context (key, value) pair added.
-func (l *LoggerBase) Add(key string, val interface{}) Logger {
+// Add returns a new logger with added context variables. This function takes
+// alternated key-value pairs (name1, val1, name1, val2, ...). The keys must be
+// strings, but the values can be of any type.
+func (l *LoggerBase) Add(vars ...interface{}) Logger {
+	if len(vars)%2 == 1 {
+		panic("bad number of arguments")
+	}
+
 	ctx := map[string]interface{}{}
 
 	for k, v := range l.ctx {
 		ctx[k] = v
 	}
 
-	ctx[key] = val
+	num := len(vars) / 2
+	for i := 0; i < num; i++ {
+		name, ok := vars[i*2].(string)
+		if !ok {
+			panic("non-string variable name")
+		}
+		ctx[name] = vars[i*2+1]
+	}
 
 	return &LoggerBase{conf: l.conf, log: l.log, ctx: ctx}
 }

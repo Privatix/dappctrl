@@ -54,7 +54,7 @@ type Worker struct {
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
-	queue          *job.Queue
+	queue          job.Queue
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
@@ -91,7 +91,7 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 }
 
 // SetQueue sets a queue for handlers.
-func (w *Worker) SetQueue(queue *job.Queue) {
+func (w *Worker) SetQueue(queue job.Queue) {
 	w.queue = queue
 }
 

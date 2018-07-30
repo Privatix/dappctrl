@@ -7,11 +7,13 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
@@ -24,8 +26,11 @@ import (
 	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/uisrv"
 	"github.com/privatix/dappctrl/util"
+	log2 "github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/rpcsrv"
 )
 
 type config struct {
@@ -33,9 +38,11 @@ type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
+	DB            *data.DBConfig
+	DBLog         *dblog.Config
 	EptMsg        *ept.Config
 	Eth           *eth.Config
-	DB            *data.DBConfig
+	FileLog       *log2.FileConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
 	Log           *util.LogConfig
@@ -47,17 +54,20 @@ type config struct {
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
+	UI            *ui.Config
 }
 
 func newConfig() *config {
 	return &config{
 		AgentMonitor:  abill.NewConfig(),
+		AgentServer:   uisrv.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		DB:            data.NewDBConfig(),
+		DBLog:         dblog.NewConfig(),
 		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
-		DB:            data.NewDBConfig(),
-		AgentServer:   uisrv.NewConfig(),
+		FileLog:       log2.NewFileConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
@@ -65,6 +75,7 @@ func newConfig() *config {
 		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
+		UI:            ui.NewConfig(),
 	}
 }
 
@@ -85,6 +96,35 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
+func createLogger(conf *config, db *reform.DB) (log2.Logger, error) {
+	flog, err := log2.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		return nil, err
+	}
+
+	dlog, err := dblog.NewLogger(conf.DBLog, db)
+	if err != nil {
+		return nil, err
+	}
+
+	return log2.NewMultiLogger(flog, dlog), nil
+}
+
+func createUIServer(conf *ui.Config, logger log2.Logger,
+	db *reform.DB, queue job.Queue) (*rpcsrv.Server, error) {
+	server, err := rpcsrv.NewServer(conf.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := ui.NewHandler(conf, logger, db, nil)
+	if err := server.AddHandler("ui", handler); err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
 func main() {
 	fatal := make(chan string)
 	defer bugsnag.PanicHunter()
@@ -98,11 +138,16 @@ func main() {
 	}
 	defer logger.GracefulStop()
 
-	db, err := data.NewDB(conf.DB, logger)
+	db, err := data.NewDB(conf.DB)
 	if err != nil {
 		logger.Fatal("failed to open db connection: %s", err)
 	}
 	defer data.CloseDB(db)
+
+	logger2, err := createLogger(conf, db)
+	if err != nil {
+		logger.Fatal("failed to create logger: %s", err)
+	}
 
 	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
 	if err != nil {
@@ -166,7 +211,7 @@ func main() {
 	defer queue.Close()
 	worker.SetQueue(queue)
 
-	pr := proc.NewProcessor(conf.Proc, queue)
+	pr := proc.NewProcessor(conf.Proc, db, queue)
 	worker.SetProcessor(pr)
 
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
@@ -177,6 +222,15 @@ func main() {
 	go func() {
 		fatal <- fmt.Sprintf("failed to run agent server: %s\n",
 			uiSrv.ListenAndServe())
+	}()
+
+	uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
+	if err != nil {
+		logger.Fatal("failed to create UI server: %s", err)
+	}
+	go func() {
+		fatal <- fmt.Sprintf("failed to run UI server: %s\n",
+			uiSrv2.ListenAndServe())
 	}()
 
 	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,

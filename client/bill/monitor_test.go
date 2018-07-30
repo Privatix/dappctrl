@@ -171,9 +171,9 @@ func TestMain(m *testing.M) {
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)
-	db = data.NewTestDB(conf.DB, logger)
+	db = data.NewTestDB(conf.DB)
 	queue := job.NewQueue(conf.Job, logger, db, nil)
-	pr = proc.NewProcessor(conf.Proc, queue)
+	pr = proc.NewProcessor(conf.Proc, db, queue)
 	pws = &pwStore{}
 
 	os.Exit(m.Run())

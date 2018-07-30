@@ -17,6 +17,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	ethutil "github.com/privatix/dappctrl/eth/util"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -99,17 +100,17 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 }
 
 func (w *Worker) addJob(jType, rType, rID string) error {
-	return w.queue.AddSimple(jType, rType, rID, data.JobTask)
+	return job.AddSimple(w.queue, jType, rType, rID, data.JobTask)
 }
 
 func (w *Worker) addJobWithData(
 	jType, rType, rID string, jData interface{}) error {
-	return w.queue.AddWithData(jType, rType, rID, data.JobTask, jData)
+	return job.AddWithData(w.queue, jType, rType, rID, data.JobTask, jData)
 }
 
 func (w *Worker) addJobWithDelay(
 	jType, rType, rID string, delay time.Duration) error {
-	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
+	return job.AddWithDelay(w.queue, jType, rType, rID, data.JobTask, delay)
 }
 
 func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {

@@ -8,8 +8,6 @@ import (
 	_ "github.com/lib/pq"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"github.com/privatix/dappctrl/util"
 )
 
 // DBConfig is a DB configuration.
@@ -38,7 +36,7 @@ func NewDBConfig() *DBConfig {
 
 // NewDBFromConnStr creates a new data connection handle from a given
 // connection string.
-func NewDBFromConnStr(connStr string, logger *util.Logger) (*reform.DB, error) {
+func NewDBFromConnStr(connStr string) (*reform.DB, error) {
 	conn, err := sql.Open("postgres", connStr)
 	if err == nil {
 		err = conn.Ping()
@@ -47,13 +45,15 @@ func NewDBFromConnStr(connStr string, logger *util.Logger) (*reform.DB, error) {
 		return nil, err
 	}
 
+	dummy := func(format string, args ...interface{}) {}
+
 	return reform.NewDB(conn,
-		postgresql.Dialect, reform.NewPrintfLogger(logger.Debug)), nil
+		postgresql.Dialect, reform.NewPrintfLogger(dummy)), nil
 }
 
 // NewDB creates a new data connection handle.
-func NewDB(conf *DBConfig, logger *util.Logger) (*reform.DB, error) {
-	return NewDBFromConnStr(conf.ConnStr(), logger)
+func NewDB(conf *DBConfig) (*reform.DB, error) {
+	return NewDBFromConnStr(conf.ConnStr())
 }
 
 // CloseDB closes database connection.

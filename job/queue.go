@@ -16,10 +16,12 @@ import (
 
 // Errors.
 var (
-	ErrAlreadyProcessing = errors.New("already processing")
-	ErrDuplicatedJob     = errors.New("duplicated job")
-	ErrHandlerNotFound   = errors.New("job handler not found")
-	ErrQueueClosed       = errors.New("queue closed")
+	ErrAlreadyProcessing    = errors.New("already processing")
+	ErrDuplicatedJob        = errors.New("duplicated job")
+	ErrHandlerNotFound      = errors.New("job handler not found")
+	ErrQueueClosed          = errors.New("queue closed")
+	ErrSubscriptionExists   = errors.New("subscription already exists")
+	ErrSubscriptionNotFound = errors.New("subscription not found")
 )
 
 // Handler is a job handler function.
@@ -68,8 +70,21 @@ type workerIO struct {
 	result chan error
 }
 
+type subEntry struct {
+	subID   string
+	subFunc SubFunc
+}
+
 // Queue is a job processing queue.
-type Queue struct {
+type Queue interface {
+	Add(j *data.Job) error
+	Process() error
+	Close()
+	Subscribe(relatedID, subID string, subFunc SubFunc) error
+	Unsubscribe(relatedID, subID string) error
+}
+
+type queue struct {
 	conf     *Config
 	logger   *util.Logger
 	db       *reform.DB
@@ -78,30 +93,23 @@ type Queue struct {
 	exit     chan struct{}
 	exited   chan struct{}
 	workers  []workerIO
+	subsMtx  sync.RWMutex
+	subs     map[string][]subEntry
 }
 
 // NewQueue creates a new job queue.
 func NewQueue(conf *Config, logger *util.Logger, db *reform.DB,
-	handlers HandlerMap) *Queue {
-	return &Queue{
+	handlers HandlerMap) Queue {
+	return &queue{
 		conf:     conf,
 		logger:   logger,
 		db:       db,
 		handlers: handlers,
+		subs:     map[string][]subEntry{},
 	}
 }
 
-// Logger is an associated util.Logger instance.
-func (q *Queue) Logger() *util.Logger {
-	return q.logger
-}
-
-// DB is an associated reform.DB instance.
-func (q *Queue) DB() *reform.DB {
-	return q.db
-}
-
-func (q *Queue) checkDuplicated(j *data.Job) error {
+func (q *queue) checkDuplicated(j *data.Job) error {
 	_, err := q.db.SelectOneFrom(data.JobTable,
 		"WHERE related_id = $1 AND type = $2", j.RelatedID, j.Type)
 
@@ -117,7 +125,7 @@ func (q *Queue) checkDuplicated(j *data.Job) error {
 }
 
 // Add adds a new job to the job queue.
-func (q *Queue) Add(j *data.Job) error {
+func (q *queue) Add(j *data.Job) error {
 	tconf := q.typeConfig(j)
 	if !tconf.Duplicated {
 		if err := q.checkDuplicated(j); err != nil {
@@ -137,7 +145,7 @@ func (q *Queue) Add(j *data.Job) error {
 }
 
 // Close causes currently running Process() function to exit.
-func (q *Queue) Close() {
+func (q *queue) Close() {
 	q.mtx.Lock()
 	defer q.mtx.Unlock()
 
@@ -151,7 +159,7 @@ func (q *Queue) Close() {
 
 // Process fetches active jobs and processes them in parallel. This function
 // does not return until an error occurs or Close() is called.
-func (q *Queue) Process() error {
+func (q *queue) Process() error {
 	q.mtx.Lock()
 
 	if q.exit != nil {
@@ -204,12 +212,12 @@ func (q *Queue) Process() error {
 	return err
 }
 
-func (q *Queue) uuidWorker(uuid string) workerIO {
+func (q *queue) uuidWorker(uuid string) workerIO {
 	i := int(crc32.ChecksumIEEE([]byte(uuid))) % len(q.workers)
 	return q.workers[i]
 }
 
-func (q *Queue) checkExit() bool {
+func (q *queue) checkExit() bool {
 	select {
 	case <-q.exit:
 		return true
@@ -218,7 +226,7 @@ func (q *Queue) checkExit() bool {
 	}
 }
 
-func (q *Queue) processMain() error {
+func (q *queue) processMain() error {
 	period := time.Duration(q.conf.CollectPeriod) * time.Millisecond
 
 	for {
@@ -259,7 +267,7 @@ func (q *Queue) processMain() error {
 	}
 }
 
-func (q *Queue) processWorker(w workerIO) {
+func (q *queue) processWorker(w workerIO) {
 	var err error
 	for err == nil {
 		id, ok := <-w.job
@@ -284,9 +292,9 @@ func (q *Queue) processWorker(w workerIO) {
 			break
 		}
 
-		q.processJob(&job, handler)
+		result := q.processJob(&job, handler)
 
-		// If job was cancelled while running a handler make sure it
+		// If job was canceled while running a handler make sure it
 		// won't be retried.
 		if job.Status == data.JobActive {
 			tx, err := q.db.Begin()
@@ -311,7 +319,7 @@ func (q *Queue) processWorker(w workerIO) {
 			}
 		}
 
-		err = q.db.Save(&job)
+		err = q.saveJobAndNotify(&job, result)
 	}
 
 	if err != nil {
@@ -327,16 +335,33 @@ func (q *Queue) processWorker(w workerIO) {
 	w.result <- err
 }
 
-func (q *Queue) processJob(job *data.Job, handler Handler) {
+func (q *queue) saveJobAndNotify(job *data.Job, result error) error {
+	if err := q.db.Save(job); err != nil {
+		return err
+	}
+
+	q.subsMtx.RLock()
+	defer q.subsMtx.RUnlock()
+
+	if subs, ok := q.subs[job.RelatedID]; ok {
+		for _, v := range subs {
+			go v.subFunc(job, result)
+		}
+	}
+
+	return nil
+}
+
+func (q *queue) processJob(job *data.Job, handler Handler) error {
 	tconf := q.typeConfig(job)
 
-	q.logger.Info("processing job %s(%s)", job.ID, job.Type)
+	q.logger.Info("processing job %s (%s)", job.ID, job.Type)
 	err := handler(job)
 
 	if err == nil {
 		job.Status = data.JobDone
-		q.logger.Info("job %s(%s) is done", job.ID, job.Type)
-		return
+		q.logger.Info("job %s (%s) is done", job.ID, job.Type)
+		return nil
 	}
 
 	if tconf.TryLimit != 0 {
@@ -345,17 +370,19 @@ func (q *Queue) processJob(job *data.Job, handler Handler) {
 
 	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
-		q.logger.Error("job %s(%s) is failed", job.ID, job.Type)
+		q.logger.Error("job %s (%s) is failed", job.ID, job.Type)
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn("retry for job %s(%s) scheduled to %s: %s",
+		q.logger.Warn("retry for job %s (%s) scheduled to %s: %s",
 			job.ID, job.Type,
 			job.NotBefore.Format(time.RFC3339), err)
 	}
+
+	return err
 }
 
-func (q *Queue) typeConfig(job *data.Job) TypeConfig {
+func (q *queue) typeConfig(job *data.Job) TypeConfig {
 	tconf := q.conf.TypeConfig
 	if conf, ok := q.conf.Types[job.Type]; ok {
 		tconf = conf
@@ -365,7 +392,7 @@ func (q *Queue) typeConfig(job *data.Job) TypeConfig {
 
 // AddWithDataAndDelay is convenience method to add a job with given data
 // and delay.
-func (q *Queue) AddWithDataAndDelay(
+func AddWithDataAndDelay(q Queue,
 	jobType, relatedType, relatedID, creator string,
 	jobData interface{}, delay time.Duration) error {
 	data2, err := json.Marshal(jobData)
@@ -384,22 +411,68 @@ func (q *Queue) AddWithDataAndDelay(
 }
 
 // AddWithData is convenience method to add a job with given data.
-func (q *Queue) AddWithData(jobType, relatedType, relatedID, creator string,
+func AddWithData(q Queue, jobType, relatedType, relatedID, creator string,
 	jobData interface{}) error {
-	return q.AddWithDataAndDelay(jobType, relatedType,
-		relatedID, creator, jobData, time.Duration(0))
+	return AddWithDataAndDelay(q, jobType,
+		relatedType, relatedID, creator, jobData, time.Duration(0))
 }
 
 // AddSimple is convenience method to add a job.
-func (q *Queue) AddSimple(
+func AddSimple(q Queue,
 	jobType, relatedType, relatedID, creator string) error {
-	return q.AddWithData(
-		jobType, relatedType, relatedID, creator, &struct{}{})
+	return AddWithData(
+		q, jobType, relatedType, relatedID, creator, &struct{}{})
 }
 
 // AddWithDelay is convenience method to add a job with given data delay.
-func (q *Queue) AddWithDelay(
-	jobType, relatedType, relatedID, creator string, delay time.Duration) error {
-	return q.AddWithDataAndDelay(
+func AddWithDelay(q Queue, jobType, relatedType, relatedID, creator string,
+	delay time.Duration) error {
+	return AddWithDataAndDelay(q,
 		jobType, relatedType, relatedID, creator, &struct{}{}, delay)
+}
+
+// SubFunc is a job result notification callback.
+type SubFunc func(job *data.Job, result error)
+
+// Subscribe adds a subscription to job result notifications.
+func (q *queue) Subscribe(relatedID, subID string, subFunc SubFunc) error {
+	q.subsMtx.Lock()
+	defer q.subsMtx.Unlock()
+
+	if subs, ok := q.subs[relatedID]; ok {
+		for _, v := range subs {
+			if v.subID == subID {
+				return ErrSubscriptionExists
+			}
+		}
+	}
+
+	q.subs[relatedID] = append(q.subs[relatedID], subEntry{subID, subFunc})
+
+	return nil
+}
+
+// Subscribe adds a subscription to job result notifications.
+func (q *queue) Unsubscribe(relatedID, subID string) error {
+	q.subsMtx.Lock()
+	defer q.subsMtx.Unlock()
+
+	if subs, ok := q.subs[relatedID]; ok {
+		for i, v := range subs {
+			if v.subID != subID {
+				continue
+			}
+
+			subs := append(subs[:i], subs[i+1:]...)
+			if subs != nil {
+				q.subs[relatedID] = subs
+			} else {
+				delete(q.subs, relatedID)
+			}
+
+			return nil
+		}
+	}
+
+	return ErrSubscriptionNotFound
 }

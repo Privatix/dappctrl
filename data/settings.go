@@ -10,6 +10,8 @@ import (
 // Setting keys.
 const (
 	SettingEthChallengePeriod = "eth.challenge.period"
+	SettingPasswordHash       = "system.password"
+	SettingPasswordSalt       = "system.salt"
 )
 
 // ReadSetting reads value of a given setting.

@@ -48,14 +48,14 @@ func TestMain(m *testing.M) {
 	conf.AgentServerTest = &testConfig{}
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
-	db := data.NewTestDB(conf.DB, logger)
+	db := data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
 	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,
-		proc.NewProcessor(proc.NewConfig(), queue))
+		proc.NewProcessor(proc.NewConfig(), db, queue))
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()

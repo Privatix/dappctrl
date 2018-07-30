@@ -41,7 +41,7 @@ type Server struct {
 	conf           *Config
 	logger         *util.Logger
 	db             *reform.DB
-	queue          *job.Queue
+	queue          job.Queue
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
@@ -52,7 +52,7 @@ type Server struct {
 func NewServer(conf *Config,
 	logger *util.Logger,
 	db *reform.DB,
-	queue *job.Queue,
+	queue job.Queue,
 	pwdStorage data.PWDGetSetter, pr *proc.Processor) *Server {
 	return &Server{
 		conf,

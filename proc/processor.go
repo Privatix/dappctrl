@@ -3,6 +3,8 @@ package proc
 import (
 	"errors"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/job"
 )
 
@@ -18,14 +20,16 @@ func NewConfig() *Config {
 // Processor encapsulates a set of top-level business logic routines.
 type Processor struct {
 	conf  *Config
-	queue *job.Queue
+	db    *reform.DB
+	queue job.Queue
 }
 
 // NewProcessor creates a new processor.
 func NewProcessor(
-	conf *Config, queue *job.Queue) *Processor {
+	conf *Config, db *reform.DB, queue job.Queue) *Processor {
 	return &Processor{
 		conf:  conf,
+		db:    db,
 		queue: queue,
 	}
 }

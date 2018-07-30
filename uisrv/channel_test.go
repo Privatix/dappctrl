@@ -380,30 +380,27 @@ func TestUpdateChannelStatus(t *testing.T) {
 	defer fixture.Close()
 	defer setTestUserCredentials(t)()
 
-	testJobCreated := func(action string, jobType string) {
-		res := sendChannelAction(t, fixture.Channel.ID, action, true)
+	offering2 := data.NewTestOffering(fixture.User.EthAddr,
+		fixture.Product.ID, fixture.TemplateOffer.ID)
+	clientChan := data.NewTestChannel(data.NewTestAccount("").EthAddr,
+		fixture.Account.EthAddr, offering2.ID, 1, 1, data.ChannelActive)
+	data.InsertToTestDB(t, testServer.db, offering2, clientChan)
+	defer data.DeleteFromTestDB(t, testServer.db, clientChan, offering2)
+
+	testJobCreated := func(action, chanID, jobType string, agent bool) {
+		res := sendChannelAction(t, chanID, action, agent)
+		job := &data.Job{}
+		data.FindInTestDB(t, testServer.db, job, "type", jobType)
+		data.DeleteFromTestDB(t, testServer.db, job)
 		if res.StatusCode != http.StatusOK {
+			s, _ := ioutil.ReadAll(res.Body)
+			t.Logf("%s", s)
 			t.Fatal("got: ", res.Status)
 		}
-		jobTerm := &data.Job{}
-		data.FindInTestDB(t, testServer.db, jobTerm, "type", jobType)
-		data.DeleteFromTestDB(t, testServer.db, jobTerm)
 	}
 
-	testClientJobCreated := func(action string, channel, jobType string) {
-		res := sendChannelAction(t, channel, action, false)
-		if res.StatusCode != http.StatusOK {
-			t.Fatal("got: ", res.Status)
-		}
-		var job data.Job
-		data.SelectOneFromTestDBTo(t, testServer.db, &job,
-			"WHERE type = $1 AND related_id = $2",
-			jobType, channel)
-		data.DeleteFromTestDB(t, testServer.db, &job)
-	}
-
-	for _, agent := range []bool{true, false} {
-		res := sendChannelAction(t, fixture.Channel.ID,
+	testBadRequest := func(chanID string, agent bool) {
+		res := sendChannelAction(t, chanID,
 			"wrong-action", agent)
 		if res.StatusCode != http.StatusBadRequest {
 			t.Fatalf("wanted: %d, got: %v",
@@ -411,30 +408,42 @@ func TestUpdateChannelStatus(t *testing.T) {
 		}
 	}
 
-	testJobCreated(channelTerminate, data.JobAgentPreServiceTerminate)
-	testJobCreated(channelPause, data.JobAgentPreServiceSuspend)
-	testJobCreated(channelResume, data.JobAgentPreServiceUnsuspend)
+	testBadRequest(fixture.Channel.ID, true)
+	testBadRequest(clientChan.ID, false)
 
-	cliChActive := createTestChannel(t)
-	cliChActive.ServiceStatus = data.ServiceActive
+	testJobCreated(channelTerminate, fixture.Channel.ID,
+		data.JobAgentPreServiceTerminate, true)
 
-	cliChPending := createTestChannel(t)
-	cliChPending.ServiceStatus = data.ServicePending
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, testServer.db, fixture.Channel)
+	testJobCreated(channelPause, fixture.Channel.ID,
+		data.JobAgentPreServiceSuspend, true)
 
-	cliChSuspended := createTestChannel(t)
-	cliChSuspended.ServiceStatus = data.ServiceSuspended
+	fixture.Channel.ServiceStatus = data.ServiceSuspended
+	data.SaveToTestDB(t, testServer.db, fixture.Channel)
+	testJobCreated(channelResume, fixture.Channel.ID,
+		data.JobAgentPreServiceUnsuspend, true)
 
-	testServer.db.Save(cliChActive)
-	testServer.db.Save(cliChPending)
-	testServer.db.Save(cliChSuspended)
-	defer data.DeleteFromTestDB(t, testServer.db, cliChActive,
-		cliChPending, cliChSuspended)
+	testJobCreated(channelTerminate, clientChan.ID,
+		data.JobClientPreServiceTerminate, false)
 
-	testClientJobCreated(channelTerminate, cliChPending.ID,
-		data.JobClientPreServiceTerminate)
-	testClientJobCreated(channelPause, cliChActive.ID,
-		data.JobClientPreServiceSuspend)
-	testClientJobCreated(channelResume, cliChSuspended.ID,
-		data.JobClientPreServiceUnsuspend)
+	clientChan.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, testServer.db, clientChan)
+	testJobCreated(channelPause, clientChan.ID,
+		data.JobClientPreServiceSuspend, false)
 
+	clientChan.ServiceStatus = data.ServiceSuspended
+	data.SaveToTestDB(t, testServer.db, clientChan)
+	testJobCreated(channelResume, clientChan.ID,
+		data.JobClientPreServiceUnsuspend, false)
+
+	gasPriceSettings := &data.Setting{
+		Key:   data.DefaultGasPriceKey,
+		Value: "20000000",
+	}
+	data.InsertToTestDB(t, testServer.db, gasPriceSettings)
+	defer data.DeleteFromTestDB(t, testServer.db, gasPriceSettings)
+
+	testJobCreated(clientChannelClose, clientChan.ID,
+		data.JobClientPreUncooperativeCloseRequest, false)
 }

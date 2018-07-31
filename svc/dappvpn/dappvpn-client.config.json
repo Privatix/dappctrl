@@ -4,7 +4,7 @@
     "Log": {
         "Level": "info",
         "LogPath": "/var/log",
-        "LogFilePrefix": "dappvpn"
+        "LogFilePrefix": "dappvpn-client"
     },
 
     "Monitor": {

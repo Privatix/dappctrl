@@ -251,7 +251,7 @@ func main() {
 	}()
 	defer cmon.Close()
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger2, db, queue,
 		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
 		ethClient.CloseIdleConnections)
 	if err != nil {

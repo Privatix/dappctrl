@@ -21,6 +21,7 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -42,7 +43,7 @@ const (
 var (
 	conf *testConf
 
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 
 	pscAddr = common.HexToAddress(
@@ -61,13 +62,13 @@ var (
 type testConf struct {
 	BlockMonitor *Config
 	DB           *data.DBConfig
-	Log          *util.LogConfig
+	Log          *log.FileConfig
 	Job          *job.Config
 	Eth          *eth.Config
 }
 
 type mockClient struct {
-	logger  *util.Logger
+	logger  log.Logger
 	headers []ethtypes.Header
 	logs    []ethtypes.Log
 	number  uint64
@@ -86,7 +87,7 @@ func newTestConf() *testConf {
 	conf := new(testConf)
 	conf.BlockMonitor = NewConfig()
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
+	conf.Log = log.NewFileConfig()
 	conf.Job = job.NewConfig()
 	conf.Eth = eth.NewConfig()
 	return conf
@@ -273,7 +274,7 @@ func (c *mockClient) FilterLogs(ctx context.Context,
 			filtered = append(filtered, e)
 		}
 	}
-	c.logger.Debug("query: %v, filtered: %v", q, filtered)
+	c.logger.Debug(fmt.Sprintf("query: %v, filtered: %v", q, filtered))
 	return filtered, nil
 }
 
@@ -394,7 +395,13 @@ func TestMain(m *testing.M) {
 	conf = newTestConf()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	l, err := log.NewStderrLogger(conf.Log)
+	if err != nil {
+		panic(err)
+	}
+
+	logger = l
+
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 

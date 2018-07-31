@@ -2,8 +2,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,17 +12,12 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
 	collectName  = "collect"
 	scheduleName = "schedule"
-)
-
-// Blockchain monitor errors.
-var (
-	ErrInput = fmt.Errorf("one or more input parameters is wrong")
 )
 
 // Config for blockchain monitor.
@@ -46,7 +39,7 @@ type Monitor struct {
 	cfg     *Config
 	ctx     context.Context
 	ethCfg  *eth.Config
-	logger  *util.Logger
+	logger  log.Logger
 	db      *reform.DB
 	queue   Queue
 	eth     Client
@@ -75,7 +68,7 @@ func NewConfig() *Config {
 }
 
 // NewMonitor creates a Monitor with specified settings.
-func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
+func NewMonitor(cfg *Config, logger log.Logger, db *reform.DB,
 	queue Queue, ethConfig *eth.Config, pscAddr common.Address,
 	ptcAddr common.Address, ethClient Client,
 	closeIdleConnections func()) (*Monitor, error) {
@@ -86,7 +79,8 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 
 	pscABI, err := mustParseABI(contract.PrivatixServiceContractABI)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrParseABI
 	}
 
 	return &Monitor{
@@ -106,29 +100,31 @@ func NewMonitor(cfg *Config, logger *util.Logger, db *reform.DB,
 	}, nil
 }
 
+func (m *Monitor) errorProcessing(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case err := <-m.errors:
+			// errors associated with blockchain
+			if (err == ErrGetHeaderByNumber ||
+				err == ErrFetchLogs) &&
+				m.closeIdleConnections != nil {
+				m.closeIdleConnections()
+			}
+		}
+	}
+}
+
 func (m *Monitor) start(ctx context.Context, collectTicker,
 	scheduleTicker <-chan time.Time) {
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case err := <-m.errors:
-				m.closeConnect(err)
-				m.logger.Error("blockchain monitor"+
-					": %s", err)
-				continue
-			}
-
-		}
-	}()
-
+	go m.errorProcessing(ctx)
 	go m.repeatEvery(ctx, collectTicker, collectName,
 		func() { m.collect(ctx) })
 	go m.repeatEvery(ctx, scheduleTicker, scheduleName,
 		func() { m.schedule(ctx) })
 
-	m.logger.Debug("monitor started")
+	m.logger.Debug("blockchain monitor started")
 }
 
 // Start starts the monitor. It will continue collecting logs and scheduling
@@ -153,7 +149,7 @@ func (m *Monitor) Stop() error {
 		t.Stop()
 	}
 
-	m.logger.Debug("monitor stopped")
+	m.logger.Debug("blockchain monitor stopped")
 	return nil
 }
 
@@ -168,13 +164,5 @@ func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
 		case <-ticker:
 			action()
 		}
-	}
-}
-
-func (m *Monitor) closeConnect(err error) {
-	if strings.Contains(err.Error(),
-		fmt.Sprintf("Post %s", m.ethCfg.GethURL)) &&
-		m.closeIdleConnections != nil {
-		m.closeIdleConnections()
 	}
 }

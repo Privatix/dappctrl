@@ -8,14 +8,20 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
 
-const maxRetryKey = "eth.event.maxretry"
+const (
+	maxRetryKey = "eth.event.maxretry"
+
+	logChannelToppedUp           = "LogChannelToppedUp"
+	logChannelCloseRequested     = "LogChannelCloseRequested"
+	logCooperativeChannelClose   = "LogCooperativeChannelClose"
+	logUnCooperativeChannelClose = "LogUnCooperativeChannelClose"
+)
 
 const (
 	topic1 = iota + 1
@@ -52,6 +58,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 
 	maxRetries, err := data.GetUint64Setting(m.db, maxRetryKey)
 	if err != nil {
+		m.logger.Add("setting", maxRetryKey).Error(err.Error())
 		m.errors <- err
 	}
 
@@ -64,12 +71,14 @@ func (m *Monitor) schedule(ctx context.Context) {
 
 	rows, err := m.db.Query(query, args...)
 	if err != nil {
-		m.errors <- fmt.Errorf("failed to select log entries: %v", err)
+		m.logger.Add("query", query).Error(err.Error())
+		m.errors <- ErrSelectLogsEntries
 		return
 	}
 
 	agent, err := data.IsAgent(m.db.Querier)
 	if err != nil {
+		m.logger.Error(err.Error())
 		m.errors <- err
 		return
 	}
@@ -79,8 +88,8 @@ func (m *Monitor) schedule(ctx context.Context) {
 		var forAgent, forClient bool
 		pointers := append(el.Pointers(), &forAgent, &forClient)
 		if err := rows.Scan(pointers...); err != nil {
-			m.errors <- fmt.Errorf("failed to scan the selected"+
-				" log entries: %v", err)
+			m.logger.Error(err.Error())
+			m.errors <- ErrScanRows
 			return
 		}
 
@@ -119,8 +128,9 @@ func (m *Monitor) schedule(ctx context.Context) {
 		}
 
 		if !found {
-			m.logger.Debug("scheduler not found for event %s",
-				eventHash.Hex())
+			m.logger.Add("event",
+				eventHash.Hex()).Debug("scheduler not" +
+				" found for event")
 			m.ignoreEvent(&el)
 			continue
 		}
@@ -129,8 +139,8 @@ func (m *Monitor) schedule(ctx context.Context) {
 	}
 
 	if err := rows.Err(); err != nil {
-		m.errors <- fmt.Errorf("failed to fetch the next selected log"+
-			" entry: %v", err)
+		m.logger.Error(err.Error())
+		m.errors <- ErrFetchLogsFromDB
 	}
 }
 
@@ -246,22 +256,26 @@ var clientUpdateCurrentSupplySchedulers = map[common.Hash]funcAndType{
 }
 
 func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
-	arg, err := m.pscABI.Events[event].
-		Inputs.NonIndexed().UnpackValues(bs)
+	arg, err := m.pscABI.Events[event].Inputs.NonIndexed().UnpackValues(bs)
 	if err != nil {
-		return 0, fmt.Errorf("failed to unpack arguments: %v", err)
+		m.logger.Add("event",
+			m.pscABI.Events[event].Name).Error(err.Error())
+		return 0, ErrUnpack
 	}
 
-	if len(arg) != m.pscABI.Events[event].
-		Inputs.LengthNonIndexed() {
-		return 0, fmt.Errorf("wrong number of event arguments")
+	if len(arg) != m.pscABI.Events[event].Inputs.LengthNonIndexed() {
+		m.logger.Add("event",
+			m.pscABI.Events[event].Name).Error(
+			ErrNumberOfEventArgs.Error())
+		return 0, ErrNumberOfEventArgs
 	}
 
 	var blockNumber uint32
 	var ok bool
 
 	if blockNumber, ok = arg[0].(uint32); !ok {
-		return 0, fmt.Errorf("wrong type argument of OpenBlockNumber")
+		m.logger.Error(ErrBlockArgumentType.Error())
+		return 0, ErrBlockArgumentType
 	}
 
 	return blockNumber, nil
@@ -273,35 +287,34 @@ func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
 func (m *Monitor) getOpenBlockNumber(el *data.EthLog) (uint32, bool, error) {
 	bs, err := data.ToBytes(el.Data)
 	if err != nil {
+		m.logger.Error(err.Error())
 		return 0, false, err
 	}
 
 	switch el.Topics[0] {
 	case common.HexToHash(eth.EthDigestChannelToppedUp):
-		blockNumber, err := m.blockNumber(bs,
-			"LogChannelToppedUp")
+		blockNumber, err := m.blockNumber(bs, logChannelToppedUp)
 		if err != nil {
 			return 0, false, err
 		}
 
 		return blockNumber, true, nil
 	case common.HexToHash(eth.EthChannelCloseRequested):
-		blockNumber, err := m.blockNumber(bs,
-			"LogChannelCloseRequested")
+		blockNumber, err := m.blockNumber(bs, logChannelCloseRequested)
 		if err != nil {
 			return 0, false, err
 		}
 		return blockNumber, true, nil
 	case common.HexToHash(eth.EthCooperativeChannelClose):
 		blockNumber, err := m.blockNumber(bs,
-			"LogCooperativeChannelClose")
+			logCooperativeChannelClose)
 		if err != nil {
 			return 0, false, err
 		}
 		return blockNumber, true, nil
 	case common.HexToHash(eth.EthUncooperativeChannelClose):
 		blockNumber, err := m.blockNumber(bs,
-			"LogUnCooperativeChannelClose")
+			logUnCooperativeChannelClose)
 		if err != nil {
 			return 0, false, err
 		}
@@ -310,7 +323,7 @@ func (m *Monitor) getOpenBlockNumber(el *data.EthLog) (uint32, bool, error) {
 		return 0, false, nil
 	}
 
-	return 0, false, fmt.Errorf("unsupported topic")
+	return 0, false, ErrUnsupportedTopic
 }
 
 func (m *Monitor) findChannelID(el *data.EthLog) string {
@@ -320,12 +333,11 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 
 	openBlockNumber, hasOpenBlockNumber, err := m.getOpenBlockNumber(el)
 	if err != nil {
-		m.logger.Warn(err.Error())
 		return ""
 	}
 
-	m.logger.Debug("block number = %d, has block number = %t",
-		openBlockNumber, hasOpenBlockNumber)
+	m.logger.Add("blockNumber", openBlockNumber, "hasBlockNumber",
+		hasOpenBlockNumber).Debug("find block number")
 
 	var query string
 	args := []interface{}{
@@ -356,7 +368,7 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 		if err == sql.ErrNoRows {
 			return ""
 		}
-		m.logger.Error("failed to scan row %s", err)
+		m.logger.Error(err.Error())
 		return ""
 	}
 
@@ -380,7 +392,7 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 			data.JobAgentAfterOfferingMsgBCPublish,
 			data.JobClientAfterOfferingMsgBCPublish)
 		if err != nil && err != sql.ErrNoRows {
-			m.logger.Error("failed to find %T: %v", jobsLog, err)
+			m.logger.Error(err.Error())
 		}
 		if jobsLog.JobID != nil {
 			relID = *jobsLog.JobID
@@ -390,8 +402,9 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 	}
 
 	if relID == "" {
-		m.logger.Info("not found offering by hash (%s) to schedule "+
-			"current supply update, skipping", topic.Hex())
+		m.logger.Add("topicHash", topic.Hex()).Info("not found" +
+			" offering by hash to schedule current supply" +
+			" update, skipping")
 		return
 	}
 
@@ -404,7 +417,7 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 	}
 
 	if err := m.queue.Add(j); err != nil {
-		m.logger.Error("failed to add %s: %v", jobType, err)
+		m.logger.Error(err.Error())
 	}
 }
 
@@ -414,12 +427,13 @@ func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {
 	acc := &data.Account{}
 	if err := m.db.FindOneTo(acc, "eth_addr", addrHash); err != nil {
 		if err == sql.ErrNoRows {
-			m.logger.Debug("account not found for addr %s",
-				el.Topics[1].Hex())
+			m.logger.Add("eth_addr",
+				addr.String()).Debug("account for" +
+				" address not found")
 			m.ignoreEvent(el)
 			return
 		}
-		m.logger.Error("failed to find account: %v", err)
+		m.logger.Add("eth_addr", addr.String()).Error(err.Error())
 		m.ignoreEvent(el)
 		return
 	}
@@ -445,15 +459,18 @@ func (m *Monitor) scheduleTokenTransfer(el *data.EthLog, jobType string) {
 	}
 
 	acc := &data.Account{}
-	if err := m.db.SelectOneTo(acc, "where eth_addr=$1 or eth_addr=$2", addr1Hash,
-		addr2Hash); err != nil {
+	if err := m.db.SelectOneTo(acc, "where eth_addr=$1 or eth_addr=$2",
+		addr1Hash, addr2Hash); err != nil {
 		if err == sql.ErrNoRows {
-			m.logger.Info("account not found for addr %s",
-				el.Topics[1].Hex())
+			m.logger.Add("eth_addr1",
+				addr1.String(), "eth_addr2",
+				addr2.String()).Debug("account for" +
+				" address not found")
 			m.ignoreEvent(el)
 			return
 		}
-		m.logger.Info("failed to find account: %v", err)
+		m.logger.Add("eth_addr1", addr1.String(), "eth_addr2",
+			addr2.String()).Info(err.Error())
 		m.ignoreEvent(el)
 		return
 	}
@@ -477,12 +494,13 @@ func (m *Monitor) scheduleAgentOfferingCreated(el *data.EthLog,
 	var id string
 	if err := row.Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
-			m.logger.Debug("offering not found with hash %s",
-				el.Topics[2].Hex())
+			m.logger.Add("hash",
+				el.Topics[2].String()).Debug("offering not" +
+				" found with hash")
 			m.ignoreEvent(el)
 			return
 		}
-		m.logger.Error("failed to scan row %s", err)
+		m.logger.Add("hash", el.Topics[2].String()).Error(err.Error())
 		m.ignoreEvent(el)
 		return
 	}
@@ -509,8 +527,9 @@ func (m *Monitor) scheduleAgentChannelCreated(el *data.EthLog,
 func (m *Monitor) scheduleAgentClientChannel(el *data.EthLog, jobType string) {
 	cid := m.findChannelID(el)
 	if cid == "" {
-		m.logger.Warn("channel for offering %s does not exist",
-			el.Topics[topic3].Hex())
+		m.logger.Add("offering",
+			el.Topics[topic3].String()).Warn("channel for" +
+			" offering does not exist")
 		m.ignoreEvent(el)
 		return
 	}
@@ -534,7 +553,8 @@ func (m *Monitor) isOfferingDeleted(offeringHash common.Hash) bool {
 
 	var count int
 	if err := row.Scan(&count); err != nil {
-		m.logger.Error("failed to scan row %s", err)
+		m.logger.Add("query", query, "topic",
+			"0x"+eth.EthOfferingDeleted).Error(err.Error())
 	}
 
 	return count > 0
@@ -602,22 +622,23 @@ func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 func (m *Monitor) incrementEventFailures(el *data.EthLog) {
 	el.Failures++
 	if err := m.db.UpdateColumns(el, "failures"); err != nil {
-		m.logger.Error("failed to update failure counter"+
-			" of an event: %v", err)
+		m.logger.Add("id", el.ID, "failures",
+			el.Failures).Error(err.Error())
 	}
 }
 
 func (m *Monitor) updateEventJobID(el *data.EthLog, jobID string) {
 	el.JobID = &jobID
 	if err := m.db.UpdateColumns(el, "job"); err != nil {
-		m.logger.Error("failed to update job_id of an event"+
-			" to %s: %v", jobID, err)
+		m.logger.Add("id", el.ID, "job",
+			el.JobID).Error(err.Error())
 	}
 }
 
 func (m *Monitor) ignoreEvent(el *data.EthLog) {
 	el.Ignore = true
 	if err := m.db.UpdateColumns(el, "ignore"); err != nil {
-		m.logger.Error("failed to ignore an event: %v", err)
+		m.logger.Add("id", el.ID, "ignore",
+			el.Ignore).Error(err.Error())
 	}
 }

@@ -364,6 +364,13 @@ func (m *Monitor) findChannelID(el *data.EthLog) string {
 }
 
 func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
+	// HACK: update supply do not mark failures,
+	// so we have naive expectation that if eth log has failures,
+	// then supply update for it has already been scheduled.
+	if el.Failures != 0 {
+		return
+	}
+
 	var relID string
 
 	// First try to take related id from offering in db.

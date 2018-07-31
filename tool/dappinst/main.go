@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"log"
@@ -15,7 +16,8 @@ import (
 )
 
 const (
-	jsonIdent = "    "
+	jsonIdent  = "    "
+	appVersion = "0.7.1"
 )
 
 func main() {
@@ -45,6 +47,7 @@ func main() {
 	id, pass := customiseProduct(logger, db, *template, *agent)
 	createDappvpnConfig(
 		logger, id, pass, *dappvpnconftpl, *dappvpnconf, *agent)
+	writeAppVersion(logger, db)
 }
 
 func randPass() string {
@@ -132,4 +135,30 @@ func createDappvpnConfig(logger *util.Logger,
 		dappvpnconf, "", jsonIdent, &conf); err != nil {
 		logger.Fatal("failed to write dappvpn config")
 	}
+}
+
+func writeAppVersion(logger *util.Logger, db *reform.DB) {
+	versionSetting := &data.Setting{}
+	err := db.FindOneTo(versionSetting, "key", data.SettingAppVersion)
+	if err == sql.ErrNoRows {
+		err = db.Insert(&data.Setting{
+			Key:         data.SettingAppVersion,
+			Value:       appVersion,
+			Permissions: data.ReadOnly,
+			Name:        "App version",
+		})
+	} else if err != nil {
+		logger.Info("%s before update: %v",
+			data.SettingAppVersion, versionSetting.Value)
+
+		versionSetting.Value = appVersion
+		err = db.Update(versionSetting)
+	}
+
+	if err != nil {
+		logger.Fatal("failed to write app version: %v", err)
+	}
+
+	logger.Info("%s after update: %v",
+		data.SettingAppVersion, appVersion)
 }

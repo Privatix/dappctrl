@@ -14,6 +14,7 @@ const (
 	SettingPasswordSalt       = "system.salt"
 	DappCTRLVersion           = "system.version.dappctrl"
 	DBVersion                 = "system.version.db"
+	SettingAppVersion         = "system.version.app"
 )
 
 // ReadSetting reads value of a given setting.

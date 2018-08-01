@@ -62,7 +62,7 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		// if setting exists and settings.permissions != 2
 		// then setting ignored
 		if settingFromDB.Key != "" {
-			if setting.Permissions != data.ReadWrite {
+			if settingFromDB.Permissions != data.ReadWrite {
 				continue
 			}
 

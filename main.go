@@ -234,7 +234,7 @@ func main() {
 	}()
 
 	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
-		db, logger, pr)
+		db, logger2, pr)
 	if err != nil {
 		logger.Fatal("failed to create agent billing monitor: %s", err)
 	}

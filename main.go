@@ -244,7 +244,7 @@ func main() {
 	}()
 
 	cmon := cbill.NewMonitor(conf.ClientMonitor,
-		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 	go func() {
 		fatal <- fmt.Sprintf("failed to run client billing monitor: %s",
 			cmon.Run())

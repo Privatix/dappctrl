@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type pwStore struct{}
@@ -38,11 +39,12 @@ var (
 		ClientBillingTest *testConfig
 		DB                *data.DBConfig
 		Job               *job.Config
+		FileLog           *log.FileConfig
 		Log               *util.LogConfig
 		Proc              *proc.Config
 	}
 
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
 	pws    *pwStore
@@ -165,14 +167,24 @@ func TestPayment(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
 	conf.ClientBillingTest = newTestConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.Log = util.NewLogConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	// TODO(maxim) remove after refactor github.com/privatix/dappctrl/job pkg
+	oldLogger := util.NewTestLogger(conf.Log)
+
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	logger = l
+
 	db = data.NewTestDB(conf.DB)
-	queue := job.NewQueue(conf.Job, logger, db, nil)
+	queue := job.NewQueue(conf.Job, oldLogger, db, nil)
 	pr = proc.NewProcessor(conf.Proc, db, queue)
 	pws = &pwStore{}
 

@@ -1,7 +1,6 @@
 package statik
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"github.com/rakyll/statik/fs"
@@ -21,18 +20,18 @@ const (
 func ReadFile(name string) ([]byte, error) {
 	fs, err := fs.New()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open statik FS: %s", err)
+		return nil, ErrOpenFS
 	}
 
 	file, err := fs.Open(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open statik file: %s", err)
+		return nil, ErrOpenFile
 	}
 	defer file.Close()
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read statik file: %s", err)
+		return nil, ErrReadFile
 	}
 
 	return data, nil

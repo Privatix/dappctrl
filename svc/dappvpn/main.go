@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,12 +18,14 @@ import (
 	"github.com/privatix/dappctrl/svc/dappvpn/msg"
 	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 var (
 	conf    *config.Config
 	channel string
 	logger  *util.Logger
+	logger2 log.Logger
 	fatal   = make(chan string)
 )
 
@@ -37,7 +38,7 @@ func main() {
 
 	conf = config.NewConfig()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
-		log.Fatalf("failed to read configuration: %s\n", err)
+		panic(fmt.Sprintf("failed to read configuration: %s\n", err))
 	}
 
 	channel = *fchannel
@@ -45,9 +46,14 @@ func main() {
 	var err error
 	logger, err = util.NewLogger(conf.Log)
 	if err != nil {
-		log.Fatalf("failed to create logger: %s\n", err)
+		panic(fmt.Sprintf("failed to create logger: %s\n", err))
 	}
 	defer logger.GracefulStop()
+
+	logger2, err = log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create logger: %s\n", err))
+	}
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
@@ -99,12 +105,12 @@ func handleConnect() {
 func handleDisconnect() {
 	down, err := strconv.ParseUint(os.Getenv("bytes_sent"), 10, 64)
 	if err != nil || down < 0 {
-		log.Fatalf("bad bytes_sent value")
+		panic("bad bytes_sent value")
 	}
 
 	up, err := strconv.ParseUint(os.Getenv("bytes_received"), 10, 64)
 	if err != nil || up < 0 {
-		log.Fatalf("bad bytes_received value")
+		panic("bad bytes_received value")
 	}
 
 	args := sesssrv.StopArgs{
@@ -192,7 +198,7 @@ func handleMonitor(confFile string) {
 		go func() {
 			pusher := msg.NewPusher(conf.Pusher,
 				conf.Server.Config, conf.Server.Username,
-				conf.Server.Password, logger)
+				conf.Server.Password, logger2)
 
 			if err := pusher.PushConfiguration(ctx); err != nil {
 				logger.Error("failed to push app config to"+
@@ -209,7 +215,8 @@ func handleMonitor(confFile string) {
 	}
 
 	if len(channel) != 0 {
-		if err := prepare.ClientConfig(channel, conf); err != nil {
+		if err := prepare.ClientConfig(logger2, channel,
+			conf); err != nil {
 			logger.Fatal("failed to prepare client"+
 				" configuration: %s", err)
 		}

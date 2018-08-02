@@ -9,10 +9,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pkg/errors"
-
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -60,6 +59,8 @@ type vpnClient struct {
 	ManagementPort uint16 `json:"-"`
 }
 
+type service struct{ logger log.Logger }
+
 func defaultVpnConfig() *vpnClient {
 	return &vpnClient{
 		Cipher:         defaultCipher,
@@ -74,18 +75,21 @@ func defaultVpnConfig() *vpnClient {
 	}
 }
 
-func fillClientConfig(serviceEndpointAddress string,
+func (s *service) fillClientConfig(serviceEndpointAddress string,
 	additionalParams []byte) (*vpnClient, error) {
 	if !util.IsHostname(serviceEndpointAddress) &&
 		!util.IsIPv4(serviceEndpointAddress) {
-		return nil, errors.New("service endpoint address" +
-			" of an invalid format")
+		s.logger.Add("serviceEndpointAddress",
+			serviceEndpointAddress).Error(
+			ErrServiceEndpointAddr.Error())
+		return nil, ErrServiceEndpointAddr
 	}
 
 	cfg := defaultVpnConfig()
 
 	if err := json.Unmarshal(additionalParams, cfg); err != nil {
-		return nil, err
+		s.logger.Error(err.Error())
+		return nil, ErrDecodeParams
 	}
 
 	cfg.ServerAddress = serviceEndpointAddress
@@ -98,15 +102,18 @@ func fillClientConfig(serviceEndpointAddress string,
 	return cfg, nil
 }
 
-func genClientConfig(text string, data interface{}) ([]byte, error) {
+func (s *service) genClientConfig(text string,
+	data interface{}) ([]byte, error) {
 	tpl, err := vpnConfigTpl.Parse(text)
 	if err != nil {
-		return nil, err
+		s.logger.Error(err.Error())
+		return nil, ErrParseConfigTemplate
 	}
 
 	buf := new(bytes.Buffer)
 	if err := tpl.Execute(buf, data); err != nil {
-		return nil, err
+		s.logger.Error(err.Error())
+		return nil, ErrCombineConfigTemplate
 	}
 
 	return buf.Bytes(), nil
@@ -120,14 +127,13 @@ func accessDestination(dir string) string {
 	return filepath.Join(dir, defaultAccessFile)
 }
 
-func makeClientConfig(dir, serviceEndpointAddress string,
+func (s *service) makeClientConfig(dir, serviceEndpointAddress string,
 	params []byte, options map[string]interface{}) error {
 	// fill client configuration from service endpoint address and
 	// and parameters received from a agent
-	cfg, err := fillClientConfig(serviceEndpointAddress, params)
+	cfg, err := s.fillClientConfig(serviceEndpointAddress, params)
 	if err != nil {
-		return errors.Wrap(err, "failed to fill"+
-			" client configuration")
+		return err
 	}
 
 	// add full path to a access file to the configuration
@@ -143,21 +149,20 @@ func makeClientConfig(dir, serviceEndpointAddress string,
 
 	data, err := readFileFromVirtualFS(clientConfigTemplate)
 	if err != nil {
-		return errors.Wrap(err, "failed to read"+
-			" template file")
+		s.logger.Error(err.Error())
+		return err
 	}
 
 	// fill configuration template
-	config, err := genClientConfig(string(data), cfg)
+	config, err := s.genClientConfig(string(data), cfg)
 	if err != nil {
-		return errors.Wrap(err, "failed to generate"+
-			"client configuration data")
+		return err
 	}
 
 	err = writeFile(configDestination(dir), config)
 	if err != nil {
-		return errors.Wrap(err, "failed to create"+
-			"client configuration file")
+		s.logger.Error(err.Error())
+		return ErrCreateConfig
 	}
 	return nil
 }
@@ -165,18 +170,14 @@ func makeClientConfig(dir, serviceEndpointAddress string,
 // makes access file with username and password
 func makeAccess(dir, username, password string) error {
 	data := fmt.Sprintf("%s\n%s\n", username, password)
-
-	err := writeFile(accessDestination(dir), []byte(data))
-	if err != nil {
-		return errors.Wrap(err, "failed to create"+
-			"client access file")
-	}
-	return nil
+	return writeFile(accessDestination(dir), []byte(data))
 }
 
 // MakeFiles creates configuration files for the product.
-func MakeFiles(dir, serviceEndpointAddress, username, password string,
-	params []byte, options map[string]interface{}) error {
+func MakeFiles(logger log.Logger, dir, serviceEndpointAddress, username,
+	password string, params []byte, options map[string]interface{}) error {
+	s := &service{}
+
 	configDst := configDestination(dir)
 	accessDst := accessDestination(dir)
 
@@ -184,8 +185,8 @@ func MakeFiles(dir, serviceEndpointAddress, username, password string,
 	// then creates target directory
 	if notExist(dir) {
 		if err := makeDir(dir); err != nil {
-			return errors.Wrap(err, "failed to make"+
-				" directory "+dir)
+			logger.Add("directory", dir).Error(err.Error())
+			return ErrCreateDir
 		}
 	} else {
 		// if the configuration file and the access file exist,
@@ -198,7 +199,7 @@ func MakeFiles(dir, serviceEndpointAddress, username, password string,
 	// if the configuration file does not exists,
 	// then makes and fill client configuration file
 	if !checkFile(configDst) {
-		if err := makeClientConfig(dir, serviceEndpointAddress,
+		if err := s.makeClientConfig(dir, serviceEndpointAddress,
 			params, options); err != nil {
 			return err
 		}
@@ -208,7 +209,9 @@ func MakeFiles(dir, serviceEndpointAddress, username, password string,
 	// then makes and fill access file
 	if !checkFile(accessDst) {
 		if err := makeAccess(dir, username, password); err != nil {
-			return err
+			s.logger.Add("directory",
+				dir).Error(err.Error())
+			return ErrCreateAccessFile
 		}
 	}
 	return nil

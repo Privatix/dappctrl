@@ -3,18 +3,18 @@ package prepare
 import (
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/msg"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // ClientConfig prepares configuration for Client.
 // By the channel ID, finds a endpoint on a session server.
 // Creates client configuration files for using a product.
-func ClientConfig(channel string, adapterConfig *config.Config) error {
+func ClientConfig(logger log.Logger, channel string,
+	adapterConfig *config.Config) error {
 	args := sesssrv.EndpointMsgArgs{ChannelID: channel}
 
 	var endpoint *data.Endpoint
@@ -23,7 +23,8 @@ func ClientConfig(channel string, adapterConfig *config.Config) error {
 		adapterConfig.Server.Username, adapterConfig.Server.Password,
 		sesssrv.PathEndpointMsg, args, &endpoint)
 	if err != nil {
-		return errors.Wrap(err, "failed to get endpoint")
+		logger.Add("channel", channel).Error(err.Error())
+		return ErrGetEndpoint
 	}
 
 	save := func(str *string) string {
@@ -36,13 +37,12 @@ func ClientConfig(channel string, adapterConfig *config.Config) error {
 	target := filepath.Join(
 		adapterConfig.OpenVPN.ConfigRoot, endpoint.Channel)
 
-	err = msg.MakeFiles(target,
+	err = msg.MakeFiles(logger, target,
 		save(endpoint.ServiceEndpointAddress), save(endpoint.Username),
 		save(endpoint.Password), endpoint.AdditionalParams,
 		msg.SpecificOptions(adapterConfig.Monitor))
 	if err != nil {
-		return errors.Wrap(err, "failed to make client"+
-			" configuration files")
+		return ErrMakeConfig
 	}
-	return err
+	return nil
 }

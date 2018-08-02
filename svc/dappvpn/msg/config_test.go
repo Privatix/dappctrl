@@ -82,7 +82,7 @@ func checkCA(t *testing.T, config string, ca []byte) {
 func checkConf(t *testing.T, config string, keys []string) {
 	keys = append(keys, remoteKey)
 
-	result, err := vpnParams(config, keys)
+	result, err := vpnParams(logger2, config, keys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestMakeFiles(t *testing.T) {
 	accessFile := filepath.Join(rootDir, defaultAccessFile)
 	confFile := filepath.Join(rootDir, clientConfigName)
 
-	if err := MakeFiles(rootDir, serviceEndpointAddress, username,
+	if err := MakeFiles(logger2, rootDir, serviceEndpointAddress, username,
 		password, data, SpecificOptions(
 			conf.VPNMonitor)); err != nil {
 		t.Fatal(err)

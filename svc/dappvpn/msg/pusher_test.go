@@ -66,7 +66,7 @@ func TestPushConfig(t *testing.T) {
 
 	pusher := NewPusher(createTestConfig(t, rootDir),
 		conf.SessionServer.Config, fxt.Product.ID, data.TestPassword,
-		logger)
+		logger2)
 	if err := pusher.PushConfiguration(context.Background()); err != nil {
 		t.Fatal(err)
 	}

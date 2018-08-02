@@ -6,19 +6,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
-func vpnParams(file string,
+func vpnParams(logger log.Logger, file string,
 	keys []string) (params map[string]string, err error) {
 	params = make(map[string]string)
 
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot read vpn"+
-			" configuration file")
+		logger.Add("file", file).Error(err.Error())
+		return nil, ErrReadConfigFile
 	}
 	defer f.Close()
 
@@ -39,23 +38,24 @@ func vpnParams(file string,
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "failed to read vpn"+
-			" configuration file")
+		logger.Add("file", file).Error(err.Error())
+		return nil, ErrReadLineFromConfigFile
 	}
 
 	return params, err
 }
 
-func certificateAuthority(file string) (ca []byte, err error) {
+func certificateAuthority(logger log.Logger,
+	file string) (ca []byte, err error) {
 	mainCertPEMBlock, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot read Certificate"+
-			" Authority file")
+		logger.Add("file", file).Error(err.Error())
+		return nil, ErrReadCAFile
 	}
 
 	if !util.IsTLSCert(string(mainCertPEMBlock)) {
-		return nil, errors.Wrap(err, "certificate authority"+
-			" can not be found in the specified path")
+		logger.Add("file", file).Error(err.Error())
+		return nil, ErrCAFormat
 	}
 
 	return mainCertPEMBlock, nil

@@ -25,6 +25,7 @@ import (
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type testConfig struct {
@@ -38,6 +39,7 @@ type testConfig struct {
 	Eth       *eth.Config
 	Job       *job.Config
 	Log       *util.LogConfig
+	FileLog   *log.FileConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
@@ -51,6 +53,7 @@ func newTestConfig() *testConfig {
 		Eth:      eth.NewConfig(),
 		Job:      job.NewConfig(),
 		Log:      util.NewLogConfig(),
+		FileLog:  log.NewFileConfig(),
 		SOMC:     somc.NewConfig(),
 		SOMCTest: somc.NewTestConfig(),
 		pscAddr:  common.HexToAddress("0x1"),
@@ -67,9 +70,10 @@ type workerTest struct {
 }
 
 var (
-	conf   *testConfig
-	db     *reform.DB
-	logger *util.Logger
+	conf    *testConfig
+	db      *reform.DB
+	logger  *util.Logger
+	logger2 log.Logger
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
@@ -89,8 +93,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(logger, db, somcConn, ethBack, conf.Gas,
-		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
+	worker, err := NewWorker(logger, logger2, db, somcConn, ethBack,
+		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
 		data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {
 		somcConn.Close()
@@ -124,6 +128,11 @@ func TestMain(m *testing.M) {
 	var err error
 
 	logger, err = util.NewLogger(conf.Log)
+	if err != nil {
+		panic(err)
+	}
+
+	logger2, err = log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}

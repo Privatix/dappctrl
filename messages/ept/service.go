@@ -7,13 +7,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-)
-
-const (
-	invalidChannel  = "invalid channel"
-	invalidOffering = "invalid offering"
-	invalidProduct  = "invalid product"
-	invalidTemplate = "invalid template"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Config is a configuration for Endpoint Message Service.
@@ -39,7 +33,7 @@ type obj struct {
 	tmpl  data.Template
 }
 
-// Message structure for Endpoint Message
+// Message structure for Endpoint Message.
 type Message struct {
 	TemplateHash           string            `json:"templateHash"`
 	Username               string            `json:"username"`
@@ -49,9 +43,10 @@ type Message struct {
 	AdditionalParams       map[string]string `json:"additionalParams"`
 }
 
-// Service for generation Endpoint Message
+// Service for generation Endpoint Message.
 type Service struct {
 	db      *reform.DB
+	logger  log.Logger
 	msgChan chan *req
 	payAddr string
 	timeout time.Duration
@@ -67,18 +62,15 @@ func newResult(tpl *Message, err error) *result {
 }
 
 // New function for initialize the service for generating
-// the Endpoint Message
-func New(db *reform.DB, payAddr string,
+// the Endpoint Message.
+func New(db *reform.DB, logger log.Logger, payAddr string,
 	timeout uint) (*Service, error) {
-	if db == nil {
-		return nil, ErrInput
-	}
-
 	return &Service{db: db, msgChan: make(chan *req), payAddr: payAddr,
-		timeout: time.Duration(timeout) * time.Second}, nil
+		timeout: time.Duration(timeout) * time.Second,
+		logger:  logger}, nil
 }
 
-// EndpointMessage returns the endpoint message object
+// EndpointMessage returns the endpoint message object.
 func (s *Service) EndpointMessage(channelID string) (*Message, error) {
 	c := make(chan *result)
 	done := make(chan bool)
@@ -124,7 +116,9 @@ func (s *Service) objects(done chan bool, errC chan error,
 			exit = true
 		case err := <-localErr:
 			if err != nil {
-				errC <- errWrapper(err, invalidChannel)
+				s.logger.Add("channel",
+					channelID).Error(err.Error())
+				errC <- err
 				terminate <- true
 				exit = true
 			}
@@ -141,7 +135,9 @@ func (s *Service) objects(done chan bool, errC chan error,
 			exit = true
 		case err := <-localErr:
 			if err != nil {
-				errC <- errWrapper(err, invalidOffering)
+				s.logger.Add("offering",
+					ch.Offering).Error(err.Error())
+				errC <- err
 				terminate <- true
 				exit = true
 			}
@@ -158,7 +154,9 @@ func (s *Service) objects(done chan bool, errC chan error,
 			terminate <- true
 		case err := <-localErr:
 			if err != nil {
-				errC <- errWrapper(err, invalidProduct)
+				s.logger.Add("product",
+					offer.Product).Error(err.Error())
+				errC <- err
 				terminate <- true
 			}
 		}
@@ -170,7 +168,9 @@ func (s *Service) objects(done chan bool, errC chan error,
 			terminate <- true
 		case err := <-localErr:
 			if err != nil {
-				errC <- errWrapper(err, invalidTemplate)
+				s.logger.Add("offerAccessID",
+					prod.OfferAccessID).Error(err.Error())
+				errC <- err
 				terminate <- true
 			}
 		}
@@ -250,7 +250,7 @@ func (s *Service) processing(req *req) {
 
 func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
 	msgCh chan *Message) {
-	conf, err := config(o.prod.Config)
+	conf, err := s.config(o.prod.Config)
 	if err != nil {
 		select {
 		case <-done:
@@ -263,7 +263,7 @@ func (s *Service) genMsg(done chan bool, errC chan error, o *obj,
 	if err != nil {
 		select {
 		case <-done:
-		case errC <- errWrapper(err, invalidTemplate):
+		case errC <- err:
 		}
 		return
 	}

@@ -12,21 +12,24 @@ import (
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
-	errValidateMsg = "incorrect validate message"
-	eptTempFile    = "/templates/ept.json"
+	eptTempFile = "/templates/ept.json"
 )
 
 var (
 	conf struct {
 		DB        *data.DBConfig
 		Log       *util.LogConfig
+		FileLog   *log.FileConfig
 		PayServer *pay.Config
 		EptTest   *eptTestConfig
 		EptMsg    *Config
 	}
+
+	logger log.Logger
 
 	testDB *reform.DB
 )
@@ -116,10 +119,18 @@ func TestMain(m *testing.M) {
 	conf.PayServer = &pay.Config{}
 	conf.EptTest = newEptTestConfig()
 	conf.EptMsg = NewConfig()
+	conf.FileLog = log.NewFileConfig()
 
 	util.ReadTestConfig(&conf)
 
 	testDB = data.NewTestDB(conf.DB)
+
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	logger = l
 
 	defer data.CloseDB(testDB)
 
@@ -137,18 +148,14 @@ func TestValidEndpointMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
+	s, err := New(testDB, logger, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	em, err := s.EndpointMessage(fxt.ch.ID)
+	_, err = s.EndpointMessage(fxt.ch.ID)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if em == nil {
-		t.Fatal(ErrInvalidFormat)
 	}
 }
 
@@ -161,13 +168,13 @@ func TestBadProductConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
+	s, err := New(testDB, logger, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if _, err := s.EndpointMessage(fxt.ch.ID); err == nil {
-		t.Fatal(errValidateMsg)
+		t.Fatal(err)
 	}
 }
 
@@ -180,12 +187,12 @@ func TestBadProductOfferAccessID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := New(testDB, conf.PayServer.Addr, conf.EptMsg.Timeout)
+	s, err := New(testDB, logger, conf.PayServer.Addr, conf.EptMsg.Timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if _, err := s.EndpointMessage(fxt.ch.ID); err == nil {
-		t.Fatal(errValidateMsg)
+		t.Fatal(err)
 	}
 }

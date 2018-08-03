@@ -3,9 +3,9 @@
 ## update_versions.py
 
 This script updates the versions of dappctrl:
+
 * prod_data.sql
 * dappinst/main.go
-
 
 Only use at `release/*` branch.
 

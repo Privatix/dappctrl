@@ -1,7 +1,6 @@
 package bill
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -11,13 +10,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/util"
-)
-
-// Errors.
-var (
-	ErrAlreadyRunning = errors.New("already running")
-	ErrMonitorClosed  = errors.New("monitor closed")
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Config is a billing monitor configuration.
@@ -42,7 +35,7 @@ type postChequeFunc func(db *reform.DB, channel, pscAddr, pass string,
 // Monitor is a client billing monitor.
 type Monitor struct {
 	conf   *Config
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
 	psc    string
@@ -54,7 +47,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates a new client billing monitor.
-func NewMonitor(conf *Config, logger *util.Logger, db *reform.DB,
+func NewMonitor(conf *Config, logger log.Logger, db *reform.DB,
 	pr *proc.Processor, pscAddr string, pw data.PWDGetter) *Monitor {
 	return &Monitor{
 		conf:   conf,
@@ -80,7 +73,6 @@ func (m *Monitor) Run() error {
 	m.mtx.Unlock()
 
 	period := time.Duration(m.conf.CollectPeriod) * time.Millisecond
-	ret := ErrMonitorClosed
 L:
 	for {
 		select {
@@ -96,14 +88,13 @@ L:
 			WHERE service_status IN ('active', 'suspended')
 			  AND channel_status = 'active' AND in_use`)
 		if err != nil {
-			ret = err
+			m.logger.Error(err.Error())
 			break L
 		}
 
 		for _, v := range chans {
 			err := m.processChannel(v.(*data.Channel))
 			if err != nil {
-				ret = err
 				break L
 			}
 		}
@@ -117,8 +108,8 @@ L:
 	m.exit = nil
 	m.mtx.Unlock()
 
-	m.logger.Info("%s", ret)
-	return ret
+	m.logger.Info(ErrMonitorClosed.Error())
+	return ErrMonitorClosed
 }
 
 // Close causes currently running Run() function to exit.
@@ -137,13 +128,16 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, false)
 		if err != nil {
 			if err != proc.ErrSameJobExists {
+				m.logger.Add("channel",
+					ch.ID).Error(err.Error())
 				return err
 			}
-			msg := "failed to trigger termination for chan %s: %s"
-			m.logger.Debug(msg, ch.ID, err)
+			m.logger.Add("channel", ch.ID, "error",
+				err.Error()).Debug("failed to trigger" +
+				" termination")
 		} else {
-			msg := "triggered termination for chan %s"
-			m.logger.Info(msg, ch.ID)
+			m.logger.Add("channel", ch.ID).Info("trigger" +
+				" termination")
 		}
 		return nil
 	}
@@ -153,12 +147,14 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		SELECT COALESCE(sum(units_used),0)
 		  FROM sessions
 		 WHERE channel = $1`, ch.ID).Scan(&consumed); err != nil {
-		return err
+		m.logger.Add("channel", ch.ID).Error(err.Error())
+		return ErrGetConsumedUnits
 	}
 
 	var offer data.Offering
 	if err := m.db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
-		return err
+		m.logger.Add("offering", ch.Offering).Error(err.Error())
+		return ErrGetOffering
 	}
 
 	lag := int64(consumed)/int64(offer.BillingInterval) -
@@ -179,12 +175,13 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
-	m.logger.Info("posting cheque for amount: %d...", amount)
+	m.logger.Add("amount", amount).Info("posting cheque")
 	pscB64 := data.FromBytes(common.HexToAddress(m.psc).Bytes())
 	err := m.post(m.db, ch, pscB64, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout)
 	if err != nil {
-		m.logger.Error("failed to post cheque for chan %s: %s", ch, err)
+		m.logger.Add("channel", ch, "amount",
+			amount).Error(err.Error())
 		return
 	}
 
@@ -193,18 +190,18 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 		   SET receipt_balance = $1
 		 WHERE id = $2 AND receipt_balance < $1`, amount, ch)
 	if err != nil {
-		msg := "failed to update receipt balance for chan %s: %s"
-		m.logger.Error(msg, ch, err)
+		m.logger.Add("channel", ch, "amount",
+			amount).Error(ErrUpdateReceiptBalance.Error())
 		return
 	}
 
 	if n, err := res.RowsAffected(); err != nil {
 		if n != 0 {
-			msg := "updated receipt balance for chan %s: %d"
-			m.logger.Info(msg, ch, amount)
+			m.logger.Add("channel", ch, "amount",
+				amount).Info("updated receipt balance")
 		} else {
-			msg := "receipt balance isn't updated for chan %s"
-			m.logger.Warn(msg, ch)
+			m.logger.Add("channel", ch).Warn(
+				"receipt balance isn't updated")
 		}
 	}
 }

@@ -198,7 +198,7 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger, db, somcConn,
+	worker, err := worker.NewWorker(logger, logger2, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,

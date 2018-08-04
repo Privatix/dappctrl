@@ -16,6 +16,7 @@ import (
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // GasConf amounts of gas limit to use for contracts calls.
@@ -61,7 +62,7 @@ type Worker struct {
 }
 
 // NewWorker returns new instance of worker.
-func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
+func NewWorker(logger *util.Logger, logger2 log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config) (*Worker, error) {
@@ -71,7 +72,7 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		return nil, err
 	}
 
-	eptService, err := ept.New(db, payAddr, eptConf.Timeout)
+	eptService, err := ept.New(db, logger2, payAddr, eptConf.Timeout)
 	if err != nil {
 		return nil, err
 	}

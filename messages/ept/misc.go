@@ -48,10 +48,11 @@ func genPass() string {
 	return generated
 }
 
-func config(confByte []byte) (map[string]string, error) {
+func (s *Service) config(confByte []byte) (map[string]string, error) {
 	var conf map[string]string
 
 	if err := json.Unmarshal(confByte, &conf); err != nil {
+		s.logger.Error(err.Error())
 		return nil, err
 	}
 

@@ -1,7 +1,6 @@
 package msg
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"testing"
@@ -13,20 +12,23 @@ import (
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 var (
 	conf struct {
 		DB                *data.DBConfig
 		Log               *util.LogConfig
+		FileLog           *log.FileConfig
 		SessionServer     *sesssrv.Config
 		SessionServerTest *testSessSrvConfig
 		VPNConfigPusher   *pusherTestConf
 		VPNMonitor        *mon.Config
 	}
 
-	db     *reform.DB
-	logger *util.Logger
+	db      *reform.DB
+	logger  *util.Logger
+	logger2 log.Logger
 
 	parameters map[string]string
 )
@@ -79,6 +81,7 @@ func newSessSrvTestConfig() *testSessSrvConfig {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.SessionServer = sesssrv.NewConfig()
 	conf.SessionServerTest = newSessSrvTestConfig()
 	conf.VPNConfigPusher = newPusherTestConf()
@@ -88,11 +91,18 @@ func TestMain(m *testing.M) {
 
 	logger = util.NewTestLogger(conf.Log)
 
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	logger2 = l
+
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	if len(conf.VPNConfigPusher.TestConfig) == 0 {
-		log.Fatal("empty test config")
+		panic("empty test config")
 	}
 
 	parameters = conf.VPNConfigPusher.TestConfig

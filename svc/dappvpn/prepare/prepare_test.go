@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -26,13 +27,15 @@ var (
 	conf struct {
 		DB                *data.DBConfig
 		Log               *util.LogConfig
+		FileLog           *log.FileConfig
 		SessionServer     *sesssrv.Config
 		SessionServerTest *testSessSrvConfig
 		VPNMonitor        *mon.Config
 	}
 
-	db     *reform.DB
-	logger *util.Logger
+	db      *reform.DB
+	logger  *util.Logger
+	logger2 log.Logger
 )
 
 type testSessSrvConfig struct {
@@ -46,12 +49,20 @@ type testSessSrv struct {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.SessionServer = sesssrv.NewConfig()
 	conf.SessionServerTest = newSessSrvTestConfig()
 
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)
+
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	logger2 = l
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
@@ -123,8 +134,10 @@ func TestClientConfig(t *testing.T) {
 	adapterConfig.Server.Password = data.TestPassword
 	adapterConfig.OpenVPN.ConfigRoot = rootDir
 	adapterConfig.Monitor = conf.VPNMonitor
+	adapterConfig.FileLog = conf.FileLog
 
-	if err := ClientConfig(fxt.Channel.ID, adapterConfig); err != nil {
+	if err := ClientConfig(logger2, fxt.Channel.ID,
+		adapterConfig); err != nil {
 		t.Fatal(err)
 	}
 

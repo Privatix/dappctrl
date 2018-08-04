@@ -1,6 +1,13 @@
 {
     "ChannelDir": ".",
 
+    "FileLog": {
+        "Level": "info",
+        "StackLevel": "error",
+        "Prefix": "",
+        "UTC": false
+    },
+
     "Log": {
         "Level": "info",
         "LogPath": "/var/log",

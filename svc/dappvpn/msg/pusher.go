@@ -7,11 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rdegges/go-ipify"
 
 	"github.com/privatix/dappctrl/sesssrv"
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -40,7 +39,7 @@ type Pusher struct {
 	server   *srv.Config
 	username string
 	password string
-	logger   *util.Logger
+	logger   log.Logger
 	ip       string
 }
 
@@ -53,11 +52,11 @@ func NewConfig() *Config {
 // Argument conf to parsing vpn configuration. Arguments srv, user, pass
 // to send configuration to session service.
 func NewPusher(conf *Config, srv *srv.Config, user, pass string,
-	logger *util.Logger) *Pusher {
+	logger log.Logger) *Pusher {
 	var ip string
 	ip, err := externalIP()
 	if err != nil {
-		logger.Warn("couldn't get my IP address: %s", err)
+		logger.Warn("couldn't get my IP address")
 		ip = defaultIP
 	}
 
@@ -72,13 +71,13 @@ func NewPusher(conf *Config, srv *srv.Config, user, pass string,
 }
 
 func (p *Pusher) vpnParams() (map[string]string, error) {
-	vpnParams, err := vpnParams(p.config.ConfigPath,
+	vpnParams, err := vpnParams(p.logger, p.config.ConfigPath,
 		p.config.ExportConfigKeys)
 	if err != nil {
 		return nil, err
 	}
 
-	ca, err := certificateAuthority(p.config.CaCertPath)
+	ca, err := certificateAuthority(p.logger, p.config.CaCertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -103,15 +102,15 @@ func (p *Pusher) PushConfiguration(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.New("context is done")
+			return ErrContextIsDone
 		default:
 		}
 
 		if err := sesssrv.Post(p.server, p.username, p.password,
 			sesssrv.PathProductConfig,
 			*args, nil); err != nil {
-			p.logger.Warn("failed to push app config to"+
-				" dappctrl. Original error: %s", err)
+			p.logger.Add("error", err.Error()).Warn(
+				"failed to push app config to dappctrl.")
 			time.Sleep(time.Second *
 				time.Duration(p.config.TimeOut))
 			continue

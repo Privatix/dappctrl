@@ -90,14 +90,14 @@ func checkCliChan(t *testing.T, resp respGetClientChan, ch data.Channel) {
 			ch.ID, resp.ID)
 	}
 
-	if ethAddrFromBase64(ch.Agent) != resp.Agent {
+	if ethAddrFromHex(ch.Agent) != resp.Agent {
 		t.Fatalf("expected %s, got: %s",
-			ethAddrFromBase64(ch.Agent), resp.Agent)
+			ethAddrFromHex(ch.Agent), resp.Agent)
 	}
 
-	if ethAddrFromBase64(ch.Client) != resp.Client {
+	if ethAddrFromHex(ch.Client) != resp.Client {
 		t.Fatalf("expected %s, got: %s",
-			ethAddrFromBase64(ch.Client), resp.Client)
+			ethAddrFromHex(ch.Client), resp.Client)
 	}
 
 	if ch.Offering != resp.Offering {

@@ -51,7 +51,7 @@ func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 		OpenBlockNumber: channel.Block,
 		OfferingHash:    offering.Hash,
 		Balance:         amount,
-		ContractAddress: data.FromBytes(testPSCAddr.Bytes()),
+		ContractAddress: data.HexFromBytes(testPSCAddr.Bytes()),
 	}
 
 	agentAddr := data.TestToAddress(t, channel.Agent)

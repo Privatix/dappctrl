@@ -29,7 +29,6 @@ const (
 	clientPass     = "clientpass"
 	someAddressStr = "0xdeadbeef"
 	someHashStr    = "0xc0ffee"
-	txHashStr      = "0xd8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 
 	minDepositVal  = 123
 	chanDepositVal = 100
@@ -38,6 +37,8 @@ const (
 	clientOfferingPoppedUp   = "client offering popped up"
 	agentAfterChannelCreated = "agent after channel created"
 	clientAfterChannelTopUp  = "client after channel topup"
+
+	txHash = "d8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 )
 
 var (
@@ -53,8 +54,6 @@ var (
 
 	someAddress = common.HexToAddress(someAddressStr)
 	someHash    = common.HexToHash(someHashStr)
-
-	txHash = data.FromBytes(common.HexToHash(txHashStr).Bytes())
 
 	blockNum uint64
 )
@@ -184,7 +183,7 @@ func insertNewAccount(t *testing.T, db *reform.DB,
 	acc := data.NewTestAccount(auth)
 	data.InsertToTestDB(t, db, acc)
 
-	addrBytes, err := data.ToBytes(acc.EthAddr)
+	addrBytes, err := data.HexToBytes(acc.EthAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,21 +336,21 @@ func generateTestData(t *testing.T) *testData {
 	offering1 := data.NewTestOffering(
 		acc1.EthAddr, product.ID, template.ID)
 	offeringX := data.NewTestOffering(
-		data.FromBytes(someAddress.Bytes()),
+		data.HexFromBytes(someAddress.Bytes()),
 		product.ID, template.ID,
 	)
 	offeringU := data.NewTestOffering(
-		data.FromBytes(someAddress.Bytes()),
+		data.HexFromBytes(someAddress.Bytes()),
 		product.ID, template.ID,
 	)
 
 	channel1 := data.NewTestChannel(
-		acc1.EthAddr, data.FromBytes(someAddress.Bytes()),
+		acc1.EthAddr, data.HexFromBytes(someAddress.Bytes()),
 		offering1.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channel1.Block = 7
 	channelX := data.NewTestChannel(
-		data.FromBytes(someAddress.Bytes()), acc2.EthAddr,
+		data.HexFromBytes(someAddress.Bytes()), acc2.EthAddr,
 		offeringX.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channelX.Block = 8

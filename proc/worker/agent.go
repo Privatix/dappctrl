@@ -65,8 +65,8 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 
 	channel := &data.Channel{
 		ID:            job.RelatedID,
-		Client:        data.FromBytes(logChannelCreated.clientAddr.Bytes()),
-		Agent:         data.FromBytes(logChannelCreated.agentAddr.Bytes()),
+		Client:        data.HexFromBytes(logChannelCreated.clientAddr.Bytes()),
+		Agent:         data.HexFromBytes(logChannelCreated.agentAddr.Bytes()),
 		TotalDeposit:  logChannelCreated.deposit.Uint64(),
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
@@ -210,7 +210,7 @@ func (w *Worker) agentCooperativeClose(job *data.Job,
 		return err
 	}
 
-	clientAddr, err := data.ToAddress(channel.Client)
+	clientAddr, err := data.HexToAddress(channel.Client)
 	if err != nil {
 		return fmt.Errorf("unable to parse client addr: %v", err)
 	}
@@ -231,7 +231,7 @@ func (w *Worker) agentCooperativeClose(job *data.Job,
 		return fmt.Errorf("could not sign closing msg: %v", err)
 	}
 
-	agentAddr, err := data.ToAddress(channel.Agent)
+	agentAddr, err := data.HexToAddress(channel.Agent)
 	if err != nil {
 		return fmt.Errorf("unable to parse agent's address: %v", err)
 	}
@@ -256,7 +256,7 @@ func (w *Worker) agentCooperativeClose(job *data.Job,
 	}
 
 	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
-		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 func (w *Worker) agentUpdateServiceStatus(job *data.Job,
@@ -544,7 +544,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "RegisterServiceOffering", job.RelatedType,
-		job.RelatedID, agent.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates
@@ -637,7 +637,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, offering.Agent,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentPreOfferingPopUp pop ups an offering.
@@ -676,5 +677,6 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, offering.Agent,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }

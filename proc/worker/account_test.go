@@ -66,7 +66,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 	})
 	defer env.deleteFromTestDB(t, approveJob)
 
-	txHash := data.FromBytes(common.HexToHash("0xd238f7").Bytes())
+	txHash := "d238f7"
 
 	ethLog := data.NewTestEthLog()
 	ethLog.JobID = &fixture.job.ID

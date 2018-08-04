@@ -39,7 +39,7 @@ func newPayload(db *reform.DB, channel,
 		ContractAddress: pscAddr,
 	}
 
-	agentAddr, err := data.ToAddress(ch.Agent)
+	agentAddr, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func newPayload(db *reform.DB, channel,
 		return nil, err
 	}
 
-	pscAddrParsed, err := data.ToAddress(pscAddr)
+	pscAddrParsed, err := data.HexToAddress(pscAddr)
 	if err != nil {
 		return nil, err
 	}

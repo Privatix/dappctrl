@@ -63,7 +63,7 @@ func TestToHash(t *testing.T, h string) common.Hash {
 
 // TestToAddress decodes to address or fails.
 func TestToAddress(t *testing.T, addr string) common.Address {
-	ret, err := ToAddress(addr)
+	ret, err := HexToAddress(addr)
 	if err != nil {
 		t.Fatal("failed to make addr")
 	}
@@ -92,7 +92,7 @@ func NewTestUser() *User {
 	priv, _ := ecdsa.GenerateKey(crypto.S256(), cryptorand.Reader)
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
-	addr := FromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
+	addr := HexFromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
 	return &User{
 		ID:        util.NewUUID(),
 		EthAddr:   addr,
@@ -105,7 +105,7 @@ func NewTestAccount(auth string) *Account {
 	priv, _ := ecdsa.GenerateKey(crypto.S256(), cryptorand.Reader)
 	pub := FromBytes(
 		crypto.FromECDSAPub(&priv.PublicKey))
-	addr := FromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
+	addr := HexFromBytes(crypto.PubkeyToAddress(priv.PublicKey).Bytes())
 	pkEcnrypted, _ := TestEncryptedKey(priv, auth)
 	return &Account{
 		ID:         util.NewUUID(),
@@ -124,7 +124,7 @@ func NewTestAccount(auth string) *Account {
 // NewEthTestAccount returns new account based on truffle.TestAccount.
 func NewEthTestAccount(auth string, acc *truffle.TestAccount) *Account {
 	pub := FromBytes(crypto.FromECDSAPub(&acc.PrivateKey.PublicKey))
-	addr := FromBytes(acc.Address.Bytes())
+	addr := HexFromBytes(acc.Address.Bytes())
 	pkEcnrypted, _ := TestEncryptedKey(acc.PrivateKey, auth)
 	return &Account{
 		ID:         util.NewUUID(),

@@ -176,8 +176,8 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
 	m.logger.Add("amount", amount).Info("posting cheque")
-	pscB64 := data.FromBytes(common.HexToAddress(m.psc).Bytes())
-	err := m.post(m.db, ch, pscB64, m.pw.Get(), amount,
+	pscHex := data.HexFromBytes(common.HexToAddress(m.psc).Bytes())
+	err := m.post(m.db, ch, pscHex, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout)
 	if err != nil {
 		m.logger.Add("channel", ch, "amount",

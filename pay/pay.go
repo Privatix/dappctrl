@@ -3,7 +3,6 @@ package pay
 import (
 	"net/http"
 
-	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -35,12 +34,6 @@ func (s *Server) handlePay(
 
 	s.RespondResult(w, struct{}{})
 
-	clientHex, err := data.FromBase64ToHex(ch.Client)
-	if err != nil {
-		s.Logger().Error("failed to decode client addr: %v", err)
-		return
-	}
-
 	s.Logger().Info(
-		"received payment: %d, from: %s", payload.Balance, clientHex)
+		"received payment: %d, from: %s", payload.Balance, ch.Client)
 }

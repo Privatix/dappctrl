@@ -24,6 +24,7 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAgentPreOfferingMsgBCPublish:        worker.AgentPreOfferingMsgBCPublish,
 		data.JobAgentAfterOfferingMsgBCPublish:      worker.AgentAfterOfferingMsgBCPublish,
 		data.JobAgentPreOfferingMsgSOMCPublish:      worker.AgentPreOfferingMsgSOMCPublish,
+		data.JobAgentPreOfferingPopUp:               worker.AgentPreOfferingPopUp,
 
 		// Client jobs.
 		data.JobClientPreChannelCreate:               worker.ClientPreChannelCreate,

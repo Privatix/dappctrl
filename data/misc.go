@@ -25,6 +25,16 @@ func FromBase64ToHex(s string) (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// HexToBytes reutrns the bytes represented by the hex of string s.
+func HexToBytes(s string) ([]byte, error) {
+	return hex.DecodeString(s)
+}
+
+// HexFromBytes returns the hex encoding of src.
+func HexFromBytes(src []byte) string {
+	return hex.EncodeToString(src)
+}
+
 // ToBytes returns the bytes represented by the base64 string s.
 func ToBytes(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(strings.TrimSpace(s))
@@ -44,9 +54,18 @@ func ToHash(h string) (common.Hash, error) {
 	return common.BytesToHash(hashBytes), err
 }
 
-// ToAddress returns ethereum's address from base 64 encoded string.
-func ToAddress(addr string) (common.Address, error) {
-	addrBytes, err := ToBytes(addr)
+// HexToHash returns the ethereum's hash represented by the hex of string s.
+func HexToHash(h string) (common.Hash, error) {
+	hashBytes, err := HexToBytes(h)
+	if err != nil {
+		err = fmt.Errorf("unable to parse ethereum hash: %s", err)
+	}
+	return common.BytesToHash(hashBytes), err
+}
+
+// HexToAddress returns ethereum's address from base 64 encoded string.
+func HexToAddress(addr string) (common.Address, error) {
+	addrBytes, err := HexToBytes(addr)
 	if err != nil {
 		err = fmt.Errorf("unable to parse ethereum addr: %s", err)
 	}
@@ -186,12 +205,12 @@ func FindOneTo(db *reform.Querier,
 // used in a Privatix Service Contract.
 func ChannelKey(client, agent string, block uint32,
 	offeringHash string) ([]byte, error) {
-	clientAddr, err := ToAddress(client)
+	clientAddr, err := HexToAddress(client)
 	if err != nil {
 		return nil, err
 	}
 
-	agentAddr, err := ToAddress(agent)
+	agentAddr, err := HexToAddress(agent)
 	if err != nil {
 		return nil, err
 	}

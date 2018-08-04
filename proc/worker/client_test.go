@@ -271,7 +271,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||
@@ -328,7 +328,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||
@@ -438,7 +438,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -138,10 +139,10 @@ func (m *Monitor) collect(ctx context.Context) {
 func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) error {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
-		TxHash:      data.FromBytes(e.TxHash.Bytes()),
+		TxHash:      data.HexFromBytes(e.TxHash.Bytes()),
 		TxStatus:    txMinedStatus,
 		BlockNumber: e.BlockNumber,
-		Addr:        data.FromBytes(e.Address.Bytes()),
+		Addr:        data.HexFromBytes(e.Address.Bytes()),
 		Data:        data.FromBytes(e.Data),
 		Topics:      e.Topics,
 	}
@@ -167,16 +168,11 @@ func (m *Monitor) getAddressesInUse() ([]common.Hash, error) {
 
 	var addresses []common.Hash
 	for rows.Next() {
-		var b64 string
-		if err := rows.Scan(&b64); err != nil {
-			m.logger.Error(err.Error())
-			return nil, ErrScanRows
+		var addrHex string
+		if err := rows.Scan(&addrHex); err != nil {
+			return nil, fmt.Errorf("failed to scan rows: %v", err)
 		}
-		addrBytes, err := data.ToBytes(b64)
-		if err != nil {
-			return nil, err
-		}
-		addresses = append(addresses, common.BytesToHash(addrBytes))
+		addresses = append(addresses, common.HexToHash(addrHex))
 	}
 	if err := rows.Err(); err != nil {
 		m.logger.Error(err.Error())

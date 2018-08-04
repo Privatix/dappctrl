@@ -89,14 +89,14 @@ func (s *Server) verifySignature(w http.ResponseWriter,
 		return false
 	}
 
-	pscAddr, err := data.ToAddress(pld.ContractAddress)
+	pscAddr, err := data.HexToAddress(pld.ContractAddress)
 	if err != nil {
 		s.Logger().Error("could not parse contract addr: %v", err)
 		s.RespondError(w, errUnexpected)
 		return false
 	}
 
-	agentAddr, err := data.ToAddress(ch.Agent)
+	agentAddr, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		s.Logger().Error("could not parse agent addr: %v", err)
 		s.RespondError(w, errUnexpected)

@@ -22,7 +22,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return fmt.Errorf("failed to parse job data: %v", err)
 	}
 
-	addr, err := data.ToAddress(acc.EthAddr)
+	addr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		return fmt.Errorf("unable to parse account's addr: %v", err)
 	}
@@ -63,7 +63,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "PTCIncreaseApproval", job.RelatedType,
-		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // PreAccountAddBalance adds balance to psc.
@@ -92,7 +92,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "PSCAddBalanceERC20", job.RelatedType,
-		job.RelatedID, acc.EthAddr, data.FromBytes(w.pscAddr.Bytes()))
+		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error) {
@@ -182,7 +182,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	}
 
 	return w.saveEthTX(job, tx, "PSCReturnBalanceERC20", job.RelatedType,
-		job.RelatedID, data.FromBytes(w.pscAddr.Bytes()), acc.EthAddr)
+		job.RelatedID, data.HexFromBytes(w.pscAddr.Bytes()), acc.EthAddr)
 }
 
 func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
@@ -201,12 +201,12 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 		return fmt.Errorf("could not parse log: %v", err)
 	}
 
-	agentAddr, err := data.ToAddress(channel.Agent)
+	agentAddr, err := data.HexToAddress(channel.Agent)
 	if err != nil {
 		return fmt.Errorf("failed to parse agent addr: %v", err)
 	}
 
-	clientAddr, err := data.ToAddress(channel.Client)
+	clientAddr, err := data.HexToAddress(channel.Client)
 	if err != nil {
 		return fmt.Errorf("failed to parse client addr: %v", err)
 	}

@@ -156,7 +156,8 @@ func main() {
 
 	logger.Reporter(reporter)
 
-	ethClient, err := eth.NewClient(context.Background(), conf.Eth)
+	ethClient, err := eth.NewClient(context.Background(),
+		conf.Eth, logger2)
 	if err != nil {
 		logger.Fatal("failed to dial Ethereum node: %v", err)
 	}

@@ -2,7 +2,6 @@ package eth
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -10,6 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -29,7 +30,8 @@ type Client struct {
 }
 
 // NewClient creates client for connection to the Ethereum.
-func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
+func NewClient(ctx context.Context, cfg *Config,
+	logger log.Logger) (*Client, error) {
 	u, err := url.Parse(cfg.GethURL)
 	if err != nil {
 		return nil, err
@@ -54,12 +56,12 @@ func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
 	case ipc:
 		rpcClient, err = rpc.DialIPC(ctx, cfg.GethURL)
 	default:
-		return nil, fmt.Errorf("no known transport"+
-			" for URL scheme %q", u.Scheme)
+		logger.Add("scheme", u.Scheme).Error(err.Error())
+		return nil, ErrURLScheme
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to create"+
-			" rpc client %s", err)
+		logger.Error(err.Error())
+		return nil, ErrCreateClient
 	}
 
 	client.c = ethclient.NewClient(rpcClient)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -29,7 +28,7 @@ import (
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/uisrv"
 	"github.com/privatix/dappctrl/util"
-	log2 "github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
 )
 
@@ -42,7 +41,7 @@ type config struct {
 	DBLog         *dblog.Config
 	EptMsg        *ept.Config
 	Eth           *eth.Config
-	FileLog       *log2.FileConfig
+	FileLog       *log.FileConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
 	Log           *util.LogConfig
@@ -67,7 +66,7 @@ func newConfig() *config {
 		DBLog:         dblog.NewConfig(),
 		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
-		FileLog:       log2.NewFileConfig(),
+		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
@@ -84,7 +83,7 @@ func readConfig(conf *config) {
 		"config", "dappctrl.config.json", "Configuration file")
 	flag.Parse()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
-		log.Fatalf("failed to read configuration: %s", err)
+		panic(fmt.Sprintf("failed to read configuration: %s", err))
 	}
 }
 
@@ -96,8 +95,8 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
-func createLogger(conf *config, db *reform.DB) (log2.Logger, error) {
-	flog, err := log2.NewStderrLogger(conf.FileLog)
+func createLogger(conf *config, db *reform.DB) (log.Logger, error) {
+	flog, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +106,10 @@ func createLogger(conf *config, db *reform.DB) (log2.Logger, error) {
 		return nil, err
 	}
 
-	return log2.NewMultiLogger(flog, dlog), nil
+	return log.NewMultiLogger(flog, dlog), nil
 }
 
-func createUIServer(conf *ui.Config, logger log2.Logger,
+func createUIServer(conf *ui.Config, logger log.Logger,
 	db *reform.DB, queue job.Queue) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf.Config)
 	if err != nil {
@@ -126,7 +125,7 @@ func createUIServer(conf *ui.Config, logger log2.Logger,
 }
 
 func main() {
-	fatal := make(chan string)
+	fatal := make(chan error)
 	defer bugsnag.PanicHunter()
 
 	conf := newConfig()
@@ -134,24 +133,25 @@ func main() {
 
 	logger, err := util.NewLogger(conf.Log)
 	if err != nil {
-		log.Fatalf("failed to create logger: %s", err)
+		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 	defer logger.GracefulStop()
 
 	db, err := data.NewDB(conf.DB)
 	if err != nil {
-		logger.Fatal("failed to open db connection: %s", err)
+		panic(fmt.Sprintf("failed to open db "+
+			"connection: %s", err))
 	}
 	defer data.CloseDB(db)
 
 	logger2, err := createLogger(conf, db)
 	if err != nil {
-		logger.Fatal("failed to create logger: %s", err)
+		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 
 	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
 	if err != nil {
-		logger.Fatal("failed to create Bugsnag client: %s", err)
+		logger2.Fatal(err.Error())
 	}
 
 	logger.Reporter(reporter)
@@ -159,7 +159,7 @@ func main() {
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger2)
 	if err != nil {
-		logger.Fatal("failed to dial Ethereum node: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	defer ethClient.Close()
 
@@ -167,33 +167,31 @@ func main() {
 	ptc, err := contract.NewPrivatixTokenContract(
 		ptcAddr, ethClient.EthClient())
 	if err != nil {
-		logger.Fatal("failed to create ptc instance: %v", err)
+		logger2.Fatal(err.Error())
 	}
 
 	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
 	psc, err := contract.NewPrivatixServiceContract(
 		pscAddr, ethClient.EthClient())
 	if err != nil {
-		logger.Fatal("failed to create psc intance: %v", err)
+		logger2.Fatal(err.Error())
 	}
 
 	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
-		fatal <- fmt.Sprintf("failed to start pay server: %s",
-			paySrv.ListenAndServe())
+		fatal <- paySrv.ListenAndServe()
 	}()
 	defer paySrv.Close()
 
 	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
 	go func() {
-		fatal <- fmt.Sprintf("failed to start session server: %s",
-			sess.ListenAndServe())
+		fatal <- sess.ListenAndServe()
 	}()
 	defer sess.Close()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		logger.Fatal("failed to connect to SOMC: %s", err)
+		logger2.Fatal(err.Error())
 	}
 	defer somcConn.Close()
 
@@ -205,7 +203,7 @@ func main() {
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
 		conf.EptMsg)
 	if err != nil {
-		logger.Fatal("failed to create worker: %s", err)
+		logger2.Fatal(err.Error())
 	}
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
@@ -221,34 +219,30 @@ func main() {
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 	go func() {
-		fatal <- fmt.Sprintf("failed to run agent server: %s\n",
-			uiSrv.ListenAndServe())
+		fatal <- uiSrv.ListenAndServe()
 	}()
 
 	uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
 	if err != nil {
-		logger.Fatal("failed to create UI server: %s", err)
+		logger2.Fatal(err.Error())
 	}
 	go func() {
-		fatal <- fmt.Sprintf("failed to run UI server: %s\n",
-			uiSrv2.ListenAndServe())
+		fatal <- uiSrv2.ListenAndServe()
 	}()
 
 	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
 		db, logger2, pr)
 	if err != nil {
-		logger.Fatal("failed to create agent billing monitor: %s", err)
+		logger2.Fatal(err.Error())
 	}
 	go func() {
-		fatal <- fmt.Sprintf("failed to run agent billing monitor: %s",
-			amon.Run())
+		fatal <- amon.Run()
 	}()
 
 	cmon := cbill.NewMonitor(conf.ClientMonitor,
 		logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 	go func() {
-		fatal <- fmt.Sprintf("failed to run client billing monitor: %s",
-			cmon.Run())
+		fatal <- cmon.Run()
 	}()
 	defer cmon.Close()
 
@@ -256,19 +250,17 @@ func main() {
 		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
 		ethClient.CloseIdleConnections)
 	if err != nil {
-		logger.Fatal("failed to initialize"+
-			" the blockchain monitor: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	if err := mon.Start(); err != nil {
-		logger.Fatal("failed to start"+
-			" the blockchain monitor: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	defer mon.Stop()
 
 	go func() {
-		fatal <- fmt.Sprintf("failed to process job queue: %s",
-			queue.Process())
+		fatal <- queue.Process()
 	}()
 
-	logger.Fatal(<-fatal)
+	err = <-fatal
+	logger2.Fatal(err.Error())
 }

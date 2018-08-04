@@ -71,7 +71,7 @@ func handleAuth() {
 	user, pass := getCreds()
 	args := sesssrv.AuthArgs{ClientID: user, Password: pass}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathAuth, args, nil)
 	if err != nil {
 		logger.Fatal("failed to auth: %s", err)
@@ -95,7 +95,7 @@ func handleConnect() {
 		ClientPort: uint16(port),
 	}
 
-	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
 		logger.Fatal("failed to start session: %s", err)
@@ -118,7 +118,7 @@ func handleDisconnect() {
 		Units:    down + up,
 	}
 
-	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
 		logger.Fatal("failed to stop session: %s", err)
@@ -130,7 +130,7 @@ func handleMonStarted(ch string) bool {
 		ClientID: ch,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
 		msg := "failed to start session for channel %s: %s"
@@ -147,7 +147,7 @@ func handleMonStopped(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
 		msg := "failed to stop session for channel %s: %s"
@@ -164,7 +164,7 @@ func handleMonByteCount(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathUpdate, args, nil)
 	if err != nil {
 		msg := "failed to update session for channel %s: %s"

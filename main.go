@@ -184,7 +184,7 @@ func main() {
 	}()
 	defer paySrv.Close()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
 	go func() {
 		fatal <- fmt.Sprintf("failed to start session server: %s",
 			sess.ListenAndServe())

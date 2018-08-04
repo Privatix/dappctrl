@@ -43,6 +43,7 @@ func (s *Server) handleProductConfig(
 
 	prodConf, err := json.Marshal(args.Config)
 	if err != nil {
+		s.logger.Error(err.Error())
 		s.RespondError(w, srv.ErrInternalServerError)
 		return
 	}

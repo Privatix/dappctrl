@@ -19,7 +19,7 @@ func ClientConfig(logger log.Logger, channel string,
 
 	var endpoint *data.Endpoint
 
-	err := sesssrv.Post(adapterConfig.Server.Config,
+	err := sesssrv.Post(adapterConfig.Server.Config, logger,
 		adapterConfig.Server.Username, adapterConfig.Server.Password,
 		sesssrv.PathEndpointMsg, args, &endpoint)
 	if err != nil {

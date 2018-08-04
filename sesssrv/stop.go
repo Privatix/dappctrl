@@ -47,7 +47,9 @@ func (s *Server) handleUpdateStop(
 		case data.ProductUsageTotal:
 			sess.UnitsUsed = args.Units
 		default:
-			panic("unsupported product usage: " + prod.UsageRepType)
+			s.logger.Add("usageRepType",
+				prod.UsageRepType).Fatal(
+				"unsupported product usage")
 		}
 	}
 
@@ -57,7 +59,7 @@ func (s *Server) handleUpdateStop(
 	}
 
 	if err := s.db.Save(sess); err != nil {
-		s.Logger().Error("failed to save session: %s", err)
+		s.logger.Add("session", sess.ID).Error(err.Error())
 		s.RespondError(w, srv.ErrInternalServerError)
 	}
 

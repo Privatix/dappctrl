@@ -106,8 +106,8 @@ func (p *Pusher) PushConfiguration(ctx context.Context) error {
 		default:
 		}
 
-		if err := sesssrv.Post(p.server, p.username, p.password,
-			sesssrv.PathProductConfig,
+		if err := sesssrv.Post(p.server, p.logger, p.username,
+			p.password, sesssrv.PathProductConfig,
 			*args, nil); err != nil {
 			p.logger.Add("error", err.Error()).Warn(
 				"failed to push app config to dappctrl.")

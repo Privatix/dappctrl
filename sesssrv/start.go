@@ -30,7 +30,8 @@ func (s *Server) handleStart(
 		return
 	}
 
-	s.Logger().Info("new client session for %s", args.ClientID)
+	s.logger.Add("clientID",
+		args.ClientID).Info("new client session")
 
 	now := time.Now()
 
@@ -53,7 +54,7 @@ func (s *Server) handleStart(
 		ClientPort:    port,
 	}
 	if err := s.db.Insert(&sess); err != nil {
-		s.Logger().Error("failed to insert session: %s", err)
+		s.logger.Error(err.Error())
 		s.RespondError(w, srv.ErrInternalServerError)
 		return
 	}

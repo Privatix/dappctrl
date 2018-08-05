@@ -54,7 +54,7 @@ func newPusherTestConf() *pusherTestConf {
 }
 
 func newTestSessSrv(t *testing.T, timeout time.Duration) *testSessSrv {
-	s := sesssrv.NewServer(conf.SessionServer, logger, db)
+	s := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
 	go func() {
 		time.Sleep(timeout)
 		if err := s.ListenAndServe(); err != http.ErrServerClosed {

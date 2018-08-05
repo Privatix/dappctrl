@@ -25,8 +25,9 @@ func (s *Server) handleAuth(
 		return
 	}
 
-	if data.ValidatePassword(ch.Password, args.Password, string(ch.Salt)) != nil {
-		s.Logger().Warn("failed to match auth password")
+	if data.ValidatePassword(ch.Password, args.Password,
+		string(ch.Salt)) != nil {
+		s.logger.Warn("failed to match auth password")
 		s.RespondError(w, ErrBadAuthPassword)
 		return
 	}

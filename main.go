@@ -195,7 +195,7 @@ func main() {
 	}()
 	defer paySrv.Close()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

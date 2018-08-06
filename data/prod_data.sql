@@ -311,7 +311,7 @@ VALUES ('eth.max.deposit',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.7.1',
+        '0.8.0',
         1,
         'Version of database.',
         'db version');

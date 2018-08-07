@@ -56,7 +56,8 @@ func (w *Worker) clientValidateChannelForClose(
 	}
 
 	// check service status
-	if ch.ServiceStatus == data.ServiceTerminated {
+	if ch.ServiceStatus != data.ServiceTerminated &&
+		ch.ServiceStatus != data.ServicePending {
 		return ErrInvalidServiceStatus
 	}
 
@@ -437,14 +438,6 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 	ch.ChannelStatus = data.ChannelClosedUncoop
 	if err := w.saveRecord(logger, ch); err != nil {
 		return err
-	}
-
-	if ch.ServiceStatus != data.ServiceTerminated {
-		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
-		if err != nil {
-			logger.Error(err.Error())
-			return ErrTerminateChannel
-		}
 	}
 
 	agent, err := w.account(logger, ch.Agent)

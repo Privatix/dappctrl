@@ -75,6 +75,11 @@
         "TryLimit": 3,
         "TryPeriod": 60000,
         "Types": {
+            "clientPreUncooperativeClose": {
+                "TryLimit": 200,
+                "TryPeriod": 180000,
+                "FirstStartDelay": 7500000
+            },
             "clientPreChannelCreate": {
                 "Duplicated": true,
                 "TryLimit": 3,

@@ -51,7 +51,7 @@ func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 		OpenBlockNumber: channel.Block,
 		OfferingHash:    offering.Hash,
 		Balance:         amount,
-		ContractAddress: data.FromBytes(testPSCAddr.Bytes()),
+		ContractAddress: data.HexFromBytes(testPSCAddr.Bytes()),
 	}
 
 	agentAddr := data.TestToAddress(t, channel.Agent)
@@ -177,7 +177,7 @@ func TestMain(m *testing.M) {
 	conf.PayServer = NewConfig()
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
-	testDB = data.NewTestDB(conf.DB, logger)
+	testDB = data.NewTestDB(conf.DB)
 	defer data.CloseDB(testDB)
 	testServer = NewServer(conf.PayServer, logger, testDB)
 	go func() {

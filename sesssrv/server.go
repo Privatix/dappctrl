@@ -3,9 +3,10 @@ package sesssrv
 import (
 	"net/http"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -24,8 +25,9 @@ func NewConfig() *Config {
 // Server is a service session server.
 type Server struct {
 	*srv.Server
-	conf *Config
-	db   *reform.DB
+	conf   *Config
+	db     *reform.DB
+	logger log.Logger
 }
 
 // Service API paths.
@@ -36,14 +38,17 @@ const (
 	PathUpdate = "/session/update"
 
 	PathProductConfig = "/product/config"
+	PathEndpointMsg   = "/endpoint/message"
 )
 
 // NewServer creates a new session server.
-func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
+func NewServer(conf *Config, logger *util.Logger, logger2 log.Logger,
+	db *reform.DB) *Server {
 	s := &Server{
 		Server: srv.NewServer(conf.Config, logger),
 		conf:   conf,
 		db:     db,
+		logger: logger2,
 	}
 
 	modifyHandler := func(h srv.HandlerFunc) srv.HandlerFunc {
@@ -56,6 +61,7 @@ func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
 	s.HandleFunc(PathStart, modifyHandler(s.handleStart))
 	s.HandleFunc(PathStop, modifyHandler(s.handleStop))
 	s.HandleFunc(PathUpdate, modifyHandler(s.handleUpdate))
+	s.HandleFunc(PathEndpointMsg, modifyHandler(s.handleEndpointMsg))
 	s.HandleFunc(PathProductConfig, modifyHandler(s.handleProductConfig))
 
 	return s

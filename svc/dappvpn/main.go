@@ -6,74 +6,50 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/sesssrv"
+	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
-	"github.com/privatix/dappctrl/svc/dappvpn/pusher"
+	"github.com/privatix/dappctrl/svc/dappvpn/msg"
+	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
 	"github.com/privatix/dappctrl/util"
-	"github.com/privatix/dappctrl/util/srv"
+	"github.com/privatix/dappctrl/util/log"
 )
 
-type ovpnConfig struct {
-	Name       string        // Name of OvenVPN executable.
-	Args       []string      // Extra arguments for OpenVPN executable.
-	ConfigRoot string        // Root path for OpenVPN channel configs.
-	StartDelay time.Duration // Delay to ensure OpenVPN is ready, in milliseconds.
-}
-
-type serverConfig struct {
-	*srv.Config
-	Password string
-	Username string
-}
-
-type config struct {
-	ChannelDir string // Directory for common-name -> channel mappings.
-	Log        *util.LogConfig
-	Monitor    *mon.Config
-	OpenVPN    *ovpnConfig // OpenVPN settings for client mode.
-	Pusher     *pusher.Config
-	Server     *serverConfig
-}
-
-func newConfig() *config {
-	return &config{
-		ChannelDir: ".",
-		Log:        util.NewLogConfig(),
-		Monitor:    mon.NewConfig(),
-		OpenVPN: &ovpnConfig{
-			Name:       "openvpn",
-			ConfigRoot: "/etc/openvpn/config",
-			StartDelay: 1000,
-		},
-		Pusher: pusher.NewConfig(),
-		Server: &serverConfig{Config: srv.NewConfig()},
-	}
-}
+// Values for versioning.
+var (
+	Commit  string
+	Version string
+)
 
 var (
-	conf    *config
+	conf    *config.Config
 	channel string
 	logger  *util.Logger
+	logger2 log.Logger
 	fatal   = make(chan string)
 )
 
 func main() {
+	v := flag.Bool("version", false, "Prints current dappctrl version")
+
 	fconfig := flag.String(
 		"config", "dappvpn.config.json", "Configuration file")
 	// Client mode is active when the parameter below is set.
 	fchannel := flag.String("channel", "", "Channel ID for client mode")
 	flag.Parse()
 
-	conf = newConfig()
+	version.Print(*v, Commit, Version)
+
+	conf = config.NewConfig()
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
-		log.Fatalf("failed to read configuration: %s\n", err)
+		panic(fmt.Sprintf("failed to read configuration: %s\n", err))
 	}
 
 	channel = *fchannel
@@ -81,9 +57,14 @@ func main() {
 	var err error
 	logger, err = util.NewLogger(conf.Log)
 	if err != nil {
-		log.Fatalf("failed to create logger: %s\n", err)
+		panic(fmt.Sprintf("failed to create logger: %s\n", err))
 	}
 	defer logger.GracefulStop()
+
+	logger2, err = log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create logger: %s\n", err))
+	}
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
@@ -101,7 +82,7 @@ func handleAuth() {
 	user, pass := getCreds()
 	args := sesssrv.AuthArgs{ClientID: user, Password: pass}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathAuth, args, nil)
 	if err != nil {
 		logger.Fatal("failed to auth: %s", err)
@@ -125,7 +106,7 @@ func handleConnect() {
 		ClientPort: uint16(port),
 	}
 
-	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
 		logger.Fatal("failed to start session: %s", err)
@@ -135,12 +116,12 @@ func handleConnect() {
 func handleDisconnect() {
 	down, err := strconv.ParseUint(os.Getenv("bytes_sent"), 10, 64)
 	if err != nil || down < 0 {
-		log.Fatalf("bad bytes_sent value")
+		panic("bad bytes_sent value")
 	}
 
 	up, err := strconv.ParseUint(os.Getenv("bytes_received"), 10, 64)
 	if err != nil || up < 0 {
-		log.Fatalf("bad bytes_received value")
+		panic("bad bytes_received value")
 	}
 
 	args := sesssrv.StopArgs{
@@ -148,7 +129,7 @@ func handleDisconnect() {
 		Units:    down + up,
 	}
 
-	err = sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
 		logger.Fatal("failed to stop session: %s", err)
@@ -160,7 +141,7 @@ func handleMonStarted(ch string) bool {
 		ClientID: ch,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
 		msg := "failed to start session for channel %s: %s"
@@ -177,7 +158,7 @@ func handleMonStopped(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
 		msg := "failed to stop session for channel %s: %s"
@@ -194,7 +175,7 @@ func handleMonByteCount(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathUpdate, args, nil)
 	if err != nil {
 		msg := "failed to update session for channel %s: %s"
@@ -221,34 +202,36 @@ func handleMonitor(confFile string) {
 
 	dir := filepath.Dir(confFile)
 
-	if len(channel) == 0 && !pusher.OVPNConfigPushed(dir) {
+	if len(channel) == 0 && !msg.IsDone(dir) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		go func() {
-			c := pusher.NewCollect(conf.Pusher, conf.Server.Config,
-				conf.Server.Username, conf.Server.Password,
-				logger)
+			pusher := msg.NewPusher(conf.Pusher,
+				conf.Server.Config, conf.Server.Username,
+				conf.Server.Password, logger2)
 
-			if err := pusher.PushConfig(ctx, c); err != nil {
-				logger.Error("failed to send OpenVpn"+
-					" server configuration to"+
-					" dappctrl: %s\n", err)
+			if err := pusher.PushConfiguration(ctx); err != nil {
+				logger.Error("failed to push app config to"+
+					" dappctrl", err)
 				return
 			}
 
-			logger.Info("OpenVpn server configuration has been" +
-				" successfully sent to dappctrl")
-
-			if err := pusher.OVPNConfigUpdated(dir); err != nil {
+			if err := msg.Done(dir); err != nil {
 				logger.Error("failed to save %s file in %s"+
-					" directory: %s\n", pusher.PushedFile,
+					" directory: %s", msg.PushedFile,
 					dir, err)
 			}
 		}()
 	}
 
 	if len(channel) != 0 {
+		if err := prepare.ClientConfig(logger2, channel,
+			conf); err != nil {
+			logger.Fatal("failed to prepare client"+
+				" configuration: %s", err)
+		}
+
 		ovpn := launchOpenVPN()
 		defer ovpn.Kill()
 		time.Sleep(conf.OpenVPN.StartDelay * time.Millisecond)

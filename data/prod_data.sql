@@ -231,9 +231,10 @@ INSERT INTO products(	id, name, offer_tpl_id, offer_access_id, usage_rep_type,
      'JDJhJDEwJHNVbWNtTkVwQk5DMkwuOC5OL1BXU08uYkJMMkxjcmthTW1BZklOTUNjNWZDdWNUOU54Tzlp',
      'by_channel_id', '{"somekey": "somevalue"}', '127.0.0.1');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.min.confirmations',
         '1',
+        2,
         'have value (stored as string) that is null or integer and' ||
         ' represents how many ethereum blocks should be mined after' ||
         ' block where transaction of interest exists. As there is non' ||
@@ -245,46 +246,52 @@ VALUES ('eth.min.confirmations',
         ' will not be used to fetch events or transactions.',
         'ethereum confirmation blocks');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.maxretry',
         '7',
+        2,
         'have value (stored as string) that is null or integer and' ||
         ' represents how many times event should try to create job,' ||
         ' until it is ignored. null or zero considered unlimited.',
         'event processing max retry');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
         '11520',
+        2,
         'defines number of latest ethereum blocks to retrieve.' ||
         ' If eth.event.freshblocks is null or zero then all events' ||
         ' will be downloaded.',
         'last events blocks');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.blocklimit',
         '80',
+        2,
         'maximum number of ethereum blocks that is used to scan' ||
         ' for new events. It is used as pagination mechanism while' ||
         ' querying ethereum JSON RPC. If eth.event.blocklimit is null' ||
         ' or zero then no pagination is used, which is not recommended.',
         'maximum events blocks');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('error.sendremote',
         'true',
+        2,
         'Allow error reporting to send logs to Privatix.',
         'error reporting');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.default.gasprice',
         '20000000000',
+        2,
         'Default GAS price for transactions.',
         'default gas price');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.challenge.period',
         '500',
+        2,
         'Number of blocks to wait from an uncooperativeClose initiated' ||
         ' by the Client in order to give the Agent a chance to respond' ||
         ' with a balance proof in case the Client cheats. After the ' ||
@@ -294,34 +301,25 @@ VALUES ('eth.challenge.period',
         ' and recieve Agent''s deposit back.',
         'challenge period');
 
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.max.deposit',
         '30000000000',
+        2,
         'We temporarily limit total token deposits in a channel to 300' ||
         ' PRIX. This is just for the bug bounty release, as a safety measure.',
         'maximum deposit');
 
-INSERT INTO settings (key, value, description, name)
-VALUES ('system.version.dappctrl',
-        '0.0.5',
-        'Version of dappctrl.',
-        'dappctrl version');
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('system.version.db',
+        '0.8.0',
+        1,
+        'Version of database.',
+        'db version');
 
-INSERT INTO settings (key, value, description, name)
-VALUES ('system.version.dappgui',
-        '0.0.4',
-        'Version of dappgui.',
-        'dappgui version');
-
-INSERT INTO settings (key, value, description, name)
-VALUES ('system.version.dappvpn',
-        '0.0.2',
-        'Version of dappvpn.',
-        'dappvpn version');
-
-INSERT INTO settings (key, value, description, name)
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('user.isagent',
         'false',
+        2,
         'Specifies user role. "true" - agent. "false" - client.',
         'user role is agent');
 

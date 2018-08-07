@@ -21,5 +21,5 @@ func RecoverPubKey(signer types.Signer, tx *types.Transaction) (*ecdsa.PublicKey
 	if err != nil {
 		return nil, err
 	}
-	return crypto.ToECDSAPub(pub), nil
+	return crypto.UnmarshalPubkey(pub)
 }

@@ -20,16 +20,15 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
-	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type testConfig struct {
-	clientVPN      *config.Config
 	DB             *data.DBConfig
 	JobHandlerTest *struct {
 		SOMCTimeout   time.Duration // In seconds.
@@ -40,6 +39,7 @@ type testConfig struct {
 	Eth       *eth.Config
 	Job       *job.Config
 	Log       *util.LogConfig
+	FileLog   *log.FileConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
@@ -48,15 +48,15 @@ type testConfig struct {
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		clientVPN: config.NewConfig(),
-		DB:        data.NewDBConfig(),
-		EptMsg:    ept.NewConfig(),
-		Eth:       eth.NewConfig(),
-		Job:       job.NewConfig(),
-		Log:       util.NewLogConfig(),
-		SOMC:      somc.NewConfig(),
-		SOMCTest:  somc.NewTestConfig(),
-		pscAddr:   common.HexToAddress("0x1"),
+		DB:       data.NewDBConfig(),
+		EptMsg:   ept.NewConfig(),
+		Eth:      eth.NewConfig(),
+		Job:      job.NewConfig(),
+		Log:      util.NewLogConfig(),
+		FileLog:  log.NewFileConfig(),
+		SOMC:     somc.NewConfig(),
+		SOMCTest: somc.NewTestConfig(),
+		pscAddr:  common.HexToAddress("0x1"),
 	}
 }
 
@@ -70,9 +70,10 @@ type workerTest struct {
 }
 
 var (
-	conf   *testConfig
-	db     *reform.DB
-	logger *util.Logger
+	conf    *testConfig
+	db      *reform.DB
+	logger  *util.Logger
+	logger2 log.Logger
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
@@ -92,9 +93,9 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(logger, db, somcConn, ethBack, conf.Gas,
-		conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		data.TestToPrivateKey, conf.clientVPN, conf.EptMsg)
+	worker, err := NewWorker(logger, logger2, db, somcConn, ethBack,
+		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
+		data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()
@@ -102,7 +103,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	}
 
 	worker.SetQueue(jobQueue)
-	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), jobQueue))
+	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), db, jobQueue))
 
 	return &workerTest{
 		db:       db,
@@ -131,10 +132,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	db, err = data.NewDB(conf.DB, logger)
+	logger2, err = log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}
+
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())

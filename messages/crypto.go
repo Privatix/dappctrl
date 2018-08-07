@@ -14,7 +14,12 @@ const sigLen = 64
 // AgentSeal encrypts message using client's public key and packs with
 // agent signature.
 func AgentSeal(msg, clientPub []byte, agentKey *ecdsa.PrivateKey) ([]byte, error) {
-	pub := ecies.ImportECDSAPublic(ethcrypto.ToECDSAPub(clientPub))
+	pubKey, err := ethcrypto.UnmarshalPubkey(clientPub)
+	if err != nil {
+		return nil, err
+	}
+
+	pub := ecies.ImportECDSAPublic(pubKey)
 	msgEncrypted, err := ecies.Encrypt(rand.Reader, pub, msg, nil, nil)
 	if err != nil {
 		return nil, err

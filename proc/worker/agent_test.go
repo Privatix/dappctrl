@@ -41,7 +41,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	}
 
 	clientAddr := ethcrypto.PubkeyToAddress(key.PublicKey)
-	fixture.Channel.Client = data.FromBytes(clientAddr.Bytes())
+	fixture.Channel.Client = data.HexFromBytes(clientAddr.Bytes())
 	env.updateInTestDB(t, fixture.Channel)
 
 	auth := bind.NewKeyedTransactor(key)
@@ -64,7 +64,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
 	ethLog := data.NewTestEthLog()
-	ethLog.TxHash = data.FromBytes(env.ethBack.tx.Hash().Bytes())
+	ethLog.TxHash = data.HexFromBytes(env.ethBack.tx.Hash().Bytes())
 	ethLog.JobID = &fixture.job.ID
 	ethLog.Data = data.FromBytes(logData)
 	ethLog.Topics = topics
@@ -86,12 +86,12 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		t.Fatalf("wanted %s, got: %s", data.ServicePending,
 			channel.ServiceStatus)
 	}
-	expectedClient := data.FromBytes(clientAddr.Bytes())
+	expectedClient := data.HexFromBytes(clientAddr.Bytes())
 	if channel.Client != expectedClient {
 		t.Fatalf("wanted client addr: %v, got: %v", expectedClient,
 			channel.Client)
 	}
-	expectedAgent := data.FromBytes(agentAddr.Bytes())
+	expectedAgent := data.HexFromBytes(agentAddr.Bytes())
 	if channel.Agent != expectedAgent {
 		t.Fatalf("wanted agent addr: %v, got: %v", expectedAgent,
 			channel.Agent)

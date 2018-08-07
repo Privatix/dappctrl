@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
 // Post posts a request with given arguments and returns a response result.
-func Post(conf *srv.Config, username, password, path string,
+func Post(conf *srv.Config, logger log.Logger, username, password, path string,
 	args, result interface{}) error {
 	data, err := json.Marshal(args)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrEncodeArgs
 	}
 
 	req, err := srv.NewHTTPRequest(
@@ -36,5 +38,10 @@ func Post(conf *srv.Config, username, password, path string,
 		return nil
 	}
 
-	return json.Unmarshal(resp.Result, result)
+	err = json.Unmarshal(resp.Result, result)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrDecodeResponse
+	}
+	return nil
 }

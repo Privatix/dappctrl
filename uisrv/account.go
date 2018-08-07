@@ -144,7 +144,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc.PublicKey = data.FromBytes(crypto.FromECDSAPub(&privKey.PublicKey))
 
 	ethAddr := crypto.PubkeyToAddress(privKey.PublicKey)
-	acc.EthAddr = data.FromBytes(ethAddr.Bytes())
+	acc.EthAddr = data.HexFromBytes(ethAddr.Bytes())
 
 	acc.IsDefault = payload.IsDefault
 	acc.InUse = payload.InUse

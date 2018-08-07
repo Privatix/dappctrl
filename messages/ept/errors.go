@@ -1,16 +1,23 @@
 package ept
 
-import "github.com/pkg/errors"
-
-// Endpoint Message Template errors
-var (
-	ErrInput             = errors.New("one or more input parameters is wrong")
-	ErrTimeOut           = errors.New("timeout")
-	ErrInvalidFormat     = errors.New("invalid endpoint message format")
-	ErrProdOfferAccessID = errors.New("OfferAccessID from product is null")
-	ErrProdEndAddress    = errors.New("ServiceEndpointAddress from product is null")
+import (
+	"github.com/privatix/dappctrl/util/errors"
 )
 
-func errWrapper(err error, msg string) error {
-	return errors.Wrap(err, msg)
+// Errors.
+const (
+	// CRC16("github.com/privatix/dappctrl/messages/ept") = 0xDC36
+	ErrTimeOut errors.Error = 0xDC36<<8 + iota
+	ErrInvalidFormat
+	ErrProdOfferAccessID
+	ErrProdEndAddress
+)
+
+var errMsgs = errors.Messages{
+	ErrTimeOut:           "timeout",
+	ErrInvalidFormat:     "invalid endpoint message format",
+	ErrProdOfferAccessID: "OfferAccessID from product is null",
+	ErrProdEndAddress:    "ServiceEndpointAddress from product is null",
 }
+
+func init() { errors.InjectMessages(errMsgs) }

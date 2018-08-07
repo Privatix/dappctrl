@@ -3,6 +3,8 @@ package uisrv
 import (
 	"net/http"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/data"
 )
 
@@ -19,12 +21,14 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
-// handleGetSettings replies with all settings.
+// handleGetSettings replies with settings.
 func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
-		Params:       nil,
+		Params: []queryParam{
+			{Name: "key", Field: "key"},
+		},
 		View:         data.SettingTable,
-		FilteringSQL: "key NOT LIKE 'system%'",
+		FilteringSQL: "permissions > 0",
 	})
 }
 
@@ -36,23 +40,44 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	if !s.parsePayload(w, r, &payload) {
 		return
 	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		s.logger.Error("failed to update settings: %v", err)
-		s.replyUnexpectedErr(w)
+
+	tx, ok := s.begin(w)
+	if !ok {
 		return
 	}
+	defer tx.Rollback()
+
 	for _, setting := range payload {
-		err := tx.Update(&setting)
-		if err != nil {
-			tx.Rollback()
-			s.replyUnexpectedErr(w)
+		var settingFromDB data.Setting
+
+		// gets setting from database
+		if err := tx.FindByPrimaryKeyTo(&settingFromDB,
+			setting.Key); err != nil {
+			if err != reform.ErrNoRows {
+				s.replyUnexpectedErr(w)
+				return
+			}
+		}
+
+		// if setting exists and settings.permissions != 2
+		// then setting ignored
+		if settingFromDB.Key != "" {
+			if settingFromDB.Permissions != data.ReadWrite {
+				continue
+			}
+
+			// copy permissions from database
+			setting.Permissions = settingFromDB.Permissions
+		}
+
+		if !s.updateTx(w, &setting, tx) {
 			return
 		}
 	}
-	if tx.Commit() != nil {
-		s.replyUnexpectedErr(w)
+
+	if !s.commit(w, tx) {
 		return
 	}
+
 	s.replyOK(w, "updated.")
 }

@@ -37,7 +37,7 @@ var (
 	db     *reform.DB
 )
 
-func add(t *testing.T, queue *Queue, job *data.Job, expected error) {
+func add(t *testing.T, queue *queue, job *data.Job, expected error) {
 	if err := queue.Add(job); err != expected {
 		if err == nil {
 			queue.db.Delete(job)
@@ -58,7 +58,7 @@ func createJob() *data.Job {
 }
 
 func TestAdd(t *testing.T) {
-	queue := NewQueue(conf.Job, logger, db, nil)
+	queue := NewQueue(conf.Job, logger, db, nil).(*queue)
 	defer queue.Close()
 
 	job := createJob()
@@ -86,7 +86,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestHandlerNotFound(t *testing.T) {
-	queue := NewQueue(conf.Job, logger, db, nil)
+	queue := NewQueue(conf.Job, logger, db, nil).(*queue)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -95,7 +95,7 @@ func TestHandlerNotFound(t *testing.T) {
 	util.TestExpectResult(t, "Process", ErrHandlerNotFound, queue.Process())
 }
 
-func waitForJob(queue *Queue, job *data.Job, ch chan<- error) {
+func waitForJob(queue *queue, job *data.Job, ch chan<- error) {
 	for {
 		if err := db.FindByPrimaryKeyTo(job, job.ID); err != nil {
 			queue.Close()
@@ -128,7 +128,7 @@ func TestFailure(t *testing.T) {
 	handlerMap := HandlerMap{
 		data.JobClientPreChannelCreate: makeHandler(conf.Job.TryLimit),
 	}
-	queue := NewQueue(conf.Job, logger, db, handlerMap)
+	queue := NewQueue(conf.Job, logger, db, handlerMap).(*queue)
 
 	job := createJob()
 	add(t, queue, job, nil)
@@ -181,7 +181,7 @@ func TestStress(t *testing.T) {
 	}
 
 	queue := NewQueue(conf.Job, logger, db,
-		HandlerMap{data.JobClientPreChannelCreate: handler})
+		HandlerMap{data.JobClientPreChannelCreate: handler}).(*queue)
 
 	ch2 := make(chan error)
 	go func() {
@@ -202,6 +202,68 @@ func TestStress(t *testing.T) {
 	util.TestExpectResult(t, "Process", ErrQueueClosed, <-ch2)
 }
 
+func TestSubscribe(t *testing.T) {
+	data.CleanTestTable(t, db, data.JobTable)
+
+	job1 := data.Job{
+		Type:        "a",
+		RelatedType: data.JobChannel,
+		RelatedID:   util.NewUUID(),
+		CreatedBy:   data.JobTask,
+		Data:        []byte("{}"),
+	}
+
+	job2 := job1
+	job2.Type = "b"
+
+	var q *queue
+	handlers := HandlerMap{
+		"a": func(j *data.Job) error {
+			if j.TryCount == 0 {
+				return errors.New("some error")
+			}
+			return q.Add(&job2)
+		},
+		"b": func(j *data.Job) error { return nil },
+	}
+	q = NewQueue(conf.Job, logger, db, handlers).(*queue)
+	defer q.Close()
+
+	type subParams struct {
+		job    *data.Job
+		result error
+	}
+
+	subch := make(chan subParams)
+	subf := func(job *data.Job, result error) {
+		subch <- subParams{job, result}
+	}
+
+	go func() { q.Process() }()
+
+	util.TestExpectResult(t, "Add job", nil, q.Add(&job1))
+	util.TestExpectResult(t, "Subscribe", nil,
+		q.Subscribe(job1.RelatedID, "1234", subf))
+	util.TestExpectResult(t, "Subscribe", ErrSubscriptionExists,
+		q.Subscribe(job1.RelatedID, "1234", subf))
+
+	if params := <-subch; params.job.ID != job1.ID ||
+		params.result == nil || params.result.Error() != "some error" {
+		t.Errorf("wrong parameters for the first notification")
+	}
+	if params := <-subch; params.job.ID != job1.ID || params.result != nil {
+		t.Errorf("wrong parameters for the second notification")
+	}
+	if params := <-subch; params.job.ID != job2.ID || params.result != nil {
+		t.Errorf("wrong parameters for the third notification")
+	}
+
+	util.TestExpectResult(t, "Unsubscribe", nil,
+		q.Unsubscribe(job1.RelatedID, "1234"))
+	util.TestExpectResult(t, "Unsubscribe", ErrSubscriptionNotFound,
+		q.Unsubscribe(job1.RelatedID, "1234"))
+}
+
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = NewConfig()
@@ -210,7 +272,7 @@ func TestMain(m *testing.M) {
 	util.ReadTestConfig(&conf)
 
 	logger = util.NewTestLogger(conf.Log)
-	db = data.NewTestDB(conf.DB, logger)
+	db = data.NewTestDB(conf.DB)
 
 	os.Exit(m.Run())
 }

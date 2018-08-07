@@ -4,19 +4,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 
 	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
+	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
-	vpncli "github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
@@ -25,8 +26,17 @@ import (
 	"github.com/privatix/dappctrl/report/bugsnag"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/uisrv"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/rpcsrv"
+)
+
+// Values for versioning.
+var (
+	Commit  string
+	Version string
 )
 
 type config struct {
@@ -34,9 +44,11 @@ type config struct {
 	AgentServer   *uisrv.Config
 	BlockMonitor  *monitor.Config
 	ClientMonitor *cbill.Config
+	DB            *data.DBConfig
+	DBLog         *dblog.Config
 	EptMsg        *ept.Config
 	Eth           *eth.Config
-	DB            *data.DBConfig
+	FileLog       *log.FileConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
 	Log           *util.LogConfig
@@ -48,18 +60,20 @@ type config struct {
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
-	VPNClient     *vpncli.Config
+	UI            *ui.Config
 }
 
 func newConfig() *config {
 	return &config{
 		AgentMonitor:  abill.NewConfig(),
+		AgentServer:   uisrv.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		DB:            data.NewDBConfig(),
+		DBLog:         dblog.NewConfig(),
 		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
-		DB:            data.NewDBConfig(),
-		AgentServer:   uisrv.NewConfig(),
+		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
 		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
@@ -67,16 +81,21 @@ func newConfig() *config {
 		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
-		VPNClient:     vpncli.NewConfig(),
+		UI:            ui.NewConfig(),
 	}
 }
 
-func readConfig(conf *config) {
+func readFlags(conf *config) {
 	fconfig := flag.String(
 		"config", "dappctrl.config.json", "Configuration file")
+	v := flag.Bool("version", false, "Prints current dappctrl version")
+
 	flag.Parse()
+
+	version.Print(*v, Commit, Version)
+
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
-		log.Fatalf("failed to read configuration: %s", err)
+		panic(fmt.Sprintf("failed to read configuration: %s", err))
 	}
 }
 
@@ -88,35 +107,71 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
+func createLogger(conf *config, db *reform.DB) (log.Logger, error) {
+	flog, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		return nil, err
+	}
+
+	dlog, err := dblog.NewLogger(conf.DBLog, db)
+	if err != nil {
+		return nil, err
+	}
+
+	return log.NewMultiLogger(flog, dlog), nil
+}
+
+func createUIServer(conf *ui.Config, logger log.Logger,
+	db *reform.DB, queue job.Queue) (*rpcsrv.Server, error) {
+	server, err := rpcsrv.NewServer(conf.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := ui.NewHandler(conf, logger, db, nil)
+	if err := server.AddHandler("ui", handler); err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
 func main() {
-	fatal := make(chan string)
+	fatal := make(chan error)
 	defer bugsnag.PanicHunter()
 
 	conf := newConfig()
-	readConfig(conf)
+	readFlags(conf)
 
 	logger, err := util.NewLogger(conf.Log)
 	if err != nil {
-		log.Fatalf("failed to create logger: %s", err)
+		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 	defer logger.GracefulStop()
 
-	db, err := data.NewDB(conf.DB, logger)
+	db, err := data.NewDB(conf.DB)
 	if err != nil {
-		logger.Fatal("failed to open db connection: %s", err)
+		panic(fmt.Sprintf("failed to open db "+
+			"connection: %s", err))
 	}
 	defer data.CloseDB(db)
 
+	logger2, err := createLogger(conf, db)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create logger: %s", err))
+	}
+
 	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
 	if err != nil {
-		logger.Fatal("failed to create Bugsnag client: %s", err)
+		logger2.Fatal(err.Error())
 	}
 
 	logger.Reporter(reporter)
 
-	ethClient, err := eth.NewClient(context.Background(), conf.Eth)
+	ethClient, err := eth.NewClient(context.Background(),
+		conf.Eth, logger2)
 	if err != nil {
-		logger.Fatal("failed to dial Ethereum node: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	defer ethClient.Close()
 
@@ -124,52 +179,50 @@ func main() {
 	ptc, err := contract.NewPrivatixTokenContract(
 		ptcAddr, ethClient.EthClient())
 	if err != nil {
-		logger.Fatal("failed to create ptc instance: %v", err)
+		logger2.Fatal(err.Error())
 	}
 
 	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
 	psc, err := contract.NewPrivatixServiceContract(
 		pscAddr, ethClient.EthClient())
 	if err != nil {
-		logger.Fatal("failed to create psc intance: %v", err)
+		logger2.Fatal(err.Error())
 	}
 
 	paySrv := pay.NewServer(conf.PayServer, logger, db)
 	go func() {
-		fatal <- fmt.Sprintf("failed to start pay server: %s",
-			paySrv.ListenAndServe())
+		fatal <- paySrv.ListenAndServe()
 	}()
 	defer paySrv.Close()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
 	go func() {
-		fatal <- fmt.Sprintf("failed to start session server: %s",
-			sess.ListenAndServe())
+		fatal <- sess.ListenAndServe()
 	}()
 	defer sess.Close()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		logger.Fatal("failed to connect to SOMC: %s", err)
+		logger2.Fatal(err.Error())
 	}
 	defer somcConn.Close()
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger, db, somcConn,
+	worker, err := worker.NewWorker(logger, logger2, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout),
-		conf.Gas, pscAddr, conf.PayAddress, pwdStorage,
-		data.ToPrivateKey, conf.VPNClient, conf.EptMsg)
+			conf.Eth.Timeout), conf.Gas,
+		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
+		conf.EptMsg)
 	if err != nil {
-		logger.Fatal("failed to create worker: %s", err)
+		logger2.Fatal(err.Error())
 	}
 
 	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	defer queue.Close()
 	worker.SetQueue(queue)
 
-	pr := proc.NewProcessor(conf.Proc, queue)
+	pr := proc.NewProcessor(conf.Proc, db, queue)
 	worker.SetProcessor(pr)
 
 	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
@@ -178,45 +231,48 @@ func main() {
 
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
 	go func() {
-		fatal <- fmt.Sprintf("failed to run agent server: %s\n",
-			uiSrv.ListenAndServe())
+		fatal <- uiSrv.ListenAndServe()
+	}()
+
+	uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
+	if err != nil {
+		logger2.Fatal(err.Error())
+	}
+	go func() {
+		fatal <- uiSrv2.ListenAndServe()
 	}()
 
 	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
-		db, logger, pr)
+		db, logger2, pr)
 	if err != nil {
-		logger.Fatal("failed to create agent billing monitor: %s", err)
+		logger2.Fatal(err.Error())
 	}
 	go func() {
-		fatal <- fmt.Sprintf("failed to run agent billing monitor: %s",
-			amon.Run())
+		fatal <- amon.Run()
 	}()
 
 	cmon := cbill.NewMonitor(conf.ClientMonitor,
-		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 	go func() {
-		fatal <- fmt.Sprintf("failed to run client billing monitor: %s",
-			cmon.Run())
+		fatal <- cmon.Run()
 	}()
 	defer cmon.Close()
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger2, db, queue,
 		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
 		ethClient.CloseIdleConnections)
 	if err != nil {
-		logger.Fatal("failed to initialize"+
-			" the blockchain monitor: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	if err := mon.Start(); err != nil {
-		logger.Fatal("failed to start"+
-			" the blockchain monitor: %v", err)
+		logger2.Fatal(err.Error())
 	}
 	defer mon.Stop()
 
 	go func() {
-		fatal <- fmt.Sprintf("failed to process job queue: %s",
-			queue.Process())
+		fatal <- queue.Process()
 	}()
 
-	logger.Fatal(<-fatal)
+	err = <-fatal
+	logger2.Fatal(err.Error())
 }

@@ -13,13 +13,11 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
-	"github.com/privatix/dappctrl/messages/ept/config"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
-
-type deployConfigFunc func(db *reform.DB, endpoint, dir string) error
 
 // GasConf amounts of gas limit to use for contracts calls.
 type GasConf struct {
@@ -57,27 +55,24 @@ type Worker struct {
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
-	queue          *job.Queue
-	clientVPN      *config.Config
-	deployConfig   deployConfigFunc
+	queue          job.Queue
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
 }
 
 // NewWorker returns new instance of worker.
-func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
+func NewWorker(logger *util.Logger, logger2 log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
-	decryptKeyFunc data.ToPrivateKeyFunc,
-	clientVPN *config.Config, eptConf *ept.Config) (*Worker, error) {
+	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
 		return nil, err
 	}
 
-	eptService, err := ept.New(db, payAddr, eptConf.Timeout)
+	eptService, err := ept.New(db, logger2, payAddr, eptConf.Timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +88,11 @@ func NewWorker(logger *util.Logger, db *reform.DB, somc *somc.Conn,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
-		deployConfig:   config.DeployConfig,
-		clientVPN:      clientVPN,
 	}, nil
 }
 
 // SetQueue sets a queue for handlers.
-func (w *Worker) SetQueue(queue *job.Queue) {
+func (w *Worker) SetQueue(queue job.Queue) {
 	w.queue = queue
 }
 

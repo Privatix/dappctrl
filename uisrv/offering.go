@@ -266,8 +266,7 @@ func (s *Server) handlePutClientOfferingStatus(
 	offer := new(data.Offering)
 	acc := new(data.Account)
 
-	if err := s.selectOneTo(w, offer,
-		"WHERE "+clientGetOfferFilterByID, id); err != nil {
+	if !s.selectOneTo(w, offer, "WHERE "+clientGetOfferFilterByID, id) {
 		return
 	}
 	if !s.findTo(w, acc, req.Account) {

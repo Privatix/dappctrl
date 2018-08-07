@@ -57,19 +57,14 @@
         }
     },
 
+    "DBLog": {
+        "Level": "info",
+        "StackLevel": "error"
+    },
+
     "EptTest": {
-        "Ca": "crt.valid",
-        "ConfInvalid": "conf.invalid",
-        "ConfValidCaEmpty": "conf.valid.ca.empty",
-        "ConfValidCaInvalid": "conf.valid.ca.invalid",
-        "ConfValidCaNotExist": "conf.valid.ca.notexist",
-        "ConfValidCaValid": "conf.valid.ca.valid",
-        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
-            "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "RetrySec": [ 0, 1, 2 ],
-        "SessSrvStartTimeout": [0, 1, 2 ],
         "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
-        "ValidHost": ["privatix.io:443", "127.0.0.1:443"]
+        "Host": "privatix.io:443"
     },
     "EptMsg": {
         "Timeout": 1
@@ -83,6 +78,13 @@
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": "",
         "Timeout": 10
+    },
+
+    "FileLog": {
+        "Level": "info",
+        "StackLevel": "error",
+        "Prefix": "",
+        "UTC": false
     },
 
     "JobHandlerTest": {
@@ -210,6 +212,15 @@
     "VPNConfigPusher": {
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
             "connect-retry", "ca", "comp-lzo", "keepalive" ],
+        "TestConfig": {
+            "ping": "1",
+            "ping-restart": "1",
+            "port": "8888",
+            "proto": "tcp",
+            "cipher": "AES-256-CBC",
+            "connect-retry": "1",
+            "comp-lzo": ""
+        },
         "TimeOut": 120
     },
 
@@ -220,5 +231,12 @@
 
     "VPNMonitorTest": {
         "ServerStartupDelay": 10
+    },
+
+    "UI": {
+        "Addr": "localhost:8888",
+        "AllowedOrigins": ["*"],
+        "Handler": {},
+        "TLS": null
     }
 }

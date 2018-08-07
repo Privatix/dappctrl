@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
@@ -216,18 +215,11 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientAfterEndpointMsgSOMCGet, data.JobEndpoint)
+		data.JobClientAfterEndpointMsgSOMCGet, data.JobChannel)
 	defer fxt.Close()
 
-	err := fmt.Errorf("some error")
-	env.worker.deployConfig = func(db *reform.DB, endpoint, dir string) error {
-		return err
-	}
+	fxt.job.Data = []byte("\"" + fxt.Endpoint.ID + "\"")
 
-	util.TestExpectResult(t, "run job", err,
-		env.worker.ClientAfterEndpointMsgSOMCGet(fxt.job))
-
-	err = nil
 	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
 
 	var endp data.Endpoint
@@ -279,7 +271,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||
@@ -336,7 +328,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||
@@ -446,7 +438,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.JobID == nil || *tx.JobID != fxt.job.ID ||
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
-		tx.AddrTo != data.FromBytes(env.worker.pscAddr.Bytes()) ||
+		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
 		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
 		tx.GasPrice != uint64(testTXGasPrice) ||
 		tx.Gas != uint64(testTXGasLimit) ||

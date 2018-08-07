@@ -48,7 +48,10 @@ go get -u github.com/rakyll/statik
 go get github.com/ethereum/go-ethereum/cmd/abigen
 
 go generate $DAPPCTRL/...
-go install -tags=notest $DAPPCTRL
+export GIT_COMMIT=$(git rev-list -1 HEAD) && \
+export GIT_RELEASE=$(git tag -l --points-at HEAD) && \
+  go install -ldflags "-X main.Commit=$GIT_COMMIT \
+    -X main.Version=$GIT_RELEASE" -tags=notest $DAPPCTRL
 ```
 
 Prepare a `dappctrl` database instance:

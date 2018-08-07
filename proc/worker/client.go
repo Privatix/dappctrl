@@ -28,7 +28,7 @@ import (
 
 func (w *Worker) checkDeposit(acc *data.Account,
 	offer *data.Offering) (uint64, error) {
-	addr, err := data.ToAddress(acc.EthAddr)
+	addr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		return 0, err
 	}
@@ -86,7 +86,7 @@ func (w *Worker) clientPreChannelCreateCheckSupply(
 func (w *Worker) clientPreChannelCreateSaveTX(
 	job *data.Job, acc *data.Account, offer *data.Offering,
 	offerHash common.Hash, deposit uint64) error {
-	agentAddr, err := data.ToAddress(offer.Agent)
+	agentAddr, err := data.HexToAddress(offer.Agent)
 	if err != nil {
 		return err
 	}
@@ -180,9 +180,13 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return fmt.Errorf("failed to decode agent pub key")
 	}
 
-	pubkey := crypto.ToECDSAPub(pubkB)
+	pubkey, err := crypto.UnmarshalPubkey(pubkB)
+	if err != nil {
+		return fmt.Errorf("failed to converts bytes to a secp256k1" +
+			" public key")
+	}
 
-	agentEthAddr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+	agentEthAddr := data.HexFromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
 
 	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", agentEthAddr)
 	if err == sql.ErrNoRows {
@@ -344,20 +348,21 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			return err
 		}
 
-		return w.addJob(data.JobClientAfterEndpointMsgSOMCGet,
-			data.JobEndpoint, endp.ID)
+		return w.addJobWithData(data.JobClientAfterEndpointMsgSOMCGet,
+			data.JobChannel, ch.ID, endp.ID)
 	})
 }
 
 // ClientAfterEndpointMsgSOMCGet cofigures a product.
 func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
-	var endp data.Endpoint
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, job.RelatedID)
-	if err != nil {
+	var epid string
+	if err := parseJobData(job, &epid); err != nil {
 		return err
 	}
 
-	if err := w.deployConfig(w.db, job.RelatedID, w.clientVPN.ConfigDir); err != nil {
+	var endp data.Endpoint
+	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, epid)
+	if err != nil {
 		return err
 	}
 
@@ -547,12 +552,12 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	agent, err := data.ToAddress(ch.Agent)
+	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		return err
 	}
 
-	client, err := data.ToAddress(ch.Client)
+	client, err := data.HexToAddress(ch.Client)
 	if err != nil {
 		return err
 	}
@@ -589,7 +594,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 
 	if err := w.saveEthTX(job, tx, "Settle",
 		data.JobChannel, ch.ID, acc.EthAddr,
-		data.FromBytes(w.pscAddr.Bytes())); err != nil {
+		data.HexFromBytes(w.pscAddr.Bytes())); err != nil {
 		return err
 	}
 
@@ -607,7 +612,7 @@ type ClientPreChannelTopUpData struct {
 func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
 	acc *data.Account, offer *data.Offering, gasPrice uint64,
 	deposit *big.Int) error {
-	agent, err := data.ToAddress(ch.Agent)
+	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		return err
 	}
@@ -642,7 +647,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
 
 	return w.saveEthTX(job, tx, "TopUpChannel",
 		data.JobChannel, ch.ID, acc.EthAddr,
-		data.FromBytes(w.pscAddr.Bytes()))
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // ClientPreChannelTopUp checks client balance and creates transaction
@@ -685,7 +690,7 @@ func (w *Worker) ClientAfterChannelTopUp(job *data.Job) error {
 func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 	ch *data.Channel, acc *data.Account, offer *data.Offering,
 	gasPrice uint64) error {
-	agent, err := data.ToAddress(ch.Agent)
+	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		return err
 	}
@@ -721,7 +726,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 
 	if err := w.saveEthTX(job, tx, "UncooperativeClose",
 		data.JobChannel, ch.ID, acc.EthAddr,
-		data.FromBytes(w.pscAddr.Bytes())); err != nil {
+		data.HexFromBytes(w.pscAddr.Bytes())); err != nil {
 		return err
 	}
 
@@ -844,7 +849,7 @@ func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
 	}
 
 	offering, err := w.fillOfferingFromSOMCReply(
-		job.RelatedID, data.FromBytes(agentAddr.Bytes()),
+		job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
 		block, offeringsData)
 	if err != nil {
 		return fmt.Errorf("failed to fill offering: %v", err)

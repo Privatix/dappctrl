@@ -3,21 +3,15 @@ package billing
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
 	jobCreator = data.JobBillingChecker
-)
-
-// Billing monitor specific errors.
-var (
-	ErrInput = errors.New("one or more input parameters is wrong")
 )
 
 // Config is a billing monitor configuration for agent.
@@ -38,7 +32,7 @@ func NewConfig() *Config {
 // so it is safe to call monitors methods from separate goroutines.
 type Monitor struct {
 	db     *reform.DB
-	logger *util.Logger
+	logger log.Logger
 	pr     *proc.Processor
 
 	// Interval between next round checks.
@@ -48,7 +42,7 @@ type Monitor struct {
 // NewMonitor creates new instance of billing monitor.
 // 'interval' specifies how often channels checks must be performed.
 func NewMonitor(interval uint64, db *reform.DB,
-	logger *util.Logger, pr *proc.Processor) (*Monitor, error) {
+	logger log.Logger, pr *proc.Processor) (*Monitor, error) {
 	if db == nil || logger == nil || pr == nil || interval == 0 {
 		return nil, ErrInput
 	}
@@ -249,7 +243,7 @@ func (m *Monitor) processRound() error {
 func (m *Monitor) suspendService(uuid string) error {
 	_, err := m.pr.SuspendChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Info("Agent billing: chan %s not suspended: %s", uuid, err)
+		m.logger.Add("channel", uuid).Info(err.Error())
 	}
 	return nil
 }
@@ -257,7 +251,7 @@ func (m *Monitor) suspendService(uuid string) error {
 func (m *Monitor) terminateService(uuid string) error {
 	_, err := m.pr.TerminateChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Info("Agent billing: chan %s not terminated: %s", uuid, err)
+		m.logger.Add("channel", uuid).Info(err.Error())
 	}
 	return nil
 }
@@ -265,7 +259,7 @@ func (m *Monitor) terminateService(uuid string) error {
 func (m *Monitor) unsuspendService(uuid string) error {
 	_, err := m.pr.ActivateChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Info("Agent billing: chan %s not unsuspended: %s", uuid, err)
+		m.logger.Add("channel", uuid).Info(err.Error())
 	}
 	return nil
 }
@@ -274,8 +268,7 @@ func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 	for _, method := range checks {
 		err := method()
 		if err != nil {
-			m.logger.Error("Internal billing error occurred."+
-				" Details: %s", err.Error())
+			m.logger.Error(err.Error())
 			return err
 		}
 	}
@@ -288,12 +281,15 @@ func (m *Monitor) processEachChannel(query string,
 	rows, err := m.db.Query(query)
 	defer rows.Close()
 	if err != nil {
+		m.logger.Error(err.Error())
 		return err
 	}
 
 	for rows.Next() {
 		channelUUID := ""
-		rows.Scan(&channelUUID)
+		if err := rows.Scan(&channelUUID); err != nil {
+			m.logger.Error(err.Error())
+		}
 		if err := processor(channelUUID); err != nil {
 			return err
 		}

@@ -207,7 +207,15 @@ type Contract struct {
 
 // Setting keys.
 const (
-	IsAgentKey = "user.isagent" // specifies user role. "true" - agent. "false" - client.
+	IsAgentKey         = "user.isagent" // specifies user role. "true" - agent. "false" - client.
+	DefaultGasPriceKey = "eth.default.gasprice"
+)
+
+// Permissions for settings.
+const (
+	AccessDenied = iota
+	ReadOnly
+	ReadWrite
 )
 
 // Setting is a user setting.
@@ -215,6 +223,7 @@ const (
 type Setting struct {
 	Key         string  `json:"key" reform:"key,pk"`
 	Value       string  `json:"value" reform:"value"`
+	Permissions int     `json:"permissions" reform:"permissions"`
 	Description *string `json:"description" reform:"description"`
 	Name        string  `json:"name" reform:"name"`
 }
@@ -301,7 +310,6 @@ const (
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
 	JobAgentAfterUncooperativeClose         = "agentAfterUncooperativeClose"
-	JobAgentPreCooperativeClose             = "agentPreCooperativeClose"
 	JobAgentAfterCooperativeClose           = "agentAfterCooperativeClose"
 	JobAgentPreServiceSuspend               = "agentPreServiceSuspend"
 	JobAgentPreServiceUnsuspend             = "agentPreServiceUnsuspend"

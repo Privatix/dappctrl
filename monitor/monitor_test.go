@@ -21,6 +21,7 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -28,7 +29,6 @@ const (
 	clientPass     = "clientpass"
 	someAddressStr = "0xdeadbeef"
 	someHashStr    = "0xc0ffee"
-	txHashStr      = "0xd8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 
 	minDepositVal  = 123
 	chanDepositVal = 100
@@ -37,12 +37,14 @@ const (
 	clientOfferingPoppedUp   = "client offering popped up"
 	agentAfterChannelCreated = "agent after channel created"
 	clientAfterChannelTopUp  = "client after channel topup"
+
+	txHash = "d8de4d04f002759b9153bb15a8e81a86700609e69c1a28f7eaa11643b754679d"
 )
 
 var (
 	conf *testConf
 
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 
 	pscAddr = common.HexToAddress(
@@ -53,21 +55,19 @@ var (
 	someAddress = common.HexToAddress(someAddressStr)
 	someHash    = common.HexToHash(someHashStr)
 
-	txHash = data.FromBytes(common.HexToHash(txHashStr).Bytes())
-
 	blockNum uint64
 )
 
 type testConf struct {
 	BlockMonitor *Config
 	DB           *data.DBConfig
-	Log          *util.LogConfig
+	Log          *log.FileConfig
 	Job          *job.Config
 	Eth          *eth.Config
 }
 
 type mockClient struct {
-	logger  *util.Logger
+	logger  log.Logger
 	headers []ethtypes.Header
 	logs    []ethtypes.Log
 	number  uint64
@@ -86,7 +86,7 @@ func newTestConf() *testConf {
 	conf := new(testConf)
 	conf.BlockMonitor = NewConfig()
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
+	conf.Log = log.NewFileConfig()
 	conf.Job = job.NewConfig()
 	conf.Eth = eth.NewConfig()
 	return conf
@@ -183,7 +183,7 @@ func insertNewAccount(t *testing.T, db *reform.DB,
 	acc := data.NewTestAccount(auth)
 	data.InsertToTestDB(t, db, acc)
 
-	addrBytes, err := data.ToBytes(acc.EthAddr)
+	addrBytes, err := data.HexToBytes(acc.EthAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func (c *mockClient) FilterLogs(ctx context.Context,
 			filtered = append(filtered, e)
 		}
 	}
-	c.logger.Debug("query: %v, filtered: %v", q, filtered)
+	c.logger.Debug(fmt.Sprintf("query: %v, filtered: %v", q, filtered))
 	return filtered, nil
 }
 
@@ -336,21 +336,21 @@ func generateTestData(t *testing.T) *testData {
 	offering1 := data.NewTestOffering(
 		acc1.EthAddr, product.ID, template.ID)
 	offeringX := data.NewTestOffering(
-		data.FromBytes(someAddress.Bytes()),
+		data.HexFromBytes(someAddress.Bytes()),
 		product.ID, template.ID,
 	)
 	offeringU := data.NewTestOffering(
-		data.FromBytes(someAddress.Bytes()),
+		data.HexFromBytes(someAddress.Bytes()),
 		product.ID, template.ID,
 	)
 
 	channel1 := data.NewTestChannel(
-		acc1.EthAddr, data.FromBytes(someAddress.Bytes()),
+		acc1.EthAddr, data.HexFromBytes(someAddress.Bytes()),
 		offering1.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channel1.Block = 7
 	channelX := data.NewTestChannel(
-		data.FromBytes(someAddress.Bytes()), acc2.EthAddr,
+		data.HexFromBytes(someAddress.Bytes()), acc2.EthAddr,
 		offeringX.ID, 0, chanDepositVal, data.ChannelActive,
 	)
 	channelX.Block = 8
@@ -394,8 +394,14 @@ func TestMain(m *testing.M) {
 	conf = newTestConf()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
-	db = data.NewTestDB(conf.DB, logger)
+	l, err := log.NewStderrLogger(conf.Log)
+	if err != nil {
+		panic(err)
+	}
+
+	logger = l
+
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	os.Exit(m.Run())

@@ -168,11 +168,11 @@ func TestMain(m *testing.M) {
 
 	logger = util.NewTestLogger(conf.Log)
 
-	db = data.NewTestDB(conf.DB, logger)
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
 	queue := job.NewQueue(conf.Job, logger, db, nil)
-	pr = proc.NewProcessor(conf.Proc, queue)
+	pr = proc.NewProcessor(conf.Proc, db, queue)
 
 	os.Exit(m.Run())
 }

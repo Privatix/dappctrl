@@ -81,13 +81,12 @@ func (m *Monitor) collect(ctx context.Context) {
 	}
 
 	if firstBlock > lastBlock {
-		m.logger.Debug("monitor has nothing to collect")
+		m.logger.Add("firstBlock", firstBlock, "lastBlock",
+			lastBlock).Debug("monitor has nothing to collect")
 		return
 	}
-	m.logger.Debug(
-		"monitor is collecting logs from blocks %d to %d",
-		firstBlock, lastBlock,
-	)
+	m.logger.Add("firstBlock", firstBlock, "lastBlock",
+		lastBlock).Debug("monitor is collecting logs")
 
 	agentQ := ethereum.FilterQuery{
 		Addresses: []common.Address{m.pscAddr, m.ptcAddr},
@@ -108,8 +107,8 @@ func (m *Monitor) collect(ctx context.Context) {
 		for _, q := range queries {
 			events, err := m.eth.FilterLogs(ctx, *q)
 			if err != nil {
-				return fmt.Errorf("could not fetch logs"+
-					" over rpc: %v", err)
+				m.logger.Error(err.Error())
+				return ErrFetchLogs
 			}
 
 			for i := range events {
@@ -127,11 +126,10 @@ func (m *Monitor) collect(ctx context.Context) {
 				}
 			}
 		}
-
 		return nil
 	})
 	if err != nil {
-		m.errors <- fmt.Errorf("log collecting failed: %v", err)
+		m.errors <- err
 		return
 	}
 
@@ -141,16 +139,18 @@ func (m *Monitor) collect(ctx context.Context) {
 func (m *Monitor) collectEvent(tx *reform.TX, e *ethtypes.Log) error {
 	el := &data.EthLog{
 		ID:          util.NewUUID(),
-		TxHash:      data.FromBytes(e.TxHash.Bytes()),
+		TxHash:      data.HexFromBytes(e.TxHash.Bytes()),
 		TxStatus:    txMinedStatus,
 		BlockNumber: e.BlockNumber,
-		Addr:        data.FromBytes(e.Address.Bytes()),
+		Addr:        data.HexFromBytes(e.Address.Bytes()),
 		Data:        data.FromBytes(e.Data),
 		Topics:      e.Topics,
 	}
 	if err := tx.Insert(el); err != nil {
-		return fmt.Errorf("failed to insert a log event"+
-			" into db: %v", err)
+		m.logger.Add("txHash", e.TxHash.String(),
+			"blockNumber", e.BlockNumber, "contractAddress",
+			e.Address.String()).Error(err.Error())
+		return ErrInsertLogEvent
 	}
 
 	return nil
@@ -161,27 +161,22 @@ func (m *Monitor) getAddressesInUse() ([]common.Hash, error) {
 		                         FROM accounts
 		                        WHERE in_use`)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query active accounts"+
-			" from db: %v", err)
+		m.logger.Error(err.Error())
+		return nil, ErrGetActiveAccounts
 	}
 	defer rows.Close()
 
 	var addresses []common.Hash
 	for rows.Next() {
-		var b64 string
-		if err := rows.Scan(&b64); err != nil {
+		var addrHex string
+		if err := rows.Scan(&addrHex); err != nil {
 			return nil, fmt.Errorf("failed to scan rows: %v", err)
 		}
-		addrBytes, err := data.ToBytes(b64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode eth address"+
-				" from base64: %v", err)
-		}
-		addresses = append(addresses, common.BytesToHash(addrBytes))
+		addresses = append(addresses, common.HexToHash(addrHex))
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to traverse"+
-			" the selected eth addresses: %v", err)
+		m.logger.Error(err.Error())
+		return nil, ErrTraverseAddresses
 	}
 	return addresses, nil
 }
@@ -193,11 +188,13 @@ func (m *Monitor) getRangeOfInterest(
 	ctx context.Context) (first, last uint64, err error) {
 	unreliableNum, err := data.GetUint64Setting(m.db, minConfirmationsKey)
 	if err != nil {
+		m.logger.Add("setting", minConfirmationsKey).Error(err.Error())
 		return 0, 0, err
 	}
 
 	freshNum, err := data.GetUint64Setting(m.db, freshBlocksKey)
 	if err != nil {
+		m.logger.Add("setting", freshBlocksKey).Error(err.Error())
 		return 0, 0, err
 	}
 
@@ -221,6 +218,7 @@ func (m *Monitor) getRangeOfInterest(
 
 	limitNum, err := data.GetUint64Setting(m.db, blockLimitKey)
 	if err != nil {
+		m.logger.Add("setting", blockLimitKey).Warn(err.Error())
 		return first, last, nil
 	}
 
@@ -252,7 +250,8 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 		var v *uint64
 
 		if err := row.Scan(&v); err != nil {
-			return 0, fmt.Errorf("failed to scan rows: %v", err)
+			m.logger.Error(err.Error())
+			return 0, ErrScanRows
 		}
 		if v != nil {
 			m.mtx.Lock()
@@ -277,7 +276,8 @@ func (m *Monitor) getLatestBlockNumber(ctx context.Context) (uint64, error) {
 
 	header, err := m.eth.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return 0, err
+		m.logger.Error(err.Error())
+		return 0, ErrGetHeaderByNumber
 	}
 
 	return header.Number.Uint64(), err

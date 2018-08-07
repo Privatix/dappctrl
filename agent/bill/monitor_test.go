@@ -13,6 +13,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 var (
@@ -21,12 +22,13 @@ var (
 		BillingTest  *billingTestConfig
 		DB           *data.DBConfig
 		Job          *job.Config
+		FileLog      *log.FileConfig
 		Log          *util.LogConfig
 		Pc           *proc.Config
 	}
 
 	db     *reform.DB
-	logger *util.Logger
+	logger log.Logger
 	mon    *Monitor
 	pr     *proc.Processor
 )
@@ -86,7 +88,7 @@ type testFixture struct {
 }
 
 func newTestMonitor(interval uint64, db *reform.DB,
-	logger *util.Logger, pc *proc.Processor) *Monitor {
+	logger log.Logger, pc *proc.Processor) *Monitor {
 	mon, err := NewMonitor(interval, db, logger, pc)
 	if err != nil {
 		panic(err)
@@ -254,19 +256,28 @@ func TestMain(m *testing.M) {
 	conf.AgentMonitor = NewConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.Log = util.NewLogConfig()
 	conf.Pc = proc.NewConfig()
 	conf.BillingTest = newBillingTestConfig()
 
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
 
-	db = data.NewTestDB(conf.DB, logger)
+	logger = l
+
+	// TODO(maxim) remove after refactor github.com/privatix/dappctrl/job pkg
+	oldLogger := util.NewTestLogger(conf.Log)
+
+	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	queue := job.NewQueue(conf.Job, logger, db, nil)
-	pr = proc.NewProcessor(conf.Pc, queue)
+	queue := job.NewQueue(conf.Job, oldLogger, db, nil)
+	pr = proc.NewProcessor(conf.Pc, db, queue)
 
 	mon = newTestMonitor(conf.AgentMonitor.Interval, db, logger, pr)
 

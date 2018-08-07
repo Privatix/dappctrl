@@ -17,6 +17,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	ethutil "github.com/privatix/dappctrl/eth/util"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -68,7 +69,7 @@ func (w *Worker) unmarshalDataTo(jobData []byte, v interface{}) error {
 }
 
 func (w *Worker) ethLogTx(ethLog *data.EthLog) (*types.Transaction, error) {
-	hash, err := data.ToHash(ethLog.TxHash)
+	hash, err := data.HexToHash(ethLog.TxHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode eth tx hash: %v", err)
 	}
@@ -84,7 +85,7 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 		return nil, false, err
 	}
 
-	addr := data.FromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
+	addr := data.HexFromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
 
 	_, err = w.db.FindOneFrom(data.UserTable, "eth_addr", addr)
 	if err != sql.ErrNoRows {
@@ -99,17 +100,17 @@ func (w *Worker) newUser(tx *types.Transaction) (*data.User, bool, error) {
 }
 
 func (w *Worker) addJob(jType, rType, rID string) error {
-	return w.queue.AddSimple(jType, rType, rID, data.JobTask)
+	return job.AddSimple(w.queue, jType, rType, rID, data.JobTask)
 }
 
 func (w *Worker) addJobWithData(
 	jType, rType, rID string, jData interface{}) error {
-	return w.queue.AddWithData(jType, rType, rID, data.JobTask, jData)
+	return job.AddWithData(w.queue, jType, rType, rID, data.JobTask, jData)
 }
 
 func (w *Worker) addJobWithDelay(
 	jType, rType, rID string, delay time.Duration) error {
-	return w.queue.AddWithDelay(jType, rType, rID, data.JobTask, delay)
+	return job.AddWithDelay(w.queue, jType, rType, rID, data.JobTask, delay)
 }
 
 func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
@@ -118,7 +119,7 @@ func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
 		return err
 	}
 
-	agentAddr, err := data.ToAddress(acc.EthAddr)
+	agentAddr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		return err
 	}
@@ -177,7 +178,7 @@ func (w *Worker) saveEthTX(job *data.Job, tx *types.Transaction,
 
 	dtx := data.EthTx{
 		ID:          util.NewUUID(),
-		Hash:        data.FromBytes(tx.Hash().Bytes()),
+		Hash:        data.HexFromBytes(tx.Hash().Bytes()),
 		Method:      method,
 		Status:      data.TxSent,
 		JobID:       pointer.ToString(job.ID),

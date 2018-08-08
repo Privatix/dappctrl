@@ -28,7 +28,8 @@ const (
 				AND offerings.current_supply > 0
                                 AND offerings.agent NOT IN
                                 (SELECT eth_addr
-                                   FROM accounts)`
+				   FROM accounts)
+				ORDER BY block_number_updated DESC`
 	clientGetOfferFilterByID = "id = $1 AND " + clientGetOfferFilter
 	agentGetOfferFilter      = `offerings.agent IN
                                (SELECT eth_addr

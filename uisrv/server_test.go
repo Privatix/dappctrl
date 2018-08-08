@@ -153,15 +153,16 @@ func getResources(t *testing.T,
 	return res
 }
 
-func testGetResources(t *testing.T, res *http.Response, exp int) {
+func testGetResources(t *testing.T, res *http.Response, exp int) []map[string]interface{} {
 	if res.StatusCode != http.StatusOK {
 		t.Fatal("failed to get products: ", res.StatusCode)
 	}
-	resData := []map[string]interface{}{}
-	json.NewDecoder(res.Body).Decode(&resData)
-	if exp != len(resData) {
-		t.Fatalf("expected %d items, got: %d", exp, len(resData))
+	ret := []map[string]interface{}{}
+	json.NewDecoder(res.Body).Decode(&ret)
+	if exp != len(ret) {
+		t.Fatalf("expected %d items, got: %d", exp, len(ret))
 	}
+	return ret
 }
 
 func setTestUserCredentials(t *testing.T) func() {

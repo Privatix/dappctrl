@@ -21,17 +21,24 @@ type ProductArgs struct {
 
 func (s *Server) handleProductConfig(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add("method", "handleProductConfig",
+		"sender", r.RemoteAddr)
+
+	logger.Info("session product config request from " + r.RemoteAddr)
+
 	var args ProductArgs
-	if !s.ParseRequest(w, r, &args) {
+	if !s.ParseRequest(logger, w, r, &args) {
 		return
 	}
+
+	logger = logger.Add("arguments", args)
 
 	if len(args.Config) == 0 {
-		s.RespondError(w, ErrInvalidProductConf)
+		s.RespondError(logger, w, ErrInvalidProductConf)
 		return
 	}
 
-	product, ok := s.findProduct(w, ctx.Username)
+	product, ok := s.findProduct(logger, w, ctx.Username)
 	if !ok {
 		return
 	}
@@ -43,19 +50,19 @@ func (s *Server) handleProductConfig(
 
 	prodConf, err := json.Marshal(args.Config)
 	if err != nil {
-		s.logger.Error(err.Error())
-		s.RespondError(w, srv.ErrInternalServerError)
+		logger.Error(err.Error())
+		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return
 	}
 
 	product.Config = prodConf
 
-	if ok := s.updateProduct(w, product); !ok {
+	if ok := s.updateProduct(logger, w, product); !ok {
 		return
 
 	}
 
-	s.RespondResult(w, nil)
+	s.RespondResult(logger, w, nil)
 }
 
 func serviceEndpointAddress(config map[string]string,

@@ -3,6 +3,8 @@ package srv
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Response is a server reply.
@@ -11,7 +13,7 @@ type Response struct {
 	Result json.RawMessage `json:"result,omitempty"`
 }
 
-func (s *Server) respond(w http.ResponseWriter, r *Response) {
+func (s *Server) respond(logger log.Logger, w http.ResponseWriter, r *Response) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	if r.Error != nil && r.Error.Status != 0 {
@@ -21,23 +23,25 @@ func (s *Server) respond(w http.ResponseWriter, r *Response) {
 	}
 
 	if err := json.NewEncoder(w).Encode(r); err != nil {
-		s.logger.Warn("failed to send reply: %s", err)
+		logger.Warn("failed to send reply: " + err.Error())
 	}
 }
 
 // RespondResult sends a response with a given result.
-func (s *Server) RespondResult(w http.ResponseWriter, result interface{}) {
+func (s *Server) RespondResult(logger log.Logger, w http.ResponseWriter,
+	result interface{}) {
+	logger = logger.Add("result", result)
 	data, err := json.Marshal(result)
 	if err != nil {
-		s.logger.Error("failed to marhsal respond result: %s", err)
-		s.RespondError(w, ErrInternalServerError)
+		logger.Error("failed to marhsal respond result: " + err.Error())
+		s.RespondError(logger, w, ErrInternalServerError)
 		return
 	}
 
-	s.respond(w, &Response{Result: data})
+	s.respond(logger, w, &Response{Result: data})
 }
 
 // RespondError sends a response with a given error.
-func (s *Server) RespondError(w http.ResponseWriter, err *Error) {
-	s.respond(w, &Response{Error: err})
+func (s *Server) RespondError(logger log.Logger, w http.ResponseWriter, err *Error) {
+	s.respond(logger, w, &Response{Error: err})
 }

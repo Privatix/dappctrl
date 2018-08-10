@@ -7,50 +7,56 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // PreAccountAddBalanceApprove approve balance if amount exists.
 func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
-	acc, err := w.relatedAccount(job,
+	logger := w.logger.Add("method", "PreAccountAddBalanceApprove", "job", job)
+
+	acc, err := w.relatedAccount(logger, job,
 		data.JobPreAccountAddBalanceApprove)
 	if err != nil {
 		return err
 	}
 
-	jobData, err := w.balanceData(job)
+	logger = logger.Add("account", acc)
+
+	jobData, err := w.balanceData(logger, job)
 	if err != nil {
 		return fmt.Errorf("failed to parse job data: %v", err)
 	}
 
 	addr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
-		return fmt.Errorf("unable to parse account's addr: %v", err)
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
 	amount, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
 	if err != nil {
-		return fmt.Errorf("could not get account's ptc balance: %v", err)
+		logger.Error(err.Error())
+		return ErrPTCRetrieveBalance
 	}
 
 	if amount.Uint64() < uint64(jobData.Amount) {
-		return fmt.Errorf("insufficient ptc balance")
+		return ErrInsufficientPTCBalance
 	}
 
-	ethBalance, err := w.ethBalance(addr)
+	ethBalance, err := w.ethBalance(logger, addr)
 	if err != nil {
-		return fmt.Errorf("failed to get eth balance: %v", err)
+		return err
 	}
 
 	wantedEthBalance := w.gasConf.PTC.Approve * jobData.GasPrice
 
 	if wantedEthBalance > ethBalance.Uint64() {
-		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
-			wantedEthBalance, ethBalance.Uint64())
+		return ErrInsufficientEthBalance
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse account's priv key: %v", err)
+		return err
 	}
 
 	auth := bind.NewKeyedTransactor(key)
@@ -59,28 +65,31 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	tx, err := w.ethBack.PTCIncreaseApproval(auth,
 		w.pscAddr, big.NewInt(int64(jobData.Amount)))
 	if err != nil {
-		return fmt.Errorf("could not ptc increase approve: %v", err)
+		logger.Error(err.Error())
+		return ErrPTCIncreaseApproval
 	}
 
-	return w.saveEthTX(job, tx, "PTCIncreaseApproval", job.RelatedType,
+	return w.saveEthTX(logger, job, tx, "PTCIncreaseApproval", job.RelatedType,
 		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // PreAccountAddBalance adds balance to psc.
 func (w *Worker) PreAccountAddBalance(job *data.Job) error {
-	acc, err := w.relatedAccount(job, data.JobPreAccountAddBalance)
+	logger := w.logger.Add("method", "PreAccountAddBalance", "job", job)
+
+	acc, err := w.relatedAccount(logger, job, data.JobPreAccountAddBalance)
 	if err != nil {
 		return err
 	}
 
-	jobData, err := w.approvedBalanceData(job)
+	jobData, err := w.approvedBalanceData(logger, job)
 	if err != nil {
-		return fmt.Errorf("failed to parse job data: %v", err)
+		return err
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse account's priv key: %v", err)
+		return err
 	}
 
 	auth := bind.NewKeyedTransactor(key)
@@ -88,15 +97,17 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 	auth.GasPrice = big.NewInt(int64(jobData.GasPrice))
 	tx, err := w.ethBack.PSCAddBalanceERC20(auth, big.NewInt(int64(jobData.Amount)))
 	if err != nil {
-		return fmt.Errorf("could not add balance to psc: %v", err)
+		logger.Error(err.Error())
+		return ErrPSCAddBalance
 	}
 
-	return w.saveEthTX(job, tx, "PSCAddBalanceERC20", job.RelatedType,
+	return w.saveEthTX(logger, job, tx, "PSCAddBalanceERC20", job.RelatedType,
 		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
-func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error) {
-	ethLog, err := w.ethLog(job)
+func (w *Worker) approvedBalanceData(logger log.Logger,
+	job *data.Job) (*data.JobBalanceData, error) {
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return nil, err
 	}
@@ -111,10 +122,11 @@ func (w *Worker) approvedBalanceData(job *data.Job) (*data.JobBalanceData, error
 		ethLog.TxHash, data.JobAccount, job.RelatedID,
 		data.JobPreAccountAddBalanceApprove)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrFindApprovalBalanceData
 	}
 
-	return w.balanceData(&approveJob)
+	return w.balanceData(logger, &approveJob)
 }
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
@@ -134,42 +146,43 @@ func (w *Worker) AccountUpdateBalances(job *data.Job) error {
 
 // PreAccountReturnBalance returns from psc to ptc.
 func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
-	acc, err := w.relatedAccount(job, data.JobPreAccountReturnBalance)
+	logger := w.logger.Add("method", "PreAccountReturnBalance", "job", job)
+	acc, err := w.relatedAccount(logger, job, data.JobPreAccountReturnBalance)
 	if err != nil {
 		return err
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse account's priv key: %v", err)
+		return err
 	}
 
-	jobData, err := w.balanceData(job)
+	jobData, err := w.balanceData(logger, job)
 	if err != nil {
-		return fmt.Errorf("failed to parse job data: %v", err)
+		return err
 	}
 
 	auth := bind.NewKeyedTransactor(key)
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 	if err != nil {
-		return fmt.Errorf("could not get account's psc balance: %v", err)
+		logger.Error(err.Error())
+		return ErrPSCReturnBalance
 	}
 
 	if amount.Uint64() < uint64(jobData.Amount) {
-		return fmt.Errorf("insufficient psc balance")
+		return ErrInsufficientPSCBalance
 	}
 
-	ethAmount, err := w.ethBalance(auth.From)
+	ethAmount, err := w.ethBalance(logger, auth.From)
 	if err != nil {
-		return fmt.Errorf("failed to get eth balance: %v", err)
+		return err
 	}
 
 	wantedEthBalance := w.gasConf.PSC.ReturnBalanceERC20 * jobData.GasPrice
 
 	if wantedEthBalance > ethAmount.Uint64() {
-		return fmt.Errorf("unsufficient eth balance, wanted: %v, got: %v",
-			wantedEthBalance, ethAmount.Uint64())
+		return ErrInsufficientEthBalance
 	}
 
 	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
@@ -178,60 +191,68 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	tx, err := w.ethBack.PSCReturnBalanceERC20(auth,
 		big.NewInt(int64(jobData.Amount)))
 	if err != nil {
-		return fmt.Errorf("could not return balance from psc: %v", err)
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCRetrieveBalance
 	}
 
-	return w.saveEthTX(job, tx, "PSCReturnBalanceERC20", job.RelatedType,
+	return w.saveEthTX(logger, job, tx, "PSCReturnBalanceERC20", job.RelatedType,
 		job.RelatedID, data.HexFromBytes(w.pscAddr.Bytes()), acc.EthAddr)
 }
 
 func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
-	channel, err := w.relatedChannel(job, jobType)
+	logger := w.logger.Add("method", "afterChannelTopUp", "job", job)
+
+	channel, err := w.relatedChannel(logger, job, jobType)
 	if err != nil {
 		return err
 	}
 
-	ethLog, err := w.ethLog(job)
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return err
 	}
 
-	logInput, err := extractLogChannelToppedUp(ethLog)
+	logInput, err := extractLogChannelToppedUp(logger, ethLog)
 	if err != nil {
 		return fmt.Errorf("could not parse log: %v", err)
 	}
 
 	agentAddr, err := data.HexToAddress(channel.Agent)
 	if err != nil {
-		return fmt.Errorf("failed to parse agent addr: %v", err)
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
 	clientAddr, err := data.HexToAddress(channel.Client)
 	if err != nil {
-		return fmt.Errorf("failed to parse client addr: %v", err)
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
-	offering, err := w.offering(channel.Offering)
+	logger = logger.Add("agent", agentAddr, "client", clientAddr)
+
+	offering, err := w.offering(logger, channel.Offering)
 	if err != nil {
 		return err
 	}
 
-	offeringHash, err := w.toHashArr(offering.Hash)
+	offeringHash, err := w.toOfferingHashArr(logger, offering.Hash)
 	if err != nil {
-		return fmt.Errorf("could not parse offering hash: %v", err)
+		return err
 	}
 
 	if agentAddr != logInput.agentAddr ||
 		clientAddr != logInput.clientAddr ||
 		offeringHash != logInput.offeringHash ||
 		channel.Block != logInput.openBlockNum {
-		return fmt.Errorf("related channel does" +
-			" not correspond to log input")
+		return ErrEthLogChannelMismatch
 	}
 
 	channel.TotalDeposit += logInput.addedDeposit.Uint64()
 	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update channels deposit: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return nil
@@ -239,24 +260,39 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 
 // DecrementCurrentSupply finds offering and decrements its current supply.
 func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
-	offering, err := w.relatedOffering(job, data.JobDecrementCurrentSupply)
+	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
+	offering, err := w.relatedOffering(logger, job, data.JobDecrementCurrentSupply)
 	if err != nil {
 		return err
 	}
 
 	offering.CurrentSupply--
 
-	return data.Save(w.db.Querier, offering)
+	err = data.Save(w.db.Querier, offering)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }
 
 // IncrementCurrentSupply finds offering and increments its current supply.
 func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
-	offering, err := w.relatedOffering(job, data.JobIncrementCurrentSupply)
+	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
+	offering, err := w.relatedOffering(logger, job,
+		data.JobIncrementCurrentSupply)
 	if err != nil {
 		return err
 	}
 
 	offering.CurrentSupply++
 
-	return data.Save(w.db.Querier, offering)
+	err = data.Save(w.db.Querier, offering)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }

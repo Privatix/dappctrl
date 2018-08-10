@@ -20,18 +20,23 @@ type StartArgs struct {
 
 func (s *Server) handleStart(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add("method", "handleStart", "sender", r.RemoteAddr)
+
+	logger.Info("session start request from " + r.RemoteAddr)
+
 	var args StartArgs
-	if !s.ParseRequest(w, r, &args) {
+	if !s.ParseRequest(logger, w, r, &args) {
 		return
 	}
 
-	ch, ok := s.identClient(w, ctx.Username, args.ClientID)
+	logger = logger.Add("arguments", args)
+
+	ch, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
 	if !ok {
 		return
 	}
 
-	s.logger.Add("clientID",
-		args.ClientID).Info("new client session")
+	logger.Info("new client session")
 
 	now := time.Now()
 
@@ -55,9 +60,9 @@ func (s *Server) handleStart(
 	}
 	if err := s.db.Insert(&sess); err != nil {
 		s.logger.Error(err.Error())
-		s.RespondError(w, srv.ErrInternalServerError)
+		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return
 	}
 
-	s.RespondResult(w, nil)
+	s.RespondResult(logger, w, nil)
 }

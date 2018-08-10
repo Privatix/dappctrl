@@ -5,7 +5,7 @@ import (
 
 	reform "gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -25,19 +25,22 @@ func NewConfig() *Config {
 type Server struct {
 	*srv.Server
 
-	db *reform.DB
+	db     *reform.DB
+	logger log.Logger
 }
 
 const payPath = "/v1/pmtChannel/pay"
 
 // NewServer creates a new pay server.
-func NewServer(conf *Config, logger *util.Logger, db *reform.DB) *Server {
+func NewServer(conf *Config, logger log.Logger, db *reform.DB) *Server {
 	s := &Server{
-		Server: srv.NewServer(conf.Config, logger),
+		Server: srv.NewServer(conf.Config),
+		logger: logger.Add("type", "pay.Server"),
 		db:     db,
 	}
 
-	s.HandleFunc(payPath, s.RequireHTTPMethods(s.handlePay, http.MethodPost))
+	s.HandleFunc(payPath,
+		s.RequireHTTPMethods(s.logger, s.handlePay, http.MethodPost))
 
 	return s
 }

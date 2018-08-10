@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
@@ -24,23 +22,26 @@ import (
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
-func (w *Worker) checkDeposit(acc *data.Account,
+func (w *Worker) checkDeposit(logger log.Logger, acc *data.Account,
 	offer *data.Offering) (uint64, error) {
 	addr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
-		return 0, err
+		logger.Error(err.Error())
+		return 0, ErrParseEthAddr
 	}
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, addr)
 	if err != nil {
-		return 0, err
+		logger.Error(err.Error())
+		return 0, ErrPSCReturnBalance
 	}
 
 	deposit := offer.UnitPrice*offer.MinUnits + offer.SetupPrice
 	if amount.Uint64() < deposit {
-		return 0, ErrNotEnoughBalance
+		return 0, ErrInsufficientPSCBalance
 	}
 
 	return deposit, nil
@@ -51,7 +52,7 @@ func (w *Worker) clientValidateChannelForClose(
 	// check channel status
 	if ch.ChannelStatus != data.ChannelActive &&
 		ch.ChannelStatus != data.ChannelPending {
-		return ErrInvalidChStatus
+		return ErrInvalidChannelStatus
 	}
 
 	// check service status
@@ -61,37 +62,37 @@ func (w *Worker) clientValidateChannelForClose(
 
 	// check receipt balance
 	if ch.ReceiptBalance > ch.TotalDeposit {
-		return ErrChReceiptBalance
+		return ErrChannelReceiptBalance
 	}
 
 	return nil
 }
 
-func (w *Worker) clientPreChannelCreateCheckSupply(
+func (w *Worker) clientPreChannelCreateCheckSupply(logger log.Logger,
 	offer *data.Offering, offerHash common.Hash) error {
 	supply, err := w.ethBack.PSCOfferingSupply(&bind.CallOpts{}, offerHash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrPSCOfferingSupply
 	}
 
 	if supply == 0 {
-		w.logger.Error("no supply for offering hash: %v",
-			offerHash.Hex())
-		return ErrNoSupply
+		return ErrOfferingNoSupply
 	}
 
 	return nil
 }
 
-func (w *Worker) clientPreChannelCreateSaveTX(
+func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 	job *data.Job, acc *data.Account, offer *data.Offering,
 	offerHash common.Hash, deposit uint64) error {
 	agentAddr, err := data.HexToAddress(offer.Agent)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
 		return err
 	}
@@ -101,10 +102,12 @@ func (w *Worker) clientPreChannelCreateSaveTX(
 	tx, err := w.ethBack.PSCCreateChannel(auth,
 		agentAddr, offerHash, big.NewInt(int64(deposit)))
 	if err != nil {
-		return err
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCCreateChannel
 	}
 
-	if err := w.saveEthTX(job, tx, "CreateChannel", data.JobChannel,
+	if err := w.saveEthTX(logger, job, tx, "CreateChannel", data.JobChannel,
 		job.RelatedID, acc.EthAddr, offer.Agent); err != nil {
 		return err
 	}
@@ -119,7 +122,13 @@ func (w *Worker) clientPreChannelCreateSaveTX(
 		ServiceStatus: data.ServicePending,
 		TotalDeposit:  deposit,
 	}
-	return data.Insert(w.db.Querier, &ch)
+	err = data.Insert(w.db.Querier, &ch)
+	if err != nil {
+		logger.Add("channel", ch).Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }
 
 // ClientPreChannelCreateData is a job data for ClientPreChannelCreate.
@@ -131,59 +140,67 @@ type ClientPreChannelCreateData struct {
 
 // ClientPreChannelCreate triggers a channel creation.
 func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientPreChannelCreate", "job", job)
+
 	var jdata ClientPreChannelCreateData
-	if err := parseJobData(job, &jdata); err != nil {
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
 		return err
 	}
 
-	var acc data.Account
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &acc, jdata.Account)
+	acc, err := w.accountByPK(logger, jdata.Account)
 	if err != nil {
 		return err
 	}
 
-	var offering data.Offering
-	err = data.FindByPrimaryKeyTo(w.db.Querier, &offering, jdata.Offering)
+	offering, err := w.offering(logger, jdata.Offering)
 	if err != nil {
 		return err
 	}
 
-	deposit, err := w.checkDeposit(&acc, &offering)
+	logger = logger.Add("account", acc, "offering", offering)
+
+	deposit, err := w.checkDeposit(logger, acc, offering)
 	if err != nil {
 		return err
 	}
 
 	offerHash, err := data.ToHash(offering.Hash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
 	}
 
-	err = w.clientPreChannelCreateCheckSupply(&offering, offerHash)
+	err = w.clientPreChannelCreateCheckSupply(logger, offering, offerHash)
 	if err != nil {
 		return err
 	}
 
 	msgRawBytes, err := data.ToBytes(offering.RawMsg)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	msgRaw, _ := messages.UnpackSignature(msgRawBytes)
 
 	msg := offer.Message{}
 	if err := json.Unmarshal(msgRaw, &msg); err != nil {
-		return fmt.Errorf("failed to unmarshal offering msg: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
+
+	logger = logger.Add("offeringMessage", msg)
 
 	pubkB, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
-		return fmt.Errorf("failed to decode agent pub key")
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	pubkey, err := crypto.UnmarshalPubkey(pubkB)
 	if err != nil {
-		return fmt.Errorf("failed to converts bytes to a secp256k1" +
-			" public key")
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	agentEthAddr := data.HexFromBytes(crypto.PubkeyToAddress(*pubkey).Bytes())
@@ -196,107 +213,116 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 			PublicKey: msg.AgentPubKey,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to insert agent user rec: %v",
-				err)
+			logger.Error(err.Error())
+			return ErrInternal
 		}
 	}
 
-	return w.clientPreChannelCreateSaveTX(
-		job, &acc, &offering, offerHash, deposit)
+	return w.clientPreChannelCreateSaveTX(logger,
+		job, acc, offering, offerHash, deposit)
 }
 
 // ClientAfterChannelCreate activates channel and triggers endpoint retrieval.
 func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
-	var ch data.Channel
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &ch, job.RelatedID)
+	logger := w.logger.Add("method", "ClientAfterChannelCreate", "job", job)
+
+	ch, err := w.relatedChannel(logger, job, data.JobClientAfterChannelCreate)
 	if err != nil {
 		return err
 	}
 
-	ethLog, err := w.ethLog(job)
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return err
 	}
+
+	logger = logger.Add("channel", ch, "ethLog", ethLog)
 
 	ch.Block = uint32(ethLog.BlockNumber)
 	ch.ChannelStatus = data.ChannelActive
-	if err = data.Save(w.db.Querier, &ch); err != nil {
+	if err = w.saveRecord(logger, ch); err != nil {
 		return err
 	}
 
-	key, err := w.KeyFromChannelData(ch.ID)
+	key, err := w.keyFromChannelData(logger, ch.ID)
 	if err != nil {
 		return err
 	}
+
+	logger = logger.Add("endpointKey", key)
 
 	endpointParams, err := w.somc.GetEndpoint(key)
 	if err != nil {
-		return fmt.Errorf("failed to get endpoint for chan %s: %s",
-			ch.ID, err)
+		logger.Error(err.Error())
+		return ErrGetEndpoint
 	}
 
 	var ep *somc.EndpointParams
 	if err := json.Unmarshal(endpointParams, &ep); err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	err = w.addJobWithData(data.JobClientPreEndpointMsgSOMCGet,
+	err = w.addJobWithData(logger, data.JobClientPreEndpointMsgSOMCGet,
 		data.JobChannel, ch.ID, ep.Endpoint)
 	if err != nil {
-		return fmt.Errorf("failed to add "+
-			"JobClientPreEndpointMsgSOMCGet job: %s", err)
+		return err
 	}
 
-	client, err := w.account(ch.Client)
+	client, err := w.account(logger, ch.Client)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(
+	return w.addJob(logger,
 		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
-func (w *Worker) decodeEndpoint(
+func (w *Worker) decodeEndpoint(logger log.Logger,
 	ch *data.Channel, sealed []byte) (*ept.Message, error) {
-	var client data.Account
-	err := data.FindOneTo(w.db.Querier, &client, "eth_addr", ch.Client)
+	client, err := w.account(logger, ch.Client)
 	if err != nil {
 		return nil, err
 	}
 
-	var agent data.User
-	err = data.FindOneTo(w.db.Querier, &agent, "eth_addr", ch.Agent)
+	agent, err := w.user(logger, ch.Agent)
 	if err != nil {
 		return nil, err
 	}
 
 	pub, err := data.ToBytes(agent.PublicKey)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
-	key, err := w.key(client.PrivateKey)
+	key, err := w.key(logger, client.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	mdata, err := messages.ClientOpen(sealed, pub, key)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrDecryptEndpointMsg
 	}
 
 	schema, err := statik.ReadFile(statik.EndpointJSONSchema)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
 	if !util.ValidateJSON(schema, mdata) {
-		return nil, fmt.Errorf(
-			"failed to validate endpoint for chan %s", ch.ID)
+		return nil, ErrInvalidEndpoint
 	}
 
 	var msg ept.Message
-	json.Unmarshal(mdata, &msg)
+	err = json.Unmarshal(mdata, &msg)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
 
 	return &msg, nil
 }
@@ -304,24 +330,26 @@ func (w *Worker) decodeEndpoint(
 // ClientPreEndpointMsgSOMCGet decodes endpoint message, saves it in the DB and
 // triggers product configuration.
 func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientPreEndpointMsgSOMCGet",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job,
+		data.JobClientPreEndpointMsgSOMCGet)
+	if err != nil {
+		return err
+	}
+
 	var sealed []byte
-	if err := parseJobData(job, &sealed); err != nil {
+	if err := w.unmarshalDataTo(logger, job.Data, &sealed); err != nil {
 		return err
 	}
 
-	var ch data.Channel
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &ch, job.RelatedID)
+	msg, err := w.decodeEndpoint(logger, ch, sealed)
 	if err != nil {
 		return err
 	}
 
-	msg, err := w.decodeEndpoint(&ch, sealed)
-	if err != nil {
-		return err
-	}
-
-	var offer data.Offering
-	err = data.FindByPrimaryKeyTo(w.db.Querier, &offer, ch.Offering)
+	offer, err := w.offering(logger, ch.Offering)
 	if err != nil {
 		return err
 	}
@@ -345,35 +373,38 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			AdditionalParams:       params,
 		}
 		if err = w.db.Insert(&endp); err != nil {
-			return err
+			logger.Add("endpoint", endp).Error(err.Error())
+			return ErrInternal
 		}
 
-		return w.addJobWithData(data.JobClientAfterEndpointMsgSOMCGet,
+		return w.addJobWithData(logger,
+			data.JobClientAfterEndpointMsgSOMCGet,
 			data.JobChannel, ch.ID, endp.ID)
 	})
 }
 
 // ClientAfterEndpointMsgSOMCGet cofigures a product.
 func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientAfterEndpointMsgSOMCGet",
+		"job", job)
+
 	var epid string
-	if err := parseJobData(job, &epid); err != nil {
+	if err := w.unmarshalDataTo(logger, job.Data, &epid); err != nil {
 		return err
 	}
 
-	var endp data.Endpoint
-	err := data.FindByPrimaryKeyTo(w.db.Querier, &endp, epid)
+	endp, err := w.endpointByPK(logger, epid)
 	if err != nil {
 		return err
 	}
 
 	return w.db.InTransaction(func(tx *reform.TX) error {
 		endp.Status = data.MsgChPublished
-		if err := data.Save(tx.Querier, &endp); err != nil {
+		if err := w.saveRecord(logger, endp); err != nil {
 			return err
 		}
 
-		var ch data.Channel
-		err = data.FindByPrimaryKeyTo(w.db.Querier, &ch, endp.Channel)
+		ch, err := w.channel(logger, endp.Channel)
 		if err != nil {
 			return err
 		}
@@ -381,156 +412,189 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		ch.ServiceStatus = data.ServiceSuspended
 		changedTime := time.Now()
 		ch.ServiceChangedTime = &changedTime
-		return data.Save(tx.Querier, &ch)
+		err = w.saveRecord(logger, ch)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+
+		return nil
 	})
 }
 
 // ClientAfterUncooperativeClose changed channel status
 // to closed uncooperative.
 func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientAfterUncooperativeClose)
+	logger := w.logger.Add("method", "ClientAfterUncooperativeClose",
+		"job", job)
+	ch, err := w.relatedChannel(logger, job, data.JobClientAfterUncooperativeClose)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("channel", ch)
+
 	ch.ChannelStatus = data.ChannelClosedUncoop
-	if err := data.Save(w.db.Querier, ch); err != nil {
+	if err := w.saveRecord(logger, ch); err != nil {
 		return err
 	}
 
 	if ch.ServiceStatus != data.ServiceTerminated {
 		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
 		if err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrTerminateChannel
 		}
 	}
 
-	agent, err := w.account(ch.Agent)
+	agent, err := w.account(logger, ch.Agent)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(
+	return w.addJob(logger,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // ClientAfterCooperativeClose changed channel status
 // to closed cooperative and launches of terminate service procedure.
 func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientAfterCooperativeClose)
+	logger := w.logger.Add("method", "ClientAfterCooperativeClose",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job,
+		data.JobClientAfterCooperativeClose)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("channel", ch)
+
 	ch.ChannelStatus = data.ChannelClosedCoop
-	if err := data.Save(w.db.Querier, ch); err != nil {
+	if err := w.saveRecord(logger, ch); err != nil {
 		return err
 	}
 
 	if ch.ServiceStatus != data.ServiceTerminated {
 		_, err = w.processor.TerminateChannel(ch.ID, data.JobTask, false)
 		if err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrTerminateChannel
 		}
 	}
 
-	agent, err := w.account(ch.Agent)
+	agent, err := w.account(logger, ch.Agent)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(
+	return w.addJob(logger,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
-}
-
-func (w *Worker) stopService(channel string) error {
-	if err := w.runner.Stop(channel); err != nil {
-		if err != svcrun.ErrNotRunning {
-			return fmt.Errorf("failed to stop service: %s", err)
-		}
-		w.logger.Warn("failed to stop service: %s", err)
-	}
-	return nil
 }
 
 // ClientPreServiceTerminate terminates service.
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientPreServiceTerminate)
+	logger := w.logger.Add("method", "ClientPreServiceTerminate", "job", job)
+
+	ch, err := w.relatedChannel(logger,
+		job, data.JobClientPreServiceTerminate)
 	if err != nil {
 		return err
 	}
 
-	if err := w.stopService(ch.ID); err != nil {
-		return err
+	logger = logger.Add("channel", ch)
+
+	if err := w.runner.Stop(ch.ID); err != nil {
+		logger.Error(err.Error())
+		return ErrFailedStopService
 	}
 
 	ch.ServiceStatus = data.ServiceTerminated
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	return data.Save(w.db.Querier, ch)
+	err = w.saveRecord(logger, ch)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ClientPreServiceSuspend suspends service.
 func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientPreServiceSuspend)
+	logger := w.logger.Add("method", "ClientPreServiceSuspend", "job", job)
+
+	ch, err := w.relatedChannel(logger, job, data.JobClientPreServiceSuspend)
 	if err != nil {
 		return err
 	}
 
-	if err := w.stopService(ch.ID); err != nil {
-		return err
+	logger = logger.Add("channel", ch)
+
+	if err := w.runner.Stop(ch.ID); err != nil {
+		logger.Error(err.Error())
+		return ErrFailedStopService
 	}
 
 	ch.ServiceStatus = data.ServiceSuspended
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	return data.Save(w.db.Querier, ch)
+	err = w.saveRecord(logger, ch)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ClientPreServiceUnsuspend activates service.
 func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientPreServiceUnsuspend)
+	logger := w.logger.Add("method", "ClientPreServiceUnsuspend",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job, data.JobClientPreServiceUnsuspend)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("channel", ch)
+
 	if err := w.runner.Start(ch.ID); err != nil {
-		return fmt.Errorf("failed to start service: %s", err)
+		logger.Error(err.Error())
+		return ErrFailedStartService
 	}
 
 	ch.ServiceStatus = data.ServiceActive
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	return data.Save(w.db.Querier, ch)
+	return w.saveRecord(logger, ch)
 }
 
-func (w *Worker) assertCanSettle(ctx context.Context, client,
-	agent common.Address, block uint32,
+func (w *Worker) assertCanSettle(ctx context.Context, logger log.Logger,
+	client, agent common.Address, block uint32,
 	hash [common.HashLength]byte) error {
 	_, _, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
 		&bind.CallOpts{}, client, agent, block, hash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrPSCGetChannelInfo
 	}
 
 	curr, err := w.ethBack.LatestBlockNumber(ctx)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrEthLatestBlockNumber
 	}
 
 	if curr.Uint64() < uint64(settleBlock) {
-		return fmt.Errorf(
-			"cannot settle yet (min. block %d, current %d)",
-			uint64(settleBlock), curr.Uint64())
+		return ErrChallengePeriodIsNotOver
 	}
 
 	return nil
 }
 
-func (w *Worker) settle(ctx context.Context, acc *data.Account,
-	agent common.Address, block uint32,
+func (w *Worker) settle(ctx context.Context, logger log.Logger,
+	acc *data.Account, agent common.Address, block uint32,
 	hash [common.HashLength]byte) (*types.Transaction, error) {
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +602,13 @@ func (w *Worker) settle(ctx context.Context, acc *data.Account,
 	opts := bind.NewKeyedTransactor(key)
 	opts.Context = ctx
 
-	return w.ethBack.PSCSettle(opts, agent, block, hash)
+	tx, err := w.ethBack.PSCSettle(opts, agent, block, hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrPSCSettle
+	}
+
+	return tx, nil
 }
 
 // ClientPreUncooperativeClose waiting for until the challenge
@@ -546,53 +616,59 @@ func (w *Worker) settle(ctx context.Context, acc *data.Account,
 // by transferring the balance to the Agent and the rest
 // of the deposit back to the Client.
 func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
-	ch, err := w.relatedChannel(job,
+	logger := w.logger.Add("method", "ClientPreUncooperativeClose",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job,
 		data.JobClientPreUncooperativeClose)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("channel", ch)
+
 	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
 	client, err := data.HexToAddress(ch.Client)
 	if err != nil {
+		logger.Error(err.Error())
+		return ErrParseEthAddr
+	}
+
+	acc, err := w.account(logger, ch.Client)
+	if err != nil {
 		return err
 	}
 
-	var acc data.Account
-	if err := data.FindOneTo(w.db.Querier, &acc,
-		"eth_addr", ch.Client); err != nil {
-		return err
-	}
-
-	var offer data.Offering
-	if err := data.FindByPrimaryKeyTo(w.db.Querier, &offer,
-		ch.Offering); err != nil {
+	offer, err := w.offering(logger, ch.Offering)
+	if err != nil {
 		return err
 	}
 
 	offerHash, err := data.ToHash(offer.Hash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = w.assertCanSettle(ctx, client, agent, ch.Block, offerHash)
+	err = w.assertCanSettle(ctx, logger, client, agent, ch.Block, offerHash)
 	if err != nil {
 		return err
 	}
 
-	tx, err := w.settle(ctx, &acc, agent, ch.Block, offerHash)
+	tx, err := w.settle(ctx, logger, acc, agent, ch.Block, offerHash)
 	if err != nil {
 		return err
 	}
 
-	if err := w.saveEthTX(job, tx, "Settle",
+	if err := w.saveEthTX(logger, job, tx, "Settle",
 		data.JobChannel, ch.ID, acc.EthAddr,
 		data.HexFromBytes(w.pscAddr.Bytes())); err != nil {
 		return err
@@ -600,7 +676,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 
 	ch.ChannelStatus = data.ChannelWaitUncoop
 
-	return data.Save(w.db.Querier, ch)
+	return w.saveRecord(logger, ch)
 }
 
 // ClientPreChannelTopUpData is a job data for ClientPreChannelTopUp.
@@ -609,20 +685,22 @@ type ClientPreChannelTopUpData struct {
 	GasPrice uint64 `json:"gasPrice"`
 }
 
-func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
-	acc *data.Account, offer *data.Offering, gasPrice uint64,
-	deposit *big.Int) error {
+func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
+	ch *data.Channel, acc *data.Account, offer *data.Offering,
+	gasPrice uint64, deposit *big.Int) error {
 	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
 	}
 
 	offerHash, err := data.ToHash(offer.Hash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
 		return err
 	}
@@ -642,10 +720,12 @@ func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
 	tx, err := w.ethBack.PSCTopUpChannel(opts, agent, ch.Block,
 		offerHash, deposit)
 	if err != nil {
-		return err
+		logger.Add("GasLimit", opts.GasLimit,
+			"GasPrice", opts.GasPrice).Error(err.Error())
+		return ErrPSCTopUpChannel
 	}
 
-	return w.saveEthTX(job, tx, "TopUpChannel",
+	return w.saveEthTX(logger, job, tx, "TopUpChannel",
 		data.JobChannel, ch.ID, acc.EthAddr,
 		data.HexFromBytes(w.pscAddr.Bytes()))
 }
@@ -653,32 +733,36 @@ func (w *Worker) clientPreChannelTopUpSaveTx(job *data.Job, ch *data.Channel,
 // ClientPreChannelTopUp checks client balance and creates transaction
 // for increase the channel deposit.
 func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientPreChannelTopUp", "job", job)
+
 	var jdata ClientPreChannelTopUpData
-	if err := parseJobData(job, &jdata); err != nil {
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
 		return err
 	}
 
-	ch, err := w.channel(jdata.Channel)
+	ch, err := w.channel(logger, jdata.Channel)
 	if err != nil {
 		return err
 	}
 
-	offer, err := w.offering(ch.Offering)
+	offer, err := w.offering(logger, ch.Offering)
 	if err != nil {
 		return err
 	}
 
-	acc, err := w.account(ch.Client)
+	acc, err := w.account(logger, ch.Client)
 	if err != nil {
 		return err
 	}
 
-	deposit, err := w.checkDeposit(acc, offer)
+	deposit, err := w.checkDeposit(logger, acc, offer)
 	if err != nil {
 		return err
 	}
 
-	return w.clientPreChannelTopUpSaveTx(job, ch, acc, offer,
+	logger = logger.Add("channel", ch, "offering", offer)
+
+	return w.clientPreChannelTopUpSaveTx(logger, job, ch, acc, offer,
 		jdata.GasPrice, new(big.Int).SetUint64(deposit))
 }
 
@@ -687,15 +771,16 @@ func (w *Worker) ClientAfterChannelTopUp(job *data.Job) error {
 	return w.afterChannelTopUp(job, data.JobClientAfterChannelTopUp)
 }
 
-func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
-	ch *data.Channel, acc *data.Account, offer *data.Offering,
+func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger,
+	job *data.Job, ch *data.Channel, acc *data.Account, offer *data.Offering,
 	gasPrice uint64) error {
 	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
-	key, err := w.key(acc.PrivateKey)
+	key, err := w.key(logger, acc.PrivateKey)
 	if err != nil {
 		return err
 	}
@@ -711,7 +796,8 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 
 	offerHash, err := data.ToHash(offer.Hash)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
 	}
 
 	if w.gasConf.PSC.UncooperativeClose != 0 {
@@ -721,10 +807,11 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 	tx, err := w.ethBack.PSCUncooperativeClose(opts, agent, ch.Block,
 		offerHash, new(big.Int).SetUint64(ch.ReceiptBalance))
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrPSCUncooperativeClose
 	}
 
-	if err := w.saveEthTX(job, tx, "UncooperativeClose",
+	if err := w.saveEthTX(logger, job, tx, "UncooperativeClose",
 		data.JobChannel, ch.ID, acc.EthAddr,
 		data.HexFromBytes(w.pscAddr.Bytes())); err != nil {
 		return err
@@ -732,28 +819,32 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(job *data.Job,
 
 	ch.ChannelStatus = data.ChannelWaitChallenge
 
-	return data.Save(w.db.Querier, ch)
+	return w.saveRecord(logger, ch)
 }
 
 // ClientPreUncooperativeCloseRequest requests the closing of the channel
 // and starts the challenge period.
 func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
-	ch, err := w.relatedChannel(job, data.JobClientPreUncooperativeCloseRequest)
+	logger := w.logger.Add("method", "ClientPreUncooperativeCloseRequest",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job,
+		data.JobClientPreUncooperativeCloseRequest)
 	if err != nil {
 		return err
 	}
 
-	jdata, err := w.publishData(job)
+	jdata, err := w.publishData(logger, job)
 	if err != nil {
 		return err
 	}
 
-	offer, err := w.offering(ch.Offering)
+	offer, err := w.offering(logger, ch.Offering)
 	if err != nil {
 		return err
 	}
 
-	acc, err := w.account(ch.Client)
+	acc, err := w.account(logger, ch.Client)
 	if err != nil {
 		return err
 	}
@@ -762,14 +853,17 @@ func (w *Worker) ClientPreUncooperativeCloseRequest(job *data.Job) error {
 		return err
 	}
 
-	return w.doClientPreUncooperativeCloseRequestAndSaveTx(job, ch, acc,
-		offer, jdata.GasPrice)
+	return w.doClientPreUncooperativeCloseRequestAndSaveTx(logger, job, ch,
+		acc, offer, jdata.GasPrice)
 }
 
 // ClientAfterUncooperativeCloseRequest waits for the channel
 // to uncooperative close, starts the service termination process.
 func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
-	ch, err := w.relatedChannel(job,
+	logger := w.logger.Add("method", "ClientAfterUncooperativeCloseRequest",
+		"job", job)
+
+	ch, err := w.relatedChannel(logger, job,
 		data.JobClientAfterUncooperativeCloseRequest)
 	if err != nil {
 		return err
@@ -777,46 +871,55 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 
 	ch.ChannelStatus = data.ChannelInChallenge
 	if err = w.db.Update(ch); err != nil {
-		return fmt.Errorf("could not update channel's"+
-			" status: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	blocks, err := data.ReadUintSetting(
 		w.db.Querier, data.SettingEthChallengePeriod)
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return w.addJobWithDelay(
-		data.JobClientPreUncooperativeClose, data.JobChannel,
+		logger, data.JobClientPreUncooperativeClose, data.JobChannel,
 		ch.ID, time.Duration(blocks)*eth.BlockDuration)
 }
 
 // ClientAfterOfferingMsgBCPublish creates offering.
 func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
-	ethLog, err := w.ethLog(job)
+	logger := w.logger.Add("method", "ClientAfterOfferingMsgBCPublish",
+		"job", job)
+
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return err
 	}
 
-	logOfferingCreated, err := extractLogOfferingCreated(ethLog)
+	logOfferingCreated, err := extractLogOfferingCreated(logger, ethLog)
 	if err != nil {
 		return err
 	}
 
-	return w.clientRetrieveAndSaveOfferingFromSOMC(job, ethLog.BlockNumber,
-		logOfferingCreated.agentAddr, logOfferingCreated.offeringHash)
+	return w.clientRetrieveAndSaveOfferingFromSOMC(logger, job,
+		ethLog.BlockNumber, logOfferingCreated.agentAddr,
+		logOfferingCreated.offeringHash)
 }
 
 // ClientAfterOfferingPopUp updates offering in db or retrieves from somc
 // if new.
 func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
-	ethLog, err := w.ethLog(job)
+	logger := w.logger.Add("method", "ClientAfterOfferingPopUp", "job", job)
+
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return err
 	}
 
-	logOfferingPopUp, err := extractLogOfferingPopUp(ethLog)
+	logger = logger.Add("ethLog", ethLog)
+
+	logOfferingPopUp, err := extractLogOfferingPopUp(logger, ethLog)
 	if err != nil {
 		return err
 	}
@@ -826,77 +929,85 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
-		return w.clientRetrieveAndSaveOfferingFromSOMC(job,
+		return w.clientRetrieveAndSaveOfferingFromSOMC(logger, job,
 			ethLog.BlockNumber, logOfferingPopUp.agentAddr,
 			logOfferingPopUp.offeringHash)
 	}
 	if err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	// Existing offering, just update offering status.
 	offering.BlockNumberUpdated = ethLog.BlockNumber
 
-	return w.db.Update(&offering)
+	return w.saveRecord(logger, &offering)
 }
 
-func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(
+func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(logger log.Logger,
 	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
 	offeringsData, err := w.somc.FindOfferings([]string{
 		data.FromBytes(hash.Bytes())})
 	if err != nil {
-		return fmt.Errorf("failed to find offering: %v", err)
+		return ErrFindOfferings
 	}
 
-	offering, err := w.fillOfferingFromSOMCReply(
+	offering, err := w.fillOfferingFromSOMCReply(logger,
 		job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
 		block, offeringsData)
 	if err != nil {
-		return fmt.Errorf("failed to fill offering: %v", err)
+		return err
 	}
 
-	if err := w.db.Insert(offering); err != nil {
-		return fmt.Errorf("failed to insert offering: %v", err)
+	if err := data.Insert(w.db.Querier, offering); err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return nil
 }
 
-func (w *Worker) fillOfferingFromSOMCReply(relID, agentAddr string, blockNumber uint64, offeringsData []somc.OfferingData) (*data.Offering, error) {
+func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
+	relID, agentAddr string, blockNumber uint64,
+	offeringsData []somc.OfferingData) (*data.Offering, error) {
 	if len(offeringsData) == 0 {
-		return nil, fmt.Errorf("no offering returned from somc")
+		return nil, ErrSOMCNoOfferings
 	}
 
 	offeringData := offeringsData[0]
-	if err := w.db.FindOneTo(&data.Offering{}, "hash", offeringData.Hash); err == nil {
-		return nil, fmt.Errorf("offering exists with hash: %s", offeringData.Hash)
+
+	_, err := w.offeringByHashString(logger, offeringData.Hash)
+	if err == nil {
+		return nil, ErrOfferingExists
 	}
 
 	msgRaw, sig := messages.UnpackSignature(offeringData.Offering)
 
 	msg := offer.Message{}
 	if err := json.Unmarshal(msgRaw, &msg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal offering data: %v", err)
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode agent pub key")
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
 	if !messages.VerifySignature(pubk, crypto.Keccak256(msgRaw), sig) {
-		return nil, fmt.Errorf("wrong signature")
+		return nil, ErrWrongOfferingMsgSignature
 	}
 
-	template, err := w.templateByHash(msg.TemplateHash)
+	template, err := w.templateByHash(logger, msg.TemplateHash)
 	if err != nil {
-		return nil, fmt.Errorf("could not find template by given hash: %v. got: %v",
-			msg.TemplateHash, err)
+		return nil, err
 	}
 
 	product := &data.Product{}
 	if err := w.db.FindOneTo(product, "offer_tpl_id", template.ID); err != nil {
-		return nil, fmt.Errorf("could not find the product: %v", err)
+		logger.Error(err.Error())
+		return nil, ErrProductNotFound
 	}
 
 	return &data.Offering{

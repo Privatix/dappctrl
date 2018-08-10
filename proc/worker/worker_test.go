@@ -93,7 +93,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(logger, logger2, db, somcConn, ethBack,
+	worker, err := NewWorker(logger2, db, somcConn, ethBack,
 		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
 		data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {

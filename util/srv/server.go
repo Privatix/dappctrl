@@ -2,15 +2,12 @@ package srv
 
 import (
 	"net/http"
-
-	"github.com/privatix/dappctrl/util"
 )
 
 // Server is an HTTP server.
 type Server struct {
-	conf   *Config
-	logger *util.Logger
-	srv    http.Server
+	conf *Config
+	srv  http.Server
 }
 
 // TLSConfig is a TLS configuration.
@@ -34,25 +31,20 @@ func NewConfig() *Config {
 }
 
 // NewServer creates a new HTTP server.
-func NewServer(conf *Config, logger *util.Logger) *Server {
-	return &Server{
-		conf:   conf,
-		logger: logger,
+func NewServer(conf *Config) *Server {
+	s := &Server{
+		conf: conf,
 		srv: http.Server{
 			Addr:    conf.Addr,
 			Handler: http.NewServeMux(),
 		},
 	}
+	return s
 }
 
 // Mux is an associated http.ServeMux instance.
 func (s *Server) Mux() *http.ServeMux {
 	return s.srv.Handler.(*http.ServeMux)
-}
-
-// Logger is an associated util.Logger instance.
-func (s *Server) Logger() *util.Logger {
-	return s.logger
 }
 
 // ListenAndServe starts to listen and to serve requests.

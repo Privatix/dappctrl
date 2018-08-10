@@ -20,7 +20,7 @@ func TestBadClientIdent(t *testing.T) {
 		fxt.Channel.ServiceStatus = data.ServiceActive
 		data.SaveToTestDB(t, db, fxt.Channel)
 
-		err := Post(conf.SessionServer.Config, logger2,
+		err := Post(conf.SessionServer.Config, logger,
 			fxt.Product.ID, data.TestPassword, v, args, nil)
 		util.TestExpectResult(t, "Post", ErrChannelNotFound, err)
 
@@ -28,7 +28,7 @@ func TestBadClientIdent(t *testing.T) {
 		fxt.Channel.ServiceStatus = data.ServicePending
 		data.SaveToTestDB(t, db, fxt.Channel)
 
-		err = Post(conf.SessionServer.Config, logger2,
+		err = Post(conf.SessionServer.Config, logger,
 			fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 		util.TestExpectResult(t, "Post", ErrNonActiveChannel, err)
 	}
@@ -41,7 +41,7 @@ func TestBadAuth(t *testing.T) {
 	args := AuthArgs{ClientID: fxt.Channel.ID, Password: "bad-password"}
 
 	args.ClientID = fxt.Channel.ID
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 	util.TestExpectResult(t, "Post", ErrBadAuthPassword, err)
 }
@@ -51,7 +51,7 @@ func TestBadUpdate(t *testing.T) {
 	defer fxt.Close()
 
 	args := UpdateArgs{ClientID: fxt.Channel.ID}
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathUpdate, args, nil)
 	util.TestExpectResult(t, "Post", ErrSessionNotFound, err)
 }
@@ -71,7 +71,7 @@ func TestNormalSessionFlow(t *testing.T) {
 
 func testAuthNormalFlow(fxt *data.TestFixture) {
 	args := AuthArgs{ClientID: fxt.Channel.ID, Password: data.TestPassword}
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
 	util.TestExpectResult(fxt.T, "Post", nil, err)
 }
@@ -85,7 +85,7 @@ func testStartNormalFlow(fxt *data.TestFixture) *data.Session {
 	}
 
 	before := time.Now()
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathStart, args2, nil)
 	util.TestExpectResult(fxt.T, "Post", nil, err)
 	after := time.Now()
@@ -138,7 +138,7 @@ func testUpdateStopNormalFlow(fxt *data.TestFixture, sess *data.Session, stop bo
 
 		before := time.Now()
 		args := UpdateArgs{ClientID: fxt.Channel.ID, Units: units}
-		err := Post(conf.SessionServer.Config, logger2, fxt.Product.ID,
+		err := Post(conf.SessionServer.Config, logger, fxt.Product.ID,
 			data.TestPassword, path, args, nil)
 		util.TestExpectResult(fxt.T, "Post", nil, err)
 

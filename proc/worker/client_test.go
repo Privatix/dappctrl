@@ -47,11 +47,11 @@ func TestClientPreChannelCreate(t *testing.T) {
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
 		fxt.Offering.SetupPrice
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
-	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
-	util.TestExpectResult(t, "Job run", ErrNoSupply,
+	util.TestExpectResult(t, "Job run", ErrOfferingNoSupply,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	issued := time.Now()
@@ -154,7 +154,7 @@ func sealMessage(t *testing.T, env *workerTest,
 	pub, err := data.ToBytes(fxt.User.PublicKey)
 	util.TestExpectResult(t, "Decode pub", nil, err)
 
-	key, err := env.worker.key(fxt.Account.PrivateKey)
+	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
 	util.TestExpectResult(t, "Get key", nil, err)
 
 	sealed, err := messages.AgentSeal(mdata, pub, key)
@@ -254,7 +254,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		fxt.Offering.SetupPrice
 
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
-	util.TestExpectResult(t, "Job run", ErrNotEnoughBalance,
+	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelTopUp(fxt.job))
 
 	issued := time.Now()
@@ -347,7 +347,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	fxt.Channel.ReceiptBalance = 2
 	env.updateInTestDB(t, fxt.Channel)
 
-	util.TestExpectResult(t, "Job run", ErrChReceiptBalance,
+	util.TestExpectResult(t, "Job run", ErrChannelReceiptBalance,
 		env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
 
 	for _, status := range badServiceStatus {
@@ -362,7 +362,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		fxt.Channel.ChannelStatus = status
 		env.updateInTestDB(t, fxt.Channel)
 
-		util.TestExpectResult(t, "Job run", ErrInvalidChStatus,
+		util.TestExpectResult(t, "Job run", ErrInvalidChannelStatus,
 			env.worker.ClientPreUncooperativeCloseRequest(fxt.job))
 	}
 
@@ -708,7 +708,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
 	util.TestExpectResult(t, "Marshall msg", nil, err)
-	key, err := env.worker.key(fxt.Account.PrivateKey)
+	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
 	util.TestExpectResult(t, "Get key", nil, err)
 	packed, err := messages.PackWithSignature(msgBytes, key)
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
@@ -858,7 +858,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
 	util.TestExpectResult(t, "Marshall msg", nil, err)
-	key, err := env.worker.key(fxt.Account.PrivateKey)
+	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
 	util.TestExpectResult(t, "Get key", nil, err)
 	packed, err := messages.PackWithSignature(msgBytes, key)
 	util.TestExpectResult(t, "PackWithSignature", nil, err)

@@ -5,7 +5,6 @@ import (
 
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -42,18 +41,17 @@ const (
 )
 
 // NewServer creates a new session server.
-func NewServer(conf *Config, logger *util.Logger, logger2 log.Logger,
-	db *reform.DB) *Server {
+func NewServer(conf *Config, logger log.Logger, db *reform.DB) *Server {
 	s := &Server{
-		Server: srv.NewServer(conf.Config, logger),
+		Server: srv.NewServer(conf.Config),
 		conf:   conf,
 		db:     db,
-		logger: logger2,
+		logger: logger.Add("type", "sesssrv.Server"),
 	}
 
 	modifyHandler := func(h srv.HandlerFunc) srv.HandlerFunc {
-		h = s.RequireBasicAuth(h, s.authProduct)
-		h = s.RequireHTTPMethods(h, http.MethodPost)
+		h = s.RequireBasicAuth(s.logger, h, s.authProduct)
+		h = s.RequireHTTPMethods(s.logger, h, http.MethodPost)
 		return h
 	}
 

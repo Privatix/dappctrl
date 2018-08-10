@@ -17,50 +17,56 @@ import (
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // AgentAfterChannelCreate registers client and creates pre service create job.
 func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
-	err := w.validateJob(job, data.JobAgentAfterChannelCreate, data.JobChannel)
+	if w.isJobInvalid(job, data.JobAgentAfterChannelCreate, data.JobChannel) {
+		return ErrInvalidJob
+	}
+
+	logger := w.logger.Add("method", "AgentAfterChannelCreate", "job", job)
+
+	ethLog, err := w.ethLog(logger, job)
 	if err != nil {
 		return err
 	}
 
-	ethLog, err := w.ethLog(job)
+	ethLogTx, err := w.ethLogTx(logger, ethLog)
 	if err != nil {
 		return err
 	}
 
-	ethLogTx, err := w.ethLogTx(ethLog)
+	client, newUser, err := w.newUser(logger, ethLogTx)
 	if err != nil {
 		return err
 	}
 
-	client, newUser, err := w.newUser(ethLogTx)
-	if err != nil {
-		return fmt.Errorf("failed to make new client record: %v", err)
-	}
+	logger = logger.Add("client", client)
 
 	tx, err := w.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to start transaction: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	if newUser {
 		if err := tx.Insert(client); err != nil {
+			logger.Error(err.Error())
 			tx.Rollback()
-			return fmt.Errorf("failed to insert %T: %v", client, err)
+			return ErrInternal
 		}
 	}
 
-	logChannelCreated, err := extractLogChannelCreated(ethLog)
+	logChannelCreated, err := extractLogChannelCreated(logger, ethLog)
 	if err != nil {
-		return fmt.Errorf("could not parse log: %v", err)
+		return err
 	}
 
-	offering, err := w.offeringByHash(logChannelCreated.offeringHash)
+	offering, err := w.offeringByHash(logger, logChannelCreated.offeringHash)
 	if err != nil {
-		return fmt.Errorf("could not find offering by hash: %v", err)
+		return err
 	}
 
 	channel := &data.Channel{
@@ -75,8 +81,9 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 	}
 
 	if err := tx.Insert(channel); err != nil {
+		logger.Error(err.Error())
 		tx.Rollback()
-		return fmt.Errorf("failed to insert %T: %v", channel, err)
+		return ErrInternal
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -84,7 +91,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return fmt.Errorf("unable to commit changes: %v", err)
 	}
 
-	return w.addJob(data.JobAgentPreEndpointMsgCreate,
+	return w.addJob(logger, data.JobAgentPreEndpointMsgCreate,
 		data.JobChannel, channel.ID)
 }
 
@@ -95,23 +102,29 @@ func (w *Worker) AgentAfterChannelTopUp(job *data.Job) error {
 
 // AgentAfterUncooperativeCloseRequest sets channel's status to challenge period.
 func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
-	channel, err := w.relatedChannel(job,
+	logger := w.logger.Add("method", "AgentAfterUncooperativeCloseRequest",
+		"job", job)
+	channel, err := w.relatedChannel(logger, job,
 		data.JobAgentAfterUncooperativeCloseRequest)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("channel", channel)
+
 	if channel.ServiceStatus != data.ServiceTerminated {
 		_, err = w.processor.TerminateChannel(
 			channel.ID, data.JobTask, true)
 		if err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrTerminateChannel
 		}
 	}
 
 	channel.ChannelStatus = data.ChannelInChallenge
 	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update channel's status: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return nil
@@ -119,7 +132,10 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 
 // AgentAfterUncooperativeClose marks channel closed uncoop.
 func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(job,
+	logger := w.logger.Add("method", "AgentAfterUncooperativeClose",
+		"job", job)
+
+	channel, err := w.relatedChannel(logger, job,
 		data.JobAgentAfterUncooperativeClose)
 	if err != nil {
 		return err
@@ -129,27 +145,31 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		_, err = w.processor.TerminateChannel(
 			channel.ID, data.JobTask, true)
 		if err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrTerminateChannel
 		}
 	}
 
 	channel.ChannelStatus = data.ChannelClosedUncoop
 	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update channel's status: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	agent, err := w.account(channel.Agent)
+	agent, err := w.account(logger, channel.Agent)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(
+	return w.addJob(logger,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterCooperativeClose marks channel as closed coop.
 func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
-	channel, err := w.relatedChannel(
+	logger := w.logger.Add("method", "AgentAfterCooperativeClose",
+		"job", job)
+	channel, err := w.relatedChannel(logger,
 		job, data.JobAgentAfterCooperativeClose)
 	if err != nil {
 		return err
@@ -157,62 +177,69 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 
 	channel.ChannelStatus = data.ChannelClosedCoop
 	if err := w.db.Update(channel); err != nil {
-		return fmt.Errorf("could not update %T: %v", channel, err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	agent, err := w.account(channel.Agent)
+	agent, err := w.account(logger, channel.Agent)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(
+	return w.addJob(logger,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentPreServiceSuspend marks service as suspended.
 func (w *Worker) AgentPreServiceSuspend(job *data.Job) error {
-	_, err := w.agentUpdateServiceStatus(job,
+	logger := w.logger.Add("method", "AgentPreServiceSuspend", "job", job)
+	_, err := w.agentUpdateServiceStatus(logger, job,
 		data.JobAgentPreServiceSuspend)
 	return err
 }
 
 // AgentPreServiceUnsuspend marks service as active.
 func (w *Worker) AgentPreServiceUnsuspend(job *data.Job) error {
-	_, err := w.agentUpdateServiceStatus(job,
+	logger := w.logger.Add("method", "AgentPreServiceSuspend", "job", job)
+	_, err := w.agentUpdateServiceStatus(logger, job,
 		data.JobAgentPreServiceUnsuspend)
 	return err
 }
 
 // AgentPreServiceTerminate terminates the service.
 func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
-	channel, err := w.agentUpdateServiceStatus(job,
+	logger := w.logger.Add("method", "AgentPreServiceSuspend", "job", job)
+	channel, err := w.agentUpdateServiceStatus(logger, job,
 		data.JobAgentPreServiceTerminate)
 	if err != nil {
 		return err
 	}
-	return w.agentCooperativeClose(job, channel)
+	return w.agentCooperativeClose(logger, job, channel)
 }
 
-func (w *Worker) agentCooperativeClose(job *data.Job,
+func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 	channel *data.Channel) error {
-	offering, err := w.offering(channel.Offering)
+	logger = logger.Add("channel", channel)
+
+	offering, err := w.offering(logger, channel.Offering)
 	if err != nil {
 		return err
 	}
 
-	agent, err := w.account(channel.Agent)
+	agent, err := w.account(logger, channel.Agent)
 	if err != nil {
 		return err
 	}
 
-	offeringHash, err := w.toHashArr(offering.Hash)
+	offeringHash, err := w.toOfferingHashArr(logger, offering.Hash)
 	if err != nil {
 		return err
 	}
 
 	clientAddr, err := data.HexToAddress(channel.Client)
 	if err != nil {
-		return fmt.Errorf("unable to parse client addr: %v", err)
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
 	balance := big.NewInt(int64(channel.ReceiptBalance))
@@ -221,28 +248,31 @@ func (w *Worker) agentCooperativeClose(job *data.Job,
 	closingHash := eth.BalanceClosingHash(clientAddr, w.pscAddr, block,
 		offeringHash, balance)
 
-	accKey, err := w.key(agent.PrivateKey)
+	accKey, err := w.key(logger, agent.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse agent's key: %v", err)
+		return err
 	}
 
 	closingSig, err := crypto.Sign(closingHash, accKey)
 	if err != nil {
-		return fmt.Errorf("could not sign closing msg: %v", err)
+		logger.Error(err.Error())
+		return ErrSignClosingMsg
 	}
 
 	agentAddr, err := data.HexToAddress(channel.Agent)
 	if err != nil {
-		return fmt.Errorf("unable to parse agent's address: %v", err)
+		logger.Error(err.Error())
+		return ErrParseEthAddr
 	}
 
 	if channel.ReceiptSignature == nil {
-		return fmt.Errorf("no receipt signature in channel")
+		return ErrNoReceiptSignature
 	}
 
 	balanceMsgSig, err := data.ToBytes(*channel.ReceiptSignature)
 	if err != nil {
-		return fmt.Errorf("unable to decode receipt signature: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	auth := bind.NewKeyedTransactor(accKey)
@@ -252,16 +282,18 @@ func (w *Worker) agentCooperativeClose(job *data.Job,
 		uint32(channel.Block), offeringHash, balance, balanceMsgSig,
 		closingSig)
 	if err != nil {
-		return fmt.Errorf("could not cooperative close: %v", err)
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCCooperativeClose
 	}
 
-	return w.saveEthTX(job, tx, "CooperativeClose", job.RelatedType,
+	return w.saveEthTX(logger, job, tx, "CooperativeClose", job.RelatedType,
 		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
-func (w *Worker) agentUpdateServiceStatus(job *data.Job,
+func (w *Worker) agentUpdateServiceStatus(logger log.Logger, job *data.Job,
 	jobType string) (*data.Channel, error) {
-	channel, err := w.relatedChannel(job, jobType)
+	channel, err := w.relatedChannel(logger, job, jobType)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +311,8 @@ func (w *Worker) agentUpdateServiceStatus(job *data.Job,
 	channel.ServiceChangedTime = &changedTime
 
 	if err = w.db.Update(channel); err != nil {
-		return nil, fmt.Errorf("could not update service status: %v", err)
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
 	return channel, nil
@@ -287,49 +320,65 @@ func (w *Worker) agentUpdateServiceStatus(job *data.Job,
 
 // AgentPreEndpointMsgCreate prepares endpoint message to be sent to client.
 func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
-	channel, err := w.relatedChannel(job, data.JobAgentPreEndpointMsgCreate)
+	logger := w.logger.Add("method", "AgentPreEndpointMsgCreate", "job", job)
+
+	channel, err := w.relatedChannel(logger, job, data.JobAgentPreEndpointMsgCreate)
 	if err != nil {
 		return err
 	}
+
+	logger = logger.Add("channel", channel)
 
 	msg, err := w.ept.EndpointMessage(channel.ID)
 	if err != nil {
-		return fmt.Errorf("could not make endpoint message: %v", err)
+		logger.Error(err.Error())
+		return ErrMakeEndpointMsg
 	}
 
-	template, err := w.templateByHash(msg.TemplateHash)
+	logger = logger.Add("endpointMsg", msg)
+
+	template, err := w.templateByHash(logger, msg.TemplateHash)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("template", template)
+
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("could not marshal endpoint msg: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	client, err := w.user(channel.Client)
+	client, err := w.user(logger, channel.Client)
 	if err != nil {
-		return fmt.Errorf("could not find channel's client: %v", err)
+		return err
 	}
+
+	logger = logger.Add("client", client)
 
 	clientPub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse client's pub key: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	agent, err := w.account(channel.Agent)
+	agent, err := w.account(logger, channel.Agent)
 	if err != nil {
-		return fmt.Errorf("could not find channel's agent: %v", err)
+		return err
 	}
 
-	agentKey, err := w.key(agent.PrivateKey)
+	logger = logger.Add("agent", agent)
+
+	agentKey, err := w.key(logger, agent.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse agent's priv key: %v", err)
+		return err
 	}
 
 	msgSealed, err := messages.AgentSeal(msgBytes, clientPub, agentKey)
 	if err != nil {
-		return fmt.Errorf("could not seal endpoint message: %v", err)
+		logger.Error(err.Error())
+		return ErrEndpointMsgSeal
 	}
 
 	hash := crypto.Keccak256(msgSealed)
@@ -357,81 +406,96 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 
 	tx, err := w.db.Begin()
 	if err != nil {
-		return fmt.Errorf("could not start db transaction: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	if err = tx.Insert(newEndpoint); err != nil {
+		logger.Error(err.Error())
 		tx.Rollback()
-		return fmt.Errorf("could not insert %T: %v", newEndpoint, err)
+		return err
 	}
 
 	salt, err := rand.Int(rand.Reader, big.NewInt(9*1e18))
 	if err != nil {
-		return fmt.Errorf("failed to generate salt: %v", err)
+		return err
 	}
 
 	passwordHash, err := data.HashPassword(msg.Password, string(salt.Uint64()))
 	if err != nil {
-		return fmt.Errorf("failed to generate password hash: %v", err)
+		logger.Error(err.Error())
+		return ErrGeneratePasswordHash
 	}
 
 	channel.Password = passwordHash
 	channel.Salt = salt.Uint64()
 
 	if err = tx.Update(channel); err != nil {
+		logger.Error(err.Error())
 		tx.Rollback()
-		return fmt.Errorf("could not update %T: %v", channel, err)
+		return ErrInternal
 	}
 
 	if err = tx.Commit(); err != nil {
+		logger.Error(err.Error())
 		tx.Rollback()
-		return fmt.Errorf("failed to commit changes: %v", err)
+		return ErrInternal
 	}
 
-	return w.addJob(data.JobAgentPreEndpointMsgSOMCPublish,
+	return w.addJob(logger, data.JobAgentPreEndpointMsgSOMCPublish,
 		data.JobEndpoint, newEndpoint.ID)
 }
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
 func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
-	endpoint, err := w.relatedEndpoint(job, data.JobAgentPreEndpointMsgSOMCPublish)
+	logger := w.logger.Add("method", "AgentPreEndpointMsgSOMCPublish",
+		"job", job)
+
+	endpoint, err := w.relatedEndpoint(logger,
+		job, data.JobAgentPreEndpointMsgSOMCPublish)
 	if err != nil {
 		return err
 	}
 
 	msg, err := data.ToBytes(endpoint.RawMsg)
 	if err != nil {
-		return fmt.Errorf("unable to parse endpoint's raw msg: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	key, err := w.KeyFromChannelData(endpoint.Channel)
+	key, err := w.keyFromChannelData(logger, endpoint.Channel)
 	if err != nil {
 		return fmt.Errorf("failed to generate channel key: %v", err)
 	}
 
 	if err = w.somc.PublishEndpoint(key, msg); err != nil {
-		return fmt.Errorf("could not publish endpoint msg: %v", err)
+		logger.Error(err.Error())
+		return ErrPublishEndpoint
 	}
 
 	endpoint.Status = data.MsgChPublished
 
 	if err = w.db.Update(endpoint); err != nil {
-		return fmt.Errorf("could not update %T: %v", endpoint, err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	return w.addJob(data.JobAgentAfterEndpointMsgSOMCPublish,
+	return w.addJob(logger, data.JobAgentAfterEndpointMsgSOMCPublish,
 		data.JobChannel, endpoint.Channel)
 }
 
 // AgentAfterEndpointMsgSOMCPublish suspends service if some pre payment expected.
 func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
-	channel, err := w.relatedChannel(job,
+	logger := w.logger.Add("method", "AgentAfterEndpointMsgSOMCPublish",
+		"job", job)
+
+	channel, err := w.relatedChannel(logger, job,
 		data.JobAgentAfterEndpointMsgSOMCPublish)
 	if err != nil {
 		return err
 	}
 
-	offering, err := w.offering(channel.Offering)
+	offering, err := w.offering(logger, channel.Offering)
 	if err != nil {
 		return err
 	}
@@ -448,7 +512,8 @@ func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 	channel.ServiceChangedTime = &changedTime
 
 	if err = w.db.Update(channel); err != nil {
-		return fmt.Errorf("failed to update %T: %v", channel, err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return nil
@@ -456,7 +521,9 @@ func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
 
 // AgentPreOfferingMsgBCPublish publishes offering to blockchain.
 func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
-	offering, err := w.relatedOffering(job,
+	logger := w.logger.Add("method", "AgentPreOfferingMsgBCPublish",
+		"job", job)
+	offering, err := w.relatedOffering(logger, job,
 		data.JobAgentPreOfferingMsgBCPublish)
 	if err != nil {
 		return err
@@ -464,31 +531,35 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
 
-	agent, err := w.account(offering.Agent)
+	agent, err := w.account(logger, offering.Agent)
 	if err != nil {
-		return fmt.Errorf("could not find offering's agent: %v", err)
+		return err
 	}
 
-	agentKey, err := w.key(agent.PrivateKey)
+	agentKey, err := w.key(logger, agent.PrivateKey)
 	if err != nil {
-		return fmt.Errorf("unable to parse agent's priv key: %v", err)
+		return err
 	}
 
-	template, err := w.template(offering.Template)
+	template, err := w.template(logger, offering.Template)
 	if err != nil {
-		return fmt.Errorf("could not find offering's template: %v", err)
+		return err
 	}
 
 	msg := offer.OfferingMessage(agent, template, offering)
 
+	logger = logger.Add("msg", msg)
+
 	msgBytes, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal offering msg: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	packed, err := messages.PackWithSignature(msgBytes, agentKey)
 	if err != nil {
-		return fmt.Errorf("failed to pack msg with signature: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	offering.RawMsg = data.FromBytes(packed)
@@ -497,7 +568,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	offering.Hash = data.FromBytes(offeringHash.Bytes())
 
-	publishData, err := w.publishData(job)
+	publishData, err := w.publishData(logger, job)
 	if err != nil {
 		return err
 	}
@@ -507,50 +578,54 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	pscBalance, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 
 	if err != nil {
-		return fmt.Errorf("failed to get psc balance: %v", err)
+		logger.Error(err.Error())
+		return ErrPSCReturnBalance
 	}
 
 	totalDeposit := minDeposit * uint64(offering.Supply)
 	if pscBalance.Uint64() < totalDeposit {
-		return fmt.Errorf("failed to publish: insufficient psc balance")
+		return ErrInsufficientPSCBalance
 	}
 
-	ethAmount, err := w.ethBalance(auth.From)
+	ethAmount, err := w.ethBalance(logger, auth.From)
 	if err != nil {
-		return fmt.Errorf("failed to publish: %v", err)
+		return err
 	}
 
 	wantedEthBalance := auth.GasLimit * publishData.GasPrice
 	if wantedEthBalance > ethAmount.Uint64() {
-		return fmt.Errorf("failed to publish: insufficient"+
-			"eth balance, wanted %v, got: %v", wantedEthBalance,
-			ethAmount.Uint64())
+		return ErrInsufficientEthBalance
 	}
 
-	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
+	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
 
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
 		big.NewInt(int64(minDeposit)), offering.Supply)
 	if err != nil {
-		return err
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCRegisterOffering
 	}
 
 	offering.Status = data.MsgBChainPublishing
 	offering.OfferStatus = data.OfferRegister
 	if err = w.db.Update(offering); err != nil {
-		return fmt.Errorf("failed to update offering: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	return w.saveEthTX(job, tx, "RegisterServiceOffering", job.RelatedType,
+	return w.saveEthTX(logger, job, tx, "RegisterServiceOffering", job.RelatedType,
 		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates
 // somc publish job.
 func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
-	offering, err := w.relatedOffering(job,
+	logger := w.logger.Add("method", "AgentAfterOfferingMsgBCPublish",
+		"job", job)
+	offering, err := w.relatedOffering(logger, job,
 		data.JobAgentAfterOfferingMsgBCPublish)
 	if err != nil {
 		return err
@@ -558,41 +633,49 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 
 	offering.Status = data.MsgBChainPublished
 	if err = w.db.Update(offering); err != nil {
-		return fmt.Errorf("could not update %T: %v", offering, err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	return w.addJob(data.JobAgentPreOfferingMsgSOMCPublish,
+	return w.addJob(logger, data.JobAgentPreOfferingMsgSOMCPublish,
 		data.JobOffering, offering.ID)
 }
 
 // AgentPreOfferingMsgSOMCPublish publishes to somc and creates after job.
 func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
-	offering, err := w.relatedOffering(job,
+	logger := w.logger.Add("method", "AgentPreOfferingMsgSOMCPublish",
+		"job", job)
+	offering, err := w.relatedOffering(logger, job,
 		data.JobAgentPreOfferingMsgSOMCPublish)
 	if err != nil {
 		return err
 	}
 
+	logger = logger.Add("offering", offering)
+
 	packedMsgBytes, err := data.ToBytes(offering.RawMsg)
 	if err != nil {
-		return fmt.Errorf("failed to decode offering's raw msg: %v", err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	if err = w.somc.PublishOffering(packedMsgBytes); err != nil {
-		return fmt.Errorf("could not publish offering: %v", err)
+		logger.Error(err.Error())
+		return ErrPublishOffering
 	}
 
 	offering.Status = data.MsgChPublished
 	if err = w.db.Update(offering); err != nil {
-		return fmt.Errorf("could not update %T: %v", offering, err)
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
-	agent, err := w.account(offering.Agent)
+	agent, err := w.account(logger, offering.Agent)
 	if err != nil {
 		return err
 	}
 
-	return w.addJob(data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+	return w.addJob(logger, data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterOfferingDelete set offering status to `remove`
@@ -603,22 +686,31 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 
 // AgentPreOfferingDelete calls psc remove an offering.
 func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
-	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingDelete)
+	logger := w.logger.Add("method", "AgentPreOfferingDelete", "job", job)
+
+	offering, err := w.relatedOffering(logger,
+		job, data.JobAgentPreOfferingDelete)
 	if err != nil {
 		return err
 	}
 
 	if offering.OfferStatus != data.OfferRegister {
-		return fmt.Errorf("offering is not registered")
+		return ErrOfferNotRegistered
 	}
 
-	jobDate, err := w.publishData(job)
+	jobDate, err := w.publishData(logger, job)
 	if err != nil {
 		return err
 	}
 
-	key, err := w.accountKey(offering.Agent)
+	key, err := w.accountKey(logger, offering.Agent)
 	if err != nil {
+		return err
+	}
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		logger.Error(err.Error())
 		return err
 	}
 
@@ -626,57 +718,59 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
 	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
 
-	offeringHash, err := data.ToHash(offering.Hash)
-	if err != nil {
-		return err
-	}
-
 	tx, err := w.ethBack.PSCRemoveServiceOffering(auth, offeringHash)
 	if err != nil {
-		return err
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCRemoveOffering
 	}
 
-	return w.saveEthTX(job, tx, "RemoveServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent,
+	return w.saveEthTX(logger, job, tx, "RemoveServiceOffering",
+		job.RelatedType, job.RelatedID, offering.Agent,
 		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentPreOfferingPopUp pop ups an offering.
 func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
-	offering, err := w.relatedOffering(job, data.JobAgentPreOfferingPopUp)
+	logger := w.logger.Add("method", "AgentPreOfferingPopUp", "job", job)
+	offering, err := w.relatedOffering(logger,
+		job, data.JobAgentPreOfferingPopUp)
 	if err != nil {
 		return err
 	}
 
 	if offering.OfferStatus != data.OfferRegister {
-		return fmt.Errorf("offering is not registered")
+		return ErrOfferNotRegistered
 	}
 
-	jobDate, err := w.publishData(job)
+	jobDate, err := w.publishData(logger, job)
 	if err != nil {
 		return err
 	}
 
-	key, err := w.accountKey(offering.Agent)
+	key, err := w.accountKey(logger, offering.Agent)
 	if err != nil {
 		return err
+	}
+
+	offeringHash, err := data.ToHash(offering.Hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
 	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
 
-	offeringHash, err := data.ToHash(offering.Hash)
-	if err != nil {
-		return err
-	}
-
 	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash)
 	if err != nil {
-		return err
+		logger.Add("GasLimit", auth.GasLimit,
+			"GasPrice", auth.GasPrice).Error(err.Error())
+		return ErrPSCPopUpOffering
 	}
 
-	return w.saveEthTX(job, tx, "PopupServiceOffering", job.RelatedType,
-		job.RelatedID, offering.Agent,
+	return w.saveEthTX(logger, job, tx, "PopupServiceOffering",
+		job.RelatedType, job.RelatedID, offering.Agent,
 		data.HexFromBytes(w.pscAddr.Bytes()))
 }

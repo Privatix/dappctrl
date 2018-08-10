@@ -15,22 +15,27 @@ type AuthArgs struct {
 
 func (s *Server) handleAuth(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add("method", "handleAuth", "sender", r.RemoteAddr)
+
+	logger.Info("session auth request from " + r.RemoteAddr)
+
 	var args AuthArgs
-	if !s.ParseRequest(w, r, &args) {
+	if !s.ParseRequest(logger, w, r, &args) {
 		return
 	}
+	logger = logger.Add("arguments", args)
 
-	ch, ok := s.identClient(w, ctx.Username, args.ClientID)
+	ch, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
 	if !ok {
 		return
 	}
 
 	if data.ValidatePassword(ch.Password, args.Password,
 		string(ch.Salt)) != nil {
-		s.logger.Warn("failed to match auth password")
-		s.RespondError(w, ErrBadAuthPassword)
+		logger.Warn("failed to match auth password")
+		s.RespondError(logger, w, ErrBadAuthPassword)
 		return
 	}
 
-	s.RespondResult(w, nil)
+	s.RespondResult(logger, w, nil)
 }

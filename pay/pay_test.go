@@ -4,7 +4,6 @@ package pay
 
 import (
 	"encoding/json"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -26,7 +26,7 @@ var (
 	testDB     *reform.DB
 	conf       struct {
 		DB            *data.DBConfig
-		Log           *util.LogConfig
+		FileLog       *log.FileConfig
 		PayServer     *Config
 		PayServerTest struct {
 			ServerStartupDelay uint // In milliseconds.
@@ -173,17 +173,22 @@ func TestInvalidPayments(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.PayServer = NewConfig()
 	util.ReadTestConfig(&conf)
-	logger := util.NewTestLogger(conf.Log)
 	testDB = data.NewTestDB(conf.DB)
 	defer data.CloseDB(testDB)
+
+	logger, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	testServer = NewServer(conf.PayServer, logger, testDB)
 	go func() {
 		err := testServer.ListenAndServe()
 		if err != http.ErrServerClosed {
-			log.Fatalf("failed to serve session requests: %s", err)
+			panic("failed to serve session requests: " + err.Error())
 		}
 	}()
 

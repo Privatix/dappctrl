@@ -197,13 +197,13 @@ func main() {
 		logger2.Fatal(err.Error())
 	}
 
-	paySrv := pay.NewServer(conf.PayServer, logger, db)
+	paySrv := pay.NewServer(conf.PayServer, logger2, db)
 	go func() {
 		fatal <- paySrv.ListenAndServe()
 	}()
 	defer paySrv.Close()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()
@@ -217,7 +217,7 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger, logger2, db, somcConn,
+	worker, err := worker.NewWorker(logger2, db, somcConn, 
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,

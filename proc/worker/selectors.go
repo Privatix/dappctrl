@@ -1,133 +1,193 @@
 package worker
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
-	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
-func (w *Worker) validateJob(job *data.Job, jobType, relType string) error {
-	if job.Type != jobType || job.RelatedType != relType {
-		return ErrInvalidJob
-	}
-	return nil
+func (w *Worker) isJobInvalid(job *data.Job, jobType, relType string) bool {
+	return job.Type != jobType || job.RelatedType != relType
 }
 
-func (w *Worker) relatedAndValidate(rec reform.Record, job *data.Job, jobType, relType string) error {
-	if err := w.validateJob(job, jobType, relType); err != nil {
-		return err
+func (w *Worker) relatedOffering(logger log.Logger, job *data.Job,
+	jobType string) (*data.Offering, error) {
+	if w.isJobInvalid(job, jobType, data.JobOffering) {
+		return nil, ErrInvalidJob
 	}
-	return w.db.FindByPrimaryKeyTo(rec, job.RelatedID)
-}
 
-func (w *Worker) relatedOffering(job *data.Job, jobType string) (*data.Offering, error) {
 	rec := &data.Offering{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobOffering)
-	return rec, err
-}
-
-func (w *Worker) relatedChannel(job *data.Job, jobType string) (*data.Channel, error) {
-	rec := &data.Channel{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobChannel)
-	return rec, err
-}
-
-func (w *Worker) relatedEndpoint(job *data.Job, jobType string) (*data.Endpoint, error) {
-	rec := &data.Endpoint{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobEndpoint)
-	return rec, err
-}
-
-func (w *Worker) relatedAccount(job *data.Job, jobType string) (*data.Account, error) {
-	rec := &data.Account{}
-	err := w.relatedAndValidate(rec, job, jobType, data.JobAccount)
-	return rec, err
-}
-
-func (w *Worker) ethLog(job *data.Job) (*data.EthLog, error) {
-	log := &data.EthLog{}
-	err := w.db.FindOneTo(log, "job", job.ID)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", log, err)
+		logger.Error(err.Error())
+		return nil, ErrOfferingNotFound
+	}
+
+	return rec, err
+}
+
+func (w *Worker) relatedChannel(logger log.Logger, job *data.Job,
+	jobType string) (*data.Channel, error) {
+	if w.isJobInvalid(job, jobType, data.JobChannel) {
+		return nil, ErrInvalidJob
+	}
+
+	rec := &data.Channel{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrChannelNotFound
+	}
+
+	return rec, err
+}
+
+func (w *Worker) relatedEndpoint(logger log.Logger, job *data.Job,
+	jobType string) (*data.Endpoint, error) {
+	if w.isJobInvalid(job, jobType, data.JobEndpoint) {
+		return nil, ErrInvalidJob
+	}
+
+	rec := &data.Endpoint{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrEndpointNotFound
+	}
+
+	return rec, err
+}
+
+func (w *Worker) relatedAccount(logger log.Logger, job *data.Job,
+	jobType string) (*data.Account, error) {
+	if w.isJobInvalid(job, jobType, data.JobAccount) {
+		return nil, ErrInvalidJob
+	}
+
+	rec := &data.Account{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrAccountNotFound
+	}
+
+	return rec, err
+}
+
+func (w *Worker) ethLog(logger log.Logger, job *data.Job) (*data.EthLog, error) {
+	log := &data.EthLog{}
+	err := data.FindOneTo(w.db.Querier, log, "job", job.ID)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrEthLogNotFound
 	}
 	return log, nil
 }
 
-func (w *Worker) channel(pk string) (*data.Channel, error) {
+func (w *Worker) channel(logger log.Logger, pk string) (*data.Channel, error) {
 	channel := &data.Channel{}
-	err := w.db.FindByPrimaryKeyTo(channel, pk)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, channel, pk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", channel, err)
+		logger.Error(err.Error())
+		return nil, ErrChannelNotFound
 	}
 	return channel, nil
 }
 
-func (w *Worker) endpoint(channel string) (*data.Endpoint, error) {
+func (w *Worker) endpoint(logger log.Logger, channel string) (*data.Endpoint, error) {
 	endpoint := &data.Endpoint{}
-	err := w.db.FindOneTo(endpoint, "channel", channel)
+	err := data.FindOneTo(w.db.Querier, endpoint, "channel", channel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", endpoint, err)
+		logger.Error(err.Error())
+		return nil, ErrEndpointNotFound
 	}
 	return endpoint, nil
 }
 
-func (w *Worker) offering(pk string) (*data.Offering, error) {
-	offering := &data.Offering{}
-	err := w.db.FindByPrimaryKeyTo(offering, pk)
+func (w *Worker) endpointByPK(logger log.Logger, pk string) (*data.Endpoint, error) {
+	endpoint := &data.Endpoint{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, endpoint, pk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", offering, err)
+		logger.Error(err.Error())
+		return nil, ErrEndpointNotFound
+	}
+	return endpoint, nil
+}
+
+func (w *Worker) offering(logger log.Logger, pk string) (*data.Offering, error) {
+	offering := &data.Offering{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, offering, pk)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrOfferingNotFound
 	}
 	return offering, nil
 }
 
-func (w *Worker) offeringByHash(hash common.Hash) (*data.Offering, error) {
+func (w *Worker) offeringByHash(logger log.Logger,
+	hash common.Hash) (*data.Offering, error) {
+	hashStr := data.FromBytes(hash.Bytes())
+	return w.offeringByHashString(logger, hashStr)
+}
+
+func (w *Worker) offeringByHashString(logger log.Logger,
+	hash string) (*data.Offering, error) {
 	offering := &data.Offering{}
-	hashB64 := data.FromBytes(hash.Bytes())
-	err := w.db.FindOneTo(offering, "hash", hashB64)
+	err := data.FindOneTo(w.db.Querier, offering, "hash", hash)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T by hash: %v",
-			offering, err)
+		logger.Error(err.Error())
+		return nil, ErrOfferingNotFound
 	}
 	return offering, nil
 }
 
-func (w *Worker) account(ethAddr string) (*data.Account, error) {
+func (w *Worker) account(logger log.Logger, ethAddr string) (*data.Account, error) {
 	account := &data.Account{}
-	err := w.db.FindOneTo(account, "eth_addr", ethAddr)
+	err := data.FindOneTo(w.db.Querier, account, "eth_addr", ethAddr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", account, err)
+		logger.Error(err.Error())
+		return nil, ErrAccountNotFound
 	}
 	return account, nil
 }
 
-func (w *Worker) user(ethAddr string) (*data.User, error) {
-	user := &data.User{}
-	err := w.db.FindOneTo(user, "eth_addr", ethAddr)
+func (w *Worker) accountByPK(logger log.Logger, pk string) (*data.Account, error) {
+	account := &data.Account{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, account, pk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T by eth addr: %v",
-			user, err)
+		logger.Error(err.Error())
+		return nil, ErrAccountNotFound
+	}
+	return account, nil
+}
+
+func (w *Worker) user(logger log.Logger, ethAddr string) (*data.User, error) {
+	user := &data.User{}
+	err := data.FindOneTo(w.db.Querier, user, "eth_addr", ethAddr)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrUserNotFound
 	}
 	return user, nil
 }
 
-func (w *Worker) template(pk string) (*data.Template, error) {
+func (w *Worker) template(logger log.Logger, pk string) (*data.Template, error) {
 	template := &data.Template{}
-	err := w.db.FindByPrimaryKeyTo(template, pk)
+	err := data.FindByPrimaryKeyTo(w.db.Querier, template, pk)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T: %v", template, err)
+		logger.Error(err.Error())
+		return nil, ErrTemplateNotFound
 	}
 	return template, nil
 }
 
-func (w *Worker) templateByHash(hash string) (*data.Template, error) {
+func (w *Worker) templateByHash(logger log.Logger, hash string) (*data.Template, error) {
 	template := &data.Template{}
-	err := w.db.FindOneTo(template, "hash", hash)
+	err := data.FindOneTo(w.db.Querier, template, "hash", hash)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find %T by hash: %v",
-			template, err)
+		logger.Error(err.Error())
+		return nil, ErrTemplateByHashNotFound
 	}
 	return template, nil
 }

@@ -163,12 +163,13 @@ func getResources(t *testing.T,
 
 func testGetResources(t *testing.T, res *http.Response, exp int) []map[string]interface{} {
 	if res.StatusCode != http.StatusOK {
-		t.Fatal("failed to get products: ", res.StatusCode)
+		t.Fatal("failed to get resources: ", res.StatusCode)
 	}
 	ret := []map[string]interface{}{}
 	json.NewDecoder(res.Body).Decode(&ret)
 	if exp != len(ret) {
-		t.Fatalf("expected %d items, got: %d", exp, len(ret))
+		t.Fatalf("expected %d items, got: %d (%s)", exp, len(ret),
+			util.Caller())
 	}
 	return ret
 }

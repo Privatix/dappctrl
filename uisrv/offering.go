@@ -97,7 +97,7 @@ func (s *Server) handlePostOffering(w http.ResponseWriter, r *http.Request) {
 	}
 	err := s.fillOffering(offering)
 	if err != nil {
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return
 	}
 	if !s.insert(w, offering) {
@@ -131,7 +131,7 @@ func (s *Server) parseOfferingPayload(w http.ResponseWriter,
 		validate.Struct(offering) != nil ||
 		invalidUnitType(offering.UnitType) ||
 		invalidBillingType(offering.BillingType) {
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return false
 	}
 	return true

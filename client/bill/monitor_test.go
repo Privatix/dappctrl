@@ -40,7 +40,6 @@ var (
 		DB                *data.DBConfig
 		Job               *job.Config
 		FileLog           *log.FileConfig
-		Log               *util.LogConfig
 		Proc              *proc.Config
 	}
 
@@ -168,13 +167,9 @@ func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
 	conf.ClientBillingTest = newTestConfig()
 	conf.FileLog = log.NewFileConfig()
-	conf.Log = util.NewLogConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
-
-	// TODO(maxim) remove after refactor github.com/privatix/dappctrl/job pkg
-	oldLogger := util.NewTestLogger(conf.Log)
 
 	l, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
@@ -184,7 +179,7 @@ func TestMain(m *testing.M) {
 	logger = l
 
 	db = data.NewTestDB(conf.DB)
-	queue := job.NewQueue(conf.Job, oldLogger, db, nil)
+	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pr = proc.NewProcessor(conf.Proc, db, queue)
 	pws = &pwStore{}
 

@@ -86,7 +86,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 		t.Fatal(err)
 	}
 
-	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
+	jobQueue := job.NewQueue(conf.Job, logger2, db, nil)
 
 	ethBack := newTestEthBackend(conf.pscAddr)
 

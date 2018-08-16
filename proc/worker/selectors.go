@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"database/sql"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
@@ -134,10 +136,13 @@ func (w *Worker) offeringByHash(logger log.Logger,
 func (w *Worker) offeringByHashString(logger log.Logger,
 	hash string) (*data.Offering, error) {
 	offering := &data.Offering{}
-	err := data.FindOneTo(w.db.Querier, offering, "hash", hash)
+	err := w.db.FindOneTo(offering, "hash", hash)
+	if err == sql.ErrNoRows {
+		return nil, ErrOfferingNotFound
+	}
 	if err != nil {
 		logger.Error(err.Error())
-		return nil, ErrOfferingNotFound
+		return nil, ErrInternal
 	}
 	return offering, nil
 }

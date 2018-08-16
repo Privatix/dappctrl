@@ -58,7 +58,7 @@ plugins:
 
   # markdown
   markdownlint:
-    enabled: true
+    enabled: false
 
   # shell
   shellcheck:

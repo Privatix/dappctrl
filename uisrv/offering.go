@@ -160,6 +160,7 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 	offering.Status = data.MsgUnpublished
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
+	offering.CurrentSupply = offering.Supply
 	// TODO: remove once prepaid is implemented.
 	offering.BillingType = data.BillingPostpaid
 

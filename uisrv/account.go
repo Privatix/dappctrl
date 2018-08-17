@@ -130,7 +130,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	privKey, err := payload.toECDSA()
 	if err != nil {
 		s.logger.Warn("could not extract priv key: %v", err)
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return
 	}
 

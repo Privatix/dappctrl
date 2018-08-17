@@ -76,7 +76,7 @@ func (s *Server) parseProductPayload(w http.ResponseWriter,
 		product.OfferAccessID == nil ||
 		(product.UsageRepType != data.ProductUsageIncremental &&
 			product.UsageRepType != data.ProductUsageTotal) {
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return false
 	}
 	return true

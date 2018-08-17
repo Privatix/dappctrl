@@ -488,7 +488,7 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 			s.createPreUncooperativeCloseRequest(w, id)
 			return
 		}
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return
 	default:
 		s.replyInvalidAction(w)

@@ -27,10 +27,9 @@ var (
 		Pc           *proc.Config
 	}
 
-	db     *reform.DB
-	logger log.Logger
-	mon    *Monitor
-	pr     *proc.Processor
+	db  *reform.DB
+	mon *Monitor
+	pr  *proc.Processor
 )
 
 const (
@@ -263,20 +262,15 @@ func TestMain(m *testing.M) {
 
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}
 
-	logger = l
-
-	// TODO(maxim) remove after refactor github.com/privatix/dappctrl/job pkg
-	oldLogger := util.NewTestLogger(conf.Log)
-
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	queue := job.NewQueue(conf.Job, oldLogger, db, nil)
+	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pr = proc.NewProcessor(conf.Pc, db, queue)
 
 	mon = newTestMonitor(conf.AgentMonitor.Interval, db, logger, pr)

@@ -15,12 +15,13 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // used throughout all tests in the package.
@@ -42,16 +43,23 @@ func TestMain(m *testing.M) {
 		DB              *data.DBConfig
 		Job             *job.Config
 		Log             *util.LogConfig
+		FileLog         *log.FileConfig
 	}
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
 	conf.AgentServerTest = &testConfig{}
+	conf.FileLog = log.NewFileConfig()
 	util.ReadTestConfig(&conf)
 	logger := util.NewTestLogger(conf.Log)
 	db := data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	queue := job.NewQueue(conf.Job, logger, db, nil)
+	logger2, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	queue := job.NewQueue(conf.Job, logger2, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
 	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,

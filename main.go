@@ -226,7 +226,7 @@ func main() {
 		logger2.Fatal(err.Error())
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
+	queue := job.NewQueue(conf.Job, logger2, db, handlers.HandlersMap(worker))
 	defer queue.Close()
 	worker.SetQueue(queue)
 

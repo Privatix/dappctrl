@@ -2,26 +2,17 @@ package job
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"hash/crc32"
 	"runtime"
 	"sync"
 	"time"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
-)
-
-// Errors.
-var (
-	ErrAlreadyProcessing    = errors.New("already processing")
-	ErrDuplicatedJob        = errors.New("duplicated job")
-	ErrHandlerNotFound      = errors.New("job handler not found")
-	ErrQueueClosed          = errors.New("queue closed")
-	ErrSubscriptionExists   = errors.New("subscription already exists")
-	ErrSubscriptionNotFound = errors.New("subscription not found")
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Handler is a job handler function.
@@ -86,7 +77,7 @@ type Queue interface {
 
 type queue struct {
 	conf     *Config
-	logger   *util.Logger
+	logger   log.Logger
 	db       *reform.DB
 	handlers HandlerMap
 	mtx      sync.Mutex // Prevents races when starting and stopping.
@@ -98,27 +89,30 @@ type queue struct {
 }
 
 // NewQueue creates a new job queue.
-func NewQueue(conf *Config, logger *util.Logger, db *reform.DB,
+func NewQueue(conf *Config, logger log.Logger, db *reform.DB,
 	handlers HandlerMap) Queue {
+	l := logger.Add("service", "job queue")
 	return &queue{
 		conf:     conf,
-		logger:   logger,
+		logger:   l,
 		db:       db,
 		handlers: handlers,
 		subs:     map[string][]subEntry{},
 	}
 }
 
-func (q *queue) checkDuplicated(j *data.Job) error {
+func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
 	_, err := q.db.SelectOneFrom(data.JobTable,
 		"WHERE related_id = $1 AND type = $2", j.RelatedID, j.Type)
 
 	if err == nil {
+		logger.Debug(ErrDuplicatedJob.Error())
 		return ErrDuplicatedJob
 	}
 
 	if err != reform.ErrNoRows {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	return nil
@@ -126,9 +120,10 @@ func (q *queue) checkDuplicated(j *data.Job) error {
 
 // Add adds a new job to the job queue.
 func (q *queue) Add(j *data.Job) error {
+	logger := q.logger.Add("method", "Add", "job", j)
 	tconf := q.typeConfig(j)
 	if !tconf.Duplicated {
-		if err := q.checkDuplicated(j); err != nil {
+		if err := q.checkDuplicated(j, logger); err != nil {
 			return err
 		}
 	}
@@ -141,7 +136,11 @@ func (q *queue) Add(j *data.Job) error {
 	j.Status = data.JobActive
 	j.CreatedAt = time.Now()
 
-	return q.db.Insert(j)
+	if err := q.db.Insert(j); err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+	return nil
 }
 
 // Close causes currently running Process() function to exit.
@@ -160,10 +159,12 @@ func (q *queue) Close() {
 // Process fetches active jobs and processes them in parallel. This function
 // does not return until an error occurs or Close() is called.
 func (q *queue) Process() error {
+	logger := q.logger.Add("method", "Process")
 	q.mtx.Lock()
 
 	if q.exit != nil {
 		q.mtx.Unlock()
+		logger.Debug(ErrAlreadyProcessing.Error())
 		return ErrAlreadyProcessing
 	}
 
@@ -181,8 +182,8 @@ func (q *queue) Process() error {
 	q.workers = nil
 	for i := 0; i < num; i++ {
 		w := workerIO{
-			make(chan string, q.conf.WorkerBufLen),
-			make(chan error, 1),
+			job:    make(chan string, q.conf.WorkerBufLen),
+			result: make(chan error, 1),
 		}
 		q.workers = append(q.workers, w)
 		go q.processWorker(w)
@@ -227,6 +228,7 @@ func (q *queue) checkExit() bool {
 }
 
 func (q *queue) processMain() error {
+	logger := q.logger.Add("method", "processMain")
 	period := time.Duration(q.conf.CollectPeriod) * time.Millisecond
 
 	for {
@@ -245,22 +247,26 @@ func (q *queue) processMain() error {
 			 WHERE not_before <= $2
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrInternal
 		}
 
 		for rows.Next() {
 			if q.checkExit() {
+				logger.Debug(ErrQueueClosed.Error())
 				return ErrQueueClosed
 			}
 
 			var job, related string
 			if err = rows.Scan(&job, &related); err != nil {
-				return err
+				logger.Error(err.Error())
+				return ErrInternal
 			}
 			q.uuidWorker(related).job <- job
 		}
 		if err := rows.Err(); err != nil {
-			return err
+			logger.Error(err.Error())
+			return ErrInternal
 		}
 
 		time.Sleep(period - time.Now().Sub(started))
@@ -268,6 +274,7 @@ func (q *queue) processMain() error {
 }
 
 func (q *queue) processWorker(w workerIO) {
+	logger := q.logger.Add("method", "processWorker")
 	var err error
 	for err == nil {
 		id, ok := <-w.job
@@ -285,14 +292,16 @@ func (q *queue) processWorker(w workerIO) {
 			continue
 		}
 
+		logger := logger.Add("job", id, "type", job.Type)
+
 		handler, ok := q.handlers[job.Type]
 		if !ok {
-			q.logger.Error("job handler for %s not found", job.Type)
+			logger.Error("job handler not found")
 			err = ErrHandlerNotFound
 			break
 		}
 
-		result := q.processJob(&job, handler)
+		result := q.processJob(&job, logger, handler)
 
 		// If job was canceled while running a handler make sure it
 		// won't be retried.
@@ -319,7 +328,7 @@ func (q *queue) processWorker(w workerIO) {
 			}
 		}
 
-		err = q.saveJobAndNotify(&job, result)
+		err = q.saveJobAndNotify(&job, logger, result)
 	}
 
 	if err != nil {
@@ -335,9 +344,11 @@ func (q *queue) processWorker(w workerIO) {
 	w.result <- err
 }
 
-func (q *queue) saveJobAndNotify(job *data.Job, result error) error {
+func (q *queue) saveJobAndNotify(job *data.Job,
+	logger log.Logger, result error) error {
 	if err := q.db.Save(job); err != nil {
-		return err
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	q.subsMtx.RLock()
@@ -352,15 +363,17 @@ func (q *queue) saveJobAndNotify(job *data.Job, result error) error {
 	return nil
 }
 
-func (q *queue) processJob(job *data.Job, handler Handler) error {
+func (q *queue) processJob(job *data.Job,
+	logger log.Logger, handler Handler) error {
+
 	tconf := q.typeConfig(job)
 
-	q.logger.Info("processing job %s (%s)", job.ID, job.Type)
+	logger.Info("processing job")
 	err := handler(job)
 
 	if err == nil {
 		job.Status = data.JobDone
-		q.logger.Info("job %s (%s) is done", job.ID, job.Type)
+		logger.Info("job is done")
 		return nil
 	}
 
@@ -370,13 +383,12 @@ func (q *queue) processJob(job *data.Job, handler Handler) error {
 
 	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
-		q.logger.Error("job %s (%s) is failed", job.ID, job.Type)
+		logger.Error("job is failed")
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn("retry for job %s (%s) scheduled to %s: %s",
-			job.ID, job.Type,
-			job.NotBefore.Format(time.RFC3339), err)
+		q.logger.Warn(fmt.Sprintf("retry for job scheduled to %s: %s",
+			job.NotBefore.Format(time.RFC3339), err))
 	}
 
 	return err

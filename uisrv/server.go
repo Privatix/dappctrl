@@ -81,6 +81,7 @@ const (
 	templatePath        = "/templates"
 	transactionsPath    = "/transactions"
 	usagePath           = "/usage"
+	logsPath            = "/logs"
 )
 
 // ListenAndServe starts a server.
@@ -104,6 +105,7 @@ func (s *Server) ListenAndServe() error {
 	mux.HandleFunc(templatePath, basicAuthMiddleware(s, s.handleTempaltes))
 	mux.HandleFunc(transactionsPath, basicAuthMiddleware(s, s.handleTransactions))
 	mux.HandleFunc(usagePath, basicAuthMiddleware(s, s.handleGetUsage))
+	mux.HandleFunc(logsPath, basicAuthMiddleware(s, s.handleGetLogs))
 	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {

@@ -50,11 +50,11 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		logger.Error(err.Error())
 		return ErrInternal
 	}
+	defer tx.Rollback()
 
 	if newUser {
 		if err := tx.Insert(client); err != nil {
 			logger.Error(err.Error())
-			tx.Rollback()
 			return ErrInternal
 		}
 	}
@@ -67,6 +67,12 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 	offering, err := w.offeringByHash(logger, logChannelCreated.offeringHash)
 	if err != nil {
 		return err
+	}
+
+	offering.CurrentSupply--
+	if err := tx.Update(offering); err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
 	}
 
 	channel := &data.Channel{
@@ -82,12 +88,10 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 
 	if err := tx.Insert(channel); err != nil {
 		logger.Error(err.Error())
-		tx.Rollback()
 		return ErrInternal
 	}
 
 	if err := tx.Commit(); err != nil {
-		tx.Rollback()
 		return fmt.Errorf("unable to commit changes: %v", err)
 	}
 
@@ -130,6 +134,22 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 	return nil
 }
 
+func (w *Worker) incrementCurrentSupply(logger log.Logger, pk string) error {
+	offering, err := w.offering(logger, pk)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	offering.CurrentSupply++
+	if err := w.db.Update(offering); err != nil {
+		logger.Add("offering", offering).Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
+}
+
 // AgentAfterUncooperativeClose marks channel closed uncoop.
 func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 	logger := w.logger.Add("method", "AgentAfterUncooperativeClose",
@@ -156,6 +176,10 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return ErrInternal
 	}
 
+	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
+		return err
+	}
+
 	agent, err := w.account(logger, channel.Agent)
 	if err != nil {
 		return err
@@ -179,6 +203,10 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 	if err := w.db.Update(channel); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
+	}
+
+	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
+		return err
 	}
 
 	agent, err := w.account(logger, channel.Agent)

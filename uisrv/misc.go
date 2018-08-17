@@ -41,7 +41,7 @@ func (s *Server) parsePayload(w http.ResponseWriter,
 	r *http.Request, v interface{}) bool {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		s.logger.Warn("failed to parse request body: %v", err)
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return false
 	}
 	return true
@@ -72,7 +72,7 @@ func (s *Server) replyUnexpectedErr(w http.ResponseWriter) {
 	})
 }
 
-func (s *Server) replyInvalidPayload(w http.ResponseWriter) {
+func (s *Server) replyInvalidRequest(w http.ResponseWriter) {
 	s.replyErr(w, http.StatusBadRequest, &serverError{
 		Message: "",
 	})

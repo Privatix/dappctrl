@@ -3,6 +3,7 @@ package uisrv
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	reform "gopkg.in/reform.v1"
@@ -20,6 +21,7 @@ type getConf struct {
 	Params       []queryParam
 	View         reform.View
 	FilteringSQL string
+	Paginated    bool
 }
 
 func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []string, args []interface{}) {
@@ -57,7 +59,6 @@ func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []strin
 	}
 
 	return conds, args
-
 }
 
 // handleGetResources select and returns records.
@@ -72,6 +73,24 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 	var tail string
 	if len(conds) > 0 {
 		tail = "WHERE " + strings.Join(conds, " AND ")
+	}
+
+	if conf.Paginated {
+		page, err := strconv.Atoi(r.FormValue("page"))
+		if err != nil || page == 0 {
+			s.logger.Warn("invalid param: %v", err)
+			s.replyInvalidRequest(w)
+			return
+		}
+
+		limit, err := strconv.Atoi(r.FormValue("perPage"))
+		if err != nil || limit == 0 {
+			s.logger.Warn("invalid param: %v", err)
+			s.replyInvalidRequest(w)
+			return
+		}
+
+		tail += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
 	}
 
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)

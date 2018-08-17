@@ -43,7 +43,7 @@ func (s *Server) parseTemplatePayload(w http.ResponseWriter,
 	if !s.parsePayload(w, r, tpl) ||
 		invalidTemplateKind(tpl.Kind) ||
 		json.Unmarshal(tpl.Raw, &v) != nil {
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(w)
 		return false
 	}
 	return true

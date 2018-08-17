@@ -2,6 +2,7 @@ package uisrv
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,6 +23,33 @@ type getConf struct {
 	View         reform.View
 	FilteringSQL string
 	Paginated    bool
+}
+
+// paginatedReply is a format of paginated reply.
+type paginatedReply struct {
+	Items   []reform.Struct `json:"items"`
+	Current int             `json:"current"`
+	Pages   int             `json:"pages"`
+}
+
+func (s *Server) newPaginatedReply(conf *getConf, tail string,
+	args []interface{}, page, perPage int) (*paginatedReply, error) {
+	ret := &paginatedReply{
+		Current: page,
+	}
+
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`,
+		conf.View.Name(), tail)
+	row := s.db.QueryRow(query, args...)
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return nil, err
+	}
+
+	ret.Pages = int(math.Ceil(
+		float64(count) / float64(perPage)))
+
+	return ret, nil
 }
 
 func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []string, args []interface{}) {
@@ -75,6 +103,8 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		tail = "WHERE " + strings.Join(conds, " AND ")
 	}
 
+	var paginatedItems *paginatedReply
+
 	if conf.Paginated {
 		page, err := strconv.Atoi(r.FormValue("page"))
 		if err != nil || page == 0 {
@@ -90,6 +120,14 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 			return
 		}
 
+		paginatedItems, err = s.newPaginatedReply(
+			conf, tail, args, page, limit)
+		if err != nil {
+			s.logger.Error("failed to get resources: %v", err)
+			s.replyUnexpectedErr(w)
+			return
+		}
+
 		tail += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
 	}
 
@@ -102,6 +140,12 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 
 	if records == nil {
 		records = []reform.Struct{}
+	}
+
+	if paginatedItems != nil {
+		paginatedItems.Items = records
+		s.reply(w, paginatedItems)
+		return
 	}
 
 	s.reply(w, records)

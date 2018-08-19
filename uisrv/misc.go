@@ -3,10 +3,12 @@ package uisrv
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/privatix/dappctrl/util/log"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
@@ -37,23 +39,24 @@ func idFromStatusPath(prefix, path string) string {
 	return parts[0]
 }
 
-func (s *Server) parsePayload(w http.ResponseWriter,
+func (s *Server) parsePayload(logger log.Logger, w http.ResponseWriter,
 	r *http.Request, v interface{}) bool {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		s.logger.Warn("failed to parse request body: %v", err)
-		s.replyInvalidRequest(w)
+		logger.Warn(fmt.Sprintf("failed to parse request body: %v", err))
+		s.replyInvalidRequest(logger, w)
 		return false
 	}
 	return true
 }
 
-func (s *Server) replyErr(w http.ResponseWriter, status int, reply *serverError) {
+func (s *Server) replyErr(logger log.Logger,
+	w http.ResponseWriter, status int, reply *serverError) {
 	w.WriteHeader(status)
-	s.reply(w, reply)
+	s.reply(logger, w, reply)
 }
 
-func (s *Server) replyNotFound(w http.ResponseWriter) {
-	s.replyErr(w, http.StatusNotFound, &serverError{
+func (s *Server) replyNotFound(logger log.Logger, w http.ResponseWriter) {
+	s.replyErr(logger, w, http.StatusNotFound, &serverError{
 		Message: "requested resources was not found",
 	})
 }
@@ -62,24 +65,24 @@ type replyOK struct {
 	Message string `json:"message"`
 }
 
-func (s *Server) replyOK(w http.ResponseWriter, msg string) {
-	s.reply(w, &replyOK{msg})
+func (s *Server) replyOK(logger log.Logger, w http.ResponseWriter, msg string) {
+	s.reply(logger, w, &replyOK{msg})
 }
 
-func (s *Server) replyUnexpectedErr(w http.ResponseWriter) {
-	s.replyErr(w, http.StatusInternalServerError, &serverError{
+func (s *Server) replyUnexpectedErr(logger log.Logger, w http.ResponseWriter) {
+	s.replyErr(logger, w, http.StatusInternalServerError, &serverError{
 		Message: "An unexpected error occurred",
 	})
 }
 
-func (s *Server) replyInvalidRequest(w http.ResponseWriter) {
-	s.replyErr(w, http.StatusBadRequest, &serverError{
+func (s *Server) replyInvalidRequest(logger log.Logger, w http.ResponseWriter) {
+	s.replyErr(logger, w, http.StatusBadRequest, &serverError{
 		Message: "",
 	})
 }
 
-func (s *Server) replyInvalidAction(w http.ResponseWriter) {
-	s.replyErr(w, http.StatusBadRequest, &serverError{
+func (s *Server) replyInvalidAction(logger log.Logger, w http.ResponseWriter) {
+	s.replyErr(logger, w, http.StatusBadRequest, &serverError{
 		Message: "invalid action",
 	})
 }
@@ -88,13 +91,15 @@ type replyEntity struct {
 	ID interface{} `json:"id"`
 }
 
-func (s *Server) replyEntityCreated(w http.ResponseWriter, id interface{}) {
+func (s *Server) replyEntityCreated(
+	logger log.Logger, w http.ResponseWriter, id interface{}) {
 	w.WriteHeader(http.StatusCreated)
-	s.reply(w, &replyEntity{ID: id})
+	s.reply(logger, w, &replyEntity{ID: id})
 }
 
-func (s *Server) replyEntityUpdated(w http.ResponseWriter, id interface{}) {
-	s.reply(w, &replyEntity{ID: id})
+func (s *Server) replyEntityUpdated(
+	logger log.Logger, w http.ResponseWriter, id interface{}) {
+	s.reply(logger, w, &replyEntity{ID: id})
 }
 
 type statusReply struct {
@@ -102,31 +107,32 @@ type statusReply struct {
 	Status string `json:"status"`
 }
 
-func (s *Server) replyStatus(w http.ResponseWriter, status string) {
-	s.reply(w, &statusReply{Status: status})
+func (s *Server) replyStatus(
+	logger log.Logger, w http.ResponseWriter, status string) {
+	s.reply(logger, w, &statusReply{Status: status})
 }
 
-func (s *Server) reply(w http.ResponseWriter, v interface{}) {
+func (s *Server) reply(logger log.Logger, w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		s.logger.Warn("failed to marshal: %v", err)
+		logger.Warn(fmt.Sprintf("failed to marshal: %v", err))
 	}
 }
 
-func (s *Server) replyNumFromQuery(w http.ResponseWriter, query, arg string) {
+func (s *Server) replyNumFromQuery(logger log.Logger, w http.ResponseWriter, query, arg string) {
 	row := s.db.QueryRow(query, arg)
 	var queryRet sql.NullInt64
 	if err := row.Scan(&queryRet); err != nil {
-		s.logger.Error("failed to get usage: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(fmt.Sprintf("failed to get usage: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
 	retB, err := json.Marshal(&queryRet.Int64)
 	if err != nil {
-		s.logger.Error("failed to encode usage: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(fmt.Sprintf("failed to encode usage: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 	w.Write(retB)

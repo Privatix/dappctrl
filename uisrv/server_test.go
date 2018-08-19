@@ -42,24 +42,21 @@ func TestMain(m *testing.M) {
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
 		Job             *job.Config
-		Log             *util.LogConfig
 		FileLog         *log.FileConfig
 	}
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
 	conf.AgentServerTest = &testConfig{}
 	conf.FileLog = log.NewFileConfig()
 	util.ReadTestConfig(&conf)
-	logger := util.NewTestLogger(conf.Log)
 	db := data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger2, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}
 
-	queue := job.NewQueue(conf.Job, logger2, db, nil)
+	queue := job.NewQueue(conf.Job, logger, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
 	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,

@@ -2,11 +2,13 @@ package uisrv
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Actions for Agent that change offerings state.
@@ -91,47 +93,51 @@ func (s *Server) handleClientOfferings(w http.ResponseWriter, r *http.Request) {
 
 // handlePostOffering creates offering.
 func (s *Server) handlePostOffering(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handlePostOffering")
+
 	offering := &data.Offering{}
-	if !s.parseOfferingPayload(w, r, offering) {
+	if !s.parseOfferingPayload(logger, w, r, offering) {
 		return
 	}
 	err := s.fillOffering(offering)
 	if err != nil {
-		s.replyInvalidRequest(w)
+		s.replyInvalidRequest(logger, w)
 		return
 	}
-	if !s.insert(w, offering) {
+	if !s.insert(logger, w, offering) {
 		return
 	}
-	s.replyEntityCreated(w, offering.ID)
+	s.replyEntityCreated(logger, w, offering.ID)
 }
 
 // handlePutOffering updates offering.
 func (s *Server) handlePutOffering(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handlePutOffering")
+
 	offering := &data.Offering{}
-	if !s.parseOfferingPayload(w, r, offering) {
+	if !s.parseOfferingPayload(logger, w, r, offering) {
 		return
 	}
 	err := s.fillOffering(offering)
 	if err != nil {
-		s.replyUnexpectedErr(w)
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 	if err := s.db.Update(offering); err != nil {
-		s.logger.Warn("failed to update offering: %v", err)
-		s.replyUnexpectedErr(w)
+		s.logger.Warn(fmt.Sprintf("failed to update offering: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
-	s.replyEntityUpdated(w, offering.ID)
+	s.replyEntityUpdated(logger, w, offering.ID)
 }
 
-func (s *Server) parseOfferingPayload(w http.ResponseWriter,
-	r *http.Request, offering *data.Offering) bool {
-	if !s.parsePayload(w, r, offering) ||
+func (s *Server) parseOfferingPayload(logger log.Logger,
+	w http.ResponseWriter, r *http.Request, offering *data.Offering) bool {
+	if !s.parsePayload(logger, w, r, offering) ||
 		validate.Struct(offering) != nil ||
 		invalidUnitType(offering.UnitType) ||
 		invalidBillingType(offering.BillingType) {
-		s.replyInvalidRequest(w)
+		s.replyInvalidRequest(logger, w)
 		return false
 	}
 	return true
@@ -209,8 +215,10 @@ type OfferingPutPayload struct {
 
 func (s *Server) handlePutOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handlePutOfferingStatus", "id", id)
+
 	req := &OfferingPutPayload{}
-	if !s.parsePayload(w, r, req) {
+	if !s.parsePayload(logger, w, r, req) {
 		return
 	}
 
@@ -222,20 +230,23 @@ func (s *Server) handlePutOfferingStatus(
 	} else if req.Action == DeactivateOffering {
 		jobType = data.JobAgentPreOfferingDelete
 	} else {
-		s.replyInvalidAction(w)
+		s.replyInvalidAction(logger, w)
 		return
 	}
 
-	if !s.findTo(w, &data.Offering{}, id) {
+	if !s.findTo(logger, w, &data.Offering{}, id) {
 		return
 	}
 
-	s.logger.Info("action ( %v )  request for offering with id: %v recieved.", req.Action, id)
+	logger.Info(fmt.Sprintf(
+		"action ( %v )  request for offering with id: %v recieved.",
+		req.Action, id))
 
 	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
 	if err != nil {
-		s.logger.Error("failed to marshal job data: %v", err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(
+			fmt.Sprintf("failed to marshal job data: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -246,9 +257,9 @@ func (s *Server) handlePutOfferingStatus(
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
 	}); err != nil {
-		s.logger.Error("failed to add %s: %v",
-			data.JobAgentPreOfferingMsgBCPublish, err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(fmt.Sprintf("failed to add %s: %v",
+			data.JobAgentPreOfferingMsgBCPublish, err))
+		s.replyUnexpectedErr(logger, w)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -256,33 +267,37 @@ func (s *Server) handlePutOfferingStatus(
 
 func (s *Server) handlePutClientOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handlePutClientOfferingStatus",
+		"id", id)
+
 	req := new(OfferingPutPayload)
-	if !s.parsePayload(w, r, req) {
+	if !s.parsePayload(logger, w, r, req) {
 		return
 	}
 	if req.Action != AcceptOffering {
-		s.replyInvalidAction(w)
+		s.replyInvalidAction(logger, w)
 		return
 	}
 
 	offer := new(data.Offering)
 	acc := new(data.Account)
 
-	if !s.selectOneTo(w, offer, "WHERE "+clientGetOfferFilterByID, id) {
+	if !s.selectOneTo(logger, w, offer, "WHERE "+clientGetOfferFilterByID, id) {
 		return
 	}
-	if !s.findTo(w, acc, req.Account) {
+	if !s.findTo(logger, w, acc, req.Account) {
 		return
 	}
 
-	s.logger.Info("action ( %v )  request for offering with id:"+
-		" %v received.", req.Action, id)
+	logger.Info(
+		fmt.Sprintf("action ( %v )  request for offering with id:"+
+			" %v received.", req.Action, id))
 
 	dataJSON, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID})
 	if err != nil {
-		s.logger.Error("failed to marshal job data: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(fmt.Sprintf("failed to marshal job data: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 	if err := s.queue.Add(&data.Job{
@@ -292,9 +307,9 @@ func (s *Server) handlePutClientOfferingStatus(
 		CreatedBy:   data.JobUser,
 		Data:        dataJSON,
 	}); err != nil {
-		s.logger.Error("failed to add %s: %v",
-			data.JobClientPreChannelCreate, err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(fmt.Sprintf("failed to add %s: %v",
+			data.JobClientPreChannelCreate, err))
+		s.replyUnexpectedErr(logger, w)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -303,9 +318,11 @@ func (s *Server) handlePutClientOfferingStatus(
 // handleGetOfferingStatus replies with offerings status by id.
 func (s *Server) handleGetOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleGetOfferingStatus")
+
 	offering := &data.Offering{}
-	if !s.findTo(w, offering, id) {
+	if !s.findTo(logger, w, offering, id) {
 		return
 	}
-	s.replyStatus(w, offering.Status)
+	s.replyStatus(logger, w, offering.Status)
 }

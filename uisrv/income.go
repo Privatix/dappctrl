@@ -11,6 +11,8 @@ const (
 )
 
 func (s *Server) handleGetIncome(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handleGetIncome")
+
 	var arg, query string
 
 	if arg = r.FormValue(incomeByOffering); arg != "" {
@@ -24,5 +26,5 @@ func (s *Server) handleGetIncome(w http.ResponseWriter, r *http.Request) {
 			     AND channels.offering=offerings.id`
 	}
 
-	s.replyNumFromQuery(w, query, arg)
+	s.replyNumFromQuery(logger, w, query, arg)
 }

@@ -12,6 +12,7 @@ const (
 )
 
 func (s *Server) handleGetUsage(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handleGetUsage")
 	var query, arg string
 
 	arg = r.FormValue(usagesByChannelID)
@@ -29,5 +30,5 @@ func (s *Server) handleGetUsage(w http.ResponseWriter, r *http.Request) {
 			   join channels on channels.offering=offerings.id`
 	}
 
-	s.replyNumFromQuery(w, query, arg)
+	s.replyNumFromQuery(logger, w, query, arg)
 }

@@ -1,10 +1,12 @@
 package uisrv
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // handleProducts calls appropriate handler by scanning incoming request.
@@ -26,29 +28,33 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
 
 // handlePostProducts creates new product.
 func (s *Server) handlePostProducts(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handlePostProducts")
+
 	product := &data.Product{}
-	if !s.parseProductPayload(w, r, product) {
+	if !s.parseProductPayload(logger, w, r, product) {
 		return
 	}
 	product.ID = util.NewUUID()
-	if !s.insert(w, product) {
+	if !s.insert(logger, w, product) {
 		return
 	}
-	s.replyEntityCreated(w, product.ID)
+	s.replyEntityCreated(logger, w, product.ID)
 }
 
 // handlePutProducts updates a product.
 func (s *Server) handlePutProducts(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handlePutProducts")
+
 	product := &data.Product{}
-	if !s.parseProductPayload(w, r, product) {
+	if !s.parseProductPayload(logger, w, r, product) {
 		return
 	}
 
 	// TODO(maxim) make it on front-end
 	oldProduct := new(data.Product)
 	if err := s.db.FindByPrimaryKeyTo(oldProduct, product.ID); err != nil {
-		s.logger.Warn("failed to find product: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to find product: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -61,22 +67,22 @@ func (s *Server) handlePutProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.db.Update(product); err != nil {
-		s.logger.Warn("failed to update product: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to update product: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
-	s.replyEntityUpdated(w, product.ID)
+	s.replyEntityUpdated(logger, w, product.ID)
 }
 
-func (s *Server) parseProductPayload(w http.ResponseWriter,
+func (s *Server) parseProductPayload(logger log.Logger, w http.ResponseWriter,
 	r *http.Request, product *data.Product) bool {
-	if !s.parsePayload(w, r, product) ||
+	if !s.parsePayload(logger, w, r, product) ||
 		validate.Struct(product) != nil ||
 		product.OfferTplID == nil ||
 		product.OfferAccessID == nil ||
 		(product.UsageRepType != data.ProductUsageIncremental &&
 			product.UsageRepType != data.ProductUsageTotal) {
-		s.replyInvalidRequest(w)
+		s.replyInvalidRequest(logger, w)
 		return false
 	}
 	return true

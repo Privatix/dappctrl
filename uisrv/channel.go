@@ -2,6 +2,7 @@ package uisrv
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -163,26 +165,28 @@ func usageCalc(u *usageBlock, params *usage) {
 	}
 }
 
-func (s *Server) parseTime(w http.ResponseWriter,
-	value string) (ti time.Time, err error) {
+func (s *Server) parseTime(logger log.Logger,
+	w http.ResponseWriter, value string) (ti time.Time, err error) {
 	ti, err = time.Parse(timeFormat, value)
 	if err != nil {
-		s.logger.Warn("failed to parse time: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to parse time: %v", err))
+		s.replyUnexpectedErr(logger, w)
 	}
 	return
 }
 
 func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 	args []interface{}) (resp []*respGetClientChan, err error) {
+	logger := s.logger.Add("method", "getClientChannelsItems",
+		"query", query)
 	resp = []*respGetClientChan{}
 
 	channels := make(map[string]*respGetClientChan)
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
-		s.logger.Warn("failed to select: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to select: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 	defer rows.Close()
@@ -200,8 +204,8 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 			&i.unitsUsage, &item.Usage.MaxUsage, &i.unitType,
 			&item.Usage.Unit, &i.costSeconds,
 			&i.costUnits); err != nil {
-			s.logger.Warn("failed to scan rows: %v", err)
-			s.replyUnexpectedErr(w)
+			logger.Warn(fmt.Sprintf("failed to scan rows: %v", err))
+			s.replyUnexpectedErr(logger, w)
 			return
 		}
 
@@ -224,12 +228,12 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 			var oldTime time.Time
 			var newTime time.Time
 
-			oldTime, err = s.parseTime(w, old.Job.CreatedAt)
+			oldTime, err = s.parseTime(logger, w, old.Job.CreatedAt)
 			if err != nil {
 				return
 			}
 
-			newTime, err = s.parseTime(w, item.Job.CreatedAt)
+			newTime, err = s.parseTime(logger, w, item.Job.CreatedAt)
 			if err != nil {
 				return
 			}
@@ -243,8 +247,8 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 		channels[item.ID] = item
 	}
 	if err = rows.Err(); err != nil {
-		s.logger.Warn("failed to rows iteration: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to rows iteration: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -259,6 +263,8 @@ func (s *Server) getClientChannelsItems(w http.ResponseWriter, query string,
 // available to the client.
 func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 	r *http.Request) {
+	logger := s.logger.Add("method", "handleGetClientChannels")
+
 	// Result 20 fields: id, agent, client, offering, Deposit, service_status, channel_status,
 	// last_changed, max_inactive_time_sec, job_id, job_type, job_status, job_created_at,
 	// sec_usage, units_usage, max_usage, unit_type, unit_name, cost_seconds, cost_units
@@ -306,7 +312,7 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 		return
 	}
 
-	s.reply(w, &resp)
+	s.reply(logger, w, &resp)
 }
 
 // TODO(maxim) After the implementation of pagination, it is better to use this method for handleGetClientChannels.
@@ -413,23 +419,27 @@ func (s *Server) handleGetClientChannels(w http.ResponseWriter,
 
 // handleGetChannelStatus replies with channels status by id.
 func (s *Server) handleGetChannelStatus(w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleGetChannelStatus")
+
 	channel := &data.Channel{}
-	if !s.findTo(w, channel, id) {
+	if !s.findTo(logger, w, channel, id) {
 		return
 	}
-	s.replyStatus(w, channel.ChannelStatus)
+	s.replyStatus(logger, w, channel.ChannelStatus)
 }
 
 // handleGetClientChannelStatus replies with client channels status by id.
 func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleGetClientChannelStatus")
+
 	channel := new(data.Channel)
-	if !s.selectOneTo(w, channel, clientStatusFilter, id) {
+	if !s.selectOneTo(logger, w, channel, clientStatusFilter, id) {
 		return
 	}
 
 	offer := new(data.Offering)
-	if !s.findTo(w, offer, channel.Offering) {
+	if !s.findTo(logger, w, offer, channel.Offering) {
 		return
 	}
 
@@ -451,25 +461,29 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	resp.ServiceStatus = channel.ServiceStatus
 	resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
 
-	s.reply(w, &resp)
+	s.reply(logger, w, &resp)
 }
 
 func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 	id string, agent bool) {
+	logger := s.logger.Add("method", "putChannelStatus", "id", id,
+		"agent", agent)
+
 	payload := &ActionPayload{}
-	if !s.parsePayload(w, r, payload) {
+	if !s.parsePayload(logger, w, r, payload) {
 		return
 	}
 
-	s.logger.Info("action ( %v )  request for channel with id:"+
-		" %v received.", payload.Action, id)
+	logger.Info(fmt.Sprintf("action ( %v )  request for channel with id:"+
+		" %v received.", payload.Action, id))
 
 	if agent {
-		if !s.findTo(w, &data.Channel{}, id) {
+		if !s.findTo(logger, w, &data.Channel{}, id) {
 			return
 		}
 	} else {
-		if !s.selectOneTo(w, &data.Channel{}, clientStatusFilter, id) {
+		if !s.selectOneTo(
+			logger, w, &data.Channel{}, clientStatusFilter, id) {
 			return
 		}
 	}
@@ -488,32 +502,36 @@ func (s *Server) putChannelStatus(w http.ResponseWriter, r *http.Request,
 			s.createPreUncooperativeCloseRequest(w, id)
 			return
 		}
-		s.replyInvalidRequest(w)
+		s.replyInvalidRequest(logger, w)
 		return
 	default:
-		s.replyInvalidAction(w)
+		s.replyInvalidAction(logger, w)
 		return
 	}
 
 	if err != nil {
-		s.logger.Error("failed to add job: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(fmt.Sprintf("failed to add job: %v", err))
+		s.replyUnexpectedErr(logger, w)
 	}
 }
 
 func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id string) {
+	logger := s.logger.Add("method", "createPreUncooperativeCloseRequest",
+		"id", id)
+
 	gasPriceSettings := &data.Setting{}
 	if err := data.FindOneTo(s.db.Querier, gasPriceSettings,
 		"key", data.DefaultGasPriceKey); err != nil {
-		s.logger.Error("%v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(err.Error())
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
 	val, err := strconv.ParseInt(gasPriceSettings.Value, 10, 64)
 	if err != nil {
-		s.logger.Error("failed to parse default gas price: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(
+			fmt.Sprintf("failed to parse default gas price: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -521,8 +539,9 @@ func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id st
 		GasPrice: uint64(val),
 	})
 	if err != nil {
-		s.logger.Error("failed to marshal job publish data: %v", err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(
+			fmt.Sprintf("failed to marshal job publish data: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -534,9 +553,9 @@ func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id st
 		Data:        publishData,
 	})
 	if err != nil {
-		s.logger.Error("failed to add job %s: %v",
-			data.JobClientPreUncooperativeCloseRequest, err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(fmt.Sprintf("failed to add job %s: %v",
+			data.JobClientPreUncooperativeCloseRequest, err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 }

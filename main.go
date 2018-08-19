@@ -209,7 +209,7 @@ func main() {
 	}()
 	defer sess.Close()
 
-	somcConn, err := somc.NewConn(conf.SOMC, logger)
+	somcConn, err := somc.NewConn(conf.SOMC, logger2)
 	if err != nil {
 		logger2.Fatal(err.Error())
 	}
@@ -217,7 +217,7 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger2, db, somcConn, 
+	worker, err := worker.NewWorker(logger2, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
@@ -237,7 +237,7 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, queue, pwdStorage, pr)
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()

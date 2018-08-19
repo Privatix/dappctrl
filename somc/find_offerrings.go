@@ -2,7 +2,6 @@ package somc
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
@@ -27,6 +26,8 @@ type OfferingData struct {
 
 // FindOfferings requests SOMC to find offerings by their hashes.
 func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
+	logger := c.logger.Add("method", "FindOfferings")
+
 	params := findOfferingsParams{hashes}
 
 	bytes, err := json.Marshal(&params)
@@ -54,8 +55,9 @@ func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
 		hash := crypto.Keccak256Hash(bytes)
 		hstr := data.FromBytes(hash.Bytes())
 		if hstr != v.Hash {
-			return nil, fmt.Errorf(
-				"SOMC hash mismatch: %s != %s", hstr, v.Hash)
+			logger.Add("hashes", hashes,
+				"res", res).Error("hash mismatch")
+			return nil, ErrInternal
 		}
 
 		ret = append(ret, OfferingData{hstr, bytes})

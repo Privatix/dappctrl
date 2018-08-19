@@ -8,7 +8,7 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // ActionPayload is a body format for action requests.
@@ -39,7 +39,7 @@ func NewConfig() *Config {
 // Server is agent api server.
 type Server struct {
 	conf           *Config
-	logger         *util.Logger
+	logger         log.Logger
 	db             *reform.DB
 	queue          job.Queue
 	pwdStorage     data.PWDGetSetter
@@ -50,7 +50,7 @@ type Server struct {
 
 // NewServer creates a new agent server.
 func NewServer(conf *Config,
-	logger *util.Logger,
+	logger log.Logger,
 	db *reform.DB,
 	queue job.Queue,
 	pwdStorage data.PWDGetSetter, pr *proc.Processor) *Server {

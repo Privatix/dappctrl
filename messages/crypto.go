@@ -3,7 +3,6 @@ package messages
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/ecies"
@@ -34,14 +33,14 @@ func ClientOpen(c, agentPub []byte, clientPrv *ecdsa.PrivateKey) ([]byte, error)
 	hash := ethcrypto.Keccak256(sealed)
 
 	if !VerifySignature(agentPub, hash, sig) {
-		return nil, fmt.Errorf("wrong signature")
+		return nil, ErrWrongSignature
 	}
 
 	prv := ecies.ImportECDSA(clientPrv)
 
 	opened, err := prv.Decrypt(sealed, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt: %v", err)
+		return nil, err
 	}
 
 	return opened, nil
@@ -74,7 +73,7 @@ func signature(key *ecdsa.PrivateKey, msg []byte) ([]byte, error) {
 	hash := ethcrypto.Keccak256(msg)
 	sig, err := ethcrypto.Sign(hash, key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign: %v", err)
+		return nil, err
 	}
 	sig = sig[:len(sig)-1]
 	return sig, nil

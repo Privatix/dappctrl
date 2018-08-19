@@ -5,7 +5,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Config is a configuration for SOMC connection.
@@ -25,7 +25,7 @@ func NewConfig() *Config {
 // Conn is a websocket connection to SOMC.
 type Conn struct {
 	conf    *Config
-	logger  *util.Logger
+	logger  log.Logger
 	conn    *websocket.Conn
 	pending map[uint32]chan reply
 	mtx     sync.Mutex // Mostly to guard the pending map.
@@ -34,7 +34,7 @@ type Conn struct {
 }
 
 // NewConn creates and starts a new SOMC connection.
-func NewConn(conf *Config, logger *util.Logger) (*Conn, error) {
+func NewConn(conf *Config, logger log.Logger) (*Conn, error) {
 	c, _, err := websocket.DefaultDialer.Dial(conf.URL, nil)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func NewConn(conf *Config, logger *util.Logger) (*Conn, error) {
 
 	conn := &Conn{
 		conf:    conf,
-		logger:  logger,
+		logger:  logger.Add("type", "somc.Conn"),
 		conn:    c,
 		pending: make(map[uint32]chan reply),
 	}

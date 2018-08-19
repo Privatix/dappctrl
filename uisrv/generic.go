@@ -92,6 +92,8 @@ func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []strin
 // handleGetResources select and returns records.
 func (s *Server) handleGetResources(w http.ResponseWriter,
 	r *http.Request, conf *getConf) {
+	logger := s.logger.Add("method", "handleGetResources",
+		"table", conf.View.Name())
 
 	conds, args := s.formatConditions(r, conf)
 	if conf.FilteringSQL != "" {
@@ -108,23 +110,24 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 	if conf.Paginated {
 		page, err := strconv.Atoi(r.FormValue("page"))
 		if err != nil || page == 0 {
-			s.logger.Warn("invalid param: %v", err)
-			s.replyInvalidRequest(w)
+			logger.Warn(fmt.Sprintf("invalid param: %v", err))
+			s.replyInvalidRequest(logger, w)
 			return
 		}
 
 		limit, err := strconv.Atoi(r.FormValue("perPage"))
 		if err != nil || limit == 0 {
-			s.logger.Warn("invalid param: %v", err)
-			s.replyInvalidRequest(w)
+			logger.Warn(fmt.Sprintf("invalid param: %v", err))
+			s.replyInvalidRequest(logger, w)
 			return
 		}
 
 		paginatedItems, err = s.newPaginatedReply(
 			conf, tail, args, page, limit)
 		if err != nil {
-			s.logger.Error("failed to get resources: %v", err)
-			s.replyUnexpectedErr(w)
+			logger.Error(
+				fmt.Sprintf("failed to get resources: %v", err))
+			s.replyUnexpectedErr(logger, w)
 			return
 		}
 
@@ -133,8 +136,8 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)
 	if err != nil {
-		s.logger.Warn("failed to select: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("failed to select: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -144,9 +147,9 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 
 	if paginatedItems != nil {
 		paginatedItems.Items = records
-		s.reply(w, paginatedItems)
+		s.reply(logger, w, paginatedItems)
 		return
 	}
 
-	s.reply(w, records)
+	s.reply(logger, w, records)
 }

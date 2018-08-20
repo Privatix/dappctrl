@@ -36,30 +36,13 @@ git checkout master
 Build `dappctrl` package:
 
 ```bash
-DAPPCTRL=github.com/privatix/dappctrl
-DAPPCTRL_DIR=$HOME/go/src/$DAPPCTRL
-mkdir -p $DAPPCTRL_DIR
-git clone https://github.com/Privatix/dappctrl.git $DAPPCTRL_DIR
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-cd $DAPPCTRL_DIR && dep ensure
-go get -d $DAPPCTRL/...
-go get -u gopkg.in/reform.v1/reform
-go get -u github.com/rakyll/statik
-go get github.com/ethereum/go-ethereum/cmd/abigen
-
-go generate $DAPPCTRL/...
-export GIT_COMMIT=$(git rev-list -1 HEAD) && \
-export GIT_RELEASE=$(git tag -l --points-at HEAD) && \
-  go install -ldflags "-X main.Commit=$GIT_COMMIT \
-    -X main.Version=$GIT_RELEASE" -tags=notest $DAPPCTRL
+/scripts/build.sh
 ```
 
 Prepare a `dappctrl` database instance:
 
 ```bash
-psql -U postgres -f $DAPPCTRL_DIR/data/settings.sql
-psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/schema.sql
-psql -U postgres -d dappctrl -f $DAPPCTRL_DIR/data/prod_data.sql
+/scripts/create_database.sh
 ```
 
 Make a copy of `dappctrl.config.json`:
@@ -71,7 +54,7 @@ cp dappctrl.config.json dappctrl.config.local.json
 Modify `dappctrl.config.local.json` if you need non-default configuration and run:
 
 ```bash
-dappctrl -config=$DAPPCTRL_DIR/dappctrl.config.local.json
+/scripts/run.sh
 ```
 
 For developing purposes, you have to use `dappctrl-dev.config.json`.
@@ -107,30 +90,9 @@ docker-compose up
 
 # Tests
 
-## Preparing the test environment
-
-1. Set variables for your test environment, e.g.:
-
-    ```bash
-    CONF_FILE=$DAPPCTRL_DIR/dappctrl-test.config.json
-    LOCAL_CONF_FILE=$HOME/dappctrl-test.config.json
-    DB_IP=10.16.194.21
-    STRESS_JOBS=1000
-    ```
-
-2. Generate locally a configuration file using these variables, e.g.:
-
-    ```bash
-    jq ".DB.Conn.host=\"$DB_IP\" | .JobTest.StressJobs=$STRESS_JOBS" $CONF_FILE > $LOCAL_CONF_FILE
-    ```
-
-    **Note**: See `jq` [manual](https://stedolan.github.io/jq/manual) for
-    syntax details.
-
-## Running the tests
-
+To run the tests execute following script:
 ```bash
-go test $DAPPCTRL/... -p=1 -config=$LOCAL_CONF_FILE
+/scripts/test.sh
 ```
 
 ## Excluding specific tests from test run
@@ -159,6 +121,7 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 * [ababo](https://github.com/ababo)
 * [furkhat](https://github.com/furkhat)
+* [dzeckelev](https://github.com/dzeckelev)
 
 See also the list of [contributors](https://github.com/Privatix/dappctrl/contributors) who participated in this project.
 

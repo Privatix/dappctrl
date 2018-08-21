@@ -14,6 +14,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type testConfig struct {
@@ -29,6 +30,7 @@ func newTestConfig() *testConfig {
 var (
 	conf struct {
 		DB                *data.DBConfig
+		FileLog           *log.FileConfig
 		Log               *util.LogConfig
 		Job               *job.Config
 		Proc              *proc.Config
@@ -160,18 +162,24 @@ func TestStopAll(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.Job = job.NewConfig()
 	conf.Proc = proc.NewConfig()
 	conf.ServiceRunner = NewConfig()
 	conf.ServiceRunnerTest = newTestConfig()
 	util.ReadTestConfig(&conf)
 
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
 	logger = util.NewTestLogger(conf.Log)
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	queue := job.NewQueue(conf.Job, logger, db, nil)
+	queue := job.NewQueue(conf.Job, l, db, nil)
 	pr = proc.NewProcessor(conf.Proc, db, queue)
 
 	os.Exit(m.Run())

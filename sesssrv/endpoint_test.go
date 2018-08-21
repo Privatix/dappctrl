@@ -23,7 +23,7 @@ func TestEndpointMsg(t *testing.T) {
 
 	var ept *data.Endpoint
 
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathEndpointMsg,
 		args, &ept)
 

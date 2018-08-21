@@ -1,13 +1,13 @@
 package worker
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type logChannelTopUpInput struct {
@@ -90,33 +90,35 @@ func init() {
 	}
 }
 
-func extractLogChannelToppedUp(log *data.EthLog) (*logChannelTopUpInput, error) {
+func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannelTopUpInput, error) {
 	dataBytes, err := data.ToBytes(log.Data)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrParseEthLog
 	}
 
 	dataUnpacked, err := logChannelTopUpDataArguments.UnpackValues(dataBytes)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrParseEthLog
 	}
 
 	if len(dataUnpacked) != 2 {
-		return nil, fmt.Errorf("wrong number of non-indexed arguments")
+		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	openBlockNum, ok := dataUnpacked[0].(uint32)
 	if !ok {
-		return nil, fmt.Errorf("could not decode event data")
+		return nil, ErrParseEthLog
 	}
 
 	addedDeposit, ok := dataUnpacked[1].(*big.Int)
 	if !ok {
-		return nil, fmt.Errorf("could not decode event data")
+		return nil, ErrParseEthLog
 	}
 
 	if len(log.Topics) != 3 {
-		return nil, fmt.Errorf("wrong number of topics")
+		return nil, ErrWrongLogTopicsNumber
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[0].Bytes())
@@ -132,36 +134,35 @@ func extractLogChannelToppedUp(log *data.EthLog) (*logChannelTopUpInput, error) 
 	}, nil
 }
 
-func extractLogChannelCreated(log *data.EthLog) (*logChannelCreatedInput, error) {
+func extractLogChannelCreated(logger log.Logger, log *data.EthLog) (*logChannelCreatedInput, error) {
 	dataBytes, err := data.ToBytes(log.Data)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode log data: %v", err)
+		logger.Error(err.Error())
+		return nil, ErrParseEthLog
 	}
 
 	dataUnpacked, err := logChannelCreatedDataArguments.UnpackValues(dataBytes)
 	if err != nil {
-		return nil, fmt.Errorf("could not unpack using %T: %v",
-			logChannelCreatedDataArguments, err)
+		logger.Error(err.Error())
+		return nil, ErrParseEthLog
 	}
 
 	if len(dataUnpacked) != 2 {
-		return nil, fmt.Errorf("wrong number of non-indexed arguments")
+		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	deposit, ok := dataUnpacked[0].(*big.Int)
 	if !ok {
-		return nil, fmt.Errorf("could not parse deposit")
+		return nil, ErrParseEthLog
 	}
 
 	authHashB, ok := dataUnpacked[1].([common.HashLength]byte)
 	if !ok {
-		return nil, fmt.Errorf("could not parse authentication hash")
+		return nil, ErrParseEthLog
 	}
 
 	if len(log.Topics) != 4 {
-		return nil, fmt.Errorf(
-			"wrong number of topics, wanted: %v, got: %v",
-			4, len(log.Topics))
+		return nil, ErrWrongLogTopicsNumber
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
@@ -177,30 +178,31 @@ func extractLogChannelCreated(log *data.EthLog) (*logChannelCreatedInput, error)
 	}, nil
 }
 
-func extractLogOfferingCreated(log *data.EthLog) (*logOfferingCreatedInput, error) {
+func extractLogOfferingCreated(logger log.Logger,
+	log *data.EthLog) (*logOfferingCreatedInput, error) {
 	if len(log.Topics) != 4 {
-		return nil, fmt.Errorf(
-			"wrong number of topics, wanted: %v, got: %v",
-			4, len(log.Topics))
+		return nil, ErrWrongLogTopicsNumber
 	}
 
 	dataBytes, err := data.ToBytes(log.Data)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrParseJobData
 	}
 
 	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(dataBytes)
 	if err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil, ErrParseJobData
 	}
 
 	if len(dataUnpacked) != 1 {
-		return nil, fmt.Errorf("wrong number of non-indexed arguments")
+		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	curSupply, ok := dataUnpacked[0].(uint16)
 	if !ok {
-		return nil, fmt.Errorf("could not decode event data")
+		return nil, ErrParseJobData
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
@@ -215,11 +217,10 @@ func extractLogOfferingCreated(log *data.EthLog) (*logOfferingCreatedInput, erro
 	}, nil
 }
 
-func extractLogOfferingPopUp(log *data.EthLog) (*logOfferingPopUpInput, error) {
+func extractLogOfferingPopUp(logger log.Logger,
+	log *data.EthLog) (*logOfferingPopUpInput, error) {
 	if len(log.Topics) != 3 {
-		return nil, fmt.Errorf(
-			"wrong number of topics, wanted: %v, got: %v",
-			3, len(log.Topics))
+		return nil, ErrWrongLogTopicsNumber
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())

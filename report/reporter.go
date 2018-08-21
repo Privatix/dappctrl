@@ -9,4 +9,5 @@ package report
 type Reporter interface {
 	Enable() bool
 	Notify(error, bool, int)
+	PanicIgnore()
 }

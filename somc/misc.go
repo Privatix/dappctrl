@@ -20,15 +20,6 @@ type JSONRPCMessage struct {
 	ErrorData json.RawMessage `json:"error,omitempty"`
 }
 
-// Error returns error if any.
-func (m *JSONRPCMessage) Error() error {
-	if len(m.ErrorData) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf("SOMC error: %+v", string(m.ErrorData))
-}
-
 type reply struct {
 	data []byte
 	err  error
@@ -44,6 +35,8 @@ func (c *Conn) cancelPending(err error) {
 }
 
 func (c *Conn) handleMessages() {
+	logger := c.logger.Add("method", "handleMessages")
+
 	for !c.exit {
 		var err error
 		for {
@@ -61,7 +54,8 @@ func (c *Conn) handleMessages() {
 			break
 		}
 
-		c.logger.Error("failed to receive SOMC response: %s", err)
+		logger.Error(
+			fmt.Sprintf("failed to receive SOMC response: %s", err))
 
 		// Make sure following requests will fail.
 		c.conn.Close()
@@ -74,7 +68,9 @@ func (c *Conn) handleMessages() {
 				break
 			}
 
-			c.logger.Error("failed to reconnect to SOMC: %s", err)
+			logger.Error(
+				fmt.Sprintf("somc failed to reconnect: %s", err))
+
 			c.cancelPending(err)
 
 			time.Sleep(time.Millisecond *
@@ -84,12 +80,18 @@ func (c *Conn) handleMessages() {
 }
 
 func (c *Conn) handleMessage(m *JSONRPCMessage) {
+	logger := c.logger.Add("method", "handleMessage")
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
 	if len(m.Method) == 0 {
 		if ch, ok := c.pending[m.ID]; ok {
-			ch <- reply{m.Result, m.Error()}
+			var err error
+			if len(m.ErrorData) != 0 {
+				logger.Error(fmt.Sprintf("%+v", m.ErrorData))
+				err = ErrInternal
+			}
+			ch <- reply{m.Result, err}
 			delete(c.pending, m.ID)
 		}
 		return

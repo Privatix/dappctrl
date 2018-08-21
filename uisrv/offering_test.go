@@ -227,14 +227,27 @@ func TestGetOffering(t *testing.T) {
 	testGetOfferings(t, "", "", data.OfferEmpty, 1)
 }
 
-func testGetClientOfferings(t *testing.T, minp, maxp,
+func testGetClientOfferingsOrdered(t *testing.T, minp, maxp,
 	country string, exp int) {
 	res := getResources(t, clientOfferingsPath,
 		map[string]string{
 			"minUnitPrice": minp,
 			"maxUnitPrice": maxp,
 			"country":      country})
-	testGetResources(t, res, exp)
+	ret := testGetResources(t, res, exp)
+
+	// Test the order.
+	if len(ret) > 0 {
+		prevBlock := uint64(ret[0]["blockNumberUpdated"].(float64))
+		for _, item := range ret[1:] {
+			cur := uint64(item["blockNumberUpdated"].(float64))
+			if cur > prevBlock {
+				t.Logf("%v > %v", cur, prevBlock)
+				t.Fatal("offerings must be ordered by block")
+			}
+			prevBlock = cur
+		}
+	}
 }
 
 func TestGetClientOffering(t *testing.T) {
@@ -243,7 +256,7 @@ func TestGetClientOffering(t *testing.T) {
 
 	createOfferingFixtures(t)
 	// Get empty list.
-	testGetClientOfferings(t, "", "", "", 0)
+	testGetClientOfferingsOrdered(t, "", "", "", 0)
 
 	// Insert test offerings.
 	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
@@ -251,27 +264,32 @@ func TestGetClientOffering(t *testing.T) {
 	off1.Status = data.MsgChPublished
 	off1.IsLocal = false
 	off1.Country = "US"
+	off1.BlockNumberUpdated = 11
 
 	off2 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferRegister
 	off2.Status = data.MsgChPublished
 	off2.IsLocal = false
 	off2.Country = "SU"
+	off2.BlockNumberUpdated = 11111
 
 	off3 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off3.OfferStatus = data.OfferEmpty
 	off3.IsLocal = false
 	off3.Country = "SU"
+	off3.BlockNumberUpdated = 111
 
 	off4 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off4.OfferStatus = data.OfferEmpty
 	off4.IsLocal = true
+	off4.BlockNumberUpdated = 111111
 
 	off5 := data.NewTestOffering(testAgent.EthAddr, testProd.ID,
 		testTpl.ID)
 	off5.OfferStatus = data.OfferRegister
 	off5.IsLocal = false
 	off5.Country = "SU"
+	off5.BlockNumberUpdated = 2
 
 	off6 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
 	off6.OfferStatus = data.OfferRegister
@@ -279,29 +297,30 @@ func TestGetClientOffering(t *testing.T) {
 	off6.IsLocal = false
 	off6.Country = "US"
 	off6.CurrentSupply = 0
+	off6.BlockNumberUpdated = 222
 
 	insertItems(t, off1, off2, off3, off4, off5, off6)
 
 	// all non-local offerings
-	testGetClientOfferings(t, "", "", "", 2)
+	testGetClientOfferingsOrdered(t, "", "", "", 2)
 
 	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
 	price := strconv.FormatUint(off1.UnitPrice, 10)
 	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
 
 	// price range
-	testGetClientOfferings(t, "", "", "", 2)           // inside range
-	testGetClientOfferings(t, "", highPrice, "", 2)    // inside range
-	testGetClientOfferings(t, "", lowPrice, "", 0)     // above range
-	testGetClientOfferings(t, highPrice, "", "", 0)    // below range
-	testGetClientOfferings(t, lowPrice, price, "", 2)  // on edge
-	testGetClientOfferings(t, price, highPrice, "", 2) // on edge
-	testGetClientOfferings(t, price, price, "", 2)     // on edge
+	testGetClientOfferingsOrdered(t, "", "", "", 2)           // inside range
+	testGetClientOfferingsOrdered(t, "", highPrice, "", 2)    // inside range
+	testGetClientOfferingsOrdered(t, "", lowPrice, "", 0)     // above range
+	testGetClientOfferingsOrdered(t, highPrice, "", "", 0)    // below range
+	testGetClientOfferingsOrdered(t, lowPrice, price, "", 2)  // on edge
+	testGetClientOfferingsOrdered(t, price, highPrice, "", 2) // on edge
+	testGetClientOfferingsOrdered(t, price, price, "", 2)     // on edge
 
 	// country filter
-	testGetClientOfferings(t, "", "", "US", 1)
-	testGetClientOfferings(t, "", "", "SU", 1)
-	testGetClientOfferings(t, "", "", "US,SU", 2)
+	testGetClientOfferingsOrdered(t, "", "", "US", 1)
+	testGetClientOfferingsOrdered(t, "", "", "SU", 1)
+	testGetClientOfferingsOrdered(t, "", "", "US,SU", 2)
 }
 
 func getOfferingStatus(t *testing.T, id string) *http.Response {

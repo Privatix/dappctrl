@@ -9,9 +9,9 @@ const (
 	ErrDecodeResponse
 )
 
-var errMsgs = errors.Messages{
-	ErrEncodeArgs:     "failed to encode arguments to JSON",
-	ErrDecodeResponse: "failed to decode response from JSON",
+func init() {
+	errors.InjectMessages(errors.Messages{
+		ErrEncodeArgs:     "failed to encode arguments to JSON",
+		ErrDecodeResponse: "failed to decode response from JSON",
+	})
 }
-
-func init() { errors.InjectMessages(errMsgs) }

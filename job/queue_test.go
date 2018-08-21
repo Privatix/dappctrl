@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type testConfig struct {
@@ -30,10 +31,9 @@ var (
 		DB      *data.DBConfig
 		Job     *Config
 		JobTest *testConfig
-		Log     *util.LogConfig
+		FileLog *log.FileConfig
 	}
-
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 )
 
@@ -268,10 +268,15 @@ func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = NewConfig()
 	conf.JobTest = newTestConfig()
-	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
+
+	logger = l
 	db = data.NewTestDB(conf.DB)
 
 	os.Exit(m.Run())

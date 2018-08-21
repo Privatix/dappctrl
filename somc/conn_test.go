@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -17,12 +18,12 @@ import (
 )
 
 var conf struct {
-	Log      *util.LogConfig
+	FileLog  *log.FileConfig
 	SOMC     *Config
 	SOMCTest *TestConfig
 }
 
-var logger *util.Logger
+var logger log.Logger
 
 func newServer(t *testing.T) *FakeSOMC {
 	return NewFakeSOMC(t, conf.SOMC.URL, conf.SOMCTest.ServerStartupDelay)
@@ -200,12 +201,16 @@ func TestGetEndpoint(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.SOMC = NewConfig()
 	conf.SOMCTest = NewTestConfig()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	l, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err.Error())
+	}
+	logger = l
 
 	os.Exit(m.Run())
 }

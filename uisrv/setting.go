@@ -36,12 +36,14 @@ type settingPayload []data.Setting
 
 // handlePutSettings updates settings.
 func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handlePutSettings")
+
 	var payload settingPayload
-	if !s.parsePayload(w, r, &payload) {
+	if !s.parsePayload(logger, w, r, &payload) {
 		return
 	}
 
-	tx, ok := s.begin(w)
+	tx, ok := s.begin(logger, w)
 	if !ok {
 		return
 	}
@@ -54,7 +56,7 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		if err := tx.FindByPrimaryKeyTo(&settingFromDB,
 			setting.Key); err != nil {
 			if err != reform.ErrNoRows {
-				s.replyUnexpectedErr(w)
+				s.replyUnexpectedErr(logger, w)
 				return
 			}
 		}
@@ -70,14 +72,14 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 			setting.Permissions = settingFromDB.Permissions
 		}
 
-		if !s.updateTx(w, &setting, tx) {
+		if !s.updateTx(logger, w, &setting, tx) {
 			return
 		}
 	}
 
-	if !s.commit(w, tx) {
+	if !s.commit(logger, w, tx) {
 		return
 	}
 
-	s.replyOK(w, "updated.")
+	s.replyOK(logger, w, "updated.")
 }

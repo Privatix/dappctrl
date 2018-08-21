@@ -12,7 +12,9 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/report"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
@@ -27,16 +29,18 @@ var (
 	defaultAccEth = new(common.Address).String()
 	defaultAppID  = emptyUUID()
 
-	enable bool
+	enable      bool
+	panicIgnore bool
 
 	notifier *bugsnag.Notifier
 )
 
 // Log interface for report.
 type Log interface {
-	Debug(fmt string, v ...interface{})
+	log.Logger
 	Printf(format string, v ...interface{})
-	Warn(fmt string, v ...interface{})
+	Reporter(reporter report.Reporter)
+	Logger(logger log.Logger)
 }
 
 // Config Bugsnag client config.
@@ -50,7 +54,6 @@ type Config struct {
 type Client struct {
 	db       *reform.DB
 	enable   bool
-	lastAcc  string
 	logger   Log
 	notifier *bugsnag.Notifier
 }
@@ -164,7 +167,7 @@ func (c *Client) notify(err error, sync bool, skip int) {
 			metadata(ethAdd))
 	}
 	if e != nil {
-		c.logger.Debug("failed to send notify: %s", e)
+		c.logger.Add("error", e).Debug("failed to send notify")
 	}
 }
 
@@ -178,25 +181,34 @@ func (c *Client) allowed() bool {
 	err := c.db.FindByPrimaryKeyTo(&setting, key)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.logger.Warn("key %s is not exist"+
-				" in Setting table", key)
+			c.logger.Add("key", key).Warn("key is not exist" +
+				" in Setting table")
 		} else {
-			c.logger.Warn("failed to get key %s"+
-				" from Setting table", key)
+			c.logger.Add("key", key).Warn("failed to get key" +
+				" from Setting table")
 		}
 		return false
 	}
 	val, err := strconv.ParseBool(setting.Value)
 	if err != nil {
-		c.logger.Warn("key %s from Setting table"+
-			" has an incorrect format", key)
+		c.logger.Add("key", key).Warn("key from Setting table" +
+			" has an incorrect format")
 		return false
 	}
 	return val
 }
 
+// PanicIgnore disables the PanicHunter.
+func (c *Client) PanicIgnore() {
+	panicIgnore = true
+}
+
 // PanicHunter catches panic, in case of an enabled reporter.
 func PanicHunter() {
+	if panicIgnore {
+		return
+	}
+
 	if err := recover(); err != nil {
 		if enable && notifier != nil {
 			notifier.NotifySync(

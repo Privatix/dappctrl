@@ -2,7 +2,6 @@ package somc
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 const publishEndpointMethod = "connectionInfo"
@@ -22,7 +21,7 @@ func (c *Conn) PublishEndpoint(channel string, endpoint []byte) error {
 
 	data, err := json.Marshal(&params)
 	if err != nil {
-		return fmt.Errorf("somc: could not marshal endpoint params: %v", err)
+		return err
 	}
 
 	return c.request(publishEndpointMethod, data).err

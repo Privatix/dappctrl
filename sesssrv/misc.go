@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -17,42 +18,42 @@ func (s *Server) authProduct(username, password string) bool {
 	return true
 }
 
-func (s *Server) findProduct(
+func (s *Server) findProduct(logger log.Logger,
 	w http.ResponseWriter, productID string) (*data.Product, bool) {
 	var prod data.Product
 	if err := s.db.FindByPrimaryKeyTo(&prod, productID); err != nil {
-		s.logger.Add("product", productID).Error(err.Error())
-		s.RespondError(w, srv.ErrInternalServerError)
+		logger.Error(err.Error())
+		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return nil, false
 	}
 	return &prod, true
 }
 
-func (s *Server) findEndpoint(w http.ResponseWriter,
-	channelID string) (*data.Endpoint, bool) {
+func (s *Server) findEndpoint(logger log.Logger,
+	w http.ResponseWriter, channelID string) (*data.Endpoint, bool) {
 	var ept data.Endpoint
 	if err := data.FindOneTo(s.db.Querier, &ept, "channel",
 		channelID); err != nil {
-		s.logger.Add("channel", channelID).Error(err.Error())
-		s.RespondError(w, ErrEndpointNotFound)
+		logger.Error(err.Error())
+		s.RespondError(logger, w, ErrEndpointNotFound)
 		return nil, false
 	}
 	return &ept, true
 }
 
-func (s *Server) updateProduct(
+func (s *Server) updateProduct(logger log.Logger,
 	w http.ResponseWriter, prod *data.Product) bool {
 	if err := s.db.Update(prod); err != nil {
-		s.logger.Add("product", prod.ID).Error(err.Error())
-		s.RespondError(w, srv.ErrInternalServerError)
+		logger.Error(err.Error())
+		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return false
 	}
 	return true
 }
 
-func (s *Server) identClient(w http.ResponseWriter,
-	productID, clientID string) (*data.Channel, bool) {
-	prod, ok := s.findProduct(w, productID)
+func (s *Server) identClient(logger log.Logger,
+	w http.ResponseWriter, productID, clientID string) (*data.Channel, bool) {
+	prod, ok := s.findProduct(logger, w, productID)
 	if !ok {
 		return nil, false
 	}
@@ -60,35 +61,31 @@ func (s *Server) identClient(w http.ResponseWriter,
 	var ch data.Channel
 	if prod.ClientIdent == data.ClientIdentByChannelID {
 		if err := s.db.FindByPrimaryKeyTo(&ch, clientID); err != nil {
-			s.logger.Add("channel",
-				clientID).Error(err.Error())
-			s.RespondError(w, ErrChannelNotFound)
+			logger.Error(err.Error())
+			s.RespondError(logger, w, ErrChannelNotFound)
 			return nil, false
 		}
 	} else {
-		s.logger.Add("clientIdent",
-			prod.ClientIdent).Fatal(
-			"unsupported client identification type")
+		logger.Fatal("unsupported client identification type")
 	}
 
 	if ch.ServiceStatus != data.ChannelActive {
-		s.logger.Add("channel",
-			ch.ID).Warn("non-active channel")
-		s.RespondError(w, ErrNonActiveChannel)
+		logger.Warn("non-active channel")
+		s.RespondError(logger, w, ErrNonActiveChannel)
 		return nil, false
 	}
 	return &ch, true
 }
 
-func (s *Server) findCurrentSession(
+func (s *Server) findCurrentSession(logger log.Logger,
 	w http.ResponseWriter, channel string) (*data.Session, bool) {
 	var sess data.Session
 	if err := s.db.SelectOneTo(&sess, `
 		WHERE channel = $1 AND stopped IS NULL
 		ORDER BY started DESC
 		LIMIT 1`, channel); err != nil {
-		s.logger.Add("channel", channel).Warn(err.Error())
-		s.RespondError(w, ErrSessionNotFound)
+		logger.Warn(err.Error())
+		s.RespondError(logger, w, ErrSessionNotFound)
 		return nil, false
 	}
 

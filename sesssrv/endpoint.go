@@ -13,20 +13,25 @@ type EndpointMsgArgs struct {
 
 func (s *Server) handleEndpointMsg(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add("method", "handleEndpointMsg", "sender", r.RemoteAddr)
+
+	logger.Info("session endpoint msg request from " + r.RemoteAddr)
+
 	var args EndpointMsgArgs
-	if !s.ParseRequest(w, r, &args) {
+	if !s.ParseRequest(logger, w, r, &args) {
 		return
 	}
+	logger = logger.Add("arguments", args)
 
 	if args.ChannelID == "" {
-		s.RespondError(w, ErrEndpointNotFound)
+		s.RespondError(logger, w, ErrEndpointNotFound)
 		return
 	}
 
-	ept, ok := s.findEndpoint(w, args.ChannelID)
+	ept, ok := s.findEndpoint(logger, w, args.ChannelID)
 	if !ok {
 		return
 	}
 
-	s.RespondResult(w, ept)
+	s.RespondResult(logger, w, ept)
 }

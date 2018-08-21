@@ -1,6 +1,7 @@
 package pay
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/privatix/dappctrl/util/srv"
@@ -19,21 +20,26 @@ type paymentPayload struct {
 // handlePay handles clients balance proof informations.
 func (s *Server) handlePay(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add("method", "handlePay", "sender", r.RemoteAddr)
+
 	payload := &paymentPayload{}
-	if !s.ParseRequest(w, r, payload) {
+	if !s.ParseRequest(logger, w, r, payload) {
 		return
 	}
-	ch, ok := s.findChannel(w,
+	logger = logger.Add("payload", payload)
+
+	ch, ok := s.findChannel(logger, w,
 		payload.OfferingHash,
 		payload.AgentAddress, payload.OpenBlockNumber)
 
-	if !ok || !s.validateChannelForPayment(w, ch, payload) ||
-		!s.updateChannelWithPayment(w, ch, payload) {
+	logger = logger.Add("channel", ch)
+
+	if !ok || !s.validateChannelForPayment(logger, w, ch, payload) ||
+		!s.updateChannelWithPayment(logger, w, ch, payload) {
 		return
 	}
 
-	s.RespondResult(w, struct{}{})
+	s.RespondResult(logger, w, struct{}{})
 
-	s.Logger().Info(
-		"received payment: %d, from: %s", payload.Balance, ch.Client)
+	logger.Info(fmt.Sprintf("received payment: %d, from: %s", payload.Balance, ch.Client))
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // handleTempaltes calls appropriate handler by scanning incoming request.
@@ -25,25 +26,28 @@ func (s *Server) handleTempaltes(w http.ResponseWriter, r *http.Request) {
 
 // handleTemplateCreate creates new template.
 func (s *Server) handleTemplateCreate(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handleTemplateCreate")
+
 	tpl := &data.Template{}
-	if !s.parseTemplatePayload(w, r, tpl) {
+	if !s.parseTemplatePayload(logger, w, r, tpl) {
 		return
 	}
 	tpl.ID = util.NewUUID()
 	tpl.Hash = data.FromBytes(crypto.Keccak256(tpl.Raw))
-	if !s.insert(w, tpl) {
+	if !s.insert(logger, w, tpl) {
 		return
 	}
-	s.replyEntityCreated(w, tpl.ID)
+	s.replyEntityCreated(logger, w, tpl.ID)
 }
 
-func (s *Server) parseTemplatePayload(w http.ResponseWriter,
+func (s *Server) parseTemplatePayload(logger log.Logger, w http.ResponseWriter,
 	r *http.Request, tpl *data.Template) bool {
+
 	v := make(map[string]interface{})
-	if !s.parsePayload(w, r, tpl) ||
+	if !s.parsePayload(logger, w, r, tpl) ||
 		invalidTemplateKind(tpl.Kind) ||
 		json.Unmarshal(tpl.Raw, &v) != nil {
-		s.replyInvalidPayload(w)
+		s.replyInvalidRequest(logger, w)
 		return false
 	}
 	return true

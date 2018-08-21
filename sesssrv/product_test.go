@@ -16,7 +16,7 @@ func TestNormalProductConfig(t *testing.T) {
 	args := ProductArgs{
 		Config: conf.SessionServerTest.Product.ValidFormatConfig}
 
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathProductConfig,
 		args, nil)
 
@@ -29,7 +29,7 @@ func TestBadProductConfig(t *testing.T) {
 
 	args := ProductArgs{}
 
-	err := Post(conf.SessionServer.Config, logger2,
+	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathProductConfig,
 		args, nil)
 	util.TestExpectResult(t, "Post", ErrInvalidProductConf, err)

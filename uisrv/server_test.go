@@ -15,12 +15,13 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // used throughout all tests in the package.
@@ -41,15 +42,19 @@ func TestMain(m *testing.M) {
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
 		Job             *job.Config
-		Log             *util.LogConfig
+		FileLog         *log.FileConfig
 	}
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
 	conf.AgentServerTest = &testConfig{}
+	conf.FileLog = log.NewFileConfig()
 	util.ReadTestConfig(&conf)
-	logger := util.NewTestLogger(conf.Log)
 	db := data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
+
+	logger, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
 
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 
@@ -153,15 +158,17 @@ func getResources(t *testing.T,
 	return res
 }
 
-func testGetResources(t *testing.T, res *http.Response, exp int) {
+func testGetResources(t *testing.T, res *http.Response, exp int) []map[string]interface{} {
 	if res.StatusCode != http.StatusOK {
-		t.Fatal("failed to get products: ", res.StatusCode)
+		t.Fatal("failed to get resources: ", res.StatusCode)
 	}
-	resData := []map[string]interface{}{}
-	json.NewDecoder(res.Body).Decode(&resData)
-	if exp != len(resData) {
-		t.Fatalf("expected %d items, got: %d", exp, len(resData))
+	ret := []map[string]interface{}{}
+	json.NewDecoder(res.Body).Decode(&ret)
+	if exp != len(ret) {
+		t.Fatalf("expected %d items, got: %d (%s)", exp, len(ret),
+			util.Caller())
 	}
+	return ret
 }
 
 func setTestUserCredentials(t *testing.T) func() {

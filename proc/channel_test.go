@@ -7,19 +7,20 @@ import (
 	"testing"
 	"time"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 var (
 	conf struct {
-		DB   *data.DBConfig
-		Job  *job.Config
-		Log  *util.LogConfig
-		Proc *Config
+		DB      *data.DBConfig
+		Job     *job.Config
+		FileLog *log.FileConfig
+		Proc    *Config
 	}
 
 	db   *reform.DB
@@ -138,11 +139,14 @@ func TestTerminateChannelClient(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
-	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.Proc = NewConfig()
 	util.ReadTestConfig(&conf)
 
-	logger := util.NewTestLogger(conf.Log)
+	logger, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)

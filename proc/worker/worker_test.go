@@ -70,10 +70,9 @@ type workerTest struct {
 }
 
 var (
-	conf    *testConfig
-	db      *reform.DB
-	logger  *util.Logger
-	logger2 log.Logger
+	conf   *testConfig
+	db     *reform.DB
+	logger log.Logger
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
@@ -93,7 +92,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(logger, logger2, db, somcConn, ethBack,
+	worker, err := NewWorker(logger, db, somcConn, ethBack,
 		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
 		data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {
@@ -127,12 +126,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	logger, err = util.NewLogger(conf.Log)
-	if err != nil {
-		panic(err)
-	}
-
-	logger2, err = log.NewStderrLogger(conf.FileLog)
+	logger, err = log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}

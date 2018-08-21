@@ -24,6 +24,7 @@ import (
 	"github.com/privatix/dappctrl/proc/handlers"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/report/bugsnag"
+	rlog "github.com/privatix/dappctrl/report/log"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/ui"
@@ -46,6 +47,7 @@ type config struct {
 	ClientMonitor *cbill.Config
 	DB            *data.DBConfig
 	DBLog         *dblog.Config
+	ReportLog     *rlog.Config
 	EptMsg        *ept.Config
 	Eth           *eth.Config
 	FileLog       *log.FileConfig
@@ -71,6 +73,7 @@ func newConfig() *config {
 		ClientMonitor: cbill.NewConfig(),
 		DB:            data.NewDBConfig(),
 		DBLog:         dblog.NewConfig(),
+		ReportLog:     rlog.NewConfig(),
 		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
@@ -107,18 +110,23 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
-func createLogger(conf *config, db *reform.DB) (log.Logger, error) {
+func createLogger(conf *config, db *reform.DB) (log.Logger, bugsnag.Log, error) {
 	flog, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	dlog, err := dblog.NewLogger(conf.DBLog, db)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return log.NewMultiLogger(flog, dlog), nil
+	rLog, err := rlog.NewLogger(conf.ReportLog)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return log.NewMultiLogger(rLog, flog, dlog), rLog.(bugsnag.Log), nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger,
@@ -156,17 +164,17 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	logger2, err := createLogger(conf, db)
+	logger2, rLog, err := createLogger(conf, db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 
-	reporter, err := bugsnag.NewClient(conf.Report, db, logger)
+	reporter, err := bugsnag.NewClient(conf.Report, db, rLog)
 	if err != nil {
 		logger2.Fatal(err.Error())
 	}
-
-	logger.Reporter(reporter)
+	rLog.Reporter(reporter)
+	rLog.Logger(logger2)
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger2)
@@ -189,19 +197,19 @@ func main() {
 		logger2.Fatal(err.Error())
 	}
 
-	paySrv := pay.NewServer(conf.PayServer, logger, db)
+	paySrv := pay.NewServer(conf.PayServer, logger2, db)
 	go func() {
 		fatal <- paySrv.ListenAndServe()
 	}()
 	defer paySrv.Close()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, logger2, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()
 	defer sess.Close()
 
-	somcConn, err := somc.NewConn(conf.SOMC, logger)
+	somcConn, err := somc.NewConn(conf.SOMC, logger2)
 	if err != nil {
 		logger2.Fatal(err.Error())
 	}
@@ -209,7 +217,7 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger, logger2, db, somcConn,
+	worker, err := worker.NewWorker(logger2, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
@@ -218,7 +226,7 @@ func main() {
 		logger2.Fatal(err.Error())
 	}
 
-	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
+	queue := job.NewQueue(conf.Job, logger2, db, handlers.HandlersMap(worker))
 	defer queue.Close()
 	worker.SetQueue(queue)
 
@@ -229,7 +237,7 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, queue, pwdStorage, pr)
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, queue, pwdStorage, pr)
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()

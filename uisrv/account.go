@@ -46,6 +46,7 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleExportAccount")
 	if !util.IsUUID(id) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -63,13 +64,14 @@ func (s *Server) handleExportAccount(w http.ResponseWriter, r *http.Request, id 
 
 	privKeyJSONBytes, err := data.ToBytes(acc.PrivateKey)
 	if err != nil {
-		s.replyUnexpectedErr(w)
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if _, err := w.Write(privKeyJSONBytes); err != nil {
-		s.logger.Warn("failed to reply with the private key: %v", err)
+		logger.Warn(fmt.Sprintf(
+			"failed to reply with the private key: %v", err))
 	}
 }
 
@@ -120,8 +122,10 @@ func (p *accountCreatePayload) toECDSA() (*ecdsa.PrivateKey, error) {
 }
 
 func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
+	logger := s.logger.Add("method", "handleCreateAccount")
+
 	payload := &accountCreatePayload{}
-	if !s.parsePayload(w, r, payload) {
+	if !s.parsePayload(logger, w, r, payload) {
 		return
 	}
 	acc := &data.Account{}
@@ -129,15 +133,15 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	privKey, err := payload.toECDSA()
 	if err != nil {
-		s.logger.Warn("could not extract priv key: %v", err)
-		s.replyInvalidPayload(w)
+		logger.Warn(fmt.Sprintf("could not extract priv key: %v", err))
+		s.replyInvalidRequest(logger, w)
 		return
 	}
 
 	acc.PrivateKey, err = s.encryptKeyFunc(privKey, s.pwdStorage.Get())
 	if err != nil {
-		s.logger.Warn("could not encrypt priv key: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("could not encrypt priv key: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -156,8 +160,8 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	acc.EthBalance = data.B64BigInt(data.FromBytes([]byte{0}))
 
 	if err := s.db.Insert(acc); err != nil {
-		s.logger.Warn("could not insert account: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Warn(fmt.Sprintf("could not insert account: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -168,13 +172,13 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		CreatedBy:   data.JobUser,
 		Data:        []byte("{}"),
 	}); err != nil {
-		s.logger.Error("could not add %s job",
-			data.JobAccountUpdateBalances)
-		s.replyUnexpectedErr(w)
+		logger.Error(fmt.Sprintf("could not add %s job",
+			data.JobAccountUpdateBalances))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
-	s.replyEntityCreated(w, acc.ID)
+	s.replyEntityCreated(logger, w, acc.ID)
 }
 
 type accountBalancePayload struct {
@@ -185,19 +189,21 @@ type accountBalancePayload struct {
 
 func (s *Server) handleAccountTransferBalance(
 	w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleAccountTransferBalance")
+
 	payload := &accountBalancePayload{}
-	if !s.parsePayload(w, r, payload) {
+	if !s.parsePayload(logger, w, r, payload) {
 		return
 	}
 	if payload.Amount == 0 || (payload.Destination != data.ContractPSC &&
 		payload.Destination != data.ContractPTC) {
-		s.replyErr(w, http.StatusBadRequest, &serverError{
+		s.replyErr(logger, w, http.StatusBadRequest, &serverError{
 			Message: "invalid amount or destination",
 		})
 		return
 	}
 
-	if !s.findTo(w, &data.Account{}, id) {
+	if !s.findTo(logger, w, &data.Account{}, id) {
 		return
 	}
 
@@ -213,8 +219,9 @@ func (s *Server) handleAccountTransferBalance(
 
 	jobDataB, err := json.Marshal(jobData)
 	if err != nil {
-		s.logger.Error("failed to marshal %T: %v", jobData, err)
-		s.replyUnexpectedErr(w)
+		logger.Error(
+			fmt.Sprintf("failed to marshal %T: %v", jobData, err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 
@@ -225,16 +232,18 @@ func (s *Server) handleAccountTransferBalance(
 		Data:        jobDataB,
 		CreatedBy:   data.JobUser,
 	}); err != nil {
-		s.logger.Error("failed to add transfer job: %v", err)
-		s.replyUnexpectedErr(w)
+		logger.Error(
+			fmt.Sprintf("failed to add transfer job: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 }
 
 func (s *Server) handleCreateUpdateBalancesJob(
 	w http.ResponseWriter, r *http.Request, id string) {
+	logger := s.logger.Add("method", "handleCreateUpdateBalancesJob", "id", id)
 
-	if !s.findTo(w, &data.Account{}, id) {
+	if !s.findTo(logger, w, &data.Account{}, id) {
 		return
 	}
 
@@ -245,8 +254,9 @@ func (s *Server) handleCreateUpdateBalancesJob(
 		Data:        []byte("{}"),
 		CreatedBy:   data.JobUser,
 	}); err != nil {
-		s.logger.Error("failed to add update balances job: %v", err)
-		s.replyUnexpectedErr(w)
+		s.logger.Error(
+			fmt.Sprintf("failed to add update balances job: %v", err))
+		s.replyUnexpectedErr(logger, w)
 		return
 	}
 }

@@ -2,7 +2,6 @@ package svcrun
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -14,13 +13,6 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
-)
-
-// ServiceRunner errors.
-var (
-	ErrAlreadyStarted = errors.New("service already running")
-	ErrUnknownService = errors.New("unknown service type")
-	ErrNotRunning     = errors.New("not running")
 )
 
 // ServiceRunner starts and stops services.

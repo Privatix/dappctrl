@@ -76,6 +76,10 @@ func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []strin
 			phs := s.db.Placeholders(placei, len(subvals))
 			placei += len(subvals)
 			ph = "(" + strings.Join(phs, ",") + ")"
+		} else if op == "like" {
+			args = append(args, "%"+val+"%")
+			ph = s.db.Placeholder(placei)
+			placei++
 		} else {
 			args = append(args, val)
 			ph = s.db.Placeholder(placei)

@@ -26,7 +26,11 @@ func insertTestLogEvents(t *testing.T, qty int, lvl log.Level) {
 	data.InsertToTestDB(t, testServer.db, logs...)
 }
 
-func testGetLogs(t *testing.T, res *http.Response, page, nPage, exp int) {
+func getLogEvents(t *testing.T, params map[string]string) *http.Response {
+	return getResources(t, logsPath, params)
+}
+
+func testGetLogEventsResult(t *testing.T, res *http.Response, page, nPage, exp int) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatal("failed to get logs: ", res.StatusCode)
 	}
@@ -45,29 +49,29 @@ func TestGetLogsPagination(t *testing.T) {
 
 	insertTestLogEvents(t, 2, log.Error)
 
-	res := getResources(t, logsPath, map[string]string{
+	res := getLogEvents(t, map[string]string{
 		"page":    "1",
 		"perPage": "2",
 	})
-	testGetLogs(t, res, 1, 1, 2)
+	testGetLogEventsResult(t, res, 1, 1, 2)
 
-	res = getResources(t, logsPath, map[string]string{
+	res = getLogEvents(t, map[string]string{
 		"page":    "1",
 		"perPage": "1",
 	})
-	testGetLogs(t, res, 1, 2, 1)
+	testGetLogEventsResult(t, res, 1, 2, 1)
 
-	res = getResources(t, logsPath, map[string]string{
+	res = getLogEvents(t, map[string]string{
 		"page":    "2",
 		"perPage": "1",
 	})
-	testGetLogs(t, res, 2, 2, 1)
+	testGetLogEventsResult(t, res, 2, 2, 1)
 
-	res = getResources(t, logsPath, map[string]string{
+	res = getLogEvents(t, map[string]string{
 		"page":    "3",
 		"perPage": "1",
 	})
-	testGetLogs(t, res, 3, 2, 0)
+	testGetLogEventsResult(t, res, 3, 2, 0)
 }
 
 func TestGetLogsFilteringByLevel(t *testing.T) {
@@ -77,19 +81,19 @@ func TestGetLogsFilteringByLevel(t *testing.T) {
 	insertTestLogEvents(t, 2, log.Error)
 
 	// Filter by level
-	res := getResources(t, logsPath, map[string]string{
+	res := getLogEvents(t, map[string]string{
 		"page":    "1",
 		"perPage": "2",
 		"level":   string(log.Error),
 	})
-	testGetLogs(t, res, 1, 1, 2)
+	testGetLogEventsResult(t, res, 1, 1, 2)
 
-	res = getResources(t, logsPath, map[string]string{
+	res = getLogEvents(t, map[string]string{
 		"page":    "1",
 		"perPage": "2",
 		"level":   string(log.Fatal),
 	})
-	testGetLogs(t, res, 1, 0, 0)
+	testGetLogEventsResult(t, res, 1, 0, 0)
 }
 
 func dateArg(d time.Time) string {
@@ -103,19 +107,43 @@ func TestGetLogsByDateRange(t *testing.T) {
 	insertTestLogEvents(t, 2, log.Error)
 
 	// Filter by date range.
-	res := getResources(t, logsPath, map[string]string{
+	res := getLogEvents(t, map[string]string{
 		"page":     "1",
 		"perPage":  "2",
 		"dateFrom": dateArg(time.Now().Add(-time.Minute)),
 		"dateTo":   dateArg(time.Now().Add(time.Minute)),
 	})
-	testGetLogs(t, res, 1, 1, 2)
+	testGetLogEventsResult(t, res, 1, 1, 2)
 
-	res = getResources(t, logsPath, map[string]string{
+	res = getLogEvents(t, map[string]string{
 		"page":     "1",
 		"perPage":  "2",
 		"dateFrom": dateArg(time.Now().Add(time.Minute)),
 		"dateTo":   dateArg(time.Now().Add(time.Hour)),
 	})
-	testGetLogs(t, res, 1, 0, 0)
+	testGetLogEventsResult(t, res, 1, 0, 0)
+}
+
+func TestGetLogsByMsgText(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+	data.InsertToTestDB(t, testServer.db, &data.LogEvent{
+		Message: "foo",
+		Level:   log.Error,
+		Context: []byte("{}"),
+	})
+
+	res := getLogEvents(t, map[string]string{
+		"page":       "1",
+		"perPage":    "1",
+		"searchText": "fo",
+	})
+	testGetLogEventsResult(t, res, 1, 1, 1)
+
+	res = getLogEvents(t, map[string]string{
+		"page":       "1",
+		"perPage":    "1",
+		"searchText": "do",
+	})
+	testGetLogEventsResult(t, res, 1, 0, 0)
 }

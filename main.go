@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -110,8 +113,21 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
-func createLogger(conf *config, db *reform.DB) (log.Logger, bugsnag.Log, error) {
-	flog, err := log.NewStderrLogger(conf.FileLog)
+func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
+	elog, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	name := fmt.Sprintf(
+		"/var/log/dappctrl-%s.log", time.Now().Format("2006-01-02"))
+	file, err := os.OpenFile(
+		name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	flog, err := log.NewFileLogger(conf.FileLog, file)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,12 +137,22 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, bugsnag.Log, error) 
 		return nil, nil, err
 	}
 
-	rLog, err := rlog.NewLogger(conf.ReportLog)
+	blog, err := rlog.NewLogger(conf.ReportLog)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return log.NewMultiLogger(rLog, flog, dlog), rLog.(bugsnag.Log), nil
+	logger := log.NewMultiLogger(elog, flog, dlog, blog)
+
+	blog2 := blog.(bugsnag.Log)
+	reporter, err := bugsnag.NewClient(conf.Report, db, blog2)
+	if err != nil {
+		return nil, nil, err
+	}
+	blog2.Reporter(reporter)
+	blog2.Logger(logger)
+
+	return logger, file, nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger,
@@ -164,17 +190,11 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	logger2, rLog, err := createLogger(conf, db)
+	logger2, closer, err := createLogger(conf, db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
-
-	reporter, err := bugsnag.NewClient(conf.Report, db, rLog)
-	if err != nil {
-		logger2.Fatal(err.Error())
-	}
-	rLog.Reporter(reporter)
-	rLog.Logger(logger2)
+	defer closer.Close()
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger2)

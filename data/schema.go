@@ -1,6 +1,7 @@
 package data
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/privatix/dappctrl/util/log"
@@ -43,10 +44,10 @@ const (
 // It can be an offer or access template.
 //reform:templates
 type Template struct {
-	ID   string `json:"id" reform:"id,pk"`
-	Hash string `json:"hash" reform:"hash"`
-	Raw  []byte `json:"raw" reform:"raw"`
-	Kind string `json:"kind" reform:"kind"`
+	ID   string          `json:"id" reform:"id,pk"`
+	Hash string          `json:"hash" reform:"hash"`
+	Raw  json.RawMessage `json:"raw" reform:"raw"`
+	Kind string          `json:"kind" reform:"kind"`
 }
 
 // Product usage reporting types.
@@ -63,17 +64,17 @@ const (
 // Product stores billing and action related settings.
 //reform:products
 type Product struct {
-	ID                     string  `json:"id" reform:"id,pk"`
-	Name                   string  `json:"name" reform:"name"`
-	OfferTplID             *string `json:"offerTplID" reform:"offer_tpl_id"`
-	OfferAccessID          *string `json:"offerAccessID" reform:"offer_access_id"`
-	UsageRepType           string  `json:"usageRepType" reform:"usage_rep_type"`
-	IsServer               bool    `json:"isServer" reform:"is_server"`
-	Salt                   uint64  `json:"-" reform:"salt"`
-	Password               string  `json:"-" reform:"password"`
-	ClientIdent            string  `json:"clientIdent" reform:"client_ident"`
-	Config                 []byte  `json:"config" reform:"config"`
-	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	ID                     string          `json:"id" reform:"id,pk"`
+	Name                   string          `json:"name" reform:"name"`
+	OfferTplID             *string         `json:"offerTplID" reform:"offer_tpl_id"`
+	OfferAccessID          *string         `json:"offerAccessID" reform:"offer_access_id"`
+	UsageRepType           string          `json:"usageRepType" reform:"usage_rep_type"`
+	IsServer               bool            `json:"isServer" reform:"is_server"`
+	Salt                   uint64          `json:"-" reform:"salt"`
+	Password               string          `json:"-" reform:"password"`
+	ClientIdent            string          `json:"clientIdent" reform:"client_ident"`
+	Config                 json.RawMessage `json:"config" reform:"config"`
+	ServiceEndpointAddress *string         `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 }
 
 // Unit used for billing calculation.

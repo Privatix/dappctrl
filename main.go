@@ -18,7 +18,6 @@ import (
 	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/monitor"
@@ -35,6 +34,7 @@ import (
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
+	"github.com/privatix/dappctrl/version"
 )
 
 // Values for versioning.

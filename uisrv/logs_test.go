@@ -147,3 +147,27 @@ func TestGetLogsByMsgText(t *testing.T) {
 	})
 	testGetLogEventsResult(t, res, 1, 0, 0)
 }
+
+func TestGetLogsByContext(t *testing.T) {
+	defer cleanDB(t)
+	setTestUserCredentials(t)
+
+	data.InsertToTestDB(t, testServer.db, &data.LogEvent{
+		Level:   log.Error,
+		Context: []byte("{\"foo\": \"bar\"}"),
+	})
+
+	res := getLogEvents(t, map[string]string{
+		"page":       "1",
+		"perPage":    "1",
+		"searchText": "ba",
+	})
+	testGetLogEventsResult(t, res, 1, 1, 1)
+
+	res = getLogEvents(t, map[string]string{
+		"page":       "1",
+		"perPage":    "1",
+		"searchText": "foo",
+	})
+	testGetLogEventsResult(t, res, 1, 0, 0)
+}

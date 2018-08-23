@@ -120,8 +120,11 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: channelsGetParams,
 
-		View:         data.ChannelTable,
-		FilteringSQL: `channels.agent IN (SELECT eth_addr FROM accounts)`,
+		View: data.ChannelTable,
+		FilteringSQL: filteringSQL{
+			SQL:      `channels.agent IN (SELECT eth_addr FROM accounts)`,
+			JoinWith: "ADD",
+		},
 	})
 }
 

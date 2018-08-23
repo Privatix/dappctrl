@@ -51,7 +51,7 @@ func NewMonitor(conf *Config, logger log.Logger, db *reform.DB,
 	pr *proc.Processor, pscAddr string, pw data.PWDGetter) *Monitor {
 	return &Monitor{
 		conf:   conf,
-		logger: logger,
+		logger: logger.Add("type", "client/bill.Monitor"),
 		db:     db,
 		pr:     pr,
 		psc:    pscAddr,

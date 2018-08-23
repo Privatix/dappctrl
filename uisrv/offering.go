@@ -38,7 +38,8 @@ const (
                                   FROM accounts)
                                AND (SELECT in_use
                                       FROM accounts
-                                     WHERE eth_addr = offerings.agent)`
+                                     WHERE eth_addr = offerings.agent)
+			       ORDER BY block_number_updated DESC`
 )
 
 type clientPreChannelCreateData struct {

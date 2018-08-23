@@ -14,7 +14,8 @@ func (s *Server) handleGetLogs(w http.ResponseWriter, r *http.Request) {
 			{Name: "dateFrom", Field: "time", Op: ">="},
 			{Name: "dateTo", Field: "time", Op: "<"},
 		},
-		View:      data.LogEventView,
-		Paginated: true,
+		View:        data.LogEventView,
+		Paginated:   true,
+		OrderingSQL: "ORDER BY time DESC",
 	})
 }

@@ -22,6 +22,7 @@ type getConf struct {
 	Params       []queryParam
 	View         reform.View
 	FilteringSQL string
+	OrderingSQL  string
 	Paginated    bool
 }
 
@@ -104,9 +105,9 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		conds = append(conds, conf.FilteringSQL)
 	}
 
-	var tail string
+	var filtering, limitOffset string
 	if len(conds) > 0 {
-		tail = "WHERE " + strings.Join(conds, " AND ")
+		filtering = "WHERE " + strings.Join(conds, " AND ")
 	}
 
 	var paginatedItems *paginatedReply
@@ -127,7 +128,7 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		}
 
 		paginatedItems, err = s.newPaginatedReply(
-			conf, tail, args, page, limit)
+			conf, filtering, args, page, limit)
 		if err != nil {
 			logger.Error(
 				fmt.Sprintf("failed to get resources: %v", err))
@@ -135,9 +136,10 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 			return
 		}
 
-		tail += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
+		limitOffset = fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
 	}
 
+	tail := fmt.Sprintf("%s %s %s", filtering, conf.OrderingSQL, limitOffset)
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)
 	if err != nil {
 		logger.Warn(fmt.Sprintf("failed to select: %v", err))

@@ -61,7 +61,7 @@ func (c *cntr) StartSession(args *sesssrv.StartArgs) error {
 }
 
 // StopSession sends a request for session stop.
-func (c *cntr) StopSession(*sesssrv.StopArgs) error {
+func (c *cntr) StopSession(args *sesssrv.StopArgs) error {
 	return sesssrv.Post(c.config.Config, c.logger, c.config.Username,
 		c.config.Password, sesssrv.PathStop, args, nil)
 }

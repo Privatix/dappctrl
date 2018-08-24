@@ -367,11 +367,11 @@ func sendOfferingAction(t *testing.T, id, action string,
 }
 
 func sendClientOfferingAction(t *testing.T, id, action,
-	account string, gasPrice uint64) *http.Response {
+	account string, gasPrice uint64, deposit uint) *http.Response {
 	path := clientOfferingsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
-		&OfferingPutPayload{Action: action, Account: account,
-			GasPrice: gasPrice})
+		&ClientOfferingPutPayload{Action: action, Account: account,
+			GasPrice: gasPrice, Deposit: deposit})
 }
 
 func TestPutOfferingStatus(t *testing.T) {
@@ -450,21 +450,36 @@ func TestPutClientOfferingStatus(t *testing.T) {
 
 	insertItems(t, offer)
 
+	minDeposit := uint(data.MinDeposit(offer))
+
 	res := sendClientOfferingAction(t, offer.ID, "wrong-action",
-		testAgent.ID, testGasPrice)
+		testAgent.ID, testGasPrice, minDeposit)
 
 	checkStatusCode(t, res, http.StatusBadRequest,
 		"failed to put offering status: %d")
 
 	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
-		testAgent.ID, testGasPrice)
+		testAgent.ID, testGasPrice, minDeposit)
 
 	checkStatusCode(t, res, http.StatusOK,
 		"failed to put offering status: %d")
 
+	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
+		testAgent.ID, testGasPrice, minDeposit-1)
+
+	checkStatusCode(t, res, http.StatusBadRequest,
+		"failed to validate custom deposit: %d")
+
+	// Custom deposit is not specified.
+	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
+		testAgent.ID, testGasPrice, 0)
+
+	checkStatusCode(t, res, http.StatusOK,
+		"custom deposit must not be required")
+
 	expectedData, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: testGasPrice, Offering: offer.ID,
-		Account: testAgent.ID})
+		Account: testAgent.ID, Deposit: minDeposit})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,19 +489,12 @@ func TestPutClientOfferingStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var found bool
-
 	for _, j := range jobs {
 		if job, ok := j.(*data.Job); ok {
-			if bytes.Equal(job.Data, expectedData) {
-				found = true
-				data.DeleteFromTestDB(t, testServer.db, job)
+			if !bytes.Equal(job.Data, expectedData) {
+				t.Fatal("job does not contain expected data")
 			}
 		}
-	}
-
-	if !found {
-		t.Fatal("job does not contain expected data")
 	}
 }
 

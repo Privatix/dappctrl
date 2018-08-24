@@ -337,6 +337,12 @@ type JobPublishData struct {
 	GasPrice uint64
 }
 
+// JobCreateChannelData is a data required by client to accept an offering.
+type JobCreateChannelData struct {
+	GasPrice uint64
+	Deposit  uint
+}
+
 // Job is a task within persistent queue.
 //reform:jobs
 type Job struct {

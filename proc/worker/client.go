@@ -27,25 +27,30 @@ import (
 )
 
 func (w *Worker) checkDeposit(logger log.Logger, acc *data.Account,
-	offer *data.Offering) (uint64, error) {
+	offer *data.Offering, deposit uint64) error {
+	logger = logger.Add("deposit", deposit)
+
 	addr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		logger.Error(err.Error())
-		return 0, ErrParseEthAddr
+		return ErrParseEthAddr
 	}
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, addr)
 	if err != nil {
 		logger.Error(err.Error())
-		return 0, ErrPSCReturnBalance
+		return ErrPSCReturnBalance
 	}
 
-	deposit := offer.UnitPrice*offer.MinUnits + offer.SetupPrice
-	if amount.Uint64() < deposit {
-		return 0, ErrInsufficientPSCBalance
+	if deposit > amount.Uint64() {
+		return ErrInsufficientPSCBalance
 	}
 
-	return deposit, nil
+	if deposit < data.MinDeposit(offer) {
+		return ErrSmallDeposit
+	}
+
+	return nil
 }
 
 func (w *Worker) clientValidateChannelForClose(
@@ -88,7 +93,7 @@ func (w *Worker) clientPreChannelCreateCheckSupply(logger log.Logger,
 
 func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 	job *data.Job, acc *data.Account, offer *data.Offering,
-	offerHash common.Hash, deposit uint64) error {
+	offerHash common.Hash, deposit uint64, gasPrice *big.Int) error {
 	agentAddr, err := data.HexToAddress(offer.Agent)
 	if err != nil {
 		logger.Error(err.Error())
@@ -102,6 +107,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.CreateChannel
+	auth.GasPrice = gasPrice
 	tx, err := w.ethBack.PSCCreateChannel(auth,
 		agentAddr, offerHash, big.NewInt(int64(deposit)))
 	if err != nil {
@@ -139,6 +145,7 @@ type ClientPreChannelCreateData struct {
 	Account  string `json:"account"`
 	Offering string `json:"offering"`
 	GasPrice uint64 `json:"gasPrice"`
+	Deposit  uint64 `json:"deposit"`
 }
 
 // ClientPreChannelCreate triggers a channel creation.
@@ -162,8 +169,12 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 
 	logger = logger.Add("account", acc, "offering", offering)
 
-	deposit, err := w.checkDeposit(logger, acc, offering)
-	if err != nil {
+	deposit := jdata.Deposit
+	if jdata.Deposit == 0 {
+		deposit = data.MinDeposit(offering)
+	}
+
+	if err := w.checkDeposit(logger, acc, offering, deposit); err != nil {
 		return err
 	}
 
@@ -221,8 +232,13 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		}
 	}
 
+	var gasPrice *big.Int
+	if jdata.GasPrice != 0 {
+		gasPrice = big.NewInt(int64(jdata.GasPrice))
+	}
+
 	return w.clientPreChannelCreateSaveTX(logger,
-		job, acc, offering, offerHash, deposit)
+		job, acc, offering, offerHash, deposit, gasPrice)
 }
 
 // ClientAfterChannelCreate activates channel and triggers endpoint retrieval.
@@ -760,8 +776,9 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 		return err
 	}
 
-	deposit, err := w.checkDeposit(logger, acc, offer)
-	if err != nil {
+	deposit := data.MinDeposit(offer)
+
+	if err := w.checkDeposit(logger, acc, offer, deposit); err != nil {
 		return err
 	}
 

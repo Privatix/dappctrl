@@ -39,13 +39,13 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
+
 	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
 		Offering: fxt.Offering.ID,
 	})
 
-	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
-		fxt.Offering.SetupPrice
+	minDeposit := data.MinDeposit(fxt.Offering)
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
@@ -56,6 +56,15 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	issued := time.Now()
 	env.ethBack.offerCurrentSupply = 1
+
+	customDeposit := 99
+	env.ethBack.balancePSC = big.NewInt(100)
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
+		Account:  fxt.Account.ID,
+		Offering: fxt.Offering.ID,
+		Deposit:  99,
+	})
+
 	runJob(t, env.worker.ClientPreChannelCreate, fxt.job)
 
 	var tx data.EthTx
@@ -69,7 +78,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		ch.Offering != fxt.Offering.ID || ch.Block != 0 ||
 		ch.ChannelStatus != data.ChannelPending ||
 		ch.ServiceStatus != data.ServicePending ||
-		ch.TotalDeposit != minDeposit {
+		ch.TotalDeposit != uint64(customDeposit) {
 		t.Fatalf("wrong channel content")
 	}
 
@@ -89,6 +98,15 @@ func TestClientPreChannelCreate(t *testing.T) {
 	env.selectOneTo(t, &agentUserRec, "WHERE eth_addr=$1 and public_key=$2",
 		fxt.Account.EthAddr, fxt.Account.PublicKey)
 	env.deleteFromTestDB(t, &agentUserRec)
+
+	env.ethBack.testCalled(t,
+		"PSCCreateChannel",
+		data.TestToAddress(t, fxt.Account.EthAddr),
+		env.gasConf.PSC.CreateChannel,
+		data.TestToAddress(t, fxt.Account.EthAddr),
+		[common.HashLength]byte(data.TestToHash(t, fxt.Offering.Hash)),
+		big.NewInt(int64(customDeposit)),
+	)
 }
 
 func TestClientAfterChannelCreate(t *testing.T) {

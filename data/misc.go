@@ -227,3 +227,8 @@ func ChannelKey(client, agent string, block uint32,
 		agentAddr.Bytes(), blockBytes[:],
 		common.BytesToHash(hash).Bytes()), nil
 }
+
+// MinDeposit calculates minimal deposit required to accept the offering.
+func MinDeposit(offering *Offering) uint64 {
+	return offering.MinUnits*offering.UnitPrice + offering.SetupPrice
+}

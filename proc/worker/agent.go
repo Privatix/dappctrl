@@ -557,7 +557,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	minDeposit := offering.MinUnits*offering.UnitPrice + offering.SetupPrice
+	minDeposit := data.MinDeposit(offering)
 
 	agent, err := w.account(logger, offering.Agent)
 	if err != nil {

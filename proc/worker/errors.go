@@ -27,6 +27,7 @@ const (
 	ErrInsufficientPTCBalance
 	ErrInsufficientPSCBalance
 	ErrInsufficientEthBalance
+	ErrSmallDeposit
 	ErrFindApprovalBalanceData
 	ErrPTCRetrieveBalance
 	ErrPTCIncreaseApproval
@@ -98,6 +99,7 @@ func init() {
 		ErrInsufficientPTCBalance:       "insufficient PTC balance",
 		ErrInsufficientPSCBalance:       "insufficient PSC balance",
 		ErrInsufficientEthBalance:       "insufficient eth balance",
+		ErrSmallDeposit:                 "deposit is too small",
 		ErrFindApprovalBalanceData:      "could not find PTC approval data",
 		ErrPTCRetrieveBalance:           "could not get PTC balance",
 		ErrPTCIncreaseApproval:          "could not increase approval (PTC)",

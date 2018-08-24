@@ -65,7 +65,7 @@ func NewPusher(conf *Config, srv *srv.Config, user, pass string,
 		server:   srv,
 		username: user,
 		password: pass,
-		logger:   logger,
+		logger:   logger.Add("type", "svc/dappvpn.Pusher"),
 		ip:       ip,
 	}
 }

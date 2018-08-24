@@ -91,7 +91,7 @@ type queue struct {
 // NewQueue creates a new job queue.
 func NewQueue(conf *Config, logger log.Logger, db *reform.DB,
 	handlers HandlerMap) Queue {
-	l := logger.Add("service", "job queue")
+	l := logger.Add("type", "job.Queue")
 	return &queue{
 		conf:     conf,
 		logger:   l,

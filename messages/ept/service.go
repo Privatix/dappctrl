@@ -65,9 +65,13 @@ func newResult(tpl *Message, err error) *result {
 // the Endpoint Message.
 func New(db *reform.DB, logger log.Logger, payAddr string,
 	timeout uint) (*Service, error) {
-	return &Service{db: db, msgChan: make(chan *req), payAddr: payAddr,
+	return &Service{
+		db:      db,
+		msgChan: make(chan *req),
+		payAddr: payAddr,
 		timeout: time.Duration(timeout) * time.Second,
-		logger:  logger}, nil
+		logger:  logger.Add("type", "messages/ept.Service"),
+	}, nil
 }
 
 // EndpointMessage returns the endpoint message object.

@@ -27,8 +27,11 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		Params: []queryParam{
 			{Name: "key", Field: "key"},
 		},
-		View:         data.SettingTable,
-		FilteringSQL: "permissions > 0",
+		View: data.SettingTable,
+		FilteringSQL: filteringSQL{
+			SQL:      "permissions > 0",
+			JoinWith: "ADD",
+		},
 	})
 }
 

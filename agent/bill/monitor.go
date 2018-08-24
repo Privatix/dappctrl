@@ -49,7 +49,7 @@ func NewMonitor(interval uint64, db *reform.DB,
 
 	return &Monitor{
 		db:       db,
-		logger:   logger,
+		logger:   logger.Add("type", "agent/bill.Monitor"),
 		pr:       pr,
 		interval: interval,
 	}, nil
@@ -151,8 +151,8 @@ func (m *Monitor) VerifyBillingLags() error {
                GROUP BY channels.id, offer.billing_interval,
                      offer.setup_price, offer.unit_price,
                      offer.max_billing_unit_lag
-              HAVING COALESCE(SUM(ses.units_used), 0) / 
-	      offer.billing_interval - (channels.receipt_balance - offer.setup_price ) / 
+              HAVING COALESCE(SUM(ses.units_used), 0) /
+	      offer.billing_interval - (channels.receipt_balance - offer.setup_price ) /
 	      offer.unit_price > offer.max_billing_unit_lag;`
 
 	return m.processEachChannel(query, m.suspendService)
@@ -181,8 +181,8 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
                GROUP BY channels.id, offer.billing_interval,
                      offer.setup_price, offer.unit_price,
                      offer.max_billing_unit_lag
-              HAVING COALESCE(SUM(ses.units_used), 0) / 
-	      offer.billing_interval - (channels.receipt_balance - offer.setup_price) / 
+              HAVING COALESCE(SUM(ses.units_used), 0) /
+	      offer.billing_interval - (channels.receipt_balance - offer.setup_price) /
 	      offer.unit_price <= offer.max_billing_unit_lag;`
 
 	return m.processEachChannel(query, m.unsuspendService)

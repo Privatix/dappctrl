@@ -187,8 +187,11 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 			{Name: "maxUnitPrice", Field: "unit_price", Op: "<="},
 			{Name: "country", Field: "country", Op: "in"},
 		},
-		View:         data.OfferingTable,
-		FilteringSQL: clientGetOfferFilter,
+		View: data.OfferingTable,
+		FilteringSQL: filteringSQL{
+			SQL:      clientGetOfferFilter,
+			JoinWith: "ADD",
+		},
 	})
 }
 
@@ -201,8 +204,11 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 			{Name: "product", Field: "product"},
 			{Name: "offerStatus", Field: "offer_status"},
 		},
-		View:         data.OfferingTable,
-		FilteringSQL: agentGetOfferFilter,
+		View: data.OfferingTable,
+		FilteringSQL: filteringSQL{
+			SQL:      agentGetOfferFilter,
+			JoinWith: "ADD",
+		},
 	})
 }
 

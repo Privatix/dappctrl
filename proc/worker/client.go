@@ -72,7 +72,8 @@ func (w *Worker) clientValidateChannelForClose(
 
 func (w *Worker) clientPreChannelCreateCheckSupply(logger log.Logger,
 	offer *data.Offering, offerHash common.Hash) error {
-	supply, err := w.ethBack.PSCOfferingSupply(&bind.CallOpts{}, offerHash)
+	_, _, _, supply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, offerHash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCOfferingSupply

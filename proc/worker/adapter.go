@@ -45,8 +45,10 @@ type EthBackend interface {
 
 	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
 
-	PSCOfferingSupply(opts *bind.CallOpts,
-		hash [common.HashLength]byte) (uint16, error)
+	PSCGetOfferingInfo(opts *bind.CallOpts,
+		hash [common.HashLength]byte) (agentAddr common.Address,
+		minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
+		updateBlockNumber uint32, active bool, err error)
 
 	PSCCreateChannel(opts *bind.TransactOpts,
 		agent common.Address, hash [common.HashLength]byte,
@@ -215,18 +217,22 @@ func (b *ethBackendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
 	return tx, nil
 }
 
-func (b *ethBackendInstance) PSCOfferingSupply(
-	opts *bind.CallOpts, hash [common.HashLength]byte) (uint16, error) {
+func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
+	hash [common.HashLength]byte) (agentAddr common.Address,
+	minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
+	updateBlockNumber uint32, active bool, err error) {
 	ctx2, cancel := b.AddTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
 
-	supply, err := b.psc.GetOfferingSupply(opts, hash)
+	agentAddr, minDeposit, maxSupply, currentSupply, updateBlockNumber,
+		active, err = b.psc.GetOfferingInfo(opts, hash)
 	if err != nil {
 		err = fmt.Errorf("failed to get PSC offering supply: %s", err)
 	}
-	return supply, err
+	return agentAddr, minDeposit, maxSupply, currentSupply,
+		updateBlockNumber, active, err
 }
 
 func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,

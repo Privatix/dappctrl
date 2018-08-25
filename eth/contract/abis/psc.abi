@@ -61,6 +61,15 @@
 		"type": "function"
 	},
 	{
+		"constant": false,
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"constant": true,
 		"inputs": [
 			{
@@ -138,7 +147,7 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "newOwner",
+				"name": "_newOwner",
 				"type": "address"
 			}
 		],
@@ -441,6 +450,18 @@
 				"indexed": true,
 				"name": "previousOwner",
 				"type": "address"
+			}
+		],
+		"name": "OwnershipRenounced",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "previousOwner",
+				"type": "address"
 			},
 			{
 				"indexed": true,
@@ -711,11 +732,31 @@
 				"type": "bytes32"
 			}
 		],
-		"name": "getOfferingSupply",
+		"name": "getOfferingInfo",
 		"outputs": [
 			{
 				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "uint192"
+			},
+			{
+				"name": "",
 				"type": "uint16"
+			},
+			{
+				"name": "",
+				"type": "uint16"
+			},
+			{
+				"name": "",
+				"type": "uint32"
+			},
+			{
+				"name": "",
+				"type": "bool"
 			}
 		],
 		"payable": false,
@@ -881,248 +922,6 @@
 		],
 		"payable": false,
 		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_deposit",
-				"type": "uint192"
-			},
-			{
-				"name": "_authentication_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "throwEventLogChannelCreated",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_added_deposit",
-				"type": "uint192"
-			}
-		],
-		"name": "throwEventLogChannelToppedUp",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_balance",
-				"type": "uint192"
-			}
-		],
-		"name": "throwEventLogChannelCloseRequested",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_min_deposit",
-				"type": "uint256"
-			},
-			{
-				"name": "_current_supply",
-				"type": "uint16"
-			}
-		],
-		"name": "throwEventLogOfferingCreated",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "throwEventLogOfferingDeleted",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_endpoint_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "throwEventLogOfferingEndpoint",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "throwEventLogOfferingPopedUp",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_balance",
-				"type": "uint192"
-			}
-		],
-		"name": "throwEventLogCooperativeChannelClose",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
-				"name": "_agent_address",
-				"type": "address"
-			},
-			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_balance",
-				"type": "uint192"
-			}
-		],
-		"name": "throwEventLogUnCooperativeChannelClose",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

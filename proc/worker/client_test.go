@@ -55,7 +55,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.offerSupply = 1
+	env.ethBack.offerCurrentSupply = 1
 	runJob(t, env.worker.ClientPreChannelCreate, fxt.job)
 
 	var tx data.EthTx

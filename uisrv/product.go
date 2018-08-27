@@ -95,7 +95,7 @@ func (s *Server) handleGetProducts(w http.ResponseWriter, r *http.Request) {
 		View:   data.ProductTable,
 		FilteringSQL: filteringSQL{
 			SQL:      `products.is_server`,
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }
@@ -108,7 +108,7 @@ func (s *Server) handleGetClientProducts(w http.ResponseWriter,
 		View:   data.ProductTable,
 		FilteringSQL: filteringSQL{
 			SQL:      `NOT products.is_server`,
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }

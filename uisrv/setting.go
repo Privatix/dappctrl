@@ -30,7 +30,7 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 		View: data.SettingTable,
 		FilteringSQL: filteringSQL{
 			SQL:      "permissions > 0",
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }

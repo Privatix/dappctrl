@@ -190,7 +190,7 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 		View: data.OfferingTable,
 		FilteringSQL: filteringSQL{
 			SQL:      clientGetOfferFilter,
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }
@@ -207,7 +207,7 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 		View: data.OfferingTable,
 		FilteringSQL: filteringSQL{
 			SQL:      agentGetOfferFilter,
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }

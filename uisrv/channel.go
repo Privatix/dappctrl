@@ -123,7 +123,7 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 		View: data.ChannelTable,
 		FilteringSQL: filteringSQL{
 			SQL:      `channels.agent IN (SELECT eth_addr FROM accounts)`,
-			JoinWith: "ADD",
+			JoinWith: "AND",
 		},
 	})
 }

@@ -3,6 +3,7 @@
 package util
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"testing"
@@ -38,5 +39,15 @@ func TestExpectResult(t *testing.T, op string, expected, actual error) {
 	if expected != actual && !sameContent {
 		t.Fatalf("unexpected '%s' result: expected '%v', returned "+
 			"'%v' (%s)", op, expected, actual, Caller())
+	}
+}
+
+// TestUnmarshalJSON unmarshals a given JSON into a given object.
+func TestUnmarshalJSON(t *testing.T, data []byte, v interface{}) {
+	if data != nil {
+		if err := json.Unmarshal(data, v); err != nil {
+			t.Errorf("failed to unmarshal JSON: '%s' (%s)",
+				err, Caller())
+		}
 	}
 }

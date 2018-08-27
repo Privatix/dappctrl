@@ -1,21 +1,21 @@
 package ui
 
 import (
-	"context"
-
-	"github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 )
 
+// AcceptOfferingResult is an AcceptOffering result.
+type AcceptOfferingResult struct {
+	Channel string `json:"channel"`
+}
+
 // AcceptOffering initiates JobClientPreChannelCreate job and subscribes to job
 // results of the corresponding flow.
-func (h *Handler) AcceptOffering(ctx context.Context,
-	password, account, offering string,
-	gasPrice uint64) (*rpc.Subscription, error) {
+func (h *Handler) AcceptOffering(password, account, offering string,
+	gasPrice uint64) (*AcceptOfferingResult, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
 		"account", account, "offering", offering, "gasPrice", gasPrice)
 
@@ -42,5 +42,5 @@ func (h *Handler) AcceptOffering(ctx context.Context,
 		return nil, ErrInternal
 	}
 
-	return h.subscribeToJobResults(ctx, logger, rid)
+	return &AcceptOfferingResult{rid}, nil
 }

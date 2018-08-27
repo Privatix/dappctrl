@@ -46,6 +46,7 @@ For better understanding, take a look at [git-flow cheatsheet](https://danielkum
 
 We adhere Google code style guides:
 * Golang:https://github.com/golang/go/wiki/CodeReviewComments
+* 80 character line length
 
 SQL style guide: http://www.sqlstyle.guide/
 

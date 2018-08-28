@@ -227,13 +227,9 @@ func TestGetOffering(t *testing.T) {
 	testGetOfferings(t, "", "", data.OfferEmpty, 1)
 }
 
-func testGetClientOfferingsOrdered(t *testing.T, minp, maxp,
-	country string, exp int) {
-	res := getResources(t, clientOfferingsPath,
-		map[string]string{
-			"minUnitPrice": minp,
-			"maxUnitPrice": maxp,
-			"country":      country})
+func testGetClientOfferingsOrdered(
+	t *testing.T, params map[string]string, exp int) {
+	res := getResources(t, clientOfferingsPath, params)
 	ret := testGetResources(t, res, exp)
 
 	// Test the order.
@@ -256,7 +252,7 @@ func TestGetClientOffering(t *testing.T) {
 
 	createOfferingFixtures(t)
 	// Get empty list.
-	testGetClientOfferingsOrdered(t, "", "", "", 0)
+	testGetClientOfferingsOrdered(t, nil, 0)
 
 	// Insert test offerings.
 	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
@@ -301,26 +297,51 @@ func TestGetClientOffering(t *testing.T) {
 
 	insertItems(t, off1, off2, off3, off4, off5, off6)
 
-	// all non-local offerings
-	testGetClientOfferingsOrdered(t, "", "", "", 2)
+	// All non-local offerings
+	testGetClientOfferingsOrdered(t, nil, 2)
 
 	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
 	price := strconv.FormatUint(off1.UnitPrice, 10)
 	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
 
-	// price range
-	testGetClientOfferingsOrdered(t, "", "", "", 2)           // inside range
-	testGetClientOfferingsOrdered(t, "", highPrice, "", 2)    // inside range
-	testGetClientOfferingsOrdered(t, "", lowPrice, "", 0)     // above range
-	testGetClientOfferingsOrdered(t, highPrice, "", "", 0)    // below range
-	testGetClientOfferingsOrdered(t, lowPrice, price, "", 2)  // on edge
-	testGetClientOfferingsOrdered(t, price, highPrice, "", 2) // on edge
-	testGetClientOfferingsOrdered(t, price, price, "", 2)     // on edge
+	// Filter by price range
+	testGetClientOfferingsOrdered(t, nil, 2) // inside range
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"maxUnitPrice": highPrice,
+	}, 2) // inside range
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"maxUnitPrice": lowPrice}, 0) // above range
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"minUnitPrice": highPrice}, 0) // below range
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": lowPrice,
+		"maxUnitPrice": price}, 2) // on edge
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": price,
+		"maxUnitPrice": highPrice}, 2) // on edge
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": price,
+		"maxUnitPrice": price}, 2) // on edge
 
-	// country filter
-	testGetClientOfferingsOrdered(t, "", "", "US", 1)
-	testGetClientOfferingsOrdered(t, "", "", "SU", 1)
-	testGetClientOfferingsOrdered(t, "", "", "US,SU", 2)
+	// Filter by country
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "US"}, 1)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "SU"}, 1)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "US,SU"}, 2)
+
+	// Filter by agent
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"agent": genEthAddr(t)}, 0)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"agent": off1.Agent}, 1)
+
+	// Get offering by id
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"id": util.NewUUID()}, 0)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"id": off6.ID}, 1)
 }
 
 func getOfferingStatus(t *testing.T, id string) *http.Response {

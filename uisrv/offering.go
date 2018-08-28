@@ -181,15 +181,22 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var filtering string
+	if r.FormValue("id") == "" {
+		filtering = clientGetOfferFilter
+	}
+
 	s.handleGetResources(w, r, &getConf{
 		Params: []queryParam{
 			{Name: "minUnitPrice", Field: "unit_price", Op: ">="},
 			{Name: "maxUnitPrice", Field: "unit_price", Op: "<="},
 			{Name: "country", Field: "country", Op: "in"},
+			{Name: "agent", Field: "agent"},
+			{Name: "id", Field: "id"},
 		},
 		View: data.OfferingTable,
 		FilteringSQL: filteringSQL{
-			SQL:      clientGetOfferFilter,
+			SQL:      filtering,
 			JoinWith: "AND",
 		},
 	})

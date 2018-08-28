@@ -73,6 +73,7 @@ const (
 	ErrChallengePeriodIsNotOver
 	ErrWrongOfferingMsgSignature
 	ErrOfferingExists
+	ErrOfferingDeposit
 )
 
 func init() {
@@ -144,5 +145,6 @@ func init() {
 		ErrChallengePeriodIsNotOver:     "cannot settle yet: challenge period is not over",
 		ErrWrongOfferingMsgSignature:    "wrong offering msg's signature",
 		ErrOfferingExists:               "offering with a given hash already exists",
+		ErrOfferingDeposit:              "incorrect offering deposit",
 	})
 }

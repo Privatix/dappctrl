@@ -696,6 +696,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	expectedOffering.Status = data.MsgChPublished
 	expectedOffering.OfferStatus = data.OfferRegister
 	expectedOffering.Country = "US"
+	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
@@ -708,6 +709,11 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
+	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.offerMaxSupply = expectedOffering.Supply
+	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+		data.MinDeposit(&expectedOffering))
+
 	// Create eth log records used by job.
 	var curSupply uint16 = expectedOffering.Supply
 	logData, err := logOfferingCreatedDataArguments.Pack(curSupply)
@@ -715,7 +721,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		t.Fatal(err)
 	}
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
-	minDeposit := big.NewInt(10)
+	minDeposit := big.NewInt(10000)
 	topics := data.LogTopics{
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
@@ -846,6 +852,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	expectedOffering.Status = data.MsgChPublished
 	expectedOffering.OfferStatus = data.OfferRegister
 	expectedOffering.Country = "US"
+	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
@@ -857,6 +864,11 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.offerMaxSupply = expectedOffering.Supply
+	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)

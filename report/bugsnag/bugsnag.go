@@ -118,20 +118,15 @@ func metadata(ethAddr string) bugsnag.MetaData {
 	}
 }
 
-func accEthAddr(db *reform.DB) string {
-	var tempAddr string
+func accEthAddr(db *reform.DB) (addr string) {
 	if err := db.QueryRow(`
 		           SELECT eth_addr
                              FROM accounts
                             ORDER BY is_default
-                            LIMIT 1;`).Scan(&tempAddr); err != nil {
+                            LIMIT 1;`).Scan(&addr); err != nil {
 		return defaultAccEth
 	}
-	addr, err := data.HexToAddress(tempAddr)
-	if err != nil {
-		return defaultAccEth
-	}
-	return addr.String()
+	return
 }
 
 func user(appID string) bugsnag.User {

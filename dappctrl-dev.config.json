@@ -36,7 +36,7 @@
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x0769912c397e5c2817dd699c131d0bcf2be12537"
+            "PSCAddrHex": "0xae6bfd07c02b1fca7e1cbc160a87729f3fafb794"
         },
         "GethURL": "https://rinkeby.infura.io/k7mXdaE6eHJ4xMnOvx8Z",
         "Timeout": 10,

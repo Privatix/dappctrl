@@ -248,10 +248,10 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 		td.offering[0].Hash, // offering hash
 	}, nil)
 
-	queue.expect(data.JobAgentAfterOfferingMsgBCPublish,
+	queue.expect(data.JobAgentAfterOfferingPopUp,
 		func(j *data.Job) bool {
 			return j.Type ==
-				data.JobAgentAfterOfferingMsgBCPublish
+				data.JobAgentAfterOfferingPopUp
 		})
 
 	// LogCooperativeChannelClose good

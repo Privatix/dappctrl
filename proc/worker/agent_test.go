@@ -662,7 +662,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 
 	if err := env.worker.AgentPreOfferingPopUp(
 		fxt.job); err != ErrUncompletedJobsExists {
-		t.Fatal("active jobs not exists")
+		t.Fatal("no active jobs")
 	}
 
 	job := &data.Job{}
@@ -698,4 +698,41 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash))
+}
+
+func TestAgentAfterOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	clientAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+
+	topics := data.LogTopics{
+		common.BytesToHash(agentAddr.Bytes()),
+		common.BytesToHash(clientAddr.Bytes()),
+		offeringHash,
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	runJob(t, env.worker.AgentAfterOfferingPopUp, fxt.job)
+
+	offering := data.Offering{}
+	env.findTo(t, &offering, fxt.Offering.ID)
+
+	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+		t.Fatal("offering block number was not updated")
+	}
 }

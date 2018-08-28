@@ -220,7 +220,7 @@ var agentOfferingSchedulers = map[common.Hash]funcAndType{
 	},
 	common.HexToHash(eth.EthOfferingPoppedUp): {
 		(*Monitor).scheduleAgentOfferingCreated,
-		data.JobAgentAfterOfferingMsgBCPublish,
+		data.JobAgentAfterOfferingPopUp,
 	},
 }
 

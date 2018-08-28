@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -767,6 +768,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
+	logger = logger.Add("offering", offering.ID)
+
 	if offering.OfferStatus != data.OfferRegister {
 		return ErrOfferNotRegistered
 	}
@@ -785,6 +788,53 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
+	}
+
+	query := `SELECT count(*)
+		    FROM jobs
+		   WHERE (jobs.type = $1
+                         OR jobs.type = $2)
+                         AND jobs.status = $3
+		         AND jobs.related_id = $4;`
+
+	var count uint64
+	err = w.db.QueryRow(query, data.JobAgentPreOfferingDelete,
+		data.JobAgentPreOfferingPopUp, data.JobActive,
+		offering.ID).Scan(&count)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if count != 0 {
+		return ErrUncompletedJobsExists
+	}
+
+	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, offeringHash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if !active {
+		return ErrOfferingNotActive
+	}
+
+	period, err := w.ethBack.PSCGetChallengePeriod(&bind.CallOpts{})
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if uint64(updateBlockNumber+period) > lastBlock.Uint64() {
+		return ErrPopUpOfferingTryAgain
 	}
 
 	auth := bind.NewKeyedTransactor(key)

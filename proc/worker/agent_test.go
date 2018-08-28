@@ -660,6 +660,34 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	fxt.Offering.OfferStatus = data.OfferRegister
 	env.updateInTestDB(t, fxt.Offering)
 
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrUncompletedJobsExists {
+		t.Fatal("active jobs not exists")
+	}
+
+	job := &data.Job{}
+	env.selectOneTo(t, job, "WHERE related_id = $1", fxt.Offering.ID)
+
+	job.Status = data.JobDone
+
+	env.updateInTestDB(t, job)
+
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrOfferingNotActive {
+		t.Fatal("offering is active")
+	}
+
+	env.ethBack.offeringIsActive = true
+	env.ethBack.challengePeriod = 300
+	env.ethBack.offerUpdateBlockNumber = 5
+
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrPopUpOfferingTryAgain {
+		t.Fatal("period of challenge has expired")
+	}
+
+	env.ethBack.blockNumber = big.NewInt(1000)
+
 	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
 
 	// Test transaction was recorded.

@@ -34,6 +34,7 @@ type testEthBackend struct {
 	offerMaxSupply         uint16
 	offerUpdateBlockNumber uint32
 	offeringIsActive       bool
+	challengePeriod        uint32
 }
 
 func newTestEthBackend(pscAddr common.Address) *testEthBackend {
@@ -205,6 +206,11 @@ func (b *testEthBackend) PSCGetOfferingInfo(opts *bind.CallOpts,
 	return b.offeringAgent, b.offerMinDeposit, b.offerMaxSupply,
 		b.offerCurrentSupply, b.offerUpdateBlockNumber,
 		b.offeringIsActive, nil
+}
+
+func (b *testEthBackend) PSCGetChallengePeriod(
+	opts *bind.CallOpts) (uint32, error) {
+	return b.challengePeriod, nil
 }
 
 const (

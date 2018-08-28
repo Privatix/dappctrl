@@ -202,7 +202,7 @@
     },
     "SOMC": {
         "ReconnPeriod": 5000,
-        "URL": "ws://89.38.96.53:8080"
+        "URL": "ws://190.2.137.9:8080"
     },
     "StaticPassword": "",
     "Report": {

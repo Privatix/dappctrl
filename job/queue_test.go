@@ -243,9 +243,9 @@ func TestSubscribe(t *testing.T) {
 
 	util.TestExpectResult(t, "Add job", nil, q.Add(&job1))
 	util.TestExpectResult(t, "Subscribe", nil,
-		q.Subscribe(job1.RelatedID, "1234", subf))
+		q.Subscribe([]string{job1.RelatedID}, "1234", subf))
 	util.TestExpectResult(t, "Subscribe", ErrSubscriptionExists,
-		q.Subscribe(job1.RelatedID, "1234", subf))
+		q.Subscribe([]string{job1.RelatedID}, "1234", subf))
 
 	if params := <-subch; params.job.ID != job1.ID ||
 		params.result == nil || params.result.Error() != "some error" {
@@ -259,9 +259,9 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	util.TestExpectResult(t, "Unsubscribe", nil,
-		q.Unsubscribe(job1.RelatedID, "1234"))
+		q.Unsubscribe([]string{job1.RelatedID}, "1234"))
 	util.TestExpectResult(t, "Unsubscribe", ErrSubscriptionNotFound,
-		q.Unsubscribe(job1.RelatedID, "1234"))
+		q.Unsubscribe([]string{job1.RelatedID}, "1234"))
 }
 
 func TestMain(m *testing.M) {

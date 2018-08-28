@@ -11,6 +11,7 @@ const (
 	ErrInternal
 	ErrAccountNotFound
 	ErrOfferingNotFound
+	ErrBadObjectType
 )
 
 var errMsgs = errors.Messages{
@@ -18,6 +19,7 @@ var errMsgs = errors.Messages{
 	ErrInternal:         "internal server error",
 	ErrAccountNotFound:  "account not found",
 	ErrOfferingNotFound: "offering not found",
+	ErrBadObjectType:    "bad object type",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

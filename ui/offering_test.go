@@ -3,9 +3,7 @@
 package ui
 
 import (
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -18,47 +16,35 @@ func TestAcceptOffering(t *testing.T) {
 
 	var j *data.Job
 	handler.queue = job.QueueMock(func(method int, j2 *data.Job,
-		relatedID, subID string, subFunc job.SubFunc) error {
+		relatedIDs []string, subID string, subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
-		case job.MockSubscribe:
-			go func() {
-				time.Sleep(time.Millisecond)
-				subFunc(j, nil)
-				subFunc(j, errors.New("some error"))
-			}()
+		default:
+			t.Fatal("unexpected queue call")
 		}
 		return nil
 	})
 
-	ch := make(chan *JobResult)
-
-	sub, err := subscribe(client, ch, "acceptOffering",
+	_, err := handler.AcceptOffering(
 		"wrong-password", fxt.UserAcc.ID, fxt.Offering.ID, 12345)
 	util.TestExpectResult(t, "AcceptOffering", ErrAccessDenied, err)
 
-	sub, err = subscribe(client, ch, "acceptOffering",
+	_, err = handler.AcceptOffering(
 		data.TestPassword, util.NewUUID(), fxt.Offering.ID, 12345)
 	util.TestExpectResult(t, "AcceptOffering", ErrAccountNotFound, err)
 
-	sub, err = subscribe(client, ch, "acceptOffering",
+	_, err = handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, util.NewUUID(), 12345)
 	util.TestExpectResult(t, "AcceptOffering", ErrOfferingNotFound, err)
 
-	sub, err = subscribe(client, ch, "acceptOffering",
+	res, err := handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, fxt.Offering.ID, 12345)
 	util.TestExpectResult(t, "AcceptOffering", nil, err)
-	defer sub.Unsubscribe()
 
-	res := <-ch
-	if res.Type != data.JobClientPreChannelCreate || res.Result != nil {
-		t.Fatalf("wrong data for the first notification")
-	}
-
-	res = <-ch
-	if res.Type != data.JobClientPreChannelCreate ||
-		res.Result.Message != "some error" {
-		t.Fatalf("wrong data for the second notification")
+	if res == nil || j == nil || j.RelatedType != data.JobChannel ||
+		j.RelatedID != res.Channel ||
+		j.Type != data.JobClientPreChannelCreate {
+		t.Fatalf("wrong result data")
 	}
 }

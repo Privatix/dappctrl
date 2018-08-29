@@ -438,7 +438,7 @@ func TestUpdateChannelStatus(t *testing.T) {
 		data.JobClientPreServiceUnsuspend, false)
 
 	gasPriceSettings := &data.Setting{
-		Key:   data.DefaultGasPriceKey,
+		Key:   data.SettingDefaultGasPrice,
 		Value: "20000000",
 	}
 	data.InsertToTestDB(t, testServer.db, gasPriceSettings)

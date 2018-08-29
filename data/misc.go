@@ -143,23 +143,23 @@ func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
 // IsAgent specifies user role. "true" - agent. "false" - client.
 func IsAgent(db *reform.Querier) (bool, error) {
 	var setting Setting
-	err := db.FindByPrimaryKeyTo(&setting, IsAgentKey)
+	err := db.FindByPrimaryKeyTo(&setting, SettingIsAgent)
 	if err != nil {
 		var err2 error
 
 		if err == sql.ErrNoRows {
 			err2 = fmt.Errorf("key %s is not exist"+
-				" in Setting table", IsAgentKey)
+				" in Setting table", SettingIsAgent)
 		} else {
 			err2 = fmt.Errorf("failed to get key %s"+
-				" from Setting table", IsAgentKey)
+				" from Setting table", SettingIsAgent)
 		}
 		return false, err2
 	}
 	val, err := strconv.ParseBool(setting.Value)
 	if err != nil {
 		return false, fmt.Errorf("key %s from Setting table"+
-			" has an incorrect format", IsAgentKey)
+			" has an incorrect format", SettingIsAgent)
 	}
 	return val, nil
 }

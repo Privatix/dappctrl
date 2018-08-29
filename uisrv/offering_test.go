@@ -365,41 +365,51 @@ func TestPutOfferingStatus(t *testing.T) {
 			http.StatusBadRequest, res.Status)
 	}
 
-	testPutOfferingStatusCreatesJob(t, fxt, PublishOffering,
-		data.JobAgentPreOfferingMsgBCPublish)
+	testPutOfferingStatusCreatesJob := func(
+		action, jobType string, sentGasPrice, expectedGasPrice uint64) {
+		res := sendOfferingAction(t, fxt.Offering.ID, action,
+			sentGasPrice)
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("got: %v (%s)", res.Status, util.Caller())
+		}
+		job := &data.Job{}
+		data.FindInTestDB(t, testServer.db, job, "related_id",
+			fxt.Offering.ID)
+		defer data.DeleteFromTestDB(t, testServer.db, job)
 
-	testPutOfferingStatusCreatesJob(t, fxt, PopupOffering,
-		data.JobAgentPreOfferingPopUp)
+		if job.Type != jobType {
+			t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
+				jobType, job.Type, util.Caller())
+		}
 
-	testPutOfferingStatusCreatesJob(t, fxt, DeactivateOffering,
-		data.JobAgentPreOfferingDelete)
-}
-
-func testPutOfferingStatusCreatesJob(t *testing.T, fxt *data.TestFixture,
-	action string, jobType string) {
-	testGasPrice := uint64(1)
-
-	res := sendOfferingAction(t, fxt.Offering.ID, action,
-		testGasPrice)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("got: %v (%s)", res.Status, util.Caller())
-	}
-	job := &data.Job{}
-	data.FindInTestDB(t, testServer.db, job, "related_id",
-		fxt.Offering.ID)
-	defer data.DeleteFromTestDB(t, testServer.db, job)
-
-	if job.Type != jobType {
-		t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
-			jobType, job.Type, util.Caller())
+		expectedData, _ := json.Marshal(&data.JobPublishData{
+			GasPrice: expectedGasPrice,
+		})
+		if !bytes.Equal(job.Data, expectedData) {
+			t.Fatalf("job does not contain expected data (%s)", util.Caller())
+		}
 	}
 
-	expectedData, _ := json.Marshal(&data.JobPublishData{
-		GasPrice: testGasPrice,
-	})
-	if !bytes.Equal(job.Data, expectedData) {
-		t.Fatalf("job does not contain expected data (%s)", util.Caller())
+	testPutOfferingStatusCreatesJob(PublishOffering,
+		data.JobAgentPreOfferingMsgBCPublish, 1, 1)
+
+	testPutOfferingStatusCreatesJob(PopupOffering,
+		data.JobAgentPreOfferingPopUp, 1, 1)
+
+	testPutOfferingStatusCreatesJob(DeactivateOffering,
+		data.JobAgentPreOfferingDelete, 1, 1)
+
+	testDefaultGasPrice := uint64(20000000)
+
+	gasPriceSettings := &data.Setting{
+		Key:   data.SettingDefaultGasPrice,
+		Value: fmt.Sprint(testDefaultGasPrice),
 	}
+	data.InsertToTestDB(t, testServer.db, gasPriceSettings)
+	defer data.DeleteFromTestDB(t, testServer.db, gasPriceSettings)
+
+	testPutOfferingStatusCreatesJob(PopupOffering,
+		data.JobAgentPreOfferingPopUp, 0, testDefaultGasPrice)
 }
 
 func TestPutClientOfferingStatus(t *testing.T) {

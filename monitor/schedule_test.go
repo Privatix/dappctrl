@@ -132,7 +132,7 @@ func setIsAgent(t *testing.T, agent bool) {
 		val = "false"
 	}
 
-	setting := &data.Setting{Key: data.IsAgentKey, Value: val,
+	setting := &data.Setting{Key: data.SettingIsAgent, Value: val,
 		Name: "user role is agent"}
 	data.SaveToTestDB(t, db, setting)
 }

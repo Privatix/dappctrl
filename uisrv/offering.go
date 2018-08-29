@@ -248,7 +248,17 @@ func (s *Server) handlePutOfferingStatus(
 		"action ( %v )  request for offering with id: %v recieved.",
 		req.Action, id))
 
-	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
+	gasPrice := req.GasPrice
+
+	if req.GasPrice == 0 {
+		val, ok := s.defaultGasPrice(logger, w)
+		if !ok {
+			return
+		}
+		gasPrice = val
+	}
+
+	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: gasPrice})
 	if err != nil {
 		s.logger.Error(
 			fmt.Sprintf("failed to marshal job data: %v", err))

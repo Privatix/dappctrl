@@ -206,12 +206,6 @@ type Contract struct {
 	Enabled bool   `json:"enabled" reform:"enabled"`
 }
 
-// Setting keys.
-const (
-	IsAgentKey         = "user.isagent" // specifies user role. "true" - agent. "false" - client.
-	DefaultGasPriceKey = "eth.default.gasprice"
-)
-
 // Permissions for settings.
 const (
 	AccessDenied = iota

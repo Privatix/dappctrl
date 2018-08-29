@@ -59,8 +59,8 @@ func TestMain(m *testing.M) {
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 
 	pwdStorage := new(data.PWDStorage)
-	testServer = NewServer(conf.AgentServer, logger, db, queue, pwdStorage,
-		proc.NewProcessor(proc.NewConfig(), db, queue))
+	testServer = NewServer(conf.AgentServer, logger, db, "", queue,
+		pwdStorage, proc.NewProcessor(proc.NewConfig(), db, queue))
 	testServer.encryptKeyFunc = data.TestEncryptedKey
 	testServer.decryptKeyFunc = data.TestToPrivateKey
 	go testServer.ListenAndServe()

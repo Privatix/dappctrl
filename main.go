@@ -264,7 +264,7 @@ func main() {
 	err = <-fatal
 	logger2.Fatal(err.Error())
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db,
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, conf.Role,
 		queue, pwdStorage, pr)
 	go func() {
 		fatal <- uiSrv.ListenAndServe()

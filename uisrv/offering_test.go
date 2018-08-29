@@ -180,6 +180,36 @@ func testGetOfferings(t *testing.T, id, product, status string, exp int) {
 	testGetResources(t, res, exp)
 }
 
+func responseOfferingsArray(t *testing.T,
+	res *http.Response, exp int) []*data.Offering {
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("failed to get resources: ", res.StatusCode)
+	}
+	var ret []*data.Offering
+	json.NewDecoder(res.Body).Decode(&ret)
+	if exp != len(ret) {
+		t.Fatalf("expected %d items, got: %d (%s)", exp, len(ret),
+			util.Caller())
+	}
+	return ret
+}
+
+func testSortOfferings(t *testing.T, id, product,
+	status string, pattern []string) {
+	res := getResources(t, offeringsPath,
+		map[string]string{
+			"id":          id,
+			"product":     product,
+			"offerStatus": status})
+	offerings := responseOfferingsArray(t, res, len(pattern))
+
+	for k, v := range offerings {
+		if v.ID != pattern[k] {
+			t.Fatal("offerings sorted incorrectly")
+		}
+	}
+}
+
 func TestGetOffering(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
@@ -199,10 +229,12 @@ func TestGetOffering(t *testing.T) {
 	off1 := data.NewTestOffering(testAgent.EthAddr,
 		testProd.ID, testTpl.ID)
 	off1.OfferStatus = data.OfferRegister
+	off1.BlockNumberUpdated = 1
 
 	off2 := data.NewTestOffering(testAgent.EthAddr,
 		testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferEmpty
+	off2.BlockNumberUpdated = 2
 
 	off3 := data.NewTestOffering(createNotUsedAcc(t).EthAddr,
 		testProd.ID, testTpl.ID)
@@ -214,8 +246,11 @@ func TestGetOffering(t *testing.T) {
 
 	insertItems(t, off1, off2, off3, off4)
 
+	sortPattern := []string{off2.ID, off1.ID}
+
 	// Get all offerings.
 	testGetOfferings(t, "", "", "", 2)
+	testSortOfferings(t, "", "", "", sortPattern)
 
 	// Get offerings by id.
 	testGetOfferings(t, off1.ID, "", "", 1)
@@ -367,7 +402,7 @@ func sendOfferingAction(t *testing.T, id, action string,
 }
 
 func sendClientOfferingAction(t *testing.T, id, action,
-	account string, gasPrice uint64, deposit uint) *http.Response {
+	account string, gasPrice uint64, deposit uint64) *http.Response {
 	path := clientOfferingsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
 		&ClientOfferingPutPayload{Action: action, Account: account,
@@ -450,7 +485,7 @@ func TestPutClientOfferingStatus(t *testing.T) {
 
 	insertItems(t, offer)
 
-	minDeposit := uint(data.MinDeposit(offer))
+	minDeposit := data.MinDeposit(offer)
 
 	res := sendClientOfferingAction(t, offer.ID, "wrong-action",
 		testAgent.ID, testGasPrice, minDeposit)

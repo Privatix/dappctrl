@@ -402,7 +402,7 @@ func sendOfferingAction(t *testing.T, id, action string,
 }
 
 func sendClientOfferingAction(t *testing.T, id, action,
-	account string, gasPrice uint64, deposit uint) *http.Response {
+	account string, gasPrice uint64, deposit uint64) *http.Response {
 	path := clientOfferingsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
 		&ClientOfferingPutPayload{Action: action, Account: account,
@@ -485,7 +485,7 @@ func TestPutClientOfferingStatus(t *testing.T) {
 
 	insertItems(t, offer)
 
-	minDeposit := uint(data.MinDeposit(offer))
+	minDeposit := data.MinDeposit(offer)
 
 	res := sendClientOfferingAction(t, offer.ID, "wrong-action",
 		testAgent.ID, testGasPrice, minDeposit)

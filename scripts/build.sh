@@ -19,3 +19,5 @@ export GIT_RELEASE
 
 go install -ldflags "-X main.Commit=$GIT_COMMIT -X main.Version=$GIT_RELEASE" -tags=notest ${DAPPCTRL}
 
+echo
+echo "Build has been completed successfully."

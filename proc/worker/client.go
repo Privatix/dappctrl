@@ -924,7 +924,7 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	return w.clientRetrieveAndSaveOfferingFromSOMC(logger, job,
+	return w.clientRetrieveAndSaveOffering(logger, job,
 		ethLog.BlockNumber, logOfferingCreated.agentAddr,
 		logOfferingCreated.offeringHash)
 }
@@ -951,7 +951,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
-		return w.clientRetrieveAndSaveOfferingFromSOMC(logger, job,
+		return w.clientRetrieveAndSaveOffering(logger, job,
 			ethLog.BlockNumber, logOfferingPopUp.agentAddr,
 			logOfferingPopUp.offeringHash)
 	}
@@ -966,7 +966,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	return w.saveRecord(logger, &offering)
 }
 
-func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(logger log.Logger,
+func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
 	offeringsData, err := w.somc.FindOfferings([]string{
 		data.FromBytes(hash.Bytes())})
@@ -980,6 +980,20 @@ func (w *Worker) clientRetrieveAndSaveOfferingFromSOMC(logger log.Logger,
 	if err != nil {
 		return err
 	}
+
+	_, minDeposit, mSupply, cSupply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if minDeposit.Uint64() != data.MinDeposit(offering) {
+		return ErrOfferingDeposit
+	}
+
+	offering.Supply = mSupply
+	offering.CurrentSupply = cSupply
 
 	if err := data.Insert(w.db.Querier, offering); err != nil {
 		logger.Error(err.Error())

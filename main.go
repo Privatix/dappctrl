@@ -171,6 +171,10 @@ func createUIServer(conf *ui.Config, logger log.Logger,
 }
 
 func main() {
+	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
+		panic(fmt.Sprintf("failed to execute command: %s", err))
+	}
+
 	fatal := make(chan error)
 	defer bugsnag.PanicHunter()
 

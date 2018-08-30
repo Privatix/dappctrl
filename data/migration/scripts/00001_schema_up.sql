@@ -1,4 +1,5 @@
-BEGIN TRANSACTION;
+-- +goose Up
+-- SQL in this section is executed when the migration is applied.
 
 -- Service Units usage reporting type. Can be incremental or total. Indicates how reporting server will report usage of units.
 CREATE TYPE usage_rep_type AS ENUM ('incremental', 'total');
@@ -354,5 +355,3 @@ CREATE TABLE log_events (
     context jsonb NOT NULL,
     stack text
 );
-
-END TRANSACTION;

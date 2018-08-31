@@ -261,9 +261,6 @@ func main() {
 		fatal <- queue.Process()
 	}()
 
-	err = <-fatal
-	logger2.Fatal(err.Error())
-
 	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, conf.Role,
 		queue, pwdStorage, pr)
 	go func() {
@@ -309,4 +306,7 @@ func main() {
 			fatal <- amon.Run()
 		}()
 	}
+
+	err = <-fatal
+	logger2.Fatal(err.Error())
 }

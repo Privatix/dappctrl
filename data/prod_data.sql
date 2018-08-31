@@ -316,11 +316,4 @@ VALUES ('system.version.db',
         'Version of database.',
         'db version');
 
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('user.isagent',
-        'false',
-        2,
-        'Specifies user role. "true" - agent. "false" - client.',
-        'user role is agent');
-
 END TRANSACTION;

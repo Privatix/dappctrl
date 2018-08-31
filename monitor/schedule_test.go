@@ -124,22 +124,9 @@ func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
 	return el
 }
 
-func setIsAgent(t *testing.T, agent bool) {
-	var val string
-	if agent {
-		val = "true"
-	} else {
-		val = "false"
-	}
-
-	setting := &data.Setting{Key: data.SettingIsAgent, Value: val,
-		Name: "user role is agent"}
-	data.SaveToTestDB(t, db, setting)
-}
-
 func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 	ticker *mockTicker, mon *Monitor) {
-	setIsAgent(t, true)
+	mon.dappRole = data.RoleAgent
 
 	// LogChannelCreated good
 	pscEvent(t, mon, txHash, LogChannelCreated, []interface{}{
@@ -304,7 +291,7 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 
 func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 	ticker *mockTicker, mon *Monitor) {
-	setIsAgent(t, false)
+	mon.dappRole = data.RoleClient
 
 	// LogChannelCreated good
 	pscEvent(t, mon, txHash, LogChannelCreated, []interface{}{
@@ -491,8 +478,7 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 }
 
 func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker, agent bool) {
-	setIsAgent(t, agent)
+	ticker *mockTicker) {
 
 	insertEvent(t, db, nextBlock(), 0, eth.EthTokenApproval,
 		td.addr[0], pscAddr, 123)
@@ -523,8 +509,10 @@ func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
 
 func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
 	ticker *mockTicker, mon *Monitor) {
-	commonSchedule(t, td, queue, ticker, true)
-	commonSchedule(t, td, queue, ticker, false)
+	mon.dappRole = data.RoleAgent
+	commonSchedule(t, td, queue, ticker)
+	mon.dappRole = data.RoleClient
+	commonSchedule(t, td, queue, ticker)
 	agentSchedule(t, td, queue, ticker, mon)
 	clientSchedule(t, td, queue, ticker, mon)
 }

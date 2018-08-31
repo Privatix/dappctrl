@@ -14,8 +14,6 @@ const (
 	SettingPasswordSalt       = "system.salt"
 	SettingAppVersion         = "system.version.app"
 	SettingDefaultGasPrice    = "eth.default.gasprice"
-	// SettingIsAgent specifies user role. "true" - agent. "false" - client.
-	SettingIsAgent = "user.isagent"
 )
 
 // ReadSetting reads value of a given setting.

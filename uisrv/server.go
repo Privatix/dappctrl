@@ -41,6 +41,7 @@ type Server struct {
 	conf           *Config
 	logger         log.Logger
 	db             *reform.DB
+	dappRole       string
 	queue          job.Queue
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
@@ -52,12 +53,14 @@ type Server struct {
 func NewServer(conf *Config,
 	logger log.Logger,
 	db *reform.DB,
+	dappRole string,
 	queue job.Queue,
 	pwdStorage data.PWDGetSetter, pr *proc.Processor) *Server {
 	return &Server{
 		conf,
 		logger,
 		db,
+		dappRole,
 		queue,
 		pwdStorage,
 		data.EncryptedKey,
@@ -74,6 +77,7 @@ const (
 	clientProductsPath  = "/client/products"
 	endpointsPath       = "/endpoints"
 	incomePath          = "/income"
+	logsPath            = "/logs"
 	offeringsPath       = "/offerings/"
 	productsPath        = "/products"
 	sessionsPath        = "/sessions"
@@ -81,31 +85,87 @@ const (
 	templatePath        = "/templates"
 	transactionsPath    = "/transactions"
 	usagePath           = "/usage"
-	logsPath            = "/logs"
+	userRolePath        = "/userrole"
 )
 
 // ListenAndServe starts a server.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc(accountsPath, basicAuthMiddleware(s, s.handleAccounts))
+
 	mux.HandleFunc(authPath, s.handleAuth)
-	mux.HandleFunc(channelsPath, basicAuthMiddleware(s, s.handleChannels))
-	mux.HandleFunc(clientChannelsPath,
-		basicAuthMiddleware(s, s.handleClientChannels))
-	mux.HandleFunc(clientOfferingsPath,
-		basicAuthMiddleware(s, s.handleClientOfferings))
-	mux.HandleFunc(clientProductsPath,
-		basicAuthMiddleware(s, s.handleGetClientProducts))
-	mux.HandleFunc(endpointsPath, basicAuthMiddleware(s, s.handleGetEndpoints))
-	mux.HandleFunc(incomePath, basicAuthMiddleware(s, s.handleGetIncome))
-	mux.HandleFunc(offeringsPath, basicAuthMiddleware(s, s.handleOfferings))
-	mux.HandleFunc(productsPath, basicAuthMiddleware(s, s.handleProducts))
-	mux.HandleFunc(sessionsPath, basicAuthMiddleware(s, s.handleGetSessions))
-	mux.HandleFunc(settingsPath, basicAuthMiddleware(s, s.handleSettings))
-	mux.HandleFunc(templatePath, basicAuthMiddleware(s, s.handleTempaltes))
-	mux.HandleFunc(transactionsPath, basicAuthMiddleware(s, s.handleTransactions))
-	mux.HandleFunc(usagePath, basicAuthMiddleware(s, s.handleGetUsage))
-	mux.HandleFunc(logsPath, basicAuthMiddleware(s, s.handleGetLogs))
+
+	for _, item := range []struct {
+		path    string
+		handler http.HandlerFunc
+	}{
+		{
+			path:    accountsPath,
+			handler: s.handleAccounts,
+		},
+		{
+			path:    channelsPath,
+			handler: s.handleChannels,
+		},
+		{
+			path:    clientChannelsPath,
+			handler: s.handleClientChannels,
+		},
+		{
+			path:    clientOfferingsPath,
+			handler: s.handleClientOfferings,
+		},
+		{
+			path:    clientProductsPath,
+			handler: s.handleGetClientProducts,
+		},
+		{
+			path:    endpointsPath,
+			handler: s.handleGetEndpoints,
+		},
+		{
+			path:    incomePath,
+			handler: s.handleGetIncome,
+		},
+		{
+			path:    logsPath,
+			handler: s.handleGetLogs,
+		},
+		{
+			path:    offeringsPath,
+			handler: s.handleOfferings,
+		},
+		{
+			path:    productsPath,
+			handler: s.handleProducts,
+		},
+		{
+			path:    sessionsPath,
+			handler: s.handleGetSessions,
+		},
+		{
+			path:    settingsPath,
+			handler: s.handleSettings,
+		},
+		{
+			path:    templatePath,
+			handler: s.handleTempaltes,
+		},
+		{
+			path:    transactionsPath,
+			handler: s.handleTransactions,
+		},
+		{
+			path:    usagePath,
+			handler: s.handleGetUsage,
+		},
+		{
+			path:    userRolePath,
+			handler: s.handleGetUserRole,
+		},
+	} {
+		mux.HandleFunc(item.path, basicAuthMiddleware(s, item.handler))
+	}
+
 	mux.HandleFunc("/", s.pageNotFound)
 
 	if s.conf.TLS != nil {

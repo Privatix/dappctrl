@@ -304,7 +304,7 @@ func newTestObjects(t *testing.T) (*Monitor, *mockQueue, *mockClient) {
 	client := newMockClient()
 
 	mon, err := NewMonitor(conf.BlockMonitor, logger, db,
-		queue, conf.Eth, pscAddr, ptcAddr, client, nil)
+		queue, conf.Eth, pscAddr, ptcAddr, client, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

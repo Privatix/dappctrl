@@ -1140,6 +1140,9 @@ class Params(CMD):
 
         data['PayAddress'] = ':'.join(raw)
 
+        # chenge role agent or client
+        data['Role'] = self.dappctrl_role
+
         # Search ports in conf and store it to main_conf['ports']
         for k, v in data.iteritems():
             if isinstance(v, dict) and v.get('Addr'):
@@ -1585,17 +1588,17 @@ class Checker(Params, Rdata, GUI):
                 logging.error('Main trouble: {}'.format(mexpt))
                 self._rolback(17)
 
-    def prompt(self, mess):
+    def prompt(self, mess, choise = ('n', 'y')):
         logging.info(mess)
 
         answ = raw_input('>')
 
         while True:
-            if answ.lower() not in ['n', 'y']:
-                logging.info('Invalid choice. Select Y or N.')
+            if answ.lower() not in choise:
+                logging.info('Invalid choice. Select {}.'.format(choise))
                 answ = raw_input('> ')
                 continue
-            if answ.lower() == 'y':
+            if answ.lower() == choise[1]:
                 return True
             return False
 
@@ -1699,8 +1702,20 @@ class Checker(Params, Rdata, GUI):
         if not self.prompt(mess=mess):
             sys.exit(21)
 
+        self.check_role()
             # self.check_graph()
 
+    def check_role(self):
+        mess = 'Please select your role.\n Enter digits 1 or 2.\n' \
+               '1 - You role are agent\n' \
+               '2 - You role are client\n' \
+
+        if self.prompt(mess=mess,choise=('1','2')):
+            #choise 2
+            self.dappctrl_role = 'client'
+        else:
+            #choise 1
+            self.dappctrl_role = 'agent'
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=' *** Installer *** ')

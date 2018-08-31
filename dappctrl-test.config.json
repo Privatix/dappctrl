@@ -173,6 +173,8 @@
         "ServerStartupDelay": 10
     },
 
+    "Role": "agent",
+
     "ServiceRunner": {
         "Services": {
             "VPN": {

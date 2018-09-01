@@ -74,6 +74,9 @@ const (
 	ErrChallengePeriodIsNotOver
 	ErrWrongOfferingMsgSignature
 	ErrOfferingExists
+	ErrUncompletedJobsExists
+	ErrOfferingNotActive
+	ErrPopUpOfferingTryAgain
 	ErrOfferingDeposit
 )
 
@@ -147,6 +150,9 @@ func init() {
 		ErrChallengePeriodIsNotOver:     "cannot settle yet: challenge period is not over",
 		ErrWrongOfferingMsgSignature:    "wrong offering msg's signature",
 		ErrOfferingExists:               "offering with a given hash already exists",
+		ErrUncompletedJobsExists:        "uncompleted offering related jobs exists",
+		ErrOfferingNotActive:            "offering is inactive",
+		ErrPopUpOfferingTryAgain:        "could not pop up offering, try again later",
 		ErrOfferingDeposit:              "incorrect offering deposit",
 	})
 }

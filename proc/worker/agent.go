@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -758,6 +759,62 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
+func (w *Worker) agentOfferingPopUpFindRelatedJobs(
+	logger log.Logger, id string) error {
+	query := `SELECT count(*)
+                    FROM jobs
+                   WHERE (jobs.type = $1
+                         OR jobs.type = $2)
+                         AND jobs.status = $3
+                         AND jobs.related_id = $4;`
+
+	var count uint64
+	err := w.db.QueryRow(query, data.JobAgentPreOfferingDelete,
+		data.JobAgentPreOfferingPopUp, data.JobActive, id).Scan(&count)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if count != 0 {
+		return ErrUncompletedJobsExists
+	}
+
+	return err
+}
+
+func (w *Worker) checkOfferingForPopUp(logger log.Logger,
+	hash common.Hash) error {
+	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if !active {
+		return ErrOfferingNotActive
+	}
+
+	period, err := w.ethBack.PSCGetChallengePeriod(&bind.CallOpts{})
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if uint64(updateBlockNumber+period) > lastBlock.Uint64() {
+		return ErrPopUpOfferingTryAgain
+	}
+
+	return nil
+}
+
 // AgentPreOfferingPopUp pop ups an offering.
 func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	logger := w.logger.Add("method", "AgentPreOfferingPopUp", "job", job)
@@ -766,6 +823,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	if err != nil {
 		return err
 	}
+
+	logger = logger.Add("offering", offering.ID)
 
 	if offering.OfferStatus != data.OfferRegister {
 		return ErrOfferNotRegistered
@@ -776,15 +835,25 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
-	key, err := w.accountKey(logger, offering.Agent)
-	if err != nil {
-		return err
-	}
-
 	offeringHash, err := data.ToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
+	}
+
+	err = w.agentOfferingPopUpFindRelatedJobs(logger, offering.ID)
+	if err != nil {
+		return err
+	}
+
+	err = w.checkOfferingForPopUp(logger, offeringHash)
+	if err != nil {
+		return err
+	}
+
+	key, err := w.accountKey(logger, offering.Agent)
+	if err != nil {
+		return err
 	}
 
 	auth := bind.NewKeyedTransactor(key)
@@ -801,4 +870,34 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	return w.saveEthTX(logger, job, tx, "PopupServiceOffering",
 		job.RelatedType, job.RelatedID, offering.Agent,
 		data.HexFromBytes(w.pscAddr.Bytes()))
+}
+
+// AgentAfterOfferingPopUp updates the block number
+// when the offering was updated.
+func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
+	logger := w.logger.Add("method", "AgentAfterOfferingPopUp", "job", job)
+
+	ethLog, err := w.ethLog(logger, job)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("ethLog", ethLog)
+
+	logOfferingPopUp, err := extractLogOfferingPopUp(logger, ethLog)
+	if err != nil {
+		return err
+	}
+
+	offering := data.Offering{}
+	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	err = w.db.FindOneTo(&offering, "hash", hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	offering.BlockNumberUpdated = ethLog.BlockNumber
+
+	return w.saveRecord(logger, &offering)
 }

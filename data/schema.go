@@ -315,6 +315,7 @@ const (
 	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
 	JobAgentPreOfferingDelete               = "agentPreOfferingDelete"
 	JobAgentPreOfferingPopUp                = "agentPreOfferingPopUp"
+	JobAgentAfterOfferingPopUp              = "agentAfterOfferingPopUp"
 	JobAgentAfterOfferingDelete             = "agentAfterOfferingDelete"
 	JobPreAccountAddBalanceApprove          = "preAccountAddBalanceApprove"
 	JobPreAccountAddBalance                 = "preAccountAddBalance"

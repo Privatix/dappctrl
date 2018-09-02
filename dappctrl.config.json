@@ -207,7 +207,7 @@
     },
     "StaticPassword": "",
     "Report": {
-        "ReleaseStage": "alpha",
+        "ReleaseStage": "production",
         "ExcludedPackages": [
             "github.com/privatix/dappctrl/tool/dappinst",
             "github.com/privatix/dappctrl/svc/dappvpn",

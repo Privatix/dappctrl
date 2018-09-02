@@ -146,7 +146,8 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 	logger := log.NewMultiLogger(elog, flog, dlog, blog)
 
 	blog2 := blog.(bugsnag.Log)
-	reporter, err := bugsnag.NewClient(conf.Report, db, blog2)
+	reporter, err := bugsnag.NewClient(conf.Report, db, blog2,
+		version.Message(Commit, Version))
 	if err != nil {
 		return nil, nil, err
 	}

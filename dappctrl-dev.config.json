@@ -86,6 +86,11 @@
         "TryLimit": 3,
         "TryPeriod": 60000,
         "Types": {
+            "clientAfterOfferingMsgBCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
+            },
             "clientPreUncooperativeClose": {
                 "TryLimit": 200,
                 "TryPeriod": 180000,

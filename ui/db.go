@@ -30,19 +30,6 @@ func (h *Handler) findByColumn(logger log.Logger, notFoundError error,
 	return nil
 }
 
-func (h *Handler) selectOneTo(logger log.Logger,
-	notFoundError error, record reform.Record,
-	tail string, args ...interface{}) error {
-	if err := h.db.SelectOneTo(record, tail, args...); err != nil {
-		logger.Error(err.Error())
-		if err == reform.ErrNoRows {
-			return notFoundError
-		}
-		return ErrInternal
-	}
-	return nil
-}
-
 func (h *Handler) selectAllFrom(logger log.Logger, view reform.View,
 	tail string, args ...interface{}) ([]reform.Struct, error) {
 	rows, err := h.db.SelectAllFrom(view, tail, args...)

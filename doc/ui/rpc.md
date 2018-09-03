@@ -16,9 +16,34 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 3. Offering id (string)
 4. Gas price (number)
 
-*Result*:
+*Result (object)*:
 - `channel` (string) - id of channel to be created.
 
+### Settings
+
+#### Get Settings
+
+*Method*:	`getSettings`
+
+*Description*: Get settings.
+
+*Parameters*:
+1. Password (string)
+
+*Result (object)*:
+- `settings` (object) - object with keys as setting names and values as setting values.
+
+#### Update Settings
+
+*Method*:	`updateSettings`
+
+*Description*: Update existing settings.
+
+*Parameters*:
+1. Password (string)
+2. Object with keys as setting names and values as setting values (object)
+
+*Result*: None.
 
 #### Create Product
 
@@ -30,7 +55,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 1. Password (string)
 2. Product (`data.Product` object)
 
-*Result*:
+*Result (object)*:
 - `product` (string) - id of created product.
 
 
@@ -42,7 +67,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 *Parameters*: None.
 
-*Result*:
+*Result (object)*:
 1. Products (array of data.Product objects)
 
 
@@ -123,7 +148,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 *Parameters*:
 1. Password (string)
-2. Template (data.Template object)
+2. Template (`data.Template` object)
 
 *Result (object)*:
 - `template` (string) - id of template to be created.

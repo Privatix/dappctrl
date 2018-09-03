@@ -96,6 +96,51 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
+### Objects
+
+#### Get object
+
+*Method*:	`getObject`
+
+*Description*: Get an object of a specified type..
+
+*Parameters*:
+1. Password (string)
+2. Object type (string, can be `account`, `user`, `template`, `product`,
+ `offering`, `channel`, `session`, `contract`, `endpoint`, `job`, `ethTx` or `ethLog`)
+3. Object id (string)
+
+*Result (object)*:
+- `object` (object) - object of a given type.
+
+### Templates
+
+#### Create Template
+
+*Method*:	`createTemplate`
+
+*Description*: Create new template.
+
+*Parameters*:
+1. Password (string)
+2. Template (data.Template object)
+
+*Result (object)*:
+- `template` (string) - id of template to be created.
+
+#### Get Templates
+
+*Method*:	`getTemplates`
+
+*Description*: Get templates.
+
+*Parameters*:
+1. Password (string)
+2. Template type (string, can be `offer` or `access`)
+
+*Result (object)*:
+- `templates` (array of `data.Template` objects) - returned templates.
+
 ## Subscriptions to asynchronous notifications
 
 #### Object change

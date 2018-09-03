@@ -1,8 +1,9 @@
 package ui
 
 import (
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/util/log"
-	reform "gopkg.in/reform.v1"
 )
 
 func (h *Handler) findByPrimaryKey(logger log.Logger,
@@ -27,6 +28,29 @@ func (h *Handler) findByColumn(logger log.Logger, notFoundError error,
 		return ErrInternal
 	}
 	return nil
+}
+
+func (h *Handler) selectOneTo(logger log.Logger,
+	notFoundError error, record reform.Record,
+	tail string, args ...interface{}) error {
+	if err := h.db.SelectOneTo(record, tail, args...); err != nil {
+		logger.Error(err.Error())
+		if err == reform.ErrNoRows {
+			return notFoundError
+		}
+		return ErrInternal
+	}
+	return nil
+}
+
+func (h *Handler) selectAllFrom(logger log.Logger, view reform.View,
+	tail string, args ...interface{}) ([]reform.Struct, error) {
+	rows, err := h.db.SelectAllFrom(view, tail, args...)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+	return rows, err
 }
 
 func beginTX(logger log.Logger, db *reform.DB) (*reform.TX, error) {

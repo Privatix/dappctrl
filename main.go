@@ -267,20 +267,15 @@ func main() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
 
-	if conf.Role == data.RoleClient {
-		uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
-		if err != nil {
-			logger2.Fatal(err.Error())
-		}
-		go func() {
-			fatal <- uiSrv2.ListenAndServe()
-		}()
+	uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
+	if err != nil {
+		logger2.Fatal(err.Error())
+	}
+	go func() {
+		fatal <- uiSrv2.ListenAndServe()
+	}()
 
-		paySrv := pay.NewServer(conf.PayServer, logger2, db)
-		go func() {
-			fatal <- paySrv.ListenAndServe()
-		}()
-		defer paySrv.Close()
+	if conf.Role == data.RoleClient {
 
 		cmon := cbill.NewMonitor(conf.ClientMonitor,
 			logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
@@ -291,6 +286,12 @@ func main() {
 	}
 
 	if conf.Role == data.RoleAgent {
+		paySrv := pay.NewServer(conf.PayServer, logger2, db)
+		go func() {
+			fatal <- paySrv.ListenAndServe()
+		}()
+		defer paySrv.Close()
+
 		sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
 		go func() {
 			fatal <- sess.ListenAndServe()

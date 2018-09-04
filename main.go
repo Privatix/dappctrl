@@ -56,7 +56,6 @@ type config struct {
 	FileLog       *log.FileConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
-	Log           *util.LogConfig
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
@@ -82,7 +81,6 @@ func newConfig() *config {
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
-		Log:           util.NewLogConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		ServiceRunner: svcrun.NewConfig(),
@@ -178,12 +176,6 @@ func main() {
 	conf := newConfig()
 	readFlags(conf)
 
-	logger, err := util.NewLogger(conf.Log)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create logger: %s", err))
-	}
-	defer logger.GracefulStop()
-
 	db, err := data.NewDB(conf.DB)
 	if err != nil {
 		panic(fmt.Sprintf("failed to open db "+
@@ -191,16 +183,16 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	logger2, closer, err := createLogger(conf, db)
+	logger, closer, err := createLogger(conf, db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 	defer closer.Close()
 
 	ethClient, err := eth.NewClient(context.Background(),
-		conf.Eth, logger2)
+		conf.Eth, logger)
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	defer ethClient.Close()
 
@@ -208,34 +200,34 @@ func main() {
 	ptc, err := contract.NewPrivatixTokenContract(
 		ptcAddr, ethClient.EthClient())
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 
 	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
 	psc, err := contract.NewPrivatixServiceContract(
 		pscAddr, ethClient.EthClient())
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 
-	somcConn, err := somc.NewConn(conf.SOMC, logger2)
+	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	defer somcConn.Close()
 
 	pwdStorage := getPWDStorage(conf)
 
-	worker, err := worker.NewWorker(logger2, db, somcConn,
+	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
 			conf.Eth.Timeout), conf.Gas,
 		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
 		conf.EptMsg)
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 
-	queue := job.NewQueue(conf.Job, logger2, db, handlers.HandlersMap(worker))
+	queue := job.NewQueue(conf.Job, logger, db, handlers.HandlersMap(worker))
 	defer queue.Close()
 	worker.SetQueue(queue)
 
@@ -246,14 +238,14 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger2, db, queue,
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
 		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
 		conf.Role, ethClient.CloseIdleConnections)
 	if err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	if err := mon.Start(); err != nil {
-		logger2.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	defer mon.Stop()
 
@@ -261,29 +253,29 @@ func main() {
 		fatal <- queue.Process()
 	}()
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, conf.Role,
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, conf.Role,
 		queue, pwdStorage, pr)
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
 
 	if conf.Role == data.RoleClient {
-		uiSrv2, err := createUIServer(conf.UI, logger2, db, queue)
+		uiSrv2, err := createUIServer(conf.UI, logger, db, queue)
 		if err != nil {
-			logger2.Fatal(err.Error())
+			logger.Fatal(err.Error())
 		}
 		go func() {
 			fatal <- uiSrv2.ListenAndServe()
 		}()
 
-		paySrv := pay.NewServer(conf.PayServer, logger2, db)
+		paySrv := pay.NewServer(conf.PayServer, logger, db)
 		go func() {
 			fatal <- paySrv.ListenAndServe()
 		}()
 		defer paySrv.Close()
 
 		cmon := cbill.NewMonitor(conf.ClientMonitor,
-			logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+			logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 		go func() {
 			fatal <- cmon.Run()
 		}()
@@ -291,16 +283,16 @@ func main() {
 	}
 
 	if conf.Role == data.RoleAgent {
-		sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
+		sess := sesssrv.NewServer(conf.SessionServer, logger, db)
 		go func() {
 			fatal <- sess.ListenAndServe()
 		}()
 		defer sess.Close()
 
 		amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
-			db, logger2, pr)
+			db, logger, pr)
 		if err != nil {
-			logger2.Fatal(err.Error())
+			logger.Fatal(err.Error())
 		}
 		go func() {
 			fatal <- amon.Run()
@@ -308,5 +300,5 @@ func main() {
 	}
 
 	err = <-fatal
-	logger2.Fatal(err.Error())
+	logger.Fatal(err.Error())
 }

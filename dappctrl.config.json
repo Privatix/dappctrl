@@ -168,11 +168,6 @@
             }
         }
     },
-    "Log": {
-        "Level": "info",
-        "LogPath": "/var/log",
-        "LogFilePrefix": "dappctrl"
-    },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
         "Addr": "0.0.0.0:9000",

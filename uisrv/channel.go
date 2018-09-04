@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -120,8 +119,11 @@ func (s *Server) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	s.handleGetResources(w, r, &getConf{
 		Params: channelsGetParams,
 
-		View:         data.ChannelTable,
-		FilteringSQL: `channels.agent IN (SELECT eth_addr FROM accounts)`,
+		View: data.ChannelTable,
+		FilteringSQL: filteringSQL{
+			SQL:      `channels.agent IN (SELECT eth_addr FROM accounts)`,
+			JoinWith: "AND",
+		},
 	})
 }
 
@@ -519,24 +521,13 @@ func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id st
 	logger := s.logger.Add("method", "createPreUncooperativeCloseRequest",
 		"id", id)
 
-	gasPriceSettings := &data.Setting{}
-	if err := data.FindOneTo(s.db.Querier, gasPriceSettings,
-		"key", data.DefaultGasPriceKey); err != nil {
-		logger.Error(err.Error())
-		s.replyUnexpectedErr(logger, w)
-		return
-	}
-
-	val, err := strconv.ParseInt(gasPriceSettings.Value, 10, 64)
-	if err != nil {
-		logger.Error(
-			fmt.Sprintf("failed to parse default gas price: %v", err))
-		s.replyUnexpectedErr(logger, w)
+	defaultGasPrice, ok := s.defaultGasPrice(logger, w)
+	if !ok {
 		return
 	}
 
 	publishData, err := json.Marshal(&data.JobPublishData{
-		GasPrice: uint64(val),
+		GasPrice: defaultGasPrice,
 	})
 	if err != nil {
 		s.logger.Error(

@@ -52,6 +52,7 @@ type Monitor struct {
 
 	cancel               context.CancelFunc
 	errors               chan error
+	dappRole             string
 	tickers              []*time.Ticker
 	callTimeout          uint64
 	closeIdleConnections func()
@@ -70,7 +71,7 @@ func NewConfig() *Config {
 // NewMonitor creates a Monitor with specified settings.
 func NewMonitor(cfg *Config, logger log.Logger, db *reform.DB,
 	queue Queue, ethConfig *eth.Config, pscAddr common.Address,
-	ptcAddr common.Address, ethClient Client,
+	ptcAddr common.Address, ethClient Client, dappRole string,
 	closeIdleConnections func()) (*Monitor, error) {
 	if logger == nil || db == nil || queue == nil ||
 		!common.IsHexAddress(pscAddr.String()) {
@@ -87,7 +88,7 @@ func NewMonitor(cfg *Config, logger log.Logger, db *reform.DB,
 		cfg:                  cfg,
 		ethCfg:               ethConfig,
 		eth:                  ethClient,
-		logger:               logger,
+		logger:               logger.Add("type", "monitor.Monitor"),
 		db:                   db,
 		queue:                queue,
 		pscAddr:              pscAddr,
@@ -95,6 +96,7 @@ func NewMonitor(cfg *Config, logger log.Logger, db *reform.DB,
 		ptcAddr:              ptcAddr,
 		mtx:                  sync.Mutex{},
 		errors:               make(chan error),
+		dappRole:             dappRole,
 		callTimeout:          ethConfig.Timeout,
 		closeIdleConnections: closeIdleConnections,
 	}, nil

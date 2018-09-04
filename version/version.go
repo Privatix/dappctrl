@@ -12,12 +12,14 @@ const (
 // Print prints version and completes the program.
 func Print(run bool, commit, version string) {
 	if run {
-		fmt.Println(message(commit, version))
+		fmt.Println(Message(commit, version))
 		os.Exit(0)
 	}
 }
 
-func message(commit, version string) string {
+// Message returns version with format
+// `version (first seven characters of commit hash)`.
+func Message(commit, version string) string {
 	var c string
 	var v string
 

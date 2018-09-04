@@ -15,8 +15,8 @@ func (e Error) Error() string {
 	return "unknown error"
 }
 
-// ErrorCode returns an error code of a given error.
-func (e Error) ErrorCode() int {
+// Code returns an error code of a given error.
+func (e Error) Code() int {
 	return int(e)
 }
 

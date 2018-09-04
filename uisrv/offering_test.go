@@ -180,6 +180,36 @@ func testGetOfferings(t *testing.T, id, product, status string, exp int) {
 	testGetResources(t, res, exp)
 }
 
+func responseOfferingsArray(t *testing.T,
+	res *http.Response, exp int) []*data.Offering {
+	if res.StatusCode != http.StatusOK {
+		t.Fatal("failed to get resources: ", res.StatusCode)
+	}
+	var ret []*data.Offering
+	json.NewDecoder(res.Body).Decode(&ret)
+	if exp != len(ret) {
+		t.Fatalf("expected %d items, got: %d (%s)", exp, len(ret),
+			util.Caller())
+	}
+	return ret
+}
+
+func testSortOfferings(t *testing.T, id, product,
+	status string, pattern []string) {
+	res := getResources(t, offeringsPath,
+		map[string]string{
+			"id":          id,
+			"product":     product,
+			"offerStatus": status})
+	offerings := responseOfferingsArray(t, res, len(pattern))
+
+	for k, v := range offerings {
+		if v.ID != pattern[k] {
+			t.Fatal("offerings sorted incorrectly")
+		}
+	}
+}
+
 func TestGetOffering(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
@@ -199,10 +229,12 @@ func TestGetOffering(t *testing.T) {
 	off1 := data.NewTestOffering(testAgent.EthAddr,
 		testProd.ID, testTpl.ID)
 	off1.OfferStatus = data.OfferRegister
+	off1.BlockNumberUpdated = 1
 
 	off2 := data.NewTestOffering(testAgent.EthAddr,
 		testProd.ID, testTpl.ID)
 	off2.OfferStatus = data.OfferEmpty
+	off2.BlockNumberUpdated = 2
 
 	off3 := data.NewTestOffering(createNotUsedAcc(t).EthAddr,
 		testProd.ID, testTpl.ID)
@@ -214,8 +246,11 @@ func TestGetOffering(t *testing.T) {
 
 	insertItems(t, off1, off2, off3, off4)
 
+	sortPattern := []string{off2.ID, off1.ID}
+
 	// Get all offerings.
 	testGetOfferings(t, "", "", "", 2)
+	testSortOfferings(t, "", "", "", sortPattern)
 
 	// Get offerings by id.
 	testGetOfferings(t, off1.ID, "", "", 1)
@@ -227,13 +262,9 @@ func TestGetOffering(t *testing.T) {
 	testGetOfferings(t, "", "", data.OfferEmpty, 1)
 }
 
-func testGetClientOfferingsOrdered(t *testing.T, minp, maxp,
-	country string, exp int) {
-	res := getResources(t, clientOfferingsPath,
-		map[string]string{
-			"minUnitPrice": minp,
-			"maxUnitPrice": maxp,
-			"country":      country})
+func testGetClientOfferingsOrdered(
+	t *testing.T, params map[string]string, exp int) {
+	res := getResources(t, clientOfferingsPath, params)
 	ret := testGetResources(t, res, exp)
 
 	// Test the order.
@@ -256,7 +287,7 @@ func TestGetClientOffering(t *testing.T) {
 
 	createOfferingFixtures(t)
 	// Get empty list.
-	testGetClientOfferingsOrdered(t, "", "", "", 0)
+	testGetClientOfferingsOrdered(t, nil, 0)
 
 	// Insert test offerings.
 	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
@@ -301,26 +332,51 @@ func TestGetClientOffering(t *testing.T) {
 
 	insertItems(t, off1, off2, off3, off4, off5, off6)
 
-	// all non-local offerings
-	testGetClientOfferingsOrdered(t, "", "", "", 2)
+	// All non-local offerings
+	testGetClientOfferingsOrdered(t, nil, 2)
 
 	lowPrice := strconv.FormatUint(off1.UnitPrice-10, 10)
 	price := strconv.FormatUint(off1.UnitPrice, 10)
 	highPrice := strconv.FormatUint(off1.UnitPrice+10, 10)
 
-	// price range
-	testGetClientOfferingsOrdered(t, "", "", "", 2)           // inside range
-	testGetClientOfferingsOrdered(t, "", highPrice, "", 2)    // inside range
-	testGetClientOfferingsOrdered(t, "", lowPrice, "", 0)     // above range
-	testGetClientOfferingsOrdered(t, highPrice, "", "", 0)    // below range
-	testGetClientOfferingsOrdered(t, lowPrice, price, "", 2)  // on edge
-	testGetClientOfferingsOrdered(t, price, highPrice, "", 2) // on edge
-	testGetClientOfferingsOrdered(t, price, price, "", 2)     // on edge
+	// Filter by price range
+	testGetClientOfferingsOrdered(t, nil, 2) // inside range
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"maxUnitPrice": highPrice,
+	}, 2) // inside range
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"maxUnitPrice": lowPrice}, 0) // above range
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"minUnitPrice": highPrice}, 0) // below range
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": lowPrice,
+		"maxUnitPrice": price}, 2) // on edge
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": price,
+		"maxUnitPrice": highPrice}, 2) // on edge
+	testGetClientOfferingsOrdered(t, map[string]string{
+		"minUnitPrice": price,
+		"maxUnitPrice": price}, 2) // on edge
 
-	// country filter
-	testGetClientOfferingsOrdered(t, "", "", "US", 1)
-	testGetClientOfferingsOrdered(t, "", "", "SU", 1)
-	testGetClientOfferingsOrdered(t, "", "", "US,SU", 2)
+	// Filter by country
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "US"}, 1)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "SU"}, 1)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"country": "US,SU"}, 2)
+
+	// Filter by agent
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"agent": genEthAddr(t)}, 0)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"agent": off1.Agent}, 1)
+
+	// Get offering by id
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"id": util.NewUUID()}, 0)
+	testGetClientOfferingsOrdered(t,
+		map[string]string{"id": off6.ID}, 1)
 }
 
 func getOfferingStatus(t *testing.T, id string) *http.Response {
@@ -346,11 +402,11 @@ func sendOfferingAction(t *testing.T, id, action string,
 }
 
 func sendClientOfferingAction(t *testing.T, id, action,
-	account string, gasPrice uint64) *http.Response {
+	account string, gasPrice uint64, deposit uint64) *http.Response {
 	path := clientOfferingsPath + id + "/status"
 	return sendPayload(t, http.MethodPut, path,
-		&OfferingPutPayload{Action: action, Account: account,
-			GasPrice: gasPrice})
+		&ClientOfferingPutPayload{Action: action, Account: account,
+			GasPrice: gasPrice, Deposit: deposit})
 }
 
 func TestPutOfferingStatus(t *testing.T) {
@@ -365,41 +421,51 @@ func TestPutOfferingStatus(t *testing.T) {
 			http.StatusBadRequest, res.Status)
 	}
 
-	testPutOfferingStatusCreatesJob(t, fxt, PublishOffering,
-		data.JobAgentPreOfferingMsgBCPublish)
+	testPutOfferingStatusCreatesJob := func(
+		action, jobType string, sentGasPrice, expectedGasPrice uint64) {
+		res := sendOfferingAction(t, fxt.Offering.ID, action,
+			sentGasPrice)
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("got: %v (%s)", res.Status, util.Caller())
+		}
+		job := &data.Job{}
+		data.FindInTestDB(t, testServer.db, job, "related_id",
+			fxt.Offering.ID)
+		defer data.DeleteFromTestDB(t, testServer.db, job)
 
-	testPutOfferingStatusCreatesJob(t, fxt, PopupOffering,
-		data.JobAgentPreOfferingPopUp)
+		if job.Type != jobType {
+			t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
+				jobType, job.Type, util.Caller())
+		}
 
-	testPutOfferingStatusCreatesJob(t, fxt, DeactivateOffering,
-		data.JobAgentPreOfferingDelete)
-}
-
-func testPutOfferingStatusCreatesJob(t *testing.T, fxt *data.TestFixture,
-	action string, jobType string) {
-	testGasPrice := uint64(1)
-
-	res := sendOfferingAction(t, fxt.Offering.ID, action,
-		testGasPrice)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("got: %v (%s)", res.Status, util.Caller())
-	}
-	job := &data.Job{}
-	data.FindInTestDB(t, testServer.db, job, "related_id",
-		fxt.Offering.ID)
-	defer data.DeleteFromTestDB(t, testServer.db, job)
-
-	if job.Type != jobType {
-		t.Fatalf("unexpected job created, wanted: %s, got: %s (%s)",
-			jobType, job.Type, util.Caller())
+		expectedData, _ := json.Marshal(&data.JobPublishData{
+			GasPrice: expectedGasPrice,
+		})
+		if !bytes.Equal(job.Data, expectedData) {
+			t.Fatalf("job does not contain expected data (%s)", util.Caller())
+		}
 	}
 
-	expectedData, _ := json.Marshal(&data.JobPublishData{
-		GasPrice: testGasPrice,
-	})
-	if !bytes.Equal(job.Data, expectedData) {
-		t.Fatalf("job does not contain expected data (%s)", util.Caller())
+	testPutOfferingStatusCreatesJob(PublishOffering,
+		data.JobAgentPreOfferingMsgBCPublish, 1, 1)
+
+	testPutOfferingStatusCreatesJob(PopupOffering,
+		data.JobAgentPreOfferingPopUp, 1, 1)
+
+	testPutOfferingStatusCreatesJob(DeactivateOffering,
+		data.JobAgentPreOfferingDelete, 1, 1)
+
+	testDefaultGasPrice := uint64(20000000)
+
+	gasPriceSettings := &data.Setting{
+		Key:   data.SettingDefaultGasPrice,
+		Value: fmt.Sprint(testDefaultGasPrice),
 	}
+	data.InsertToTestDB(t, testServer.db, gasPriceSettings)
+	defer data.DeleteFromTestDB(t, testServer.db, gasPriceSettings)
+
+	testPutOfferingStatusCreatesJob(PopupOffering,
+		data.JobAgentPreOfferingPopUp, 0, testDefaultGasPrice)
 }
 
 func TestPutClientOfferingStatus(t *testing.T) {
@@ -419,21 +485,36 @@ func TestPutClientOfferingStatus(t *testing.T) {
 
 	insertItems(t, offer)
 
+	minDeposit := data.MinDeposit(offer)
+
 	res := sendClientOfferingAction(t, offer.ID, "wrong-action",
-		testAgent.ID, testGasPrice)
+		testAgent.ID, testGasPrice, minDeposit)
 
 	checkStatusCode(t, res, http.StatusBadRequest,
 		"failed to put offering status: %d")
 
 	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
-		testAgent.ID, testGasPrice)
+		testAgent.ID, testGasPrice, minDeposit)
 
 	checkStatusCode(t, res, http.StatusOK,
 		"failed to put offering status: %d")
 
+	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
+		testAgent.ID, testGasPrice, minDeposit-1)
+
+	checkStatusCode(t, res, http.StatusBadRequest,
+		"failed to validate custom deposit: %d")
+
+	// Custom deposit is not specified.
+	res = sendClientOfferingAction(t, offer.ID, AcceptOffering,
+		testAgent.ID, testGasPrice, 0)
+
+	checkStatusCode(t, res, http.StatusOK,
+		"custom deposit must not be required")
+
 	expectedData, err := json.Marshal(&worker.ClientPreChannelCreateData{
 		GasPrice: testGasPrice, Offering: offer.ID,
-		Account: testAgent.ID})
+		Account: testAgent.ID, Deposit: minDeposit})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,19 +524,12 @@ func TestPutClientOfferingStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var found bool
-
 	for _, j := range jobs {
 		if job, ok := j.(*data.Job); ok {
-			if bytes.Equal(job.Data, expectedData) {
-				found = true
-				data.DeleteFromTestDB(t, testServer.db, job)
+			if !bytes.Equal(job.Data, expectedData) {
+				t.Fatal("job does not contain expected data")
 			}
 		}
-	}
-
-	if !found {
-		t.Fatal("job does not contain expected data")
 	}
 }
 

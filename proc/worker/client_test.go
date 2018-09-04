@@ -39,13 +39,13 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	fxt.job.RelatedType = data.JobChannel
 	fxt.job.RelatedID = util.NewUUID()
+
 	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
 		Offering: fxt.Offering.ID,
 	})
 
-	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
-		fxt.Offering.SetupPrice
+	minDeposit := data.MinDeposit(fxt.Offering)
 	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
@@ -55,7 +55,16 @@ func TestClientPreChannelCreate(t *testing.T) {
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.offerSupply = 1
+	env.ethBack.offerCurrentSupply = 1
+
+	customDeposit := 99
+	env.ethBack.balancePSC = big.NewInt(100)
+	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
+		Account:  fxt.Account.ID,
+		Offering: fxt.Offering.ID,
+		Deposit:  99,
+	})
+
 	runJob(t, env.worker.ClientPreChannelCreate, fxt.job)
 
 	var tx data.EthTx
@@ -69,7 +78,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		ch.Offering != fxt.Offering.ID || ch.Block != 0 ||
 		ch.ChannelStatus != data.ChannelPending ||
 		ch.ServiceStatus != data.ServicePending ||
-		ch.TotalDeposit != minDeposit {
+		ch.TotalDeposit != uint64(customDeposit) {
 		t.Fatalf("wrong channel content")
 	}
 
@@ -89,6 +98,15 @@ func TestClientPreChannelCreate(t *testing.T) {
 	env.selectOneTo(t, &agentUserRec, "WHERE eth_addr=$1 and public_key=$2",
 		fxt.Account.EthAddr, fxt.Account.PublicKey)
 	env.deleteFromTestDB(t, &agentUserRec)
+
+	env.ethBack.testCalled(t,
+		"PSCCreateChannel",
+		data.TestToAddress(t, fxt.Account.EthAddr),
+		env.gasConf.PSC.CreateChannel,
+		data.TestToAddress(t, fxt.Account.EthAddr),
+		[common.HashLength]byte(data.TestToHash(t, fxt.Offering.Hash)),
+		big.NewInt(int64(customDeposit)),
+	)
 }
 
 func TestClientAfterChannelCreate(t *testing.T) {
@@ -696,6 +714,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	expectedOffering.Status = data.MsgChPublished
 	expectedOffering.OfferStatus = data.OfferRegister
 	expectedOffering.Country = "US"
+	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
@@ -708,6 +727,11 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
+	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.offerMaxSupply = expectedOffering.Supply
+	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+		data.MinDeposit(&expectedOffering))
+
 	// Create eth log records used by job.
 	var curSupply uint16 = expectedOffering.Supply
 	logData, err := logOfferingCreatedDataArguments.Pack(curSupply)
@@ -715,7 +739,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		t.Fatal(err)
 	}
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
-	minDeposit := big.NewInt(10)
+	minDeposit := big.NewInt(10000)
 	topics := data.LogTopics{
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
@@ -846,6 +870,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	expectedOffering.Status = data.MsgChPublished
 	expectedOffering.OfferStatus = data.OfferRegister
 	expectedOffering.Country = "US"
+	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
@@ -857,6 +882,11 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+
+	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.offerMaxSupply = expectedOffering.Supply
+	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)

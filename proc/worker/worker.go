@@ -78,7 +78,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 
 	return &Worker{
 		abi:            abi,
-		logger:         logger,
+		logger:         logger.Add("type", "proc/worker.Worker"),
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
 		gasConf:        gasConc,

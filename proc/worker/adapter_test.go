@@ -20,15 +20,21 @@ type testEthBackCall struct {
 }
 
 type testEthBackend struct {
-	callStack   []testEthBackCall
-	balanceEth  *big.Int
-	balancePSC  *big.Int
-	balancePTC  *big.Int
-	blockNumber *big.Int
-	abi         abi.ABI
-	pscAddr     common.Address
-	offerSupply uint16
-	tx          *types.Transaction
+	callStack              []testEthBackCall
+	balanceEth             *big.Int
+	balancePSC             *big.Int
+	balancePTC             *big.Int
+	blockNumber            *big.Int
+	abi                    abi.ABI
+	pscAddr                common.Address
+	tx                     *types.Transaction
+	offeringAgent          common.Address
+	offerMinDeposit        *big.Int
+	offerCurrentSupply     uint16
+	offerMaxSupply         uint16
+	offerUpdateBlockNumber uint32
+	offeringIsActive       bool
+	challengePeriod        uint32
 }
 
 func newTestEthBackend(pscAddr common.Address) *testEthBackend {
@@ -66,6 +72,15 @@ func (b *testEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
 		txOpts: opts,
 		args:   []interface{}{offeringHash, minDeposit, maxSupply},
 	})
+	b.offeringAgent = opts.From
+	b.offerMinDeposit = minDeposit
+	b.offerMaxSupply = maxSupply
+	b.offerCurrentSupply = maxSupply
+	b.offeringIsActive = true
+
+	nextBlock, _ := b.LatestBlockNumber(context.Background())
+	b.blockNumber = nextBlock
+
 	tx := types.NewTransaction(0, common.Address{}, big.NewInt(1), 1, big.NewInt(1), nil)
 	return tx, nil
 }
@@ -179,14 +194,23 @@ func (b *testEthBackend) testCalled(t *testing.T, method string,
 	t.Fatalf("no call of %s from %v with args: %v", method, caller, args)
 }
 
-func (b *testEthBackend) PSCOfferingSupply(opts *bind.CallOpts,
-	hash [common.HashLength]byte) (uint16, error) {
+func (b *testEthBackend) PSCGetOfferingInfo(opts *bind.CallOpts,
+	hash [common.HashLength]byte) (agentAddr common.Address,
+	minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
+	updateBlockNumber uint32, active bool, err error) {
 	b.callStack = append(b.callStack, testEthBackCall{
-		method: "PSCOfferingSupply",
+		method: "GetOfferingInfo",
 		caller: opts.From,
 		args:   []interface{}{hash},
 	})
-	return b.offerSupply, nil
+	return b.offeringAgent, b.offerMinDeposit, b.offerMaxSupply,
+		b.offerCurrentSupply, b.offerUpdateBlockNumber,
+		b.offeringIsActive, nil
+}
+
+func (b *testEthBackend) PSCGetChallengePeriod(
+	opts *bind.CallOpts) (uint32, error) {
+	return b.challengePeriod, nil
 }
 
 const (
@@ -204,6 +228,8 @@ func (b *testEthBackend) PSCCreateChannel(opts *bind.TransactOpts,
 		args:   []interface{}{agent, hash, deposit},
 	})
 
+	b.offerCurrentSupply--
+
 	tx := types.NewTransaction(
 		testTXNonce, agent, deposit, testTXGasLimit,
 		big.NewInt(testTXGasPrice), []byte{})
@@ -219,6 +245,8 @@ func (b *testEthBackend) PSCSettle(opts *bind.TransactOpts,
 		caller: opts.From,
 		args:   []interface{}{agent, blockNumber, hash},
 	})
+
+	b.offerCurrentSupply++
 
 	tx := types.NewTransaction(
 		testTXNonce, agent, new(big.Int), testTXGasLimit,
@@ -268,6 +296,8 @@ func (b *testEthBackend) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 		args:   []interface{}{offeringHash},
 	})
 
+	b.offeringIsActive = false
+
 	tx := types.NewTransaction(
 		testTXNonce, b.pscAddr, nil, opts.GasLimit,
 		opts.GasPrice, []byte{})
@@ -283,6 +313,9 @@ func (b *testEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
 		caller: opts.From,
 		args:   []interface{}{offeringHash},
 	})
+
+	nextBlock, _ := b.LatestBlockNumber(context.Background())
+	b.offerUpdateBlockNumber = uint32(nextBlock.Uint64())
 
 	tx := types.NewTransaction(
 		testTXNonce, b.pscAddr, nil, opts.GasLimit,

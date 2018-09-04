@@ -110,7 +110,8 @@ func TestTerminate(t *testing.T) {
 func expectBalance(t *testing.T, fxt *data.TestFixture, expected uint64) {
 	data.ReloadFromTestDB(t, db, fxt.Channel)
 	if fxt.Channel.ReceiptBalance != expected {
-		t.Fatalf("unexpected receipt balance: %d", expected)
+		t.Fatalf("unexpected receipt balance: %d (expected %d)",
+			fxt.Channel.ReceiptBalance, expected)
 	}
 }
 

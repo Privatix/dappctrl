@@ -652,13 +652,43 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 		GasPrice: 123,
 	})
 
+	duplicatedJob := *fxt.job
+	duplicatedJob.ID = util.NewUUID()
+
 	// Offering must be registered.
 	if env.worker.AgentPreOfferingPopUp(fxt.job) == nil {
 		t.Fatal("offering status not validated")
 	}
 
+	env.insertToTestDB(t, &duplicatedJob)
+	defer env.deleteFromTestDB(t, &duplicatedJob)
+
 	fxt.Offering.OfferStatus = data.OfferRegister
 	env.updateInTestDB(t, fxt.Offering)
+
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrUncompletedJobsExists {
+		t.Fatal("no active jobs")
+	}
+
+	duplicatedJob.Status = data.JobDone
+	env.updateInTestDB(t, &duplicatedJob)
+
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrOfferingNotActive {
+		t.Fatal("offering is active")
+	}
+
+	env.ethBack.offeringIsActive = true
+	env.ethBack.challengePeriod = 300
+	env.ethBack.offerUpdateBlockNumber = 5
+
+	if err := env.worker.AgentPreOfferingPopUp(
+		fxt.job); err != ErrPopUpOfferingTryAgain {
+		t.Fatal("period of challenge has expired")
+	}
+
+	env.ethBack.blockNumber = big.NewInt(1000)
 
 	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
 
@@ -670,4 +700,41 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash))
+}
+
+func TestAgentAfterOfferingPopUp(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobAgentAfterOfferingPopUp, data.JobOffering)
+	defer fxt.close()
+
+	fxt.job.RelatedID = util.NewUUID()
+	env.updateInTestDB(t, fxt.job)
+
+	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
+	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+	clientAddr := data.TestToAddress(t, fxt.Account.EthAddr)
+
+	topics := data.LogTopics{
+		common.BytesToHash(agentAddr.Bytes()),
+		common.BytesToHash(clientAddr.Bytes()),
+		offeringHash,
+	}
+
+	ethLog := data.NewTestEthLog()
+	ethLog.JobID = &fxt.job.ID
+	ethLog.Topics = topics
+	env.insertToTestDB(t, ethLog)
+	defer env.deleteFromTestDB(t, ethLog)
+
+	runJob(t, env.worker.AgentAfterOfferingPopUp, fxt.job)
+
+	offering := data.Offering{}
+	env.findTo(t, &offering, fxt.Offering.ID)
+
+	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+		t.Fatal("offering block number was not updated")
+	}
 }

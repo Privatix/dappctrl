@@ -1,14 +1,10 @@
 package ui
 
 import (
-	"context"
-
-	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
-	"github.com/privatix/dappctrl/util/rpcsrv"
 )
 
 const (
@@ -66,49 +62,4 @@ func (h *Handler) findActiveOfferingByID(
 		return nil, ErrInternal
 	}
 	return &offer, nil
-}
-
-// JobResult is a job result notification.
-type JobResult struct {
-	Type   string        `json:"type"`
-	Result *rpcsrv.Error `json:"result"`
-}
-
-func (h *Handler) subscribeToJobResults(ctx context.Context,
-	logger log.Logger, relatedID string) (*rpc.Subscription, error) {
-	ntf, ok := rpc.NotifierFromContext(ctx)
-	if !ok {
-		logger.Error("no notifier found in context")
-		return nil, ErrInternal
-	}
-
-	sub := ntf.CreateSubscription()
-
-	sid := string(sub.ID)
-	err := h.queue.Subscribe(relatedID, sid,
-		func(job *data.Job, result error) {
-			ntf.Notify(sub.ID,
-				&JobResult{job.Type, rpcsrv.ToError(result)})
-		})
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrInternal
-	}
-
-	go func() {
-		for {
-			if err, _ := <-sub.Err(); err != nil {
-				logger.Warn(err.Error())
-			}
-
-			err := h.queue.Unsubscribe(relatedID, sid)
-			if err != nil {
-				logger.Error(err.Error())
-			}
-
-			break
-		}
-	}()
-
-	return sub, nil
 }

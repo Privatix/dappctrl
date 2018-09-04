@@ -17,11 +17,17 @@ type queryParam struct {
 	Op    string // comparison operator ({Field} {Op} {Value}, default "=")
 }
 
+type filteringSQL struct {
+	SQL      string
+	JoinWith string
+}
+
 // getConf is a config for generic get handler.
 type getConf struct {
 	Params       []queryParam
 	View         reform.View
-	FilteringSQL string
+	FilteringSQL filteringSQL
+	OrderingSQL  string
 	Paginated    bool
 }
 
@@ -76,6 +82,10 @@ func (s *Server) formatConditions(r *http.Request, conf *getConf) (conds []strin
 			phs := s.db.Placeholders(placei, len(subvals))
 			placei += len(subvals)
 			ph = "(" + strings.Join(phs, ",") + ")"
+		} else if op == "like" {
+			args = append(args, "%"+val+"%")
+			ph = s.db.Placeholder(placei)
+			placei++
 		} else {
 			args = append(args, val)
 			ph = s.db.Placeholder(placei)
@@ -96,13 +106,18 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		"table", conf.View.Name())
 
 	conds, args := s.formatConditions(r, conf)
-	if conf.FilteringSQL != "" {
-		conds = append(conds, conf.FilteringSQL)
-	}
 
-	var tail string
+	var filtering, limitOffset string
+	confFiltering := conf.FilteringSQL.SQL
+	confFilteringJoinWith := conf.FilteringSQL.JoinWith
 	if len(conds) > 0 {
-		tail = "WHERE " + strings.Join(conds, " AND ")
+		filtering = "WHERE " + strings.Join(conds, " AND ")
+		if confFiltering != "" {
+			filtering += " " + confFilteringJoinWith + " " +
+				confFiltering
+		}
+	} else if confFiltering != "" {
+		filtering = "WHERE " + confFiltering
 	}
 
 	var paginatedItems *paginatedReply
@@ -123,20 +138,22 @@ func (s *Server) handleGetResources(w http.ResponseWriter,
 		}
 
 		paginatedItems, err = s.newPaginatedReply(
-			conf, tail, args, page, limit)
+			conf, filtering, args, page, limit)
 		if err != nil {
-			logger.Error(
+			logger.Add("filtering", filtering).Error(
 				fmt.Sprintf("failed to get resources: %v", err))
 			s.replyUnexpectedErr(logger, w)
 			return
 		}
 
-		tail += fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
+		limitOffset = fmt.Sprintf(" LIMIT %d OFFSET %d", limit, (page-1)*limit)
 	}
 
+	tail := fmt.Sprintf("%s %s %s", filtering, conf.OrderingSQL, limitOffset)
 	records, err := s.db.SelectAllFrom(conf.View, tail, args...)
 	if err != nil {
-		logger.Warn(fmt.Sprintf("failed to select: %v", err))
+		logger.Add("tailSQL", tail).
+			Error(fmt.Sprintf("failed to select: %v", err))
 		s.replyUnexpectedErr(logger, w)
 		return
 	}

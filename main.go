@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -15,7 +18,6 @@ import (
 	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
-	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/monitor"
@@ -32,6 +34,7 @@ import (
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
+	"github.com/privatix/dappctrl/version"
 )
 
 // Values for versioning.
@@ -58,6 +61,7 @@ type config struct {
 	PayAddress    string
 	Proc          *proc.Config
 	Report        *bugsnag.Config
+	Role          string
 	ServiceRunner *svcrun.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
@@ -110,8 +114,21 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
-func createLogger(conf *config, db *reform.DB) (log.Logger, bugsnag.Log, error) {
-	flog, err := log.NewStderrLogger(conf.FileLog)
+func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
+	elog, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	name := fmt.Sprintf(
+		"/var/log/dappctrl-%s.log", time.Now().Format("2006-01-02"))
+	file, err := os.OpenFile(
+		name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	flog, err := log.NewFileLogger(conf.FileLog, file)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,12 +138,22 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, bugsnag.Log, error) 
 		return nil, nil, err
 	}
 
-	rLog, err := rlog.NewLogger(conf.ReportLog)
+	blog, err := rlog.NewLogger(conf.ReportLog)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return log.NewMultiLogger(rLog, flog, dlog), rLog.(bugsnag.Log), nil
+	logger := log.NewMultiLogger(elog, flog, dlog, blog)
+
+	blog2 := blog.(bugsnag.Log)
+	reporter, err := bugsnag.NewClient(conf.Report, db, blog2)
+	if err != nil {
+		return nil, nil, err
+	}
+	blog2.Reporter(reporter)
+	blog2.Logger(logger)
+
+	return logger, file, nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger,
@@ -164,17 +191,11 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	logger2, rLog, err := createLogger(conf, db)
+	logger2, closer, err := createLogger(conf, db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
-
-	reporter, err := bugsnag.NewClient(conf.Report, db, rLog)
-	if err != nil {
-		logger2.Fatal(err.Error())
-	}
-	rLog.Reporter(reporter)
-	rLog.Logger(logger2)
+	defer closer.Close()
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger2)
@@ -196,18 +217,6 @@ func main() {
 	if err != nil {
 		logger2.Fatal(err.Error())
 	}
-
-	paySrv := pay.NewServer(conf.PayServer, logger2, db)
-	go func() {
-		fatal <- paySrv.ListenAndServe()
-	}()
-	defer paySrv.Close()
-
-	sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
-	go func() {
-		fatal <- sess.ListenAndServe()
-	}()
-	defer sess.Close()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger2)
 	if err != nil {
@@ -237,7 +246,23 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, queue, pwdStorage, pr)
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger2, db, queue,
+		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
+		conf.Role, ethClient.CloseIdleConnections)
+	if err != nil {
+		logger2.Fatal(err.Error())
+	}
+	if err := mon.Start(); err != nil {
+		logger2.Fatal(err.Error())
+	}
+	defer mon.Stop()
+
+	go func() {
+		fatal <- queue.Process()
+	}()
+
+	uiSrv := uisrv.NewServer(conf.AgentServer, logger2, db, conf.Role,
+		queue, pwdStorage, pr)
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
@@ -250,6 +275,28 @@ func main() {
 		fatal <- uiSrv2.ListenAndServe()
 	}()
 
+	// if conf.Role == data.RoleClient {
+	cmon := cbill.NewMonitor(conf.ClientMonitor,
+		logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+	go func() {
+		fatal <- cmon.Run()
+	}()
+	defer cmon.Close()
+	// }
+
+	// if conf.Role == data.RoleAgent {
+	paySrv := pay.NewServer(conf.PayServer, logger2, db)
+	go func() {
+		fatal <- paySrv.ListenAndServe()
+	}()
+	defer paySrv.Close()
+
+	sess := sesssrv.NewServer(conf.SessionServer, logger2, db)
+	go func() {
+		fatal <- sess.ListenAndServe()
+	}()
+	defer sess.Close()
+
 	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
 		db, logger2, pr)
 	if err != nil {
@@ -258,28 +305,7 @@ func main() {
 	go func() {
 		fatal <- amon.Run()
 	}()
-
-	cmon := cbill.NewMonitor(conf.ClientMonitor,
-		logger2, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
-	go func() {
-		fatal <- cmon.Run()
-	}()
-	defer cmon.Close()
-
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger2, db, queue,
-		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
-		ethClient.CloseIdleConnections)
-	if err != nil {
-		logger2.Fatal(err.Error())
-	}
-	if err := mon.Start(); err != nil {
-		logger2.Fatal(err.Error())
-	}
-	defer mon.Stop()
-
-	go func() {
-		fatal <- queue.Process()
-	}()
+	// }
 
 	err = <-fatal
 	logger2.Fatal(err.Error())

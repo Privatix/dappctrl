@@ -4,7 +4,7 @@ import subprocess
 
 import sys
 
-_git_branch_name_command = 'git rev-parse --abbrev-ref HEAD'
+_git_branch_name_command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
 _release_prefix = 'release/'
 
 _prod_data_sql_path = 'data/prod_data.sql'
@@ -34,6 +34,7 @@ def take_repo_folder():
 
 def take_release_version():
     current_branch_name = subprocess.check_output(_git_branch_name_command).decode("utf-8").strip()
+
     print('Current branch: {}'.format(current_branch_name))
     if not current_branch_name.startswith(_release_prefix):
         print('\n\nFailed. Please checkout to release branch')

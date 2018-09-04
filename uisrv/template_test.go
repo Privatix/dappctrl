@@ -37,14 +37,6 @@ func TestPostTemplateValidation(t *testing.T) {
 			},
 			Code: http.StatusBadRequest,
 		},
-		// Wrong format for src.
-		{
-			Payload: &data.Template{
-				Kind: data.TemplateOffer,
-				Raw:  []byte("not-json"),
-			},
-			Code: http.StatusBadRequest,
-		},
 	} {
 		res := postTemplate(t, testcase.Payload)
 		if testcase.Code != res.StatusCode {

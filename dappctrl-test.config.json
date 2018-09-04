@@ -18,7 +18,7 @@
 
     "ClientBillingTest": {
         "MonitorStartupDelay": 10,
-        "ReactionDelay": 100
+        "ReactionDelay": 200
     },
 
     "BillingTest": {
@@ -172,6 +172,8 @@
     "PayServerTest": {
         "ServerStartupDelay": 10
     },
+
+    "Role": "agent",
 
     "ServiceRunner": {
         "Services": {

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
 	validator "gopkg.in/go-playground/validator.v9"
 )
@@ -137,6 +139,26 @@ func (s *Server) replyNumFromQuery(logger log.Logger, w http.ResponseWriter, que
 	}
 	w.Write(retB)
 	return
+}
+
+func (s *Server) defaultGasPrice(logger log.Logger, w http.ResponseWriter) (uint64, bool) {
+	gasPriceSettings := &data.Setting{}
+	if err := data.FindOneTo(s.db.Querier, gasPriceSettings,
+		"key", data.SettingDefaultGasPrice); err != nil {
+		logger.Error(err.Error())
+		s.replyUnexpectedErr(logger, w)
+		return 0, false
+	}
+
+	val, err := strconv.ParseUint(gasPriceSettings.Value, 10, 64)
+	if err != nil {
+		logger.Error(
+			fmt.Sprintf("failed to parse default gas price: %v", err))
+		s.replyUnexpectedErr(logger, w)
+		return 0, false
+	}
+
+	return val, true
 }
 
 func singleTimeFormat(tm time.Time) string {

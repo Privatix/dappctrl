@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/privatix/dappctrl/internal/version"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
@@ -20,6 +19,7 @@ import (
 	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/version"
 )
 
 // Values for versioning.

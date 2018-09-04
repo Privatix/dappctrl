@@ -140,30 +140,6 @@ func GetUint64Setting(db *reform.DB, key string) (uint64, error) {
 
 }
 
-// IsAgent specifies user role. "true" - agent. "false" - client.
-func IsAgent(db *reform.Querier) (bool, error) {
-	var setting Setting
-	err := db.FindByPrimaryKeyTo(&setting, IsAgentKey)
-	if err != nil {
-		var err2 error
-
-		if err == sql.ErrNoRows {
-			err2 = fmt.Errorf("key %s is not exist"+
-				" in Setting table", IsAgentKey)
-		} else {
-			err2 = fmt.Errorf("failed to get key %s"+
-				" from Setting table", IsAgentKey)
-		}
-		return false, err2
-	}
-	val, err := strconv.ParseBool(setting.Value)
-	if err != nil {
-		return false, fmt.Errorf("key %s from Setting table"+
-			" has an incorrect format", IsAgentKey)
-	}
-	return val, nil
-}
-
 // FindByPrimaryKeyTo calls db.FindByPrimaryKeyTo() returning more descriptive
 // error.
 func FindByPrimaryKeyTo(db *reform.Querier,
@@ -226,4 +202,9 @@ func ChannelKey(client, agent string, block uint32,
 	return crypto.Keccak256(clientAddr.Bytes(),
 		agentAddr.Bytes(), blockBytes[:],
 		common.BytesToHash(hash).Bytes()), nil
+}
+
+// MinDeposit calculates minimal deposit required to accept the offering.
+func MinDeposit(offering *Offering) uint64 {
+	return offering.MinUnits*offering.UnitPrice + offering.SetupPrice
 }

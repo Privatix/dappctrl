@@ -77,13 +77,6 @@ func (m *Monitor) schedule(ctx context.Context) {
 		return
 	}
 
-	agent, err := data.IsAgent(m.db.Querier)
-	if err != nil {
-		m.logger.Error(err.Error())
-		m.errors <- err
-		return
-	}
-
 	for rows.Next() {
 		var el data.EthLog
 		var forAgent, forClient bool
@@ -104,7 +97,7 @@ func (m *Monitor) schedule(ctx context.Context) {
 		}
 
 		if !found {
-			if agent {
+			if m.dappRole == data.RoleAgent {
 				if isOfferingRelated(&el) {
 					scheduler, found =
 						agentOfferingSchedulers[eventHash]
@@ -220,7 +213,7 @@ var agentOfferingSchedulers = map[common.Hash]funcAndType{
 	},
 	common.HexToHash(eth.EthOfferingPoppedUp): {
 		(*Monitor).scheduleAgentOfferingCreated,
-		data.JobAgentAfterOfferingMsgBCPublish,
+		data.JobAgentAfterOfferingPopUp,
 	},
 }
 

@@ -38,7 +38,8 @@ const (
                                   FROM accounts)
                                AND (SELECT in_use
                                       FROM accounts
-                                     WHERE eth_addr = offerings.agent)`
+                                     WHERE eth_addr = offerings.agent)
+			       ORDER BY block_number_updated DESC`
 )
 
 type clientPreChannelCreateData struct {
@@ -181,14 +182,24 @@ func (s *Server) handleGetClientOfferings(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var filtering string
+	if r.FormValue("id") == "" {
+		filtering = clientGetOfferFilter
+	}
+
 	s.handleGetResources(w, r, &getConf{
 		Params: []queryParam{
 			{Name: "minUnitPrice", Field: "unit_price", Op: ">="},
 			{Name: "maxUnitPrice", Field: "unit_price", Op: "<="},
 			{Name: "country", Field: "country", Op: "in"},
+			{Name: "agent", Field: "agent"},
+			{Name: "id", Field: "id"},
 		},
-		View:         data.OfferingTable,
-		FilteringSQL: clientGetOfferFilter,
+		View: data.OfferingTable,
+		FilteringSQL: filteringSQL{
+			SQL:      filtering,
+			JoinWith: "AND",
+		},
 	})
 }
 
@@ -201,8 +212,11 @@ func (s *Server) handleGetOfferings(w http.ResponseWriter, r *http.Request) {
 			{Name: "product", Field: "product"},
 			{Name: "offerStatus", Field: "offer_status"},
 		},
-		View:         data.OfferingTable,
-		FilteringSQL: agentGetOfferFilter,
+		View: data.OfferingTable,
+		FilteringSQL: filteringSQL{
+			SQL:      agentGetOfferFilter,
+			JoinWith: "AND",
+		},
 	})
 }
 
@@ -242,7 +256,17 @@ func (s *Server) handlePutOfferingStatus(
 		"action ( %v )  request for offering with id: %v recieved.",
 		req.Action, id))
 
-	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: req.GasPrice})
+	gasPrice := req.GasPrice
+
+	if req.GasPrice == 0 {
+		val, ok := s.defaultGasPrice(logger, w)
+		if !ok {
+			return
+		}
+		gasPrice = val
+	}
+
+	dataJSON, err := json.Marshal(&data.JobPublishData{GasPrice: gasPrice})
 	if err != nil {
 		s.logger.Error(
 			fmt.Sprintf("failed to marshal job data: %v", err))
@@ -265,15 +289,26 @@ func (s *Server) handlePutOfferingStatus(
 	w.WriteHeader(http.StatusOK)
 }
 
+// ClientOfferingPutPayload offering status update payload for clients.
+type ClientOfferingPutPayload struct {
+	Action   string `json:"action"`
+	Account  string `json:"account"`
+	GasPrice uint64 `json:"gasPrice"`
+	Deposit  uint64 `json:"deposit"`
+}
+
 func (s *Server) handlePutClientOfferingStatus(
 	w http.ResponseWriter, r *http.Request, id string) {
 	logger := s.logger.Add("method", "handlePutClientOfferingStatus",
 		"id", id)
 
-	req := new(OfferingPutPayload)
+	req := new(ClientOfferingPutPayload)
 	if !s.parsePayload(logger, w, r, req) {
 		return
 	}
+
+	logger = logger.Add("payload", req)
+
 	if req.Action != AcceptOffering {
 		s.replyInvalidAction(logger, w)
 		return
@@ -285,6 +320,16 @@ func (s *Server) handlePutClientOfferingStatus(
 	if !s.selectOneTo(logger, w, offer, "WHERE "+clientGetOfferFilterByID, id) {
 		return
 	}
+
+	minDeposit := data.MinDeposit(offer)
+
+	if req.Deposit == 0 {
+		req.Deposit = minDeposit
+	} else if req.Deposit < minDeposit {
+		s.replyInvalidAction(logger, w)
+		return
+	}
+
 	if !s.findTo(logger, w, acc, req.Account) {
 		return
 	}
@@ -294,7 +339,8 @@ func (s *Server) handlePutClientOfferingStatus(
 			" %v received.", req.Action, id))
 
 	dataJSON, err := json.Marshal(&worker.ClientPreChannelCreateData{
-		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID})
+		GasPrice: req.GasPrice, Offering: offer.ID, Account: acc.ID,
+		Deposit: req.Deposit})
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to marshal job data: %v", err))
 		s.replyUnexpectedErr(logger, w)

@@ -760,17 +760,19 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 }
 
 func (w *Worker) agentOfferingPopUpFindRelatedJobs(
-	logger log.Logger, id string) error {
+	logger log.Logger, id, jobID string) error {
 	query := `SELECT count(*)
                     FROM jobs
                    WHERE (jobs.type = $1
                          OR jobs.type = $2)
                          AND jobs.status = $3
-                         AND jobs.related_id = $4;`
+			 AND jobs.related_id = $4
+			 AND jobs.id != $5;`
 
 	var count uint64
 	err := w.db.QueryRow(query, data.JobAgentPreOfferingDelete,
-		data.JobAgentPreOfferingPopUp, data.JobActive, id).Scan(&count)
+		data.JobAgentPreOfferingPopUp, data.JobActive, id,
+		jobID).Scan(&count)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -841,7 +843,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return ErrInternal
 	}
 
-	err = w.agentOfferingPopUpFindRelatedJobs(logger, offering.ID)
+	err = w.agentOfferingPopUpFindRelatedJobs(logger, offering.ID, job.ID)
 	if err != nil {
 		return err
 	}

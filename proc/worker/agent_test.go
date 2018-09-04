@@ -652,10 +652,16 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 		GasPrice: 123,
 	})
 
+	duplicatedJob := *fxt.job
+	duplicatedJob.ID = util.NewUUID()
+
 	// Offering must be registered.
 	if env.worker.AgentPreOfferingPopUp(fxt.job) == nil {
 		t.Fatal("offering status not validated")
 	}
+
+	env.insertToTestDB(t, &duplicatedJob)
+	defer env.deleteFromTestDB(t, &duplicatedJob)
 
 	fxt.Offering.OfferStatus = data.OfferRegister
 	env.updateInTestDB(t, fxt.Offering)
@@ -665,12 +671,8 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 		t.Fatal("no active jobs")
 	}
 
-	job := &data.Job{}
-	env.selectOneTo(t, job, "WHERE related_id = $1", fxt.Offering.ID)
-
-	job.Status = data.JobDone
-
-	env.updateInTestDB(t, job)
+	duplicatedJob.Status = data.JobDone
+	env.updateInTestDB(t, &duplicatedJob)
 
 	if err := env.worker.AgentPreOfferingPopUp(
 		fxt.job); err != ErrOfferingNotActive {

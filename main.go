@@ -267,37 +267,37 @@ func main() {
 		fatal <- uiSrv2.ListenAndServe()
 	}()
 
-	// if conf.Role == data.RoleClient {
-	cmon := cbill.NewMonitor(conf.ClientMonitor,
-		logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
-	go func() {
-		fatal <- cmon.Run()
-	}()
-	defer cmon.Close()
-	// }
-
-	// if conf.Role == data.RoleAgent {
-	paySrv := pay.NewServer(conf.PayServer, logger, db)
-	go func() {
-		fatal <- paySrv.ListenAndServe()
-	}()
-	defer paySrv.Close()
-
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
-	go func() {
-		fatal <- sess.ListenAndServe()
-	}()
-	defer sess.Close()
-
-	amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
-		db, logger, pr)
-	if err != nil {
-		logger.Fatal(err.Error())
+	if conf.Role == data.RoleClient {
+		cmon := cbill.NewMonitor(conf.ClientMonitor,
+			logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		go func() {
+			fatal <- cmon.Run()
+		}()
+		defer cmon.Close()
 	}
-	go func() {
-		fatal <- amon.Run()
-	}()
-	// }
+
+	if conf.Role == data.RoleAgent {
+		paySrv := pay.NewServer(conf.PayServer, logger, db)
+		go func() {
+			fatal <- paySrv.ListenAndServe()
+		}()
+		defer paySrv.Close()
+
+		sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+		go func() {
+			fatal <- sess.ListenAndServe()
+		}()
+		defer sess.Close()
+
+		amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
+			db, logger, pr)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		go func() {
+			fatal <- amon.Run()
+		}()
+	}
 
 	err = <-fatal
 	logger.Fatal(err.Error())

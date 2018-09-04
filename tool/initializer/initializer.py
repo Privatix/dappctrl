@@ -685,7 +685,8 @@ class CMD(Init):
             return True
 
         if rw:
-            self.__wait_up()
+            if not args['no_wait']:
+                self.__wait_up()
             self.file_rw(p=self.fin_file, w=True, data=self.use_ports,
                          log='Finalizer.Write port info', json_r=True)
             return True
@@ -1154,7 +1155,8 @@ class Params(CMD):
                 # if int(port) == int(pay_port['old']):
                 if k == 'PayServer':
                     raw_row[-1] = pay_port['new']
-                    self.use_ports['comm_port'].append(pay_port['new'])
+                    if not self.dappctrl_role == 'client':
+                        self.use_ports['comm_port'].append(pay_port['new'])
 
                 else:
                     port = self.check_port(port)
@@ -1165,6 +1167,8 @@ class Params(CMD):
                         self.use_ports['apiEndpoint'] = port
                     if k == 'SessionServer':
                         self.sessServPort = port
+                        if self.dappctrl_role == 'client':
+                            self.use_ports['common'].remove(port)
 
                 data[k]['Addr'] = delim.join(raw_row)
 
@@ -1745,6 +1749,10 @@ if __name__ == '__main__':
 
     parser.add_argument("--no-gui", action='store_true', default=False,
                         help='Full install without GUI.')
+
+    parser.add_argument("--no-wait", action='store_true',
+                        default=False,
+                        help='Installation without checking ports and waiting for their open.')
 
     parser.add_argument("--clean", action='store_true', default=False,
                         help='Cleaning after the initialization process. Removing GUI, downloaded files, initialization pid file, stopping containers.')

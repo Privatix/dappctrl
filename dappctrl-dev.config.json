@@ -202,12 +202,16 @@
     },
     "StaticPassword": "",
     "Report": {
-        "ReleaseStage": "develop",
+        "ReleaseStage": "development",
         "ExcludedPackages": [
             "github.com/privatix/dappctrl/tool/dappinst",
             "github.com/privatix/dappctrl/svc/dappvpn",
             "github.com/privatix/dappctrl/svc/dappvpn/mon",
-            "github.com/privatix/dappctrl/svc/dappvpn/pusher"
+            "github.com/privatix/dappctrl/svc/dappvpn/pusher",
+            "github.com/privatix/dappctrl/util/log",
+            "github.com/privatix/dappctrl/report/bugsnag",
+            "github.com/privatix/dappctrl/report/log",
+            "github.com/privatix/dappctrl/data/log"
         ]
     },
     "UI": {

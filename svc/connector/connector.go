@@ -3,6 +3,7 @@
 package connector
 
 import (
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
@@ -28,6 +29,9 @@ type Connector interface {
 	// SetupProductConfiguration send common server configuration
 	// used by client access message.
 	SetupProductConfiguration(args *sesssrv.ProductArgs) error
+	// GetEndpointMessage returns endpoint message by channel identificator.
+	GetEndpointMessage(
+		args *sesssrv.EndpointMsgArgs) (*data.Endpoint, error)
 }
 
 type cntr struct {
@@ -77,4 +81,13 @@ func (c *cntr) UpdateSessionUsage(args *sesssrv.UpdateArgs) error {
 func (c *cntr) SetupProductConfiguration(args *sesssrv.ProductArgs) error {
 	return sesssrv.Post(c.config.Config, c.logger, c.config.Username,
 		c.config.Password, sesssrv.PathProductConfig, args, nil)
+}
+
+// GetEndpointMessage returns endpoint message by channel identificator.
+func (c *cntr) GetEndpointMessage(
+	args *sesssrv.EndpointMsgArgs) (*data.Endpoint, error) {
+	var endpoint *data.Endpoint
+	err := sesssrv.Post(c.config.Config, c.logger, c.config.Username,
+		c.config.Password, sesssrv.PathProductConfig, args, &endpoint)
+	return endpoint, err
 }

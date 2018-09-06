@@ -35,7 +35,8 @@ func storeChannel(cn, ch string) {
 	name := filepath.Join(conf.ChannelDir, encode(cn))
 	err := ioutil.WriteFile(name, []byte(ch), chanPerm)
 	if err != nil {
-		logger.Fatal("failed to store channel: %s", err)
+		logger.Add("error", err).Fatal(
+			"failed to store channel")
 	}
 }
 
@@ -43,7 +44,8 @@ func loadChannel() string {
 	name := filepath.Join(conf.ChannelDir, encode(commonName()))
 	data, err := ioutil.ReadFile(name)
 	if err != nil {
-		logger.Fatal("failed to load channel: %s", err)
+		logger.Add("error", err).Fatal(
+			"failed to load channel")
 	}
 	return string(data)
 }
@@ -62,7 +64,8 @@ func getCreds() (string, string) {
 
 	file, err := os.Open(flag.Arg(0))
 	if err != nil {
-		logger.Fatal("failed to open file with credentials: %s", err)
+		logger.Add("error", err).Fatal(
+			"failed to open file with credentials")
 	}
 	defer file.Close()
 
@@ -73,7 +76,8 @@ func getCreds() (string, string) {
 	pass = scanner.Text()
 
 	if err := scanner.Err(); err != nil {
-		logger.Fatal("failed to read file with credentials: %s", err)
+		logger.Add("error", err).Fatal(
+			"failed to read file with credentials")
 	}
 
 	return user, pass

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 type testConfig struct {
@@ -26,12 +27,12 @@ func newTestConfig() *testConfig {
 }
 
 var conf struct {
-	Log            *util.LogConfig
+	FileLog        *log.FileConfig
 	VPNMonitor     *Config
 	VPNMonitorTest *testConfig
 }
 
-var logger *util.Logger
+var logger log.Logger
 
 func connect(t *testing.T, handleSession HandleSessionFunc,
 	channel string) (net.Conn, <-chan error) {
@@ -292,11 +293,15 @@ func TestKill(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.Log = util.NewLogConfig()
+	conf.FileLog = log.NewFileConfig()
 	conf.VPNMonitor = NewConfig()
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
+	var err error
+	logger, err = log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		panic(err)
+	}
 
 	os.Exit(m.Run())
 }

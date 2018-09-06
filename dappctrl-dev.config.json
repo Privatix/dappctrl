@@ -31,7 +31,7 @@
         "Level": "info",
         "StackLevel": "error"
     },
-	"EptMsg": {
+    "EptMsg": {
         "Timeout": 1
     },
     "Eth": {
@@ -198,7 +198,7 @@
     },
     "SOMC": {
         "ReconnPeriod": 5000,
-        "URL": "ws://190.2.137.9:8080"
+        "URL": "ws://89.38.96.53:8080"
     },
     "StaticPassword": "",
     "Report": {
@@ -213,6 +213,10 @@
             "github.com/privatix/dappctrl/report/log",
             "github.com/privatix/dappctrl/data/log"
         ]
+    },
+    "ReportLog": {
+        "Level": "info",
+        "StackLevel": "error"
     },
     "UI": {
         "Addr": "localhost:8888",

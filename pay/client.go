@@ -55,7 +55,7 @@ func newPayload(db *reform.DB, channel,
 	}
 
 	hash := eth.BalanceProofHash(pscAddrParsed,
-		agentAddr, ch.Block, offerHash, big.NewInt(int64(amount)))
+		agentAddr, ch.Block, offerHash, new(big.Int).SetUint64(amount))
 
 	key, err := data.ToPrivateKey(client.PrivateKey, pass)
 	if err != nil {

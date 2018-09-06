@@ -271,7 +271,7 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 		return ErrParseEthAddr
 	}
 
-	balance := big.NewInt(int64(channel.ReceiptBalance))
+	balance := new(big.Int).SetUint64(channel.ReceiptBalance)
 	block := uint32(channel.Block)
 
 	closingHash := eth.BalanceClosingHash(clientAddr, w.pscAddr, block,
@@ -627,11 +627,11 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
-	auth.GasPrice = big.NewInt(int64(publishData.GasPrice))
+	auth.GasPrice = new(big.Int).SetUint64(publishData.GasPrice)
 
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(offeringHash),
-		big.NewInt(int64(minDeposit)), offering.Supply)
+		new(big.Int).SetUint64(minDeposit), offering.Supply)
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())
@@ -745,7 +745,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
-	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
 	tx, err := w.ethBack.PSCRemoveServiceOffering(auth, offeringHash)
 	if err != nil {
@@ -860,7 +860,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
-	auth.GasPrice = big.NewInt(int64(jobDate.GasPrice))
+	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
 	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash)
 	if err != nil {

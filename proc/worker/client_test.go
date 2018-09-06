@@ -46,11 +46,11 @@ func TestClientPreChannelCreate(t *testing.T) {
 	})
 
 	minDeposit := data.MinDeposit(fxt.Offering)
-	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
-	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
 	util.TestExpectResult(t, "Job run", ErrOfferingNoSupply,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
@@ -260,23 +260,19 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		data.JobClientPreChannelTopUp, data.JobChannel)
 	defer fxt.Close()
 
-	fxt.job.RelatedType = data.JobChannel
-	fxt.job.RelatedID = util.NewUUID()
-
-	setJobData(t, fxt.DB, fxt.job, ClientPreChannelTopUpData{
-		Channel:  fxt.Channel.ID,
+	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
 		GasPrice: uint64(testTXGasPrice),
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
 		fxt.Offering.SetupPrice
 
-	env.ethBack.balancePSC = big.NewInt(int64(minDeposit - 1))
+	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelTopUp(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.balancePSC = big.NewInt(int64(minDeposit))
+	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
 
 	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
 

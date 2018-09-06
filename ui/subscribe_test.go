@@ -1,4 +1,4 @@
-package ui
+package ui_test
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -17,7 +18,7 @@ func TestObjectChange(t *testing.T) {
 	unsubscribed := false
 	j1 := &data.Job{RelatedID: fxt.Channel.ID}
 	j2 := &data.Job{RelatedID: util.NewUUID()}
-	handler.queue = job.QueueMock(func(method int, j3 *data.Job,
+	handler.SetMockQueue(job.QueueMock(func(method int, j3 *data.Job,
 		relatedIDs []string, subID string, subFunc job.SubFunc) error {
 		switch method {
 		case job.MockSubscribe:
@@ -32,16 +33,16 @@ func TestObjectChange(t *testing.T) {
 			t.Fatal("unexpected queue call")
 		}
 		return nil
-	})
+	}))
 
-	ch := make(chan *ObjectChangeResult)
+	ch := make(chan *ui.ObjectChangeResult)
 	_, err := subscribe(client, ch, "objectChange",
 		"bad-password", data.JobChannel, nil)
-	util.TestExpectResult(t, "ObjectChange", ErrAccessDenied, err)
+	util.TestExpectResult(t, "ObjectChange", ui.ErrAccessDenied, err)
 
 	_, err = subscribe(client, ch, "objectChange",
 		data.TestPassword, "bad-object-type", nil)
-	util.TestExpectResult(t, "ObjectChange", ErrBadObjectType, err)
+	util.TestExpectResult(t, "ObjectChange", ui.ErrBadObjectType, err)
 
 	sub, err := subscribe(client, ch, "objectChange", data.TestPassword,
 		data.JobChannel, []string{j1.RelatedID, j2.RelatedID})

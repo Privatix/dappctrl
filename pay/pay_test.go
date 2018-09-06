@@ -58,8 +58,8 @@ func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 
 	offeringHash := data.TestToHash(t, pld.OfferingHash)
 
-	hash := eth.BalanceProofHash(testPSCAddr, agentAddr,
-		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+	hash := eth.BalanceProofHash(testPSCAddr, agentAddr, pld.OpenBlockNumber,
+		offeringHash, new(big.Int).SetUint64(pld.Balance))
 
 	key, err := data.TestToPrivateKey(clientAcc.PrivateKey, data.TestPassword)
 	util.TestExpectResult(t, "to private key", nil, err)

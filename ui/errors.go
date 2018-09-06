@@ -10,16 +10,20 @@ const (
 	ErrAccessDenied errors.Error = 0x2F5D<<8 + iota
 	ErrInternal
 	ErrAccountNotFound
+	ErrChannelNotFound
+	ErrDefailtGasPriceNotFound
 	ErrOfferingNotFound
 	ErrBadObjectType
 )
 
 var errMsgs = errors.Messages{
-	ErrAccessDenied:     "access denied",
-	ErrInternal:         "internal server error",
-	ErrAccountNotFound:  "account not found",
-	ErrOfferingNotFound: "offering not found",
-	ErrBadObjectType:    "bad object type",
+	ErrAccessDenied:            "access denied",
+	ErrInternal:                "internal server error",
+	ErrAccountNotFound:         "account not found",
+	ErrChannelNotFound:         "channel not found",
+	ErrDefailtGasPriceNotFound: "default gas price setting not found",
+	ErrOfferingNotFound:        "offering not found",
+	ErrBadObjectType:           "bad object type",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

@@ -98,6 +98,7 @@ logging.getLogger().addHandler(ch)
 main_conf = dict(
     branch='develop',
     link_download='http://art.privatix.net/',
+    dappctrl_dev_conf_json='https://raw.githubusercontent.com/Privatix/dappctrl/{}/dappctrl-dev.config.json',
 
     back=dict(
         file_download=[
@@ -224,6 +225,7 @@ class Init:
 
     def __init__(self):
         self.url_dwnld = main_conf['link_download']
+        self.p_dapctrl_dev_conf = main_conf['dappctrl_dev_conf_json'].format(main_conf['branch'])
 
         self.f_vpn = main_conf['back']['unit_vpn']
         self.f_com = main_conf['back']['unit_com']
@@ -1111,6 +1113,16 @@ class Params(CMD):
         self.file_rw(p=self.dappvpnconf, w=True,
                      data=raw_tmpl, log='Create file with test sql data.')
 
+    def conf_dappctrl_dev_json(self, db_conn):
+        ''' replace the config dappctrl_dev_conf_json
+        with dappctrl.config.local.json '''
+        json_conf = self._get_url(self.p_dapctrl_dev_conf)
+        if json_conf and json_conf.get['DB']:
+            json_conf['DB'] = db_conn
+            return json_conf
+        return False
+
+
     def ip_port_dapp(self):
         """Check ip addr, free ports and replace it in
         dappctrl.config.local.json"""
@@ -1124,6 +1136,12 @@ class Params(CMD):
                             log='Read dappctrl conf')
         if not data:
             self._rolback(22)
+
+        if args['link']:
+            db_conn = data.get('DB')  # save db params from local
+            res = self.conf_dappctrl_dev_json(db_conn)
+            if res: data = res
+
         # Check and change self ip and port for PayAddress
         my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')
         logging.debug('Find IP: {}. Write it.'.format(my_ip))

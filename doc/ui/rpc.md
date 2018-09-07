@@ -19,6 +19,20 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result (object)*:
 - `channel` (string) - id of channel to be created.
 
+
+#### Top Up Channel
+
+*Method*: `topUpChannel`
+
+*Description*: Top up a channel.
+
+*Parameters*: 
+1. Password (string)
+2. Channel id (string)
+3. Gas price (number)
+
+*Result (object)*: Empty
+
 ## Subscriptions to asynchronous notifications
 
 #### Object change

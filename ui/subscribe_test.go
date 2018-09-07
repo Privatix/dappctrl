@@ -12,7 +12,7 @@ import (
 )
 
 func TestObjectChange(t *testing.T) {
-	fxt := newFixture(t)
+	fxt, assertMatchErr := newTest(t, "ObjectChange")
 	defer fxt.close()
 
 	unsubscribed := false
@@ -38,15 +38,15 @@ func TestObjectChange(t *testing.T) {
 	ch := make(chan *ui.ObjectChangeResult)
 	_, err := subscribe(client, ch, "objectChange",
 		"bad-password", data.JobChannel, nil)
-	util.TestExpectResult(t, "ObjectChange", ui.ErrAccessDenied, err)
+	assertMatchErr(ui.ErrAccessDenied, err)
 
 	_, err = subscribe(client, ch, "objectChange",
 		data.TestPassword, "bad-object-type", nil)
-	util.TestExpectResult(t, "ObjectChange", ui.ErrBadObjectType, err)
+	assertMatchErr(ui.ErrBadObjectType, err)
 
 	sub, err := subscribe(client, ch, "objectChange", data.TestPassword,
 		data.JobChannel, []string{j1.RelatedID, j2.RelatedID})
-	util.TestExpectResult(t, "ObjectChange", nil, err)
+	assertMatchErr(nil, err)
 
 	var ch2 data.Channel
 

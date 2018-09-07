@@ -10,7 +10,7 @@ import (
 )
 
 func TestAcceptOffering(t *testing.T) {
-	fxt := newFixture(t)
+	fxt, assertMatchErr := newTest(t, "AcceptOffering")
 	defer fxt.close()
 
 	var j *data.Job
@@ -25,25 +25,21 @@ func TestAcceptOffering(t *testing.T) {
 		return nil
 	}))
 
-	expectResult := func(expected, actual error) {
-		util.TestExpectResult(t, "AcceptOffering", expected, actual)
-	}
-
 	_, err := handler.AcceptOffering(
 		"wrong-password", fxt.UserAcc.ID, fxt.Offering.ID, 12345)
-	expectResult(ui.ErrAccessDenied, err)
+	assertMatchErr(ui.ErrAccessDenied, err)
 
 	_, err = handler.AcceptOffering(
 		data.TestPassword, util.NewUUID(), fxt.Offering.ID, 12345)
-	expectResult(ui.ErrAccountNotFound, err)
+	assertMatchErr(ui.ErrAccountNotFound, err)
 
 	_, err = handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, util.NewUUID(), 12345)
-	expectResult(ui.ErrOfferingNotFound, err)
+	assertMatchErr(ui.ErrOfferingNotFound, err)
 
 	res, err := handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, fxt.Offering.ID, 12345)
-	expectResult(nil, err)
+	assertMatchErr(nil, err)
 
 	if res == nil || j == nil || j.RelatedType != data.JobChannel ||
 		j.RelatedID != res.Channel ||

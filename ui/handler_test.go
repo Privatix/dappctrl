@@ -22,9 +22,8 @@ type fixture struct {
 	salt *data.Setting
 }
 
-func newFixture(t *testing.T) *fixture {
+func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
-
 	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
 	fxt.Offering.OfferStatus = data.OfferRegister
 	fxt.Offering.Status = data.MsgChPublished
@@ -46,7 +45,9 @@ func newFixture(t *testing.T) *fixture {
 	data.SaveToTestDB(t, db, fxt.hash)
 	data.SaveToTestDB(t, db, fxt.salt)
 
-	return &fxt
+	return &fxt, func(expected, actual error) {
+		util.TestExpectResult(t, method, expected, actual)
+	}
 }
 
 func (f *fixture) close() {

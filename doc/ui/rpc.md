@@ -20,6 +20,32 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 - `channel` (string) - id of channel to be created.
 
 
+#### Create Product
+
+*Method*: `createProduct`
+
+*Description*: Creates a new product.
+
+*Parameters*: 
+1. Password (string)
+2. Product (`data.Product` object)
+
+*Result*:
+- `product` (string) - id of created product.
+
+
+#### Get Products
+
+*Method*: `getProducts`
+
+*Description*: Get all products available to the agent.
+
+*Parameters*: None.
+
+*Result*:
+1. Products (array of data.Product objects)
+
+
 #### Set password
 
 *Method*: `setPassword`
@@ -55,6 +81,17 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Parameters*: 
 1. Current password (string)
 2. New password (string)
+
+
+#### Update Product
+
+*Method*: `updateProduct`
+
+*Description*: Updates a new product. If salt is 0, ignores its change. If password is empty, ignores its change.
+
+*Parameters*: 
+1. Password (string)
+2. Product (`data.Product` object)
 
 *Result*: None.
 

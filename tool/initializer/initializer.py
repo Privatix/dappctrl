@@ -1116,8 +1116,9 @@ class Params(CMD):
     def conf_dappctrl_dev_json(self, db_conn):
         ''' replace the config dappctrl_dev_conf_json
         with dappctrl.config.local.json '''
+        logging.debug('Get dappctrl_dev_conf_json from repo')
         json_conf = self._get_url(self.p_dapctrl_dev_conf)
-        if json_conf and json_conf.get['DB']:
+        if json_conf and json_conf.get('DB'):
             json_conf['DB'] = db_conn
             return json_conf
         return False
@@ -1138,7 +1139,7 @@ class Params(CMD):
             self._rolback(22)
 
         if args['link']:
-            db_conn = data.get('DB')  # save db params from local
+            db_conn = data.get(u'DB')  # save db params from local
             res = self.conf_dappctrl_dev_json(db_conn)
             if res: data = res
 

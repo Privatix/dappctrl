@@ -25,7 +25,7 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 		id          string
 		action      string
 		destination string
-		amount      uint
+		amount      uint64
 	}{
 		// Wrong destination.
 		{
@@ -82,7 +82,7 @@ func TestUpdateAccountCheckAvailableBalance(t *testing.T) {
 }
 
 func sendAccountBalanceAction(t *testing.T,
-	id, destination string, amount uint) *http.Response {
+	id, destination string, amount uint64) *http.Response {
 	path := fmt.Sprint(accountsPath, id, "/status")
 	payload := &accountBalancePayload{
 		Amount:      amount,

@@ -330,7 +330,7 @@ const (
 // JobBalanceData is a data required for transfer jobs.
 type JobBalanceData struct {
 	GasPrice uint64
-	Amount   uint
+	Amount   uint64
 }
 
 // JobPublishData is a data required for blockchain publish jobs.

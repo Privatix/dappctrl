@@ -182,7 +182,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 type accountBalancePayload struct {
-	Amount      uint   `json:"amount"`
+	Amount      uint64 `json:"amount"`
 	Destination string `json:"destination"`
 	GasPrice    uint64 `json:"gasPrice"`
 }

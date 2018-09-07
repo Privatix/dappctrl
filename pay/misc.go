@@ -111,8 +111,8 @@ func (s *Server) verifySignature(logger log.Logger,
 		return false
 	}
 
-	hash := eth.BalanceProofHash(pscAddr, agentAddr,
-		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+	hash := eth.BalanceProofHash(pscAddr, agentAddr, pld.OpenBlockNumber,
+		offeringHash, new(big.Int).SetUint64(pld.Balance))
 
 	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
 		s.RespondError(logger, w, &srv.Error{

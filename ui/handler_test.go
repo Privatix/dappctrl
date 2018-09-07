@@ -1,4 +1,4 @@
-package ui
+package ui_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -54,6 +55,17 @@ func (f *fixture) close() {
 	f.TestFixture.Close()
 }
 
+// insertDefaultGasPriceSetting inserts default gas price settings and returns
+// clean up function.
+func insertDefaultGasPriceSetting(t *testing.T, v uint64) func() {
+	rec := &data.Setting{
+		Key:   data.SettingDefaultGasPrice,
+		Value: fmt.Sprint(v),
+	}
+	data.InsertToTestDB(t, db, rec)
+	return func() { data.DeleteFromTestDB(t, db, rec) }
+}
+
 func subscribe(client *rpc.Client, channel interface{}, method string,
 	args ...interface{}) (*rpc.ClientSubscription, error) {
 	return client.Subscribe(context.Background(),
@@ -61,7 +73,7 @@ func subscribe(client *rpc.Client, channel interface{}, method string,
 }
 
 var db *reform.DB
-var handler *Handler
+var handler *ui.Handler
 var client *rpc.Client
 
 func TestMain(m *testing.M) {
@@ -69,7 +81,7 @@ func TestMain(m *testing.M) {
 		DB      *data.DBConfig
 		FileLog *log.FileConfig
 		Job     *job.Config
-		UI      *Config
+		UI      *ui.Config
 	}
 
 	conf.DB = data.NewDBConfig()
@@ -85,7 +97,7 @@ func TestMain(m *testing.M) {
 	}
 
 	server := rpc.NewServer()
-	handler = NewHandler(conf.UI, logger, db, nil)
+	handler = ui.NewHandler(conf.UI, logger, db, nil)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

@@ -1,12 +1,11 @@
-// +build !nouitest
-
-package ui
+package ui_test
 
 import (
 	"testing"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -15,7 +14,7 @@ func TestAcceptOffering(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.queue = job.QueueMock(func(method int, j2 *data.Job,
+	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
 		relatedIDs []string, subID string, subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
@@ -24,23 +23,27 @@ func TestAcceptOffering(t *testing.T) {
 			t.Fatal("unexpected queue call")
 		}
 		return nil
-	})
+	}))
+
+	expectResult := func(expected, actual error) {
+		util.TestExpectResult(t, "AcceptOffering", expected, actual)
+	}
 
 	_, err := handler.AcceptOffering(
 		"wrong-password", fxt.UserAcc.ID, fxt.Offering.ID, 12345)
-	util.TestExpectResult(t, "AcceptOffering", ErrAccessDenied, err)
+	expectResult(ui.ErrAccessDenied, err)
 
 	_, err = handler.AcceptOffering(
 		data.TestPassword, util.NewUUID(), fxt.Offering.ID, 12345)
-	util.TestExpectResult(t, "AcceptOffering", ErrAccountNotFound, err)
+	expectResult(ui.ErrAccountNotFound, err)
 
 	_, err = handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, util.NewUUID(), 12345)
-	util.TestExpectResult(t, "AcceptOffering", ErrOfferingNotFound, err)
+	expectResult(ui.ErrOfferingNotFound, err)
 
 	res, err := handler.AcceptOffering(
 		data.TestPassword, fxt.UserAcc.ID, fxt.Offering.ID, 12345)
-	util.TestExpectResult(t, "AcceptOffering", nil, err)
+	expectResult(nil, err)
 
 	if res == nil || j == nil || j.RelatedType != data.JobChannel ||
 		j.RelatedID != res.Channel ||

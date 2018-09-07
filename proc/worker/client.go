@@ -109,7 +109,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 	auth.GasLimit = w.gasConf.PSC.CreateChannel
 	auth.GasPrice = gasPrice
 	tx, err := w.ethBack.PSCCreateChannel(auth,
-		agentAddr, offerHash, big.NewInt(int64(deposit)))
+		agentAddr, offerHash, new(big.Int).SetUint64(deposit))
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())
@@ -234,7 +234,7 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 
 	var gasPrice *big.Int
 	if jdata.GasPrice != 0 {
-		gasPrice = big.NewInt(int64(jdata.GasPrice))
+		gasPrice = new(big.Int).SetUint64(jdata.GasPrice)
 	}
 
 	return w.clientPreChannelCreateSaveTX(logger,
@@ -756,12 +756,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 	logger := w.logger.Add("method", "ClientPreChannelTopUp", "job", job)
 
-	var jdata ClientPreChannelTopUpData
-	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
-		return err
-	}
-
-	ch, err := w.channel(logger, jdata.Channel)
+	ch, err := w.relatedChannel(logger, job, data.JobClientPreChannelTopUp)
 	if err != nil {
 		return err
 	}
@@ -783,6 +778,11 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 	}
 
 	logger = logger.Add("channel", ch, "offering", offer)
+
+	var jdata data.JobPublishData
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
+		return err
+	}
 
 	return w.clientPreChannelTopUpSaveTx(logger, job, ch, acc, offer,
 		jdata.GasPrice, new(big.Int).SetUint64(deposit))

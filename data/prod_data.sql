@@ -290,7 +290,7 @@ VALUES ('eth.default.gasprice',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.challenge.period',
-        '500',
+        '50',
         2,
         'Number of blocks to wait from an uncooperativeClose initiated' ||
         ' by the Client in order to give the Agent a chance to respond' ||

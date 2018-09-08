@@ -11,6 +11,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -73,7 +74,7 @@ func newPayload(db *reform.DB, channel,
 }
 
 func postPayload(db *reform.DB, channel string,
-	pld *paymentPayload, tls bool, timeout uint) error {
+	pld *paymentPayload, tls bool, timeout uint, pr *proc.Processor) error {
 	pldArgs, err := json.Marshal(pld)
 	if err != nil {
 		return err
@@ -94,8 +95,18 @@ func postPayload(db *reform.DB, channel string,
 		http.MethodPost, url, &srv.Request{Args: pldArgs})
 
 	resp, err := srv.Send(req)
+	if err != nil {
+		return err
+	}
 
 	if resp.Error != nil {
+		if resp.Error.Code == errCodeTerminatedService {
+			_, err = pr.TerminateChannel(
+				channel, data.JobBillingChecker, false)
+			if err != nil {
+				return err
+			}
+		}
 		return fmt.Errorf("%s (%d)", resp.Error.Message, resp.Error.Code)
 	}
 
@@ -104,10 +115,10 @@ func postPayload(db *reform.DB, channel string,
 
 // PostCheque sends a payment cheque to a payment server.
 func PostCheque(db *reform.DB, channel, pscAddr, pass string,
-	amount uint64, tls bool, timeout uint) error {
+	amount uint64, tls bool, timeout uint, pr *proc.Processor) error {
 	pld, err := newPayload(db, channel, pscAddr, pass, amount)
 	if err != nil {
 		return err
 	}
-	return postPayload(db, channel, pld, tls, timeout)
+	return postPayload(db, channel, pld, tls, timeout, pr)
 }

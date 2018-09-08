@@ -138,7 +138,8 @@ func TestPayment(t *testing.T) {
 	called := false
 	err := fmt.Errorf("some error")
 	mon.post = func(db *reform.DB, channel, pscAddr, pass string,
-		amount uint64, tls bool, timeout uint) error {
+		amount uint64, tls bool, timeout uint,
+		pr *proc.Processor) error {
 		called = true
 		return err
 	}

@@ -98,7 +98,9 @@ func TestMain(m *testing.M) {
 	}
 
 	server := rpc.NewServer()
-	handler = ui.NewHandler(conf.UI, logger, db, nil)
+	pwdStorage := new(data.PWDStorage)
+	handler = ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
+		data.TestEncryptedKey, data.TestToPrivateKey)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

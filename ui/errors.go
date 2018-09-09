@@ -21,6 +21,12 @@ const (
 	ErrProductNotFound
 	ErrInvalidTemplateType
 	ErrMalformedTemplate
+	ErrBadObjectType
+	ErrDecodePrivateKey
+	ErrDecryptKeystore
+	ErrPrivateKeyNotFound
+	ErrSmallTokensAmount
+	ErrDestination
 )
 
 var errMsgs = errors.Messages{
@@ -38,6 +44,12 @@ var errMsgs = errors.Messages{
 	ErrProductNotFound:         "product not found",
 	ErrInvalidTemplateType:     "invalid template type",
 	ErrMalformedTemplate:       "malformed template",
+	ErrBadObjectType:           "bad object type",
+	ErrDecodePrivateKey:        "failed to decode private key",
+	ErrDecryptKeystore:         "failed to decrypt keystore",
+	ErrPrivateKeyNotFound:      "private key not found",
+	ErrSmallTokensAmount:       "the amount of tokens is too small",
+	ErrDestination:             "invalid destination",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

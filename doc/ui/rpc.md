@@ -4,6 +4,78 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ## Synchronous methods
 
+### Accounts
+
+#### Create Account
+
+*Method*:	`createAccount`
+
+*Description*: Create new account.
+
+*Parameters*:
+1. Password (string)
+2. Raw private key (string)
+3. Key in Ethereum keystore format (object)
+4. Password to decrypting key in Ethereum keystore format (string)
+5. Account name (string)
+6. Is default account (bool)
+7. InUse (bool)
+
+*Result (object)*:
+- `account` (string) - id of account to be created.
+
+#### Export private key
+
+*Method*:	`exportPrivateKey`
+
+*Description*: Export a private key in base64 encoding by account id.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+
+*Result (object)*:
+- `privateKey` (string) - private key in base64 encoding.
+
+#### Get accounts
+
+*Method*:	`getAccounts`
+
+*Description*: Get accounts.
+
+*Parameters*:
+1. Password (string)
+
+*Result (object)*:
+- `accounts` (array of `data.Account` objects) - account objects.
+
+#### Transfer tokens
+
+*Method*:	`transferTokens`
+
+*Description*: Create transfer of tokens between Privatix token & Privatix service contracts.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+3. Destination smart contract name (string, can be `ptc` or `psc`)
+4. Token amount (number)
+5. Gas price (number)
+
+*Result*: None.
+
+#### Update balance
+
+*Method*:	`updateBalance`
+
+*Description*: Actualize the PRIX token balance for a specific account.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+
+*Result*: None.
+
 #### Accept Offering
 
 *Method*:	`acceptOffering`

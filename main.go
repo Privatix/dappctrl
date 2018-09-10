@@ -162,7 +162,7 @@ func createUIServer(conf *ui.Config, logger log.Logger,
 		return nil, err
 	}
 
-	handler := ui.NewHandler(conf, logger, db, nil)
+	handler := ui.NewHandler(conf, logger, db, queue)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}

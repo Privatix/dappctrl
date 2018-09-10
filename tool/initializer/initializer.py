@@ -17,7 +17,6 @@
     python initializer.py --update-gui                     update only GUI
     python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
-
 """
 
 import sys
@@ -460,8 +459,8 @@ class CommonCMD(Init):
         return True
 
     def _reletive_path(self, name):
-        # dirname = path.dirname(__file__)
-        dirname = getcwd()
+        dirname = path.dirname(path.abspath(__file__))
+        # dirname = getcwd()
         logging.debug('Reletive path: {}'.format(dirname))
         return path.join(dirname, name)
 
@@ -976,7 +975,7 @@ class CommonCMD(Init):
 
         # Check and change self ip and port for PayAddress
         my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')
-        logging.debug('Find IP: {}. Write it.'.format(my_ip))
+        logging.debug('Found IP: {}. Write it.'.format(my_ip))
 
         raw = data['PayAddress'].split(':')
 

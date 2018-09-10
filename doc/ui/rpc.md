@@ -16,8 +16,20 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 3. Offering id (string)
 4. Gas price (number)
 
-*Result (object)*:
+*Result*:
 - `channel` (string) - id of channel to be created.
+
+
+#### Set password
+
+*Method*: `setPassword`
+
+*Description*: Sets the password. Meant to be called only once. For password updates use `updatePassword`.
+
+*Parameters*: 
+1. Password (string)
+
+*Result*: None.
 
 
 #### Top Up Channel
@@ -31,7 +43,21 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 2. Channel id (string)
 3. Gas price (number)
 
-*Result (object)*: Empty
+*Result*: None.
+
+
+#### Update Password
+
+*Method*: `updatePassword`
+
+*Description*: Updates the password.
+
+*Parameters*: 
+1. Current password (string)
+2. New password (string)
+
+*Result*: None.
+
 
 ## Subscriptions to asynchronous notifications
 

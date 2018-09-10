@@ -8,12 +8,14 @@ import (
 const (
 	// CRC16("github.com/privatix/dappctrl/ui") = 0x2F5D
 	ErrAccessDenied errors.Error = 0x2F5D<<8 + iota
-	ErrInternal
 	ErrAccountNotFound
+	ErrBadObjectType
 	ErrChannelNotFound
 	ErrDefailtGasPriceNotFound
 	ErrOfferingNotFound
-	ErrBadObjectType
+	ErrPasswordExists
+	ErrInternal
+	ErrEmptyPassword
 )
 
 var errMsgs = errors.Messages{
@@ -23,7 +25,9 @@ var errMsgs = errors.Messages{
 	ErrChannelNotFound:         "channel not found",
 	ErrDefailtGasPriceNotFound: "default gas price setting not found",
 	ErrOfferingNotFound:        "offering not found",
+	ErrPasswordExists:          "password exists",
 	ErrBadObjectType:           "bad object type",
+	ErrEmptyPassword:           "invalid password",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

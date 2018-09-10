@@ -18,30 +18,6 @@ const (
 			AND agent NOT IN (SELECT eth_addr FROM accounts)`
 )
 
-func (h *Handler) findByPrimaryKey(logger log.Logger,
-	notFoundError error, record reform.Record, id string) error {
-	if err := h.db.FindByPrimaryKeyTo(record, id); err != nil {
-		logger.Error(err.Error())
-		if err == reform.ErrNoRows {
-			return notFoundError
-		}
-		return ErrInternal
-	}
-	return nil
-}
-
-func (h *Handler) findByColumn(logger log.Logger, notFoundError error,
-	record reform.Record, column string, arg interface{}) error {
-	if err := h.db.FindOneTo(record, column, arg); err != nil {
-		logger.Error(err.Error())
-		if err == reform.ErrNoRows {
-			return notFoundError
-		}
-		return ErrInternal
-	}
-	return nil
-}
-
 func (h *Handler) checkPassword(logger log.Logger, password string) error {
 	hash, err := data.ReadSetting(h.db.Querier, data.SettingPasswordHash)
 	if err != nil {

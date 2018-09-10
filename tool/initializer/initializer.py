@@ -274,7 +274,7 @@ fh.setFormatter(form_file)
 logging.getLogger().addHandler(fh)
 
 ch = logging.StreamHandler()  # console debug
-ch.setLevel('DEBUG')
+ch.setLevel('INFO')
 ch.setFormatter(form_console)
 logging.getLogger().addHandler(ch)
 
@@ -483,18 +483,18 @@ class CommonCMD(Init):
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
-        #
-        # if self.target == 'back':
-        #     self.clear_contr(True)
-        #
-        # elif self.target == 'gui':
-        #     self._clear_dir(self.gui_path)
-        #
-        # elif self.target == 'both':
-        #     self.clear_contr(True)
-        #     self._clear_dir(self.gui_path)
-        # else:
-        #     logging.debug('Absent `target` for cleaning!')
+
+        if self.target == 'back':
+            self.clear_contr(True)
+
+        elif self.target == 'gui':
+            self._clear_dir(self.gui_path)
+
+        elif self.target == 'both':
+            self.clear_contr(True)
+            self._clear_dir(self.gui_path)
+        else:
+            logging.debug('Absent `target` for cleaning!')
 
         sys.exit(code)
 
@@ -2352,6 +2352,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
                         self.run_service()
                         if not self.in_args['no_gui']:
+                            self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
                             if pass_check:
@@ -2386,6 +2387,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         logging.debug('Containers: {}'.format(self.p_unpck))
                         logging.debug('Ports: {}'.format(self.use_ports))
                         if not self.in_args['no_gui']:
+                            self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
                             if pass_check:
@@ -2601,6 +2603,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             elif self.in_args['clean']:
                 logging.info('Clean mode.')
                 self.clear_contr()
+                self._clear_dir(self.gui_path)
+
                 if isfile(self.fin_file):
                     remove(self.fin_file)
 

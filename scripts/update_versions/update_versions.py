@@ -5,6 +5,9 @@ import subprocess
 _dappctrl_folder_path = os.path.expanduser("~") + '/go/src/github.com/privatix/dappctrl'
 
 _git_branch_name_command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
+_git_add_all_command = ['git', 'add', '-A']
+_git_commit_command = ['git', 'commit', '-m']
+
 _release_prefix = 'release/'
 
 _prod_data_sql_path = 'data/prod_data.sql'
@@ -48,7 +51,15 @@ def actualize_dappinst(dappctrl_folder_path, release_version):
     replace_in_file(file_path, _dappinst_pattern, r'\1"{}'.format(release_version))
 
 
+def commit_all(release_version):
+    commit_message = 'change version to {}'.format(release_version)
+
+    subprocess.call(_git_add_all_command)
+    subprocess.call(_git_commit_command+[commit_message])
+
+
 os.chdir(_dappctrl_folder_path)
 _release_version = take_release_version()
 actualize_prod_data(_dappctrl_folder_path, _release_version)
 actualize_dappinst(_dappctrl_folder_path, _release_version)
+commit_all(_release_version)

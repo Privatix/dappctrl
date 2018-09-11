@@ -459,10 +459,6 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 				data.JobClientAfterUncooperativeClose
 		})
 
-	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
-		return j.Type == data.JobIncrementCurrentSupply
-	})
-
 	// LogUnCooperativeChannelClose ignored
 	pscEvent(t, mon, "", LogUnCooperativeChannelClose,
 		[]interface{}{
@@ -470,6 +466,10 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.addr[1],          // client
 			td.offering[1].Hash, // offering
 		}, []interface{}{uint32(td.channel[0].Block), new(big.Int)})
+
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
 
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.

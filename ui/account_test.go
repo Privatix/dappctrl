@@ -132,7 +132,7 @@ func testAccount(t *testing.T,
 	}
 }
 
-func testImportAccount(t *testing.T, expID string,
+func testImportAccount(t *testing.T, expID *string,
 	expAccount *data.Account, expPK *ecdsa.PrivateKey, expJob *data.Job) {
 	account2 := &data.Account{}
 	err := data.FindByPrimaryKeyTo(db.Querier, account2, expID)

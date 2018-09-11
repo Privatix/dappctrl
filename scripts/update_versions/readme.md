@@ -12,13 +12,13 @@ Only use at `release/*` branch.
 ### Usage
 
 ```
-update_versions.py <path_to_dappctrl_folder>
+update_versions.py
 ```
 
 Example of usage:
 
 ```
-python update_versions.py /go/src/github.com/privatix/dappctrl
+python update_versions.py
 ```
 
 ### Result

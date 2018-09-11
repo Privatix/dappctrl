@@ -81,7 +81,7 @@ Exit code:
 """
 
 main_conf = dict(
-    log_path='initializer.log',
+    log_path='/var/log/initializer.log',
     branch='develop',
     link_download='http://art.privatix.net/',
     mask=['/24', '255.255.255.0'],
@@ -1830,7 +1830,7 @@ class LXC(DB):
             octet = increment_octet(int(addr[1]), found_contrs_ip)
             self.p_unpck[name][1] = str(octet)
 
-    def _rw_openvpn_conf(self):
+    def _rw_openvpn_conf(self, code):
         # rewrite in /var/lib/lxc/vpn/rootfs/etc/openvpn/config/server.conf
         # management field
         logging.debug('Lxc openvpn_conf')
@@ -2371,7 +2371,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     try:
                         self.unpacking()
                         self._rw_container_conf()
-                        self._rw_openvpn_conf()
+                        self._rw_openvpn_conf(7)
                         self._rw_psql_conf()
                         self._rw_container_intrfs()
                         self._rw_container_run_sh()
@@ -2436,8 +2436,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                        "Y if everything is correct".format(back_build)
 
                 if not self.prompt(mess):
-                    back()
-                self.back_route = back_build
+                    back_build = back()
+                return back_build
 
             def gui():
                 logging.info('Enter the GUI build number for downloading')
@@ -2447,18 +2447,17 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                        "Y if everything is correct".format(gui_build)
 
                 if not self.prompt(mess):
-                    gui()
-
-                self.gui_route = gui_build
+                    gui_build = gui()
+                return gui_build
 
             def back_gui():
-                back()
-                gui()
+                self.back_route = back()
+                self.gui_route = gui()
 
             if self.in_args['update_back'] or self.in_args['no_gui']:
-                back()
+                self.back_route = back()
             elif self.in_args['update_gui']:
-                gui()
+                self.gui_route = gui()
             else:
                 back_gui()
                 # elif self.in_args['update_mass']:

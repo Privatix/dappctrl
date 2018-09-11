@@ -707,7 +707,7 @@ class CommonCMD(Init):
         else:
             logging.debug('dnsmasq conf not exist')
 
-    def _ping_port(self, port, verb=False, host='0.0.0.0'):
+    def _ping_port(self, port,  host='0.0.0.0',verb=False):
 
         with closing(
                 socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
@@ -732,7 +732,7 @@ class CommonCMD(Init):
         if status == 'stop':
             logging.debug('Stop mode')
             while True:
-                if not self._ping_port(p, verb, h):
+                if not self._ping_port(port=p, host=h, verb=verb):
                     return True
                 if time() - ts > tw:
                     return False
@@ -740,7 +740,7 @@ class CommonCMD(Init):
         else:
             logging.debug('Start mode')
             while True:
-                if self._ping_port(p, verb, h):
+                if self._ping_port(port=p, host=h, verb=verb):
                     return True
                 if time() - ts > tw:
                     return False
@@ -807,13 +807,13 @@ class CommonCMD(Init):
         if not self._checker_port(
                 host=self.p_unpck['common'][1],
                 port=self.use_ports['common'],
-                verb=False):
+                verb=True):
             logging.info('Restart Common')
             self.run_service(comm=True, restart=True)
             if not self._checker_port(
                     host=self.p_unpck['common'][1],
                     port=self.use_ports['common'],
-                    verb=False):
+                    verb=True):
                 logging.error('Common is not ready')
                 exit(14)
 
@@ -821,13 +821,13 @@ class CommonCMD(Init):
         if not self._checker_port(
                 host=self.p_unpck['vpn'][1],
                 port=self.use_ports['vpn'],
-                verb=False):
+                verb=True):
             logging.info('Restart VPN')
             self.run_service(comm=False, restart=True)
             if not self._checker_port(
                     host=self.p_unpck['vpn'][1],
                     port=self.use_ports['vpn'],
-                    verb=False):
+                    verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
 

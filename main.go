@@ -4,9 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -56,6 +54,7 @@ type config struct {
 	FileLog       *log.FileConfig
 	Gas           *worker.GasConf
 	Job           *job.Config
+	LogLocation   *log.LocationConfig
 	PayServer     *pay.Config
 	PayAddress    string
 	Proc          *proc.Config
@@ -81,6 +80,7 @@ func newConfig() *config {
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
+		LogLocation:   log.NewLocationConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		ServiceRunner: svcrun.NewConfig(),
@@ -112,33 +112,25 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 	return &storage
 }
 
-func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
+func createLogger(conf *config, file *os.File, db *reform.DB) (log.Logger, error) {
 	elog, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	name := fmt.Sprintf(
-		"/var/log/dappctrl-%s.log", time.Now().Format("2006-01-02"))
-	file, err := os.OpenFile(
-		name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	flog, err := log.NewFileLogger(conf.FileLog, file)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	dlog, err := dblog.NewLogger(conf.DBLog, db)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	blog, err := rlog.NewLogger(conf.ReportLog)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	logger := log.NewMultiLogger(elog, flog, dlog, blog)
@@ -147,12 +139,12 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 	reporter, err := bugsnag.NewClient(conf.Report, db, blog2,
 		version.Message(Commit, Version))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	blog2.Reporter(reporter)
 	blog2.Logger(logger)
 
-	return logger, file, nil
+	return logger, nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger,
@@ -188,11 +180,16 @@ func main() {
 	}
 	defer data.CloseDB(db)
 
-	logger, closer, err := createLogger(conf, db)
+	file, err := log.FileLoggerFile(conf.LogLocation)
+	if err != nil {
+		panic("failed to open log file: " + err.Error())
+	}
+	defer file.Close()
+
+	logger, err := createLogger(conf, file, db)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
-	defer closer.Close()
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger)

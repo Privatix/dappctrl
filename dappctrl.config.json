@@ -173,10 +173,31 @@
             }
         }
     },
+    "LogLocation": {
+        "FilePrefix": "dappctrl",
+        "Path": "/var/log/"
+    },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
         "Addr": "0.0.0.0:9000",
         "TLS": null
+    },
+    "Report": {
+        "ReleaseStage": "production",
+        "ExcludedPackages": [
+            "github.com/privatix/dappctrl/tool/dappinst",
+            "github.com/privatix/dappctrl/svc/dappvpn",
+            "github.com/privatix/dappctrl/svc/dappvpn/mon",
+            "github.com/privatix/dappctrl/svc/dappvpn/pusher",
+            "github.com/privatix/dappctrl/util/log",
+            "github.com/privatix/dappctrl/report/bugsnag",
+            "github.com/privatix/dappctrl/report/log",
+            "github.com/privatix/dappctrl/data/log"
+        ]
+    },
+    "ReportLog": {
+        "Level": "info",
+        "StackLevel": "error"
     },
     "Role": "agent",
     "ServiceRunner": {
@@ -206,23 +227,6 @@
         "URL": "ws://190.2.137.9:8080"
     },
     "StaticPassword": "",
-    "Report": {
-        "ReleaseStage": "production",
-        "ExcludedPackages": [
-            "github.com/privatix/dappctrl/tool/dappinst",
-            "github.com/privatix/dappctrl/svc/dappvpn",
-            "github.com/privatix/dappctrl/svc/dappvpn/mon",
-            "github.com/privatix/dappctrl/svc/dappvpn/pusher",
-            "github.com/privatix/dappctrl/util/log",
-            "github.com/privatix/dappctrl/report/bugsnag",
-            "github.com/privatix/dappctrl/report/log",
-            "github.com/privatix/dappctrl/data/log"
-        ]
-    },
-    "ReportLog": {
-        "Level": "info",
-        "StackLevel": "error"
-    },
     "UI": {
         "Addr": "localhost:8888",
         "AllowedOrigins": ["*"],

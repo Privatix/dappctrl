@@ -281,18 +281,18 @@ func main() {
 		defer cmon.Close()
 	}
 
+	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	go func() {
+		fatal <- sess.ListenAndServe()
+	}()
+	defer sess.Close()
+
 	if conf.Role == data.RoleAgent {
 		paySrv := pay.NewServer(conf.PayServer, logger, db)
 		go func() {
 			fatal <- paySrv.ListenAndServe()
 		}()
 		defer paySrv.Close()
-
-		sess := sesssrv.NewServer(conf.SessionServer, logger, db)
-		go func() {
-			fatal <- sess.ListenAndServe()
-		}()
-		defer sess.Close()
 
 		amon, err := abill.NewMonitor(conf.AgentMonitor.Interval,
 			db, logger, pr)

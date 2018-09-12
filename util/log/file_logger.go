@@ -1,10 +1,12 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 // FileConfig is FileLogger configuration.
@@ -23,9 +25,29 @@ func NewFileConfig() *FileConfig {
 	}
 }
 
+// LocationConfig is logs destination file configuration.
+type LocationConfig struct {
+	FilePrefix string
+	Path       string
+}
+
+// NewLocationConfig creates a new FileLogger configuration.
+func NewLocationConfig() *LocationConfig {
+	return &LocationConfig{
+		Path: "/var/log/",
+	}
+}
+
 type fileLogger struct {
 	*LoggerBase
 	logger *log.Logger
+}
+
+// FileLoggerFile opens file.
+func FileLoggerFile(conf *LocationConfig) (*os.File, error) {
+	name := fmt.Sprintf(conf.Path+conf.FilePrefix+"-%s.log",
+		time.Now().Format("2006-01-02"))
+	return os.OpenFile(name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 }
 
 // NewFileLogger creates a new FileLogger.

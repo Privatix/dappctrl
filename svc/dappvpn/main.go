@@ -35,6 +35,20 @@ var (
 	fatal   = make(chan string)
 )
 
+func makeLogger(file *os.File) (log.Logger, error) {
+	elog, err := log.NewStderrLogger(conf.FileLog)
+	if err != nil {
+		return nil, err
+	}
+
+	flog, err := log.NewFileLogger(conf.FileLog, file)
+	if err != nil {
+		return nil, err
+	}
+
+	return log.NewMultiLogger(elog, flog), nil
+}
+
 func main() {
 	v := flag.Bool("version", false, "Prints current dappctrl version")
 
@@ -55,9 +69,14 @@ func main() {
 
 	var err error
 
-	logger, err = log.NewStderrLogger(conf.FileLog)
+	file, err := log.FileLoggerFile(conf.LogLocation)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create logger: %s\n", err))
+		panic("failed to open log file: " + err.Error())
+	}
+	defer file.Close()
+	logger, err = makeLogger(file)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create a logger: %s\n", err))
 	}
 
 	switch os.Getenv("script_type") {

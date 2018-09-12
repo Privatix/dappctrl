@@ -38,10 +38,13 @@ func Post(conf *srv.Config, logger log.Logger, username, password, path string,
 		return nil
 	}
 
-	err = json.Unmarshal(resp.Result, result)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrDecodeResponse
+	if result != nil {
+		err = json.Unmarshal(resp.Result, result)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrDecodeResponse
+		}
 	}
+
 	return nil
 }

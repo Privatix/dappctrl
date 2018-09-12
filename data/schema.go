@@ -107,34 +107,34 @@ const (
 // Offering is a service offering.
 //reform:offerings
 type Offering struct {
-	ID                 string  `json:"id" reform:"id,pk"`
-	IsLocal            bool    `json:"is_local" reform:"is_local"`
-	Template           string  `json:"template" reform:"tpl" validate:"required"`    // Offering's.
-	Product            string  `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
-	Hash               string  `json:"hash" reform:"hash"`                           // Offering's hash.
-	Status             string  `json:"status" reform:"status"`
-	OfferStatus        string  `json:"offerStatus" reform:"offer_status"`
-	BlockNumberUpdated uint64  `json:"blockNumberUpdated" reform:"block_number_updated"`
-	Agent              string  `json:"agent" reform:"agent" validate:"required"`
-	RawMsg             string  `json:"rawMsg" reform:"raw_msg"`
-	ServiceName        string  `json:"serviceName" reform:"service_name" validate:"required"`
-	Description        *string `json:"description" reform:"description"`
-	Country            string  `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
-	Supply             uint16  `json:"supply" reform:"supply" validate:"required"`
-	CurrentSupply      uint16  `json:"currentSupply" reform:"current_supply"`
-	UnitName           string  `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
-	UnitType           string  `json:"unitType" reform:"unit_type" validate:"required"`
-	BillingType        string  `json:"billingType" reform:"billing_type" validate:"required"`
-	SetupPrice         uint64  `json:"setupPrice" reform:"setup_price"` // Setup fee.
-	UnitPrice          uint64  `json:"unitPrice" reform:"unit_price"`
-	MinUnits           uint64  `json:"minUnits" reform:"min_units" validate:"required"`
-	MaxUnit            *uint64 `json:"maxUnit" reform:"max_unit"`
-	BillingInterval    uint    `json:"billingInterval" reform:"billing_interval" validate:"required"` // Every unit number to be paid.
-	MaxBillingUnitLag  uint    `json:"maxBillingUnitLag" reform:"max_billing_unit_lag"`               // Max maximum tolerance for payment lag.
-	MaxSuspendTime     uint    `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
-	MaxInactiveTimeSec *uint64 `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
-	FreeUnits          uint8   `json:"freeUnits" reform:"free_units"`
-	AdditionalParams   []byte  `json:"additionalParams" reform:"additional_params" validate:"required"`
+	ID                 string          `json:"id" reform:"id,pk"`
+	IsLocal            bool            `json:"is_local" reform:"is_local"`
+	Template           string          `json:"template" reform:"tpl" validate:"required"`    // Offering's.
+	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
+	Hash               string          `json:"hash" reform:"hash"`                           // Offering's hash.
+	Status             string          `json:"status" reform:"status"`
+	OfferStatus        string          `json:"offerStatus" reform:"offer_status"`
+	BlockNumberUpdated uint64          `json:"blockNumberUpdated" reform:"block_number_updated"`
+	Agent              string          `json:"agent" reform:"agent" validate:"required"`
+	RawMsg             string          `json:"rawMsg" reform:"raw_msg"`
+	ServiceName        string          `json:"serviceName" reform:"service_name" validate:"required"`
+	Description        *string         `json:"description" reform:"description"`
+	Country            string          `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
+	Supply             uint16          `json:"supply" reform:"supply" validate:"required"`
+	CurrentSupply      uint16          `json:"currentSupply" reform:"current_supply"`
+	UnitName           string          `json:"unitName" reform:"unit_name" validate:"required"` // Like megabytes, minutes, etc.
+	UnitType           string          `json:"unitType" reform:"unit_type" validate:"required"`
+	BillingType        string          `json:"billingType" reform:"billing_type" validate:"required"`
+	SetupPrice         uint64          `json:"setupPrice" reform:"setup_price"` // Setup fee.
+	UnitPrice          uint64          `json:"unitPrice" reform:"unit_price"`
+	MinUnits           uint64          `json:"minUnits" reform:"min_units" validate:"required"`
+	MaxUnit            *uint64         `json:"maxUnit" reform:"max_unit"`
+	BillingInterval    uint            `json:"billingInterval" reform:"billing_interval" validate:"required"` // Every unit number to be paid.
+	MaxBillingUnitLag  uint            `json:"maxBillingUnitLag" reform:"max_billing_unit_lag"`               // Max maximum tolerance for payment lag.
+	MaxSuspendTime     uint            `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
+	MaxInactiveTimeSec *uint64         `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
+	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
+	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 }
 
 // State channel statuses.

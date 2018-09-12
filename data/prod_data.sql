@@ -8,8 +8,19 @@ VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
             "schema": {
                 "properties": {
                     "additionalParams": {
-                        "default": "{}",
-                        "type": "string"
+                        "default": {
+                            "minUploadMbps": 1,
+                            "minDownloadMbps": 1
+                        },
+                        "minUploadMbps": {
+                            "title": "minimum upload speed (Mbps)",
+                            "type": number
+                        },
+                        "minDownloadMbps": {
+                            "title": "minimum download speed (Mbps)",
+                            "type": number
+                        },
+                        "type": "object"
                     },
                     "agent": {
                         "title": "agent uuid",

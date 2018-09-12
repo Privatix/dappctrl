@@ -84,11 +84,16 @@ func testStartNormalFlow(fxt *data.TestFixture) *data.Session {
 		ClientPort: clientPort,
 	}
 
+	var res StartResult
 	before := time.Now()
 	err := Post(conf.SessionServer.Config, logger,
-		fxt.Product.ID, data.TestPassword, PathStart, args2, nil)
+		fxt.Product.ID, data.TestPassword, PathStart, args2, &res)
 	util.TestExpectResult(fxt.T, "Post", nil, err)
 	after := time.Now()
+
+	if res.Offering == nil || res.Offering.ID != fxt.Channel.Offering {
+		fxt.T.Fatal("bad start result offering")
+	}
 
 	var sess data.Session
 	if err := db.FindOneTo(&sess, "channel", fxt.Channel.ID); err != nil {

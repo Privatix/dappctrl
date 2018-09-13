@@ -123,6 +123,18 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ### Channels
 
+#### Get Channel Usage
+
+*Method*: `getChannelUsage`
+
+*Description*: Returns total units used for a given channel.
+
+*Parameters*: 
+1. Password (string)
+2. Channel id (string)
+
+*Result*:   Amount (number)
+
 #### Top Up Channel
 
 *Method*: `topUpChannel`
@@ -208,6 +220,18 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 *Result (array of `data.Offering` objects)*: offerings.
 
+#### Get Offering Usage
+
+*Method*: `getOfferingUsage`
+
+*Description*: Returns total units used for all channels with a given offering.
+
+*Parameters*: 
+1. Password (string)
+2. Offering id (string)
+
+*Result*:   Amount (number)
+
 #### Update Offering
 
 *Method*:	`updateOffering`
@@ -261,6 +285,18 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Parameters*: None.
 
 *Result (array of `data.Product` objects)*: products.
+
+#### Get Product usage
+
+*Method*: `getProductUsage`
+
+*Description*: Returns total units used in all channel of all offerings with a given product.
+
+*Parameters*: 
+1. Password (string)
+2. Product id (string)
+
+*Result*:   Amount (number)
 
 #### Update Product
 

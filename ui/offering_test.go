@@ -44,7 +44,7 @@ type testField struct {
 }
 
 func TestAcceptOffering(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "AcceptOffering")
+	fxt, assertErrEqual := newTest(t, "AcceptOffering")
 	defer fxt.close()
 
 	var j *data.Job
@@ -63,23 +63,23 @@ func TestAcceptOffering(t *testing.T) {
 
 	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.ID,
 		fxt.Offering.ID, minDeposit, 12345)
-	assertMatchErr(ui.ErrAccessDenied, err)
+	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = handler.AcceptOffering(data.TestPassword, util.NewUUID(),
 		fxt.Offering.ID, minDeposit, 12345)
-	assertMatchErr(ui.ErrAccountNotFound, err)
+	assertErrEqual(ui.ErrAccountNotFound, err)
 
 	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
 		util.NewUUID(), minDeposit, 12345)
-	assertMatchErr(ui.ErrOfferingNotFound, err)
+	assertErrEqual(ui.ErrOfferingNotFound, err)
 
 	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
 		fxt.Offering.ID, minDeposit-1, 12345)
-	assertMatchErr(ui.ErrDepositTooSmall, err)
+	assertErrEqual(ui.ErrDepositTooSmall, err)
 
 	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
 		fxt.Offering.ID, minDeposit, 12345)
-	assertMatchErr(nil, err)
+	assertErrEqual(nil, err)
 
 	if res == nil || j == nil || j.RelatedType != data.JobChannel ||
 		j.RelatedID != *res ||

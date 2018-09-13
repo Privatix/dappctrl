@@ -12,7 +12,7 @@ import (
 )
 
 func TestTopUpChannel(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "TopUpChannel")
+	fxt, assertErrEqual := newTest(t, "TopUpChannel")
 	defer fxt.close()
 
 	var j *data.Job
@@ -28,13 +28,13 @@ func TestTopUpChannel(t *testing.T) {
 	}))
 
 	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 123)
-	assertMatchErr(ui.ErrAccessDenied, err)
+	assertErrEqual(ui.ErrAccessDenied, err)
 
 	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 123)
-	assertMatchErr(ui.ErrChannelNotFound, err)
+	assertErrEqual(ui.ErrChannelNotFound, err)
 
 	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 123)
-	assertMatchErr(nil, err)
+	assertErrEqual(nil, err)
 
 	if j == nil || j.RelatedType != data.JobChannel ||
 		j.RelatedID != fxt.Channel.ID ||

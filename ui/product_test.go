@@ -21,14 +21,14 @@ func testProduct(offerTpl, accessTpl string) data.Product {
 	}
 }
 
-func TestCreateProduct(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "CreateProduct")
+func TestCrateProduct(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "CreateProduct")
 	defer fxt.close()
 
 	product := testProduct(fxt.TemplateOffer.ID, fxt.TemplateAccess.ID)
 
 	_, err := handler.CreateProduct("wrong-password", product)
-	assertMatchErr(ui.ErrAccessDenied, err)
+	assertErrEqual(ui.ErrAccessDenied, err)
 
 	res, err := handler.CreateProduct(data.TestPassword, product)
 
@@ -42,7 +42,7 @@ func TestCreateProduct(t *testing.T) {
 }
 
 func TestUpdateProduct(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "UpdateProduct")
+	fxt, assertErrEqual := newTest(t, "UpdateProduct")
 	defer fxt.close()
 
 	newName := "changed-name"
@@ -52,13 +52,13 @@ func TestUpdateProduct(t *testing.T) {
 	product.Password = ""
 
 	err := handler.UpdateProduct("wrong-password", product)
-	assertMatchErr(ui.ErrAccessDenied, err)
+	assertErrEqual(ui.ErrAccessDenied, err)
 
 	unknownProduct := data.Product{ID: util.NewUUID()}
 	err = handler.UpdateProduct(data.TestPassword, unknownProduct)
-	assertMatchErr(ui.ErrProductNotFound, err)
+	assertErrEqual(ui.ErrProductNotFound, err)
 
-	assertMatchErr(nil, handler.UpdateProduct(data.TestPassword, product))
+	assertErrEqual(nil, handler.UpdateProduct(data.TestPassword, product))
 	fxt.DB.Reload(&product)
 	if product.Name != newName ||
 		product.Salt == 0 || product.Password == "" {
@@ -67,11 +67,11 @@ func TestUpdateProduct(t *testing.T) {
 }
 
 func TestGetProducts(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "GetProducts")
+	fxt, assertErrEqual := newTest(t, "GetProducts")
 	defer fxt.close()
 
 	_, err := handler.GetProducts("wrong-password")
-	assertMatchErr(ui.ErrAccessDenied, err)
+	assertErrEqual(ui.ErrAccessDenied, err)
 
 	// pr2 expected to be ignored from reply.
 	pr2 := *fxt.Product

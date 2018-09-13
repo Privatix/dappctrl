@@ -26,13 +26,13 @@ func ExecuteCommand(args []string) error {
 		if err := migration.Update(connStr); err != nil {
 			panic(fmt.Sprintf("failed to run migration %s", err))
 		}
-		os.Exit(1)
+		os.Exit(0)
 	case "db-init-data":
 		connStr := getConnectionString(args)
 		if err := initData(connStr); err != nil {
 			panic(fmt.Sprintf("failed to init database %s", err))
 		}
-		os.Exit(1)
+		os.Exit(0)
 	}
 	return nil
 }

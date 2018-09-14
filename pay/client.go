@@ -73,8 +73,9 @@ func newPayload(db *reform.DB, channel,
 	return pld, nil
 }
 
-func postPayload(db *reform.DB, channel string,
-	pld *paymentPayload, tls bool, timeout uint, pr *proc.Processor) error {
+func postPayload(db *reform.DB, channel string, pld *paymentPayload,
+	tls bool, timeout uint, pr *proc.Processor,
+	sendFunc func(req *http.Request) (*srv.Response, error)) error {
 	pldArgs, err := json.Marshal(pld)
 	if err != nil {
 		return err
@@ -94,7 +95,7 @@ func postPayload(db *reform.DB, channel string,
 	req, err := srv.NewHTTPRequestWithURL(
 		http.MethodPost, url, &srv.Request{Args: pldArgs})
 
-	resp, err := srv.Send(req)
+	resp, err := sendFunc(req)
 	if err != nil {
 		return err
 	}
@@ -120,5 +121,5 @@ func PostCheque(db *reform.DB, channel, pscAddr, pass string,
 	if err != nil {
 		return err
 	}
-	return postPayload(db, channel, pld, tls, timeout, pr)
+	return postPayload(db, channel, pld, tls, timeout, pr, srv.Send)
 }

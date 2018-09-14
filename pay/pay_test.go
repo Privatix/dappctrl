@@ -180,26 +180,33 @@ func TestServiceTerminate(t *testing.T) {
 	defer data.CleanTestDB(t, testDB)
 	fxt := newFixture(t)
 
-	fxt.Channel.ServiceStatus = data.ServiceTerminated
+	fxt.Channel.ServiceStatus = data.ServiceActive
 	path := srv.GetURL(conf.PayServer.Config, payPath)
 
 	fxt.Endpoint.PaymentReceiverAddress = &path
 
 	data.SaveToTestDB(t, testDB, fxt.Channel, fxt.Endpoint)
 
+	mock := func(req *http.Request) (*srv.Response, error) {
+		return &srv.Response{
+			Error: &srv.Error{
+				Code: errCodeTerminatedService,
+			},
+		}, nil
+	}
+
 	payload := newTestPayload(t,
 		100, fxt.Channel, fxt.Offering, fxt.UserAcc)
-	err := postPayload(testDB, fxt.Channel.ID, payload, false, 0, pr)
+	postPayload(
+		testDB, fxt.Channel.ID, payload, false, 0, pr, mock)
 
-	// We can not simulate a conditions in this test
-	// when there are 2 channels for Client and Agent
-	// with different statuses of the service.
-	// Success is when the service
-	// can not be switched to the status of terminated.
-	if err == nil && err != proc.ErrBadServiceStatus {
-		t.Fatal("processor should try to switch" +
-			" a service status to terminated")
+	j := &data.Job{}
+	data.FindInTestDB(t, testDB, j, "related_id", fxt.Channel.ID)
+	if j.Type != data.JobClientPreServiceTerminate ||
+		j.RelatedID != fxt.Channel.ID {
+		t.Fatal("wrong job")
 	}
+
 }
 
 func TestMain(m *testing.M) {

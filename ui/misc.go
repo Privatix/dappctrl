@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"database/sql"
 	"strconv"
 
 	"gopkg.in/reform.v1"
@@ -91,4 +92,21 @@ func (h *Handler) catchError(logger log.Logger, err error) error {
 	}
 	logger.Error(err.Error())
 	return ErrInternal
+}
+
+func (h *Handler) uintFromQuery(
+	logger log.Logger, password, query, arg string) (*uint, error) {
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	var queryRet sql.NullInt64
+	err := h.db.QueryRow(query, arg).Scan(&queryRet)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
+	ret := uint(queryRet.Int64)
+	return &ret, nil
 }

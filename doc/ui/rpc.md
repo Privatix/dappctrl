@@ -97,6 +97,32 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ### Authentication
 
+#### Get Product Income
+
+*Method*:   `getProductIncome`
+
+*Description*: Get total receipt balance from all channels of all offerings with given product id.
+
+*Parameters*: 
+1. Password (string)
+2. Product id (string)
+
+*Result*: Amount (number)
+
+
+#### Get Offering Income
+
+*Method*: `getOfferingIncome`
+
+*Description*: Get total receipt balance from all channels of offering with given id.
+
+*Parameters*: 
+1. Password (string)
+2. Offering id (string)
+
+*Result*: Amount (number)
+
+
 #### Set password
 
 *Method*: `setPassword`

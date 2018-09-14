@@ -5,6 +5,7 @@ import (
 
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/svc/dappvpn/msg"
+	"github.com/privatix/dappctrl/tc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
@@ -26,20 +27,21 @@ type serverConfig struct {
 // Config is dappvpn configuration.
 type Config struct {
 	ChannelDir string // Directory for common-name -> channel mappings.
-	Log        *util.LogConfig
 	FileLog    *log.FileConfig
+	Log        *util.LogConfig
 	Monitor    *mon.Config
 	OpenVPN    *ovpnConfig // OpenVPN settings for client mode.
 	Pusher     *msg.Config
 	Server     *serverConfig
+	TC         *tc.Config
 }
 
 // NewConfig creates default dappvpn configuration.
 func NewConfig() *Config {
 	return &Config{
 		ChannelDir: ".",
-		Log:        util.NewLogConfig(),
 		FileLog:    log.NewFileConfig(),
+		Log:        util.NewLogConfig(),
 		Monitor:    mon.NewConfig(),
 		OpenVPN: &ovpnConfig{
 			Name:       "openvpn",
@@ -48,5 +50,6 @@ func NewConfig() *Config {
 		},
 		Pusher: msg.NewConfig(),
 		Server: &serverConfig{Config: srv.NewConfig()},
+		TC:     tc.NewConfig(),
 	}
 }

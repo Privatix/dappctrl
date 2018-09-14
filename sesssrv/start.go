@@ -18,6 +18,11 @@ type StartArgs struct {
 	ClientPort uint16 `json:"clientPort"`
 }
 
+// StartResult is a result of session starting.
+type StartResult struct {
+	Offering *data.Offering
+}
+
 func (s *Server) handleStart(
 	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
 	logger := s.logger.Add("method", "handleStart", "sender", r.RemoteAddr)
@@ -33,6 +38,13 @@ func (s *Server) handleStart(
 
 	ch, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
 	if !ok {
+		return
+	}
+
+	var offer data.Offering
+	if err := s.db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
+		logger.Error(err.Error())
+		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return
 	}
 
@@ -64,5 +76,5 @@ func (s *Server) handleStart(
 		return
 	}
 
-	s.RespondResult(logger, w, nil)
+	s.RespondResult(logger, w, StartResult{Offering: &offer})
 }

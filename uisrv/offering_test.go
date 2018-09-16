@@ -93,9 +93,6 @@ func TestPostOfferingValidation(t *testing.T) {
 	invalidBillingType := validPld
 	invalidBillingType.BillingType = "Invalid"
 
-	noAdditionalParams := validPld
-	noAdditionalParams.AdditionalParams = nil
-
 	noAgent := validPld
 	noAgent.Agent = ""
 
@@ -134,7 +131,6 @@ func TestPostOfferingValidation(t *testing.T) {
 		invalidBillingType,
 
 		// Test required fields.
-		noAdditionalParams,
 		noAgent,
 		noBillingInterval,
 		noBillingType,

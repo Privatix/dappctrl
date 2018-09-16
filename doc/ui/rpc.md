@@ -6,36 +6,29 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ### Accounts
 
-#### Create Account
-
-*Method*:	`createAccount`
-
-*Description*: Create new account.
-
-*Parameters*:
-1. Password (string)
-2. Raw private key (string)
-3. Key in Ethereum keystore format (object)
-4. Password to decrypting key in Ethereum keystore format (string)
-5. Account name (string)
-6. Is default account (bool)
-7. InUse (bool)
-
-*Result (object)*:
-- `account` (string) - id of account to be created.
-
 #### Export private key
 
 *Method*:	`exportPrivateKey`
 
-*Description*: Export a private key in base64 encoding by account id.
+*Description*: Export a private key by account id.
 
 *Parameters*:
 1. Password (string)
 2. Account id (string)
 
-*Result (object)*:
-- `privateKey` (string) - private key in base64 encoding.
+*Result (array of bytes)*: private key.
+
+#### Generate Account
+
+*Method*:	`generateAccount`
+
+*Description*: Generate new private key and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+
+*Result (string)*: id of account to be created.
 
 #### Get accounts
 
@@ -46,8 +39,33 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Parameters*:
 1. Password (string)
 
-*Result (object)*:
-- `accounts` (array of `data.Account` objects) - account objects.
+*Result (array of `data.Account` objects)*: account objects.
+
+#### Import Account From Hex
+
+*Method*:	`importAccountFromHex`
+
+*Description*: Import private key from hex and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+
+*Result (string)*: id of account to be created.
+
+#### Import Account From JSON
+
+*Method*:	`importAccountFromJSON`
+
+*Description*: Import private key from JSON blob with password and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+3. Key in Ethereum keystore format (object)
+4. Password to decrypting key in Ethereum keystore format (string)
+
+*Result (string)*: id of account to be created.
 
 #### Transfer tokens
 

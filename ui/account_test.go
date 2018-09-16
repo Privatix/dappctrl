@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
@@ -14,15 +13,6 @@ import (
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
-
-type accountCreatePayload struct {
-	privateKey           string
-	jsonKeyStoreRaw      json.RawMessage
-	jsonKeyStorePassword string
-	isDefault            bool
-	inUse                bool
-	name                 string
-}
 
 type transferTokensPayload struct {
 	account     string
@@ -46,9 +36,9 @@ func TestExportPrivateKey(t *testing.T) {
 	res, err := handler.ExportPrivateKey(data.TestPassword, fxt.Account.ID)
 	assertMatchErr(nil, err)
 
-	if !bytes.Equal(res.PrivateKey, expectedBytes) {
+	if !bytes.Equal(res, expectedBytes) {
 		t.Fatalf("wrong private key exported:"+
-			" expected %x got %x", expectedBytes, res.PrivateKey)
+			" expected %x got %x", expectedBytes, res)
 	}
 }
 
@@ -64,17 +54,9 @@ func TestGetAccounts(t *testing.T) {
 	res, err := handler.GetAccounts(data.TestPassword)
 	assertMatchErr(nil, err)
 
-	if len(res.Accounts) != expectedAccNumber {
+	if len(res) != expectedAccNumber {
 		t.Fatalf("expected %d items, got: %d (%s)",
-			expectedAccNumber, len(res.Accounts), util.Caller())
-	}
-}
-
-func newCreatePayload() *accountCreatePayload {
-	return &accountCreatePayload{
-		isDefault: true,
-		inUse:     true,
-		name:      "Test account",
+			expectedAccNumber, len(res), util.Caller())
 	}
 }
 
@@ -97,44 +79,36 @@ func fromPrivateKeyToECDSA(t *testing.T, privateKey string) *ecdsa.PrivateKey {
 	return key
 }
 
-func fromJSONKeyStoreRawToECDSA(t *testing.T, jsonKeyStoreRaw json.RawMessage,
-	jsonKeyStorePassword string) *ecdsa.PrivateKey {
-	key, err := keystore.DecryptKey(
-		jsonKeyStoreRaw, jsonKeyStorePassword)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return key.PrivateKey
-}
-
-func toECDSA(t *testing.T, privateKey, jsonKeyStorePassword string,
-	jsonKeyStoreRaw json.RawMessage) *ecdsa.PrivateKey {
-	var pk *ecdsa.PrivateKey
-	if privateKey != "" {
-		pk = fromPrivateKeyToECDSA(t, privateKey)
-	} else if len(jsonKeyStoreRaw) != 0 {
-		pk = fromJSONKeyStoreRawToECDSA(
-			t, jsonKeyStoreRaw, jsonKeyStorePassword)
-	}
-	return pk
-}
-
-func checkTestAccount(t *testing.T, pk *ecdsa.PrivateKey,
-	payload *accountCreatePayload, created *data.Account) {
-	if created.Name != payload.name {
+func testAccountFields(t *testing.T,
+	expected *data.Account, created *data.Account) {
+	if created.Name != expected.Name {
 		t.Fatal("wrong name stored")
 	}
 
-	if created.IsDefault != payload.isDefault {
+	if created.IsDefault != expected.IsDefault {
 		t.Fatal("wrong is default stored")
 	}
 
-	if created.InUse != payload.inUse {
+	if created.InUse != expected.InUse {
 		t.Fatal("wrong in use stored")
 	}
+}
 
-	expectedKey := toECDSA(t, payload.privateKey,
-		payload.jsonKeyStorePassword, payload.jsonKeyStoreRaw)
+func checkGeneratedAccount(t *testing.T, expected, created *data.Account) {
+	testAccountFields(t, expected, created)
+
+	_, err := data.TestToPrivateKey(created.PrivateKey, "")
+	if err != nil {
+		t.Fatal("failed to decrypt account's private key: ", err)
+	}
+}
+
+func testAccount(t *testing.T,
+	expected, created *data.Account, key *ecdsa.PrivateKey) {
+	testAccountFields(t, expected, created)
+
+	expectedKey := fromPrivateKeyToECDSA(
+		t, data.FromBytes(crypto.FromECDSA(key)))
 
 	createdKey, err := data.TestToPrivateKey(created.PrivateKey, "")
 	if err != nil {
@@ -144,22 +118,61 @@ func checkTestAccount(t *testing.T, pk *ecdsa.PrivateKey,
 	equalECDSA := func(a, b *ecdsa.PrivateKey) bool {
 		abytes := crypto.FromECDSA(a)
 		bbytes := crypto.FromECDSA(b)
-		return bytes.Compare(abytes, bbytes) == 0
+		return bytes.Equal(abytes, bbytes)
 	}
 
 	if !equalECDSA(expectedKey, createdKey) {
 		t.Fatal("wrong private key stored")
 	}
 
-	pubB := crypto.FromECDSAPub(&pk.PublicKey)
+	pubB := crypto.FromECDSAPub(&key.PublicKey)
 
 	if created.PublicKey != data.FromBytes(pubB) {
 		t.Fatal("wrong public key stored")
 	}
 }
 
-func testCreateAccount(t *testing.T, useJSONKey bool) {
-	fxt, _ := newTest(t, "CreateAccount")
+func testImportAccount(t *testing.T, expID string,
+	expAccount *data.Account, expPK *ecdsa.PrivateKey, expJob *data.Job) {
+	account2 := &data.Account{}
+	err := data.FindByPrimaryKeyTo(db.Querier, account2, expID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.DeleteFromTestDB(t, db, account2)
+
+	testAccount(t, expAccount, account2, expPK)
+
+	if expJob == nil || expJob.RelatedType != data.JobAccount ||
+		expJob.RelatedID != expAccount.ID ||
+		expJob.Type != data.JobAccountUpdateBalances ||
+		expJob.CreatedBy != data.JobUser {
+		t.Fatalf("expected job not created")
+	}
+}
+
+func TestGenerateAccount(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "GenerateAccount")
+	defer fxt.close()
+
+	account := *fxt.Account
+	account.Name = util.NewUUID()[:30]
+
+	res, err := handler.GenerateAccount(data.TestPassword, &account)
+	assertMatchErr(nil, err)
+
+	account2 := &data.Account{}
+	err = data.FindByPrimaryKeyTo(db.Querier, account2, res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer data.DeleteFromTestDB(t, db, account2)
+
+	checkGeneratedAccount(t, &account, account2)
+}
+
+func TestImportAccountFromHex(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "ImportAccountFromHex")
 	defer fxt.close()
 
 	var j *data.Job
@@ -174,43 +187,44 @@ func testCreateAccount(t *testing.T, useJSONKey bool) {
 		return nil
 	}))
 
-	payload := newCreatePayload()
-
 	pk, _ := crypto.GenerateKey()
-	if useJSONKey {
-		payload.privateKey = data.FromBytes(crypto.FromECDSA(pk))
-	} else {
-		k, p := privateKeyToJSON(pk)
-		payload.jsonKeyStoreRaw, payload.jsonKeyStorePassword = k, p
-	}
 
-	res, err := handler.CreateAccount(data.TestPassword, payload.privateKey,
-		payload.jsonKeyStoreRaw, payload.jsonKeyStorePassword,
-		payload.name, payload.isDefault, payload.inUse)
-	if err != nil {
-		t.Fatal(err)
-	}
+	account := *fxt.Account
+	account.Name = util.NewUUID()[:30]
+	account.PrivateKey = data.FromBytes(crypto.FromECDSA(pk))
 
-	account := &data.Account{}
-	err = db.FindByPrimaryKeyTo(account, res.Account)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer data.DeleteFromTestDB(t, db, account)
+	res, err := handler.ImportAccountFromHex(data.TestPassword, &account)
+	assertMatchErr(nil, err)
 
-	checkTestAccount(t, pk, payload, account)
-
-	if j == nil || j.RelatedType != data.JobAccount ||
-		j.RelatedID != account.ID ||
-		j.Type != data.JobAccountUpdateBalances ||
-		j.CreatedBy != data.JobUser {
-		t.Fatalf("expected job not created")
-	}
+	testImportAccount(t, res, &account, pk, j)
 }
 
-func TestCreateAccount(t *testing.T) {
-	testCreateAccount(t, true)
-	testCreateAccount(t, false)
+func TestImportAccountFromJSON(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "ImportAccountFromJSON")
+	defer fxt.close()
+
+	var j *data.Job
+	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
+		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+		switch method {
+		case job.MockAdd:
+			j = j2
+		default:
+			t.Fatal("unexpected queue call")
+		}
+		return nil
+	}))
+
+	pk, _ := crypto.GenerateKey()
+	key, pass := privateKeyToJSON(pk)
+	account := *fxt.Account
+	account.Name = util.NewUUID()[:30]
+
+	res, err := handler.ImportAccountFromJSON(
+		data.TestPassword, &account, key, pass)
+	assertMatchErr(nil, err)
+
+	testImportAccount(t, res, &account, pk, j)
 }
 
 func TestTransferTokens(t *testing.T) {

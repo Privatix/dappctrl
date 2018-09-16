@@ -11,11 +11,12 @@ const (
 	ErrInternal
 	ErrObjectNotFound
 	ErrAccountNotFound
-	ErrBadObjectType
 	ErrChannelNotFound
 	ErrDefailtGasPriceNotFound
 	ErrEmptyPassword
 	ErrOfferingNotFound
+	ErrSettingNotFound
+	ErrBadObjectType
 	ErrPasswordExists
 	ErrProductNotFound
 	ErrInvalidTemplateType
@@ -27,11 +28,12 @@ var errMsgs = errors.Messages{
 	ErrInternal:                "internal server error",
 	ErrObjectNotFound:          "object not found",
 	ErrAccountNotFound:         "account not found",
-	ErrBadObjectType:           "bad object type",
 	ErrChannelNotFound:         "channel not found",
 	ErrDefailtGasPriceNotFound: "default gas price setting not found",
 	ErrEmptyPassword:           "invalid password",
 	ErrOfferingNotFound:        "offering not found",
+	ErrSettingNotFound:         "setting not found",
+	ErrBadObjectType:           "bad object type",
 	ErrPasswordExists:          "password exists",
 	ErrProductNotFound:         "product not found",
 	ErrInvalidTemplateType:     "invalid template type",

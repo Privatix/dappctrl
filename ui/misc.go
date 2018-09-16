@@ -6,6 +6,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/errors"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -81,4 +82,12 @@ func (h *Handler) defaultGasPrice(logger log.Logger) (uint64, error) {
 	}
 
 	return val, nil
+}
+
+func (h *Handler) catchError(logger log.Logger, err error) error {
+	if e, ok := err.(errors.Error); ok {
+		return e
+	}
+	logger.Error(err.Error())
+	return ErrInternal
 }

@@ -26,7 +26,7 @@ func NewConfig() *Config {
 // SetRateLimit sets a rate limit for a given client IP address on a given
 // network interface.
 func (tc *TrafficControl) SetRateLimit(
-	iface, clientIP string, upMbps, downMbps int) error {
+	iface, clientIP string, upMbps, downMbps float32) error {
 	logger := tc.logger.Add("method", "SetRateLimit", "iface", iface,
 		"clientIp", clientIP, "up", upMbps, "down", downMbps)
 
@@ -50,18 +50,24 @@ func (tc *TrafficControl) SetRateLimit(
 		}
 	}
 
-	cid := classID(ip)
-	rate := fmt.Sprintf("%dMbit", downMbps)
-	_, err = tc.run(logger, tc.conf.TcPath,
-		"class", "add", "dev", iface, "parent", "1:",
-		"classid", cid, "htb", "rate", rate, "ceil", rate)
-	if err != nil {
-		return err
+	if downMbps > 0 {
+		cid := classID(ip)
+		rate := fmt.Sprintf("%fMbit", downMbps)
+		_, err = tc.run(logger, tc.conf.TcPath,
+			"class", "add", "dev", iface, "parent", "1:",
+			"classid", cid, "htb", "rate", rate, "ceil", rate)
+		if err != nil {
+			return err
+		}
+
+		_, err = tc.run(logger, tc.conf.IptablesPath,
+			"-t", "mangle", "-A", "POSTROUTING", "-o", iface, "-d",
+			withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
 	}
 
-	_, err = tc.run(logger, tc.conf.IptablesPath,
-		"-t", "mangle", "-A", "POSTROUTING", "-o", iface,
-		"-d", withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
+	if upMbps > 0 {
+		// TODO: Implement upload rate limiting.
+	}
 
 	return err
 }

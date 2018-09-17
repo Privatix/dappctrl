@@ -3,6 +3,7 @@ package ui
 import (
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
@@ -22,20 +23,28 @@ func NewConfig() *Config {
 
 // Handler is an UI RPC handler.
 type Handler struct {
-	conf   *Config
-	logger log.Logger
-	db     *reform.DB
-	queue  job.Queue
+	conf           *Config
+	logger         log.Logger
+	db             *reform.DB
+	queue          job.Queue
+	pwdStorage     data.PWDGetSetter
+	encryptKeyFunc data.EncryptedKeyFunc
+	decryptKeyFunc data.ToPrivateKeyFunc
 }
 
 // NewHandler creates a new handler.
-func NewHandler(conf *Config,
-	logger log.Logger, db *reform.DB, queue job.Queue) *Handler {
+func NewHandler(conf *Config, logger log.Logger, db *reform.DB,
+	queue job.Queue, pwdStorage data.PWDGetSetter,
+	encryptKeyFunc data.EncryptedKeyFunc,
+	decryptKeyFunc data.ToPrivateKeyFunc) *Handler {
 	logger = logger.Add("type", "uisrv.Handler")
 	return &Handler{
-		conf:   conf,
-		logger: logger,
-		db:     db,
-		queue:  queue,
+		conf:           conf,
+		logger:         logger,
+		db:             db,
+		queue:          queue,
+		pwdStorage:     pwdStorage,
+		encryptKeyFunc: encryptKeyFunc,
+		decryptKeyFunc: decryptKeyFunc,
 	}
 }

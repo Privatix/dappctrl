@@ -4,6 +4,96 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ## Synchronous methods
 
+### Accounts
+
+#### Export private key
+
+*Method*:	`exportPrivateKey`
+
+*Description*: Export a private key by account id.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+
+*Result (array of bytes)*: private key.
+
+#### Generate Account
+
+*Method*:	`generateAccount`
+
+*Description*: Generate new private key and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+
+*Result (string)*: id of account to be created.
+
+#### Get accounts
+
+*Method*:	`getAccounts`
+
+*Description*: Get accounts.
+
+*Parameters*:
+1. Password (string)
+
+*Result (array of `data.Account` objects)*: account objects.
+
+#### Import Account From Hex
+
+*Method*:	`importAccountFromHex`
+
+*Description*: Import private key from hex and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+
+*Result (string)*: id of account to be created.
+
+#### Import Account From JSON
+
+*Method*:	`importAccountFromJSON`
+
+*Description*: Import private key from JSON blob with password and create new account.
+
+*Parameters*:
+1. Password (string)
+2. Account (`data.Account` object)
+3. Key in Ethereum keystore format (object)
+4. Password to decrypting key in Ethereum keystore format (string)
+
+*Result (string)*: id of account to be created.
+
+#### Transfer tokens
+
+*Method*:	`transferTokens`
+
+*Description*: Create transfer of tokens between Privatix token & Privatix service contracts.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+3. Destination smart contract name (string, can be `ptc` or `psc`)
+4. Token amount (number)
+5. Gas price (number)
+
+*Result*: None.
+
+#### Update balance
+
+*Method*:	`updateBalance`
+
+*Description*: Actualize the PRIX token balance for a specific account.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+
+*Result*: None.
+
 #### Accept Offering
 
 *Method*:	`acceptOffering`

@@ -4,6 +4,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 ## Synchronous methods
 
+
 ### Accounts
 
 #### Export private key
@@ -16,7 +17,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 1. Password (string)
 2. Account id (string)
 
-*Result (array of bytes)*: private key.
+*Result (array of `byte`s)*: private key.
 
 #### Generate Account
 
@@ -39,7 +40,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Parameters*:
 1. Password (string)
 
-*Result (array of `data.Account` objects)*: account objects.
+*Result (array of `data.Account` objects)*: accounts.
 
 #### Import Account From Hex
 
@@ -94,84 +95,34 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 *Result*: None.
 
-#### Accept Offering
 
-*Method*:	`acceptOffering`
-
-*Description*: Accept offering and create a new channel.
-
-*Parameters*:
-1. Password (string)
-2. Account ethereum address (string)
-3. Offering id (string)
-4. Gas price (number)
-
-*Result (object)*:
-- `channel` (string) - id of channel to be created.
-
-### Settings
-
-#### Get Settings
-
-*Method*:	`getSettings`
-
-*Description*: Get settings.
-
-*Parameters*:
-1. Password (string)
-
-*Result (object)*:
-- `settings` (object) - object with keys as setting names and values as setting values.
-
-#### Update Settings
-
-*Method*:	`updateSettings`
-
-*Description*: Update existing settings.
-
-*Parameters*:
-1. Password (string)
-2. Object with keys as setting names and values as setting values (object)
-
-*Result*: None.
-
-#### Create Product
-
-*Method*: `createProduct`
-
-*Description*: Creates a new product.
-
-*Parameters*: 
-1. Password (string)
-2. Product (`data.Product` object)
-
-*Result (object)*:
-- `product` (string) - id of created product.
-
-
-#### Get Products
-
-*Method*: `getProducts`
-
-*Description*: Get all products available to the agent.
-
-*Parameters*: None.
-
-*Result (object)*:
-1. Products (array of data.Product objects)
-
+### Authentication
 
 #### Set password
 
 *Method*: `setPassword`
 
-*Description*: Sets the password. Meant to be called only once. For password updates use `updatePassword`.
+*Description*: Sets the password. Meant to be called only once. To update password use `updatePassword`.
 
 *Parameters*: 
 1. Password (string)
 
 *Result*: None.
 
+#### Update Password
+
+*Method*: `updatePassword`
+
+*Description*: Updates the password.
+
+*Parameters*: 
+1. Current password (string)
+2. New password (string)
+
+*Result*: None.
+
+
+### Channels
 
 #### Top Up Channel
 
@@ -187,16 +138,99 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
-#### Update Password
+### Offerings
 
-*Method*: `updatePassword`
+#### Accept Offering
 
-*Description*: Updates the password.
+*Method*:	`acceptOffering`
+
+*Description*: Accept offering and create a new channel.
+
+*Parameters*:
+1. Password (string)
+2. Account ethereum address (string)
+3. Offering id (string)
+4. Gas price (number)
+
+*Result (string)*: id of channel to be created.
+
+
+### Settings
+
+#### Get Settings
+
+*Method*:	`getSettings`
+
+*Description*: Get settings.
+
+*Parameters*:
+1. Password (string)
+
+*Result (object)*: object with keys as setting names and values as setting values.
+
+#### Update Settings
+
+*Method*:	`updateSettings`
+
+*Description*: Update existing settings.
+
+*Parameters*:
+1. Password (string)
+2. Object with keys as setting names and values as setting values (object)
+
+*Result*: None.
+
+
+### Templates
+
+#### Get Templates
+
+*Method*:	`getTemplates`
+
+*Description*: Get templates.
+
+*Parameters*:
+1. Password (string)
+2. Template type (string, can be `offer` or `access`)
+
+*Result (array of `data.Template` objects)*: templates.
+
+#### Create Template
+
+*Method*:	`createTemplate`
+
+*Description*: Create new template.
+
+*Parameters*:
+1. Password (string)
+2. Template (`data.Template` object)
+
+*Result (string)*: id of template to be created.
+
+
+### Products
+
+#### Create Product
+
+*Method*: `createProduct`
+
+*Description*: Creates a new product.
 
 *Parameters*: 
-1. Current password (string)
-2. New password (string)
+1. Password (string)
+2. Product (`data.Product` object)
 
+*Result (string)*: id of created product.
+
+#### Get Products
+
+*Method*: `getProducts`
+
+*Description*: Get all products available to the agent.
+
+*Parameters*: None.
+
+*Result (array)*: array of data.Product objects
 
 #### Update Product
 
@@ -211,13 +245,29 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
+### Transactions
+
+#### Get Transactions
+
+*Method*:	`getEthTransactions`
+
+*Description*: Get Ethereum transactiosn.
+
+*Parameters*:
+1. Password (string)
+2. Related type (string, can be `offering`, `channel`, `endpoint`, `account` or empty)
+3. Related id (string, either uuid or empty)
+
+*Result (array of `data.EthTx` objects)*: transactions.
+
+
 ### Objects
 
 #### Get object
 
 *Method*:	`getObject`
 
-*Description*: Get an object of a specified type..
+*Description*: Get an object of a specified type.
 
 *Parameters*:
 1. Password (string)
@@ -225,36 +275,8 @@ This document describes a UI JSON RPC API located in "ui" namespace.
  `offering`, `channel`, `session`, `contract`, `endpoint`, `job`, `ethTx` or `ethLog`)
 3. Object id (string)
 
-*Result (object)*:
-- `object` (object) - object of a given type.
+*Result (object)*: object of a given type.
 
-### Templates
-
-#### Create Template
-
-*Method*:	`createTemplate`
-
-*Description*: Create new template.
-
-*Parameters*:
-1. Password (string)
-2. Template (`data.Template` object)
-
-*Result (object)*:
-- `template` (string) - id of template to be created.
-
-#### Get Templates
-
-*Method*:	`getTemplates`
-
-*Description*: Get templates.
-
-*Parameters*:
-1. Password (string)
-2. Template type (string, can be `offer` or `access`)
-
-*Result (object)*:
-- `templates` (array of `data.Template` objects) - returned templates.
 
 ## Subscriptions to asynchronous notifications
 

@@ -8,14 +8,9 @@ import (
 
 const settingsCondition = "WHERE permissions > 0"
 
-// GetSettingsResult is a GetSettings result.
-type GetSettingsResult struct {
-	Settings map[string]string `json:"settings"`
-}
-
 // GetSettings returns settings.
 func (h *Handler) GetSettings(
-	password string) (*GetSettingsResult, error) {
+	password string) (map[string]string, error) {
 	logger := h.logger.Add("method", "GetSettings")
 
 	err := h.checkPassword(logger, password)
@@ -23,7 +18,7 @@ func (h *Handler) GetSettings(
 		return nil, err
 	}
 
-	result := &GetSettingsResult{make(map[string]string)}
+	result := make(map[string]string)
 
 	settings, err := h.selectAllFrom(
 		logger, data.SettingTable, settingsCondition)
@@ -33,7 +28,7 @@ func (h *Handler) GetSettings(
 
 	for _, v := range settings {
 		setting := *v.(*data.Setting)
-		result.Settings[setting.Name] = setting.Value
+		result[setting.Name] = setting.Value
 	}
 
 	return result, err

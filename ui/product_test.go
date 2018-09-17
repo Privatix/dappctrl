@@ -21,7 +21,7 @@ func testProduct(offerTpl, accessTpl string) data.Product {
 	}
 }
 
-func TestCrateProduct(t *testing.T) {
+func TestCreateProduct(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "CreateProduct")
 	defer fxt.close()
 
@@ -33,7 +33,7 @@ func TestCrateProduct(t *testing.T) {
 	res, err := handler.CreateProduct(data.TestPassword, product)
 
 	prodInDB := &data.Product{}
-	err = fxt.DB.FindByPrimaryKeyTo(prodInDB, res.Product)
+	err = fxt.DB.FindByPrimaryKeyTo(prodInDB, res)
 	if err != nil {
 		t.Fatalf("failed to find created product: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestGetProducts(t *testing.T) {
 	defer data.DeleteFromTestDB(t, fxt.DB, &pr2)
 
 	result, _ := handler.GetProducts(data.TestPassword)
-	if len(result.Products) != 1 {
-		t.Fatal("expected 1 product, got ", len(result.Products))
+	if len(result) != 1 {
+		t.Fatal("expected 1 product, got ", len(result))
 	}
 }

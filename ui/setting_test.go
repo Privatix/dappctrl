@@ -62,12 +62,12 @@ func deleteSettings(t *testing.T) {
 }
 
 func testGetSettings(t *testing.T, exp int, err error,
-	checkFunc func(error, error)) *ui.GetSettingsResult {
+	checkFunc func(error, error)) map[string]string {
 	res, err2 := handler.GetSettings(data.TestPassword)
 	checkFunc(err, err2)
-	if res != nil && len(res.Settings) != exp {
+	if res != nil && len(res) != exp {
 		t.Fatalf("expected %d items, got: %d (%s)",
-			exp, len(res.Settings), util.Caller())
+			exp, len(res), util.Caller())
 	}
 	return res
 }

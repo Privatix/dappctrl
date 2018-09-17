@@ -9,8 +9,8 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-func TestGetTransactions(t *testing.T) {
-	fxt, assertErrEqual := newTest(t, "GetTransactions")
+func TestGetEthTransactions(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "GetEthTransactions")
 	defer fxt.close()
 	testRelID := util.NewUUID()
 	tx := &data.EthTx{
@@ -25,7 +25,7 @@ func TestGetTransactions(t *testing.T) {
 	data.InsertToTestDB(t, db, tx)
 	defer data.DeleteFromTestDB(t, db, tx)
 
-	_, err := handler.GetTransactions("wrong-password", "", "")
+	_, err := handler.GetEthTransactions("wrong-password", "", "")
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	assertResult := func(res []data.EthTx, err error, exp int) {
@@ -35,27 +35,27 @@ func TestGetTransactions(t *testing.T) {
 		}
 	}
 
-	res, err := handler.GetTransactions(
+	res, err := handler.GetEthTransactions(
 		data.TestPassword, "", "")
 	assertResult(res, err, 1)
 
-	res, err = handler.GetTransactions(
+	res, err = handler.GetEthTransactions(
 		data.TestPassword, data.JobChannel, "")
 	assertResult(res, err, 1)
 
-	res, err = handler.GetTransactions(
+	res, err = handler.GetEthTransactions(
 		data.TestPassword, "", testRelID)
 	assertResult(res, err, 1)
 
-	res, err = handler.GetTransactions(
+	res, err = handler.GetEthTransactions(
 		data.TestPassword, data.JobChannel, testRelID)
 	assertResult(res, err, 1)
 
-	res, err = handler.GetTransactions(
+	res, err = handler.GetEthTransactions(
 		data.TestPassword, data.JobOffering, "")
 	assertResult(res, err, 0)
 
-	res, err = handler.GetTransactions(
+	res, err = handler.GetEthTransactions(
 		data.TestPassword, "", util.NewUUID())
 	assertResult(res, err, 0)
 }

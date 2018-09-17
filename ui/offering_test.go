@@ -42,7 +42,7 @@ func TestAcceptOffering(t *testing.T) {
 	assertMatchErr(nil, err)
 
 	if res == nil || j == nil || j.RelatedType != data.JobChannel ||
-		j.RelatedID != res.Channel ||
+		j.RelatedID != *res ||
 		j.Type != data.JobClientPreChannelCreate {
 		t.Fatalf("wrong result data")
 	}

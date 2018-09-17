@@ -7,15 +7,10 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-// AcceptOfferingResult is an AcceptOffering result.
-type AcceptOfferingResult struct {
-	Channel string `json:"channel"`
-}
-
 // AcceptOffering initiates JobClientPreChannelCreate job and subscribes to job
 // results of the corresponding flow.
 func (h *Handler) AcceptOffering(password, account, offering string,
-	gasPrice uint64) (*AcceptOfferingResult, error) {
+	gasPrice uint64) (*string, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
 		"account", account, "offering", offering, "gasPrice", gasPrice)
 
@@ -42,5 +37,5 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 		return nil, ErrInternal
 	}
 
-	return &AcceptOfferingResult{rid}, nil
+	return &rid, nil
 }

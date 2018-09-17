@@ -5,14 +5,9 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-// CreateProductResult is a CreateProduct result.
-type CreateProductResult struct {
-	Product string `json:"product"`
-}
-
 // CreateProduct creates new product.
 func (h *Handler) CreateProduct(password string,
-	product data.Product) (*CreateProductResult, error) {
+	product data.Product) (*string, error) {
 	logger := h.logger.Add("method", "CreateProduct", "product", product)
 
 	if err := h.checkPassword(logger, password); err != nil {
@@ -24,7 +19,7 @@ func (h *Handler) CreateProduct(password string,
 		return nil, err
 	}
 
-	return &CreateProductResult{product.ID}, nil
+	return &product.ID, nil
 }
 
 // UpdateProduct updates a product.
@@ -57,13 +52,8 @@ func (h *Handler) UpdateProduct(password string, product data.Product) error {
 	return nil
 }
 
-// GetProductsResult reply of GetProducts method.
-type GetProductsResult struct {
-	Products []data.Product `json:"products"`
-}
-
 // GetProducts returns all products available to the agent.
-func (h *Handler) GetProducts(password string) (*GetProductsResult, error) {
+func (h *Handler) GetProducts(password string) ([]data.Product, error) {
 	logger := h.logger.Add("method", "GetProducts")
 
 	if err := h.checkPassword(logger, password); err != nil {
@@ -82,5 +72,5 @@ func (h *Handler) GetProducts(password string) (*GetProductsResult, error) {
 		products[i] = *item.(*data.Product)
 	}
 
-	return &GetProductsResult{products}, nil
+	return products, nil
 }

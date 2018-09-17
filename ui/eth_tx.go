@@ -6,10 +6,10 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
-// GetTransactions returns transactions by related object.
-func (h *Handler) GetTransactions(
+// GetEthTransactions returns transactions by related object.
+func (h *Handler) GetEthTransactions(
 	password, relType, relID string) ([]data.EthTx, error) {
-	logger := h.logger.Add("method", "GetTransactions",
+	logger := h.logger.Add("method", "GetEthTransactions",
 		"relatedType", relType, "relatedID", relID)
 
 	if err := h.checkPassword(logger, password); err != nil {

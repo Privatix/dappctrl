@@ -20,12 +20,12 @@ func expectedTemplates(t *testing.T, resultsNumber int, tplType string,
 		return
 	}
 
-	if len(res.Templates) != resultsNumber {
+	if len(res) != resultsNumber {
 		t.Fatalf("expected %d items, got: %d (%s)",
-			resultsNumber, len(res.Templates), util.Caller())
+			resultsNumber, len(res), util.Caller())
 	}
 
-	for _, template := range res.Templates {
+	for _, template := range res {
 		if tplType != "" && template.Kind != tplType {
 			t.Fatalf("invalid template type,"+
 				" expected: %s, got %s",
@@ -45,7 +45,7 @@ func expectedTemplate(t *testing.T, id string, reference *data.Template,
 	}
 
 	var result *data.Template
-	err = json.Unmarshal(res.Object, &result)
+	err = json.Unmarshal(res, &result)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +121,7 @@ func TestCreateTemplate(t *testing.T) {
 		util.TestExpectResult(t, "CreateTemplate", nil, err)
 
 		tpl := &data.Template{}
-		err = db.FindByPrimaryKeyTo(tpl, res.Template)
+		err = db.FindByPrimaryKeyTo(tpl, res)
 		if err != nil {
 			t.Fatal(err)
 		}

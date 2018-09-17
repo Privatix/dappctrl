@@ -39,15 +39,10 @@ var objectTypes = map[string]reform.Table{
 	TypeEthLog:   data.EthLogTable,
 }
 
-// GetObjectResult is a GetObject result.
-type GetObjectResult struct {
-	Object json.RawMessage `json:"object"`
-}
-
 // GetObject finds object in a database by id,
 // then returns an object on raw JSON format.
 func (h *Handler) GetObject(
-	password, objectType, id string) (*GetObjectResult, error) {
+	password, objectType, id string) (json.RawMessage, error) {
 	logger := h.logger.Add("method", "GetObject",
 		"type", objectType, "id", id)
 
@@ -74,7 +69,7 @@ func (h *Handler) GetObject(
 		return nil, ErrInternal
 	}
 
-	return &GetObjectResult{raw}, nil
+	return raw, nil
 }
 
 func (h *Handler) insertObject(object reform.Struct) error {

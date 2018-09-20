@@ -23,7 +23,7 @@ func (s *Server) handleAuth(
 	if !s.ParseRequest(logger, w, r, &args) {
 		return
 	}
-	logger = logger.Add("arguments", args)
+	logger = logger.Add("clientID", args.ClientID)
 
 	ch, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
 	if !ok {

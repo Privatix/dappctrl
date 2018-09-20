@@ -44,6 +44,7 @@ type testConfig struct {
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
 	pscAddr   common.Address
+	Country   *CountryConfig
 }
 
 func newTestConfig() *testConfig {
@@ -57,6 +58,7 @@ func newTestConfig() *testConfig {
 		SOMC:     somc.NewConfig(),
 		SOMCTest: somc.NewTestConfig(),
 		pscAddr:  common.HexToAddress("0x1"),
+		Country:  NewCountryConfig(),
 	}
 }
 
@@ -94,7 +96,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
 		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		data.TestToPrivateKey, conf.EptMsg)
+		conf.Country, data.TestToPrivateKey, conf.EptMsg)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

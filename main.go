@@ -66,6 +66,7 @@ type config struct {
 	SOMC          *somc.Config
 	StaticPasword string
 	UI            *ui.Config
+	Country       *worker.CountryConfig
 }
 
 func newConfig() *config {
@@ -87,6 +88,7 @@ func newConfig() *config {
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
+		Country:       worker.NewCountryConfig(),
 	}
 }
 
@@ -226,9 +228,8 @@ func main() {
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		conf.EptMsg)
+			conf.Eth.Timeout), conf.Gas, pscAddr, conf.PayAddress,
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

@@ -3,7 +3,10 @@ package worker
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -456,6 +459,20 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 1. PSC.registerServiceOffering()
 	// 2. msg_status="bchain_publishing"
 	// 3. offer_status="register"
+
+	testCountry := "YY"
+	testCountryField := "testCountry"
+
+	ts := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintln(w, fmt.Sprintf(
+				`{"%s": "%s"}`, testCountryField, testCountry))
+		}))
+	defer ts.Close()
+
+	conf.Country.URL = ts.URL
+	conf.Country.Field = testCountryField
+
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
 		data.JobOffering)
@@ -486,6 +503,11 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	offering := &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
+
+	if offering.Country != testCountry {
+		t.Fatalf("expected: %s, got: %s",
+			testCountry, offering.Country)
+	}
 
 	if offering.RawMsg == fixture.Offering.RawMsg {
 		t.Fatal("raw msg was not set")

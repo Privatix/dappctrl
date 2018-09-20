@@ -78,6 +78,7 @@ const (
 	ErrOfferingNotActive
 	ErrPopUpOfferingTryAgain
 	ErrOfferingDeposit
+	ErrCountryNotFound
 )
 
 var errMsgs = errors.Messages{
@@ -153,6 +154,7 @@ var errMsgs = errors.Messages{
 	ErrOfferingNotActive:            "offering is inactive",
 	ErrPopUpOfferingTryAgain:        "could not pop up, try again later",
 	ErrOfferingDeposit:              "incorrect offering deposit",
+	ErrCountryNotFound:              "country not found",
 }
 
 func init() {

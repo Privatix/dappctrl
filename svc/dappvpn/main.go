@@ -113,7 +113,7 @@ func handleConnect() {
 		logger.Fatal("failed to start session: " + err.Error())
 	}
 
-	if len(channel) != 0 {
+	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
 		return
 	}
 

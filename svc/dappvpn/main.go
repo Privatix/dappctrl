@@ -120,7 +120,7 @@ func handleConnect() {
 	var params vpndata.OfferingParams
 	err = json.Unmarshal(res.Offering.AdditionalParams, &params)
 	if err != nil {
-		logger.Fatal(
+		logger.Add("offering_params", res.Offering.AdditionalParams).Fatal(
 			"failed to unmarshal offering params: " + err.Error())
 	}
 

@@ -86,6 +86,11 @@
         "TryLimit": 3,
         "TryPeriod": 60000,
         "Types": {
+            "clientAfterOfferingMsgBCPublish": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 30000
+            },
             "clientPreUncooperativeClose": {
                 "TryLimit": 200,
                 "TryPeriod": 180000,
@@ -168,11 +173,6 @@
             }
         }
     },
-    "Log": {
-        "Level": "info",
-        "LogPath": "/var/log",
-        "LogFilePrefix": "dappctrl"
-    },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
         "Addr": "0.0.0.0:9000",
@@ -207,7 +207,7 @@
     },
     "StaticPassword": "",
     "Report": {
-        "ReleaseStage": "alpha",
+        "ReleaseStage": "production",
         "ExcludedPackages": [
             "github.com/privatix/dappctrl/tool/dappinst",
             "github.com/privatix/dappctrl/svc/dappvpn",

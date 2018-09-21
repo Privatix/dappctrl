@@ -30,7 +30,7 @@ func NewConfig() *Config {
 }
 
 type postChequeFunc func(db *reform.DB, channel, pscAddr, pass string,
-	amount uint64, tls bool, timeout uint) error
+	amount uint64, tls bool, timeout uint, pr *proc.Processor) error
 
 // Monitor is a client billing monitor.
 type Monitor struct {
@@ -178,7 +178,7 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 	m.logger.Add("amount", amount).Info("posting cheque")
 	pscHex := data.HexFromBytes(common.HexToAddress(m.psc).Bytes())
 	err := m.post(m.db, ch, pscHex, m.pw.Get(), amount,
-		m.conf.RequestTLS, m.conf.RequestTimeout)
+		m.conf.RequestTLS, m.conf.RequestTimeout, m.pr)
 	if err != nil {
 		m.logger.Add("channel", ch, "amount",
 			amount).Error(err.Error())

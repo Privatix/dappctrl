@@ -8,12 +8,6 @@
         "UTC": false
     },
 
-    "Log": {
-        "Level": "info",
-        "LogPath": "/var/log",
-        "LogFilePrefix": "dappvpn"
-    },
-
     "Monitor": {
         "Addr": "localhost:7505",
         "ByteCountPeriod": 5

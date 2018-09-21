@@ -43,7 +43,6 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		if !ok {
 			return
 		}
-		logger = logger.Add("product", prod)
 
 		// TODO: Use unit size instead of this hardcode.
 		args.Units /= 1024 * 1024

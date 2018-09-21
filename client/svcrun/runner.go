@@ -2,6 +2,7 @@ package svcrun
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // ServiceRunner starts and stops services.
@@ -46,7 +47,7 @@ type newCmdFunc func(name string, args []string, channel string) *exec.Cmd
 
 type serviceRunner struct {
 	conf   *Config
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
 	newCmd newCmdFunc
@@ -55,7 +56,7 @@ type serviceRunner struct {
 }
 
 // NewServiceRunner creates a new service runner.
-func NewServiceRunner(conf *Config, logger *util.Logger,
+func NewServiceRunner(conf *Config, logger log.Logger,
 	db *reform.DB, pr *proc.Processor) ServiceRunner {
 	newCmd := func(name string, args []string, channel string) *exec.Cmd {
 		return exec.Command(name, append(args, "-channel="+channel)...)
@@ -63,7 +64,7 @@ func NewServiceRunner(conf *Config, logger *util.Logger,
 
 	return &serviceRunner{
 		conf:   conf,
-		logger: logger,
+		logger: logger.Add("type", "svcrun.serviceRunner"),
 		db:     db,
 		pr:     pr,
 		newCmd: newCmd,
@@ -89,6 +90,8 @@ func (r *serviceRunner) StopAll() error {
 
 // Start starts a service associated with a given channel.
 func (r *serviceRunner) Start(channel string) error {
+	logger := r.logger.Add("method", "Start", "channel", channel)
+
 	conf, key, err := r.getKey(channel)
 	if err != nil {
 		return err
@@ -114,7 +117,7 @@ func (r *serviceRunner) Start(channel string) error {
 		return err
 	}
 
-	r.logger.Warn("service adapter for channel %s has started", channel)
+	logger.Warn("service adapter has started")
 
 	r.cmds[key] = cmd
 
@@ -150,6 +153,8 @@ func (r *serviceRunner) getKey(channel string) (*ServiceConfig, string, error) {
 
 func (r *serviceRunner) wait(
 	channel, key string, cmd *exec.Cmd, stderr io.ReadCloser) {
+	logger := r.logger.Add("method", "wait", "channel", channel)
+
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
@@ -159,8 +164,7 @@ func (r *serviceRunner) wait(
 		stderr.Close()
 	}()
 
-	r.logger.Warn("service adapter for channel %s has exited: %v",
-		channel, cmd.Wait())
+	logger.Warn(fmt.Sprintf("service adapter has exited: %v", cmd.Wait()))
 
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
@@ -169,7 +173,7 @@ func (r *serviceRunner) wait(
 
 	_, err := r.pr.SuspendChannel(channel, data.JobServiceAdapter, false)
 	if err != nil {
-		r.logger.Warn("failed to suspend channel: %s", err)
+		logger.Add("error", err).Warn("failed to suspend channel")
 	}
 }
 

@@ -23,7 +23,7 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 	var transferAmount int64 = 10
 
 	setJobData(t, fixture.DB, fixture.job, data.JobBalanceData{
-		Amount: uint(transferAmount),
+		Amount: uint64(transferAmount),
 	})
 
 	env.ethBack.balancePTC = big.NewInt(transferAmount)
@@ -62,7 +62,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 	approveJob.RelatedID = fixture.Account.ID
 	env.insertToTestDB(t, approveJob)
 	setJobData(t, fixture.DB, approveJob, &data.JobBalanceData{
-		Amount: uint(transferAmount),
+		Amount: uint64(transferAmount),
 	})
 	defer env.deleteFromTestDB(t, approveJob)
 
@@ -114,7 +114,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	var amount int64 = 10
 
 	setJobData(t, fixture.DB, fixture.job, &data.JobBalanceData{
-		Amount: uint(amount),
+		Amount: uint64(amount),
 	})
 
 	env.ethBack.balancePSC = big.NewInt(amount)

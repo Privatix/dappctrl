@@ -8,8 +8,16 @@ VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
             "schema": {
                 "properties": {
                     "additionalParams": {
-                        "default": "{}",
-                        "type": "string"
+                        "default": {},
+                        "minUploadMbps": {
+                            "title": "minimum upload speed (Mbps)",
+                            "type": "number"
+                        },
+                        "minDownloadMbps": {
+                            "title": "minimum download speed (Mbps)",
+                            "type": "number"
+                        },
+                        "type": "object"
                     },
                     "agent": {
                         "title": "agent uuid",
@@ -290,7 +298,7 @@ VALUES ('eth.default.gasprice',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.challenge.period',
-        '500',
+        '50',
         2,
         'Number of blocks to wait from an uncooperativeClose initiated' ||
         ' by the Client in order to give the Agent a chance to respond' ||
@@ -311,7 +319,7 @@ VALUES ('eth.max.deposit',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.10.0',
+        '0.11.0',
         1,
         'Version of database.',
         'db version');

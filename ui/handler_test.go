@@ -1,4 +1,4 @@
-package ui
+package ui_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -21,9 +22,8 @@ type fixture struct {
 	salt *data.Setting
 }
 
-func newFixture(t *testing.T) *fixture {
+func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
-
 	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
 	fxt.Offering.OfferStatus = data.OfferRegister
 	fxt.Offering.Status = data.MsgChPublished
@@ -45,13 +45,26 @@ func newFixture(t *testing.T) *fixture {
 	data.SaveToTestDB(t, db, fxt.hash)
 	data.SaveToTestDB(t, db, fxt.salt)
 
-	return &fxt
+	return &fxt, func(expected, actual error) {
+		util.TestExpectResult(t, method, expected, actual)
+	}
 }
 
 func (f *fixture) close() {
 	data.DeleteFromTestDB(f.T, db, f.salt)
 	data.DeleteFromTestDB(f.T, db, f.hash)
 	f.TestFixture.Close()
+}
+
+// insertDefaultGasPriceSetting inserts default gas price settings and returns
+// clean up function.
+func insertDefaultGasPriceSetting(t *testing.T, v uint64) func() {
+	rec := &data.Setting{
+		Key:   data.SettingDefaultGasPrice,
+		Value: fmt.Sprint(v),
+	}
+	data.InsertToTestDB(t, db, rec)
+	return func() { data.DeleteFromTestDB(t, db, rec) }
 }
 
 func subscribe(client *rpc.Client, channel interface{}, method string,
@@ -61,7 +74,7 @@ func subscribe(client *rpc.Client, channel interface{}, method string,
 }
 
 var db *reform.DB
-var handler *Handler
+var handler *ui.Handler
 var client *rpc.Client
 
 func TestMain(m *testing.M) {
@@ -69,7 +82,7 @@ func TestMain(m *testing.M) {
 		DB      *data.DBConfig
 		FileLog *log.FileConfig
 		Job     *job.Config
-		UI      *Config
+		UI      *ui.Config
 	}
 
 	conf.DB = data.NewDBConfig()
@@ -85,7 +98,9 @@ func TestMain(m *testing.M) {
 	}
 
 	server := rpc.NewServer()
-	handler = NewHandler(conf.UI, logger, db, nil)
+	pwdStorage := new(data.PWDStorage)
+	handler = ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
+		data.TestEncryptedKey, data.TestToPrivateKey)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

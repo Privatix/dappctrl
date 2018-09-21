@@ -380,30 +380,20 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 	var relID string
 
 	// First try to take related id from offering in db.
-	topic := el.Topics[3]
-	offeringHash := data.FromBytes(topic.Bytes())
+	topicOffering := el.Topics[3]
+	offeringHash := data.FromBytes(topicOffering.Bytes())
+
 	var offering data.Offering
 	err := m.db.FindOneTo(&offering, "hash", offeringHash)
 	if err == sql.ErrNoRows {
 		// Try to take related id from after offering publish job.
-		jobsLog := &data.EthLog{}
-		topicHex := fmt.Sprintf("0x%064v", topic.Hex())
-		err = m.db.SelectOneTo(jobsLog, `WHERE topics->>2 = $1
-						AND type IN ($2, $3)`, topicHex,
-			data.JobAgentAfterOfferingMsgBCPublish,
-			data.JobClientAfterOfferingMsgBCPublish)
-		if err != nil && err != sql.ErrNoRows {
-			m.logger.Error(err.Error())
-		}
-		if jobsLog.JobID != nil {
-			relID = *jobsLog.JobID
-		}
+		relID = m.offeringPublishJobID(topicOffering)
 	} else {
 		relID = offering.ID
 	}
 
 	if relID == "" {
-		m.logger.Add("topicHash", topic.Hex()).Info("not found" +
+		m.logger.Add("topicHash", topicOffering.Hex()).Info("not found" +
 			" offering by hash to schedule current supply" +
 			" update, skipping")
 		return
@@ -420,6 +410,24 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 	if err := m.queue.Add(j); err != nil {
 		m.logger.Error(err.Error())
 	}
+}
+
+func (m *Monitor) offeringPublishJobID(hash common.Hash) string {
+	hashHex := fmt.Sprintf("0x%064v", hash.Hex())
+	job := &data.Job{}
+	err := m.db.SelectOneTo(job,
+		`INNER JOIN eth_logs
+		    ON jobs.id=eth_logs.job
+		 WHERE eth_logs.topics->>2 = $1
+		    AND jobs.type in ($2, $3)`,
+		hashHex,
+		data.JobAgentAfterOfferingMsgBCPublish,
+		data.JobClientAfterOfferingMsgBCPublish,
+	)
+	if err != nil && err != sql.ErrNoRows {
+		m.logger.Error(err.Error())
+	}
+	return job.ID
 }
 
 func (m *Monitor) scheduleTokenApprove(el *data.EthLog, jobType string) {

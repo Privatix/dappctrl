@@ -2,14 +2,13 @@ package mon
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 // Config is a configuration for OpenVPN monitor.
@@ -35,7 +34,7 @@ type client struct {
 // for killing client VPN sessions.
 type Monitor struct {
 	conf            *Config
-	logger          *util.Logger
+	logger          log.Logger
 	handleSession   HandleSessionFunc
 	channel         string // Client mode channel (empty in server mode).
 	conn            net.Conn
@@ -56,11 +55,11 @@ const (
 type HandleSessionFunc func(ch string, event int, up, down uint64) bool
 
 // NewMonitor creates a new OpenVPN monitor.
-func NewMonitor(conf *Config, logger *util.Logger,
+func NewMonitor(conf *Config, logger log.Logger,
 	handleSession HandleSessionFunc, channel string) *Monitor {
 	return &Monitor{
 		conf:          conf,
-		logger:        logger,
+		logger:        logger.Add("type", "svc/dappvpn.Monitor"),
 		handleSession: handleSession,
 		channel:       channel,
 	}
@@ -74,34 +73,36 @@ func (m *Monitor) Close() error {
 	return nil
 }
 
-// Monitor errors.
-var (
-	ErrServerOutdated = errors.New("server outdated")
-)
-
 // MonitorTraffic connects to OpenVPN management interfaces and starts
 // monitoring VPN traffic.
 func (m *Monitor) MonitorTraffic() error {
+	logger := m.logger.Add("method", "MonitorTraffic")
+
+	handleErr := func(err error) error {
+		logger.Error(err.Error())
+		return err
+	}
+
 	var err error
 	if m.conn, err = net.Dial("tcp", m.conf.Addr); err != nil {
-		return err
+		return handleErr(err)
 	}
 	defer m.conn.Close()
 
 	reader := bufio.NewReader(m.conn)
 
-	if err := m.initConn(); err != nil {
-		return err
+	if err := m.initConn(logger); err != nil {
+		return handleErr(err)
 	}
 
 	for {
 		str, err := reader.ReadString('\n')
 		if err != nil {
-			return err
+			return handleErr(err)
 		}
 
-		if err = m.processReply(str); err != nil {
-			return err
+		if err = m.processReply(logger, str); err != nil {
+			return handleErr(err)
 		}
 	}
 }
@@ -113,8 +114,8 @@ func (m *Monitor) write(cmd string) error {
 	return err
 }
 
-func (m *Monitor) requestClients() error {
-	m.logger.Info("requesting updated client list")
+func (m *Monitor) requestClients(logger log.Logger) error {
+	logger.Info("requesting updated client list")
 	return m.write("status 2")
 }
 
@@ -126,13 +127,13 @@ func (m *Monitor) killSession(cn string) error {
 	return m.write(fmt.Sprintf("kill %s", cn))
 }
 
-func (m *Monitor) initConn() error {
+func (m *Monitor) initConn(logger log.Logger) error {
 	if err := m.setByteCountPeriod(); err != nil {
 		return err
 	}
 
 	if len(m.channel) == 0 {
-		if err := m.requestClients(); err != nil {
+		if err := m.requestClients(logger); err != nil {
 			return err
 		}
 	} else {
@@ -158,8 +159,8 @@ const (
 	prefixState             = ">STATE:"
 )
 
-func (m *Monitor) processReply(s string) error {
-	m.logger.Debug("openvpn raw: %s", s)
+func (m *Monitor) processReply(logger log.Logger, s string) error {
+	logger.Debug("openvpn raw: " + s)
 
 	if strings.HasPrefix(s, prefixClientListHeader) {
 		m.clients = make(map[uint]client)
@@ -167,27 +168,27 @@ func (m *Monitor) processReply(s string) error {
 	}
 
 	if strings.HasPrefix(s, prefixClientList) {
-		return m.processClientList(s[len(prefixClientList):])
+		return m.processClientList(logger, s[len(prefixClientList):])
 	}
 
 	if strings.HasPrefix(s, prefixByteCount) {
-		return m.processByteCount(s[len(prefixByteCount):])
+		return m.processByteCount(logger, s[len(prefixByteCount):])
 	}
 
 	if strings.HasPrefix(s, prefixByteCountClient) {
-		return m.processByteCountClient(s[len(prefixByteCountClient):])
+		return m.processByteCountClient(logger, s[len(prefixByteCountClient):])
 	}
 
 	if strings.HasPrefix(s, prefixClientEstablished) {
-		return m.requestClients()
+		return m.requestClients(logger)
 	}
 
 	if strings.HasPrefix(s, prefixState) {
-		return m.processState(s[len(prefixState):])
+		return m.processState(logger, s[len(prefixState):])
 	}
 
 	if strings.HasPrefix(s, prefixError) {
-		m.logger.Error("openvpn error: %s", s[len(prefixError):])
+		logger.Error(s[len(prefixError):])
 	}
 
 	return nil
@@ -197,7 +198,7 @@ func split(s string) []string {
 	return strings.Split(strings.TrimRight(s, "\r\n"), ",")
 }
 
-func (m *Monitor) processClientList(s string) error {
+func (m *Monitor) processClientList(logger log.Logger, s string) error {
 	sp := split(s)
 	if len(sp) < 10 {
 		return ErrServerOutdated
@@ -209,13 +210,14 @@ func (m *Monitor) processClientList(s string) error {
 	}
 
 	m.clients[uint(cid)] = client{sp[8], sp[0]}
-	m.logger.Info("openvpn client found: cid %d, chan %s, cn %s",
-		cid, sp[8], sp[0])
+
+	logger.Add("cid", cid, "chan", sp[8], "cn", sp[0]).
+		Info("openvpn client found")
 
 	return nil
 }
 
-func (m *Monitor) processByteCount(s string) error {
+func (m *Monitor) processByteCount(logger log.Logger, s string) error {
 	sp := split(s)
 
 	cid, err := strconv.ParseUint(sp[0], 10, 32)
@@ -235,11 +237,11 @@ func (m *Monitor) processByteCount(s string) error {
 
 	cl, ok := m.clients[uint(cid)]
 	if !ok {
-		return m.requestClients()
+		return m.requestClients(logger)
 	}
 
-	m.logger.Info("openvpn byte count for chan %s: up %d, down %d",
-		cl.channel, up, down)
+	logger.Add("chan", cl.channel, "up", up, "down", down).
+		Info("openvpn byte count")
 
 	go func() {
 		if !m.handleSession(cl.channel, SessionByteCount, up, down) {
@@ -250,7 +252,7 @@ func (m *Monitor) processByteCount(s string) error {
 	return nil
 }
 
-func (m *Monitor) processByteCountClient(s string) error {
+func (m *Monitor) processByteCountClient(logger log.Logger, s string) error {
 	if !m.clientConnected {
 		return nil
 	}
@@ -267,7 +269,7 @@ func (m *Monitor) processByteCountClient(s string) error {
 		return err
 	}
 
-	m.logger.Info("openvpn byte count: up %d, down %d", up, down)
+	logger.Info(fmt.Sprintf("openvpn byte count: up %d, down %d", up, down))
 
 	go func() {
 		m.handleSession(m.channel, SessionByteCount, up, down)
@@ -276,17 +278,17 @@ func (m *Monitor) processByteCountClient(s string) error {
 	return nil
 }
 
-func (m *Monitor) processState(s string) error {
+func (m *Monitor) processState(logger log.Logger, s string) error {
 	connected := split(s)[1] == "CONNECTED"
 
 	if m.clientConnected && !connected {
-		m.logger.Warn("disconnected from server")
+		logger.Warn("disconnected from server")
 		go func() {
 			m.handleSession(m.channel, SessionStopped, 0, 0)
 		}()
 		m.clientConnected = false
 	} else if !m.clientConnected && connected {
-		m.logger.Warn("connected to server")
+		logger.Warn("connected to server")
 		go func() {
 			m.handleSession(m.channel, SessionStarted, 0, 0)
 		}()

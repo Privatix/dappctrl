@@ -38,7 +38,7 @@ var (
 		ServiceRunnerTest *testConfig
 	}
 
-	logger *util.Logger
+	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
 )
@@ -161,7 +161,6 @@ func TestStopAll(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.Log = util.NewLogConfig()
 	conf.FileLog = log.NewFileConfig()
 	conf.Job = job.NewConfig()
 	conf.Proc = proc.NewConfig()
@@ -174,7 +173,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	logger = util.NewTestLogger(conf.Log)
+	logger = l
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)

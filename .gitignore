@@ -2,15 +2,18 @@
 .DS_Store
 
 *_reform.go
+.vscode
 .idea/*
 .docker_data/*
 
+dappctrl
 dappctrl.config.local.json
 dappctrl-test.config.local.json
 
 Gopkg.lock
 statik/statik.go
 statik/pkgList/packages.txt
+statik/scripts/*
 vendor
 
 *.iml

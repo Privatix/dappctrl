@@ -286,7 +286,7 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second)
+	queue.awaitCompletion(time.Second * 5)
 }
 
 func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
@@ -459,10 +459,6 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 				data.JobClientAfterUncooperativeClose
 		})
 
-	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
-		return j.Type == data.JobIncrementCurrentSupply
-	})
-
 	// LogUnCooperativeChannelClose ignored
 	pscEvent(t, mon, "", LogUnCooperativeChannelClose,
 		[]interface{}{
@@ -471,10 +467,14 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.offering[1].Hash, // offering
 		}, []interface{}{uint32(td.channel[0].Block), new(big.Int)})
 
+	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
+		return j.Type == data.JobIncrementCurrentSupply
+	})
+
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second)
+	queue.awaitCompletion(time.Second * 5)
 }
 
 func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
@@ -504,7 +504,7 @@ func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second)
+	queue.awaitCompletion(time.Second * 5)
 }
 
 func scheduleTest(t *testing.T, td *testData, queue *mockQueue,

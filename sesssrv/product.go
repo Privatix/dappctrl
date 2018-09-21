@@ -31,8 +31,6 @@ func (s *Server) handleProductConfig(
 		return
 	}
 
-	logger = logger.Add("arguments", args)
-
 	if len(args.Config) == 0 {
 		s.RespondError(logger, w, ErrInvalidProductConf)
 		return

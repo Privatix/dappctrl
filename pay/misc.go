@@ -14,8 +14,9 @@ import (
 
 // Codes for unauthorized replies.
 const (
-	errCodeNoChannel     = 1
-	errCodeClosedChannel = iota
+	errCodeNoChannel = iota + 1
+	errCodeClosedChannel
+	errCodeTerminatedService
 )
 
 // Codes for bad request replies.
@@ -66,6 +67,19 @@ func (s *Server) validateChannelState(logger log.Logger,
 	return true
 }
 
+func (s *Server) isServiceTerminated(logger log.Logger,
+	w http.ResponseWriter, ch *data.Channel) bool {
+	if ch.ServiceStatus == data.ServiceTerminated {
+		s.RespondError(logger, w, &srv.Error{
+			Status:  http.StatusUnauthorized,
+			Message: "Service is terminated",
+			Code:    errCodeTerminatedService,
+		})
+		return true
+	}
+	return false
+}
+
 func (s *Server) verifySignature(logger log.Logger,
 	w http.ResponseWriter, ch *data.Channel, pld *paymentPayload) bool {
 
@@ -111,8 +125,8 @@ func (s *Server) verifySignature(logger log.Logger,
 		return false
 	}
 
-	hash := eth.BalanceProofHash(pscAddr, agentAddr,
-		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+	hash := eth.BalanceProofHash(pscAddr, agentAddr, pld.OpenBlockNumber,
+		offeringHash, new(big.Int).SetUint64(pld.Balance))
 
 	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
 		s.RespondError(logger, w, &srv.Error{

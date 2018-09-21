@@ -34,6 +34,10 @@ func (s *Server) handlePay(
 
 	logger = logger.Add("channel", ch)
 
+	if ok && s.isServiceTerminated(logger, w, ch) {
+		return
+	}
+
 	if !ok || !s.validateChannelForPayment(logger, w, ch, payload) ||
 		!s.updateChannelWithPayment(logger, w, ch, payload) {
 		return

@@ -12,10 +12,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
@@ -31,7 +33,10 @@ var (
 		PayServerTest struct {
 			ServerStartupDelay uint // In milliseconds.
 		}
+		Job  *job.Config
+		Proc *proc.Config
 	}
+	pr *proc.Processor
 )
 
 func newFixture(t *testing.T) *data.TestFixture {
@@ -58,8 +63,8 @@ func newTestPayload(t *testing.T, amount uint64, channel *data.Channel,
 
 	offeringHash := data.TestToHash(t, pld.OfferingHash)
 
-	hash := eth.BalanceProofHash(testPSCAddr, agentAddr,
-		pld.OpenBlockNumber, offeringHash, big.NewInt(int64(pld.Balance)))
+	hash := eth.BalanceProofHash(testPSCAddr, agentAddr, pld.OpenBlockNumber,
+		offeringHash, new(big.Int).SetUint64(pld.Balance))
 
 	key, err := data.TestToPrivateKey(clientAcc.PrivateKey, data.TestPassword)
 	util.TestExpectResult(t, "to private key", nil, err)
@@ -171,10 +176,44 @@ func TestInvalidPayments(t *testing.T) {
 	}
 }
 
+func TestServiceTerminate(t *testing.T) {
+	defer data.CleanTestDB(t, testDB)
+	fxt := newFixture(t)
+
+	fxt.Channel.ServiceStatus = data.ServiceActive
+	path := srv.GetURL(conf.PayServer.Config, payPath)
+
+	fxt.Endpoint.PaymentReceiverAddress = &path
+
+	data.SaveToTestDB(t, testDB, fxt.Channel, fxt.Endpoint)
+
+	mock := func(req *http.Request) (*srv.Response, error) {
+		return &srv.Response{
+			Error: &srv.Error{
+				Code: errCodeTerminatedService,
+			},
+		}, nil
+	}
+
+	payload := newTestPayload(t,
+		100, fxt.Channel, fxt.Offering, fxt.UserAcc)
+	postPayload(
+		testDB, fxt.Channel.ID, payload, false, 0, pr, mock)
+
+	j := &data.Job{}
+	data.FindInTestDB(t, testDB, j, "related_id", fxt.Channel.ID)
+	if j.Type != data.JobClientPreServiceTerminate ||
+		j.RelatedID != fxt.Channel.ID {
+		t.Fatal("wrong job")
+	}
+
+}
+
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.FileLog = log.NewFileConfig()
 	conf.PayServer = NewConfig()
+	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
 	testDB = data.NewTestDB(conf.DB)
 	defer data.CloseDB(testDB)
@@ -194,6 +233,9 @@ func TestMain(m *testing.M) {
 
 	time.Sleep(time.Duration(conf.PayServerTest.ServerStartupDelay) *
 		time.Millisecond)
+
+	queue := job.NewQueue(conf.Job, logger, testDB, nil)
+	pr = proc.NewProcessor(conf.Proc, testDB, queue)
 
 	os.Exit(m.Run())
 }

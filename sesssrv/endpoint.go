@@ -24,6 +24,7 @@ func (s *Server) handleEndpointMsg(
 	logger = logger.Add("arguments", args)
 
 	if args.ChannelID == "" {
+		logger.Error("channel was not provided")
 		s.RespondError(logger, w, ErrEndpointNotFound)
 		return
 	}

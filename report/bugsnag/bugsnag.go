@@ -20,9 +20,12 @@ import (
 const (
 	account             = "Account"
 	ethAddress          = "EthAddr"
-	defaultReleaseStage = "alpha"
-	currentAPIKey       = "c021f92e9c199c79d870adf34365e372"
-	key                 = "error.sendremote"
+	defaultReleaseStage = "development"
+	production          = "production"
+	staging             = "staging"
+
+	currentAPIKey = "c021f92e9c199c79d870adf34365e372"
+	key           = "error.sendremote"
 )
 
 var (
@@ -69,7 +72,8 @@ func NewConfig() *Config {
 // about the error and panic.
 // Service is activated if exist entry key = "error.sendremote"
 // and value = true in the database settings table.
-func NewClient(cfg *Config, db *reform.DB, log Log) (*Client, error) {
+func NewClient(
+	cfg *Config, db *reform.DB, log Log, version string) (*Client, error) {
 	if log == nil {
 		return nil, fmt.Errorf("no log object specified")
 	}
@@ -86,11 +90,13 @@ func NewClient(cfg *Config, db *reform.DB, log Log) (*Client, error) {
 	}
 
 	bugsnag.Configure(bugsnag.Configuration{
-		APIKey:          currentAPIKey,
-		Logger:          log,
-		PanicHandler:    func() {}, // we use our panic processor
-		ProjectPackages: pkgSlice,
-		ReleaseStage:    cfg.ReleaseStage,
+		APIKey:              currentAPIKey,
+		Logger:              log,
+		PanicHandler:        func() {}, // we use our panic processor
+		ProjectPackages:     pkgSlice,
+		ReleaseStage:        cfg.ReleaseStage,
+		NotifyReleaseStages: []string{production, staging},
+		AppVersion:          version,
 	})
 
 	cli := new(Client)

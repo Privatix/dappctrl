@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -14,9 +15,11 @@ import (
 
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
+	vpndata "github.com/privatix/dappctrl/svc/dappvpn/data"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/svc/dappvpn/msg"
 	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
+	"github.com/privatix/dappctrl/tc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/version"
@@ -31,8 +34,8 @@ var (
 var (
 	conf    *config.Config
 	channel string
-	logger  *util.Logger
-	logger2 log.Logger
+	logger  log.Logger
+	tctrl   *tc.TrafficControl
 	fatal   = make(chan string)
 )
 
@@ -55,16 +58,13 @@ func main() {
 	channel = *fchannel
 
 	var err error
-	logger, err = util.NewLogger(conf.Log)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create logger: %s\n", err))
-	}
-	defer logger.GracefulStop()
 
-	logger2, err = log.NewStderrLogger(conf.FileLog)
+	logger, err = log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create logger: %s\n", err))
 	}
+
+	tctrl = tc.NewTrafficControl(conf.TC, logger)
 
 	switch os.Getenv("script_type") {
 	case "user-pass-verify":
@@ -82,10 +82,10 @@ func handleAuth() {
 	user, pass := getCreds()
 	args := sesssrv.AuthArgs{ClientID: user, Password: pass}
 
-	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathAuth, args, nil)
 	if err != nil {
-		logger.Fatal("failed to auth: %s", err)
+		logger.Fatal("failed to auth: " + err.Error())
 	}
 
 	if cn := commonNameOrEmpty(); len(cn) != 0 {
@@ -106,10 +106,28 @@ func handleConnect() {
 		ClientPort: uint16(port),
 	}
 
-	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
-		conf.Server.Password, sesssrv.PathStart, args, nil)
+	var res sesssrv.StartResult
+	err = sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
+		conf.Server.Password, sesssrv.PathStart, args, &res)
 	if err != nil {
-		logger.Fatal("failed to start session: %s", err)
+		logger.Fatal("failed to start session: " + err.Error())
+	}
+
+	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
+		return
+	}
+
+	var params vpndata.OfferingParams
+	err = json.Unmarshal(res.Offering.AdditionalParams, &params)
+	if err != nil {
+		logger.Add("offering_params", res.Offering.AdditionalParams).Fatal(
+			"failed to unmarshal offering params: " + err.Error())
+	}
+
+	err = tctrl.SetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"),
+		params.MinUploadMbits, params.MinDownloadMbits)
+	if err != nil {
+		logger.Fatal("failed to set rate limit: " + err.Error())
 	}
 }
 
@@ -129,10 +147,15 @@ func handleDisconnect() {
 		Units:    down + up,
 	}
 
-	err = sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
+	err = sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
-		logger.Fatal("failed to stop session: %s", err)
+		logger.Fatal("failed to stop session: " + err.Error())
+	}
+
+	err = tctrl.UnsetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"))
+	if err != nil {
+		logger.Fatal("failed to unset rate limit: " + err.Error())
 	}
 }
 
@@ -141,11 +164,11 @@ func handleMonStarted(ch string) bool {
 		ClientID: ch,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStart, args, nil)
 	if err != nil {
-		msg := "failed to start session for channel %s: %s"
-		logger.Error(msg, ch, err)
+		logger.Add("channel", ch).Error(
+			"failed to start session for channel: " + err.Error())
 		return false
 	}
 
@@ -158,11 +181,11 @@ func handleMonStopped(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathStop, args, nil)
 	if err != nil {
-		msg := "failed to stop session for channel %s: %s"
-		logger.Error(msg, ch, err)
+		logger.Add("channel", ch).Error(
+			"failed to stop session for channel: " + err.Error())
 		return false
 	}
 
@@ -175,11 +198,11 @@ func handleMonByteCount(ch string, up, down uint64) bool {
 		Units:    down + up,
 	}
 
-	err := sesssrv.Post(conf.Server.Config, logger2, conf.Server.Username,
+	err := sesssrv.Post(conf.Server.Config, logger, conf.Server.Username,
 		conf.Server.Password, sesssrv.PathUpdate, args, nil)
 	if err != nil {
-		msg := "failed to update session for channel %s: %s"
-		logger.Error(msg, ch, err)
+		logger.Add("channel", ch).Error(
+			"failed to update session for channel: " + err.Error())
 		return false
 	}
 
@@ -209,27 +232,27 @@ func handleMonitor(confFile string) {
 		go func() {
 			pusher := msg.NewPusher(conf.Pusher,
 				conf.Server.Config, conf.Server.Username,
-				conf.Server.Password, logger2)
+				conf.Server.Password, logger)
 
 			if err := pusher.PushConfiguration(ctx); err != nil {
-				logger.Error("failed to push app config to"+
-					" dappctrl", err)
+				logger.Error("failed to push app config to" +
+					" dappctrl: " + err.Error())
 				return
 			}
 
 			if err := msg.Done(dir); err != nil {
-				logger.Error("failed to save %s file in %s"+
-					" directory: %s", msg.PushedFile,
-					dir, err)
+				logger.Add("file", msg.PushedFile, "dir", dir,
+					"err", err,
+				).Error("failed to save file in directory")
 			}
 		}()
 	}
 
 	if len(channel) != 0 {
-		if err := prepare.ClientConfig(logger2, channel,
+		if err := prepare.ClientConfig(logger, channel,
 			conf); err != nil {
-			logger.Fatal("failed to prepare client"+
-				" configuration: %s", err)
+			logger.Fatal("failed to prepare client" +
+				" configuration: " + err.Error())
 		}
 
 		ovpn := launchOpenVPN()
@@ -259,16 +282,16 @@ func launchOpenVPN() *os.Process {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		logger.Fatal("failed to access OpenVPN stdout: %s", err)
+		logger.Fatal("failed to access OpenVPN stdout: " + err.Error())
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		logger.Fatal("failed to access OpenVPN stderr: %s", err)
+		logger.Fatal("failed to access OpenVPN stderr: " + err.Error())
 	}
 
 	if err := cmd.Start(); err != nil {
-		logger.Fatal("failed to launch OpenVPN: %s", err)
+		logger.Fatal("failed to launch OpenVPN: " + err.Error())
 	}
 
 	go func() {

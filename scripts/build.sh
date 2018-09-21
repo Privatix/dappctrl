@@ -7,6 +7,7 @@ cd "${DAPPCTRL_DIR}" && dep ensure
 go get -d ${DAPPCTRL}/...
 go get -u gopkg.in/reform.v1/reform
 go get -u github.com/rakyll/statik
+go get -u github.com/pressly/goose/cmd/goose
 go get github.com/ethereum/go-ethereum/cmd/abigen
 
 go generate ${DAPPCTRL}/...

@@ -146,12 +146,12 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 
 // GenerateAccount generates new private key and creates new account.
 func (h *Handler) GenerateAccount(
-	password string, account *data.Account) (string, error) {
+	password string, account *data.Account) (*string, error) {
 	logger := h.logger.Add("method", "GenerateAccount")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if account == nil {
@@ -161,21 +161,21 @@ func (h *Handler) GenerateAccount(
 	id, err := h.fillAndSaveAccount(
 		logger, account, crypto.GenerateKey, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // ImportAccountFromHex imports private key from hex, creates account
 // and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromHex(
-	password string, account *data.Account) (string, error) {
+	password string, account *data.Account) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromHex")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if account == nil {
@@ -187,22 +187,22 @@ func (h *Handler) ImportAccountFromHex(
 	id, err := h.fillAndSaveAccount(
 		logger, account, makeECDSAFunc, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // ImportAccountFromJSON imports private key from JSON blob with password,
 // creates account and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromJSON(
 	password string, account *data.Account, jsonBlob json.RawMessage,
-	jsonKeyStorePassword string) (string, error) {
+	jsonKeyStorePassword string) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromJSON")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if account == nil {
@@ -215,10 +215,10 @@ func (h *Handler) ImportAccountFromJSON(
 	id, err := h.fillAndSaveAccount(
 		logger, account, makeECDSAFunc, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // TransferTokens initiates JobPreAccountAddBalanceApprove

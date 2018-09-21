@@ -16,7 +16,8 @@ const (
 			AND status = 'msg_channel_published'
 			AND NOT is_local
 			AND current_supply > 0
-			AND agent NOT IN (SELECT eth_addr FROM accounts)`
+			AND agent NOT IN (SELECT eth_addr FROM accounts)
+		      ORDER BY block_number_updated DESC`
 )
 
 func (h *Handler) checkPassword(logger log.Logger, password string) error {

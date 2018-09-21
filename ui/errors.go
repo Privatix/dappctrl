@@ -20,6 +20,11 @@ const (
 	ErrProductNotFound
 	ErrInvalidTemplateType
 	ErrMalformedTemplate
+	ErrDepositTooSmall
+	ErrBadUnitPriceRange
+	ErrBadUnitType
+	ErrBillingType
+	ErrBadOfferingStatusAction
 	ErrBadObjectType
 	ErrFailedToDecodePrivateKey
 	ErrFailedToDecryptPKey
@@ -37,12 +42,17 @@ var errMsgs = errors.Messages{
 	ErrDefailtGasPriceNotFound:  "default gas price setting not found",
 	ErrEmptyPassword:            "invalid password",
 	ErrOfferingNotFound:         "offering not found",
-	ErrSettingNotFound:         "setting not found",
+	ErrSettingNotFound:          "setting not found",
+	ErrBadObjectType:            "bad object type",
+	ErrDepositTooSmall:          "deposit is too small",
+	ErrBadUnitPriceRange:        "bad unit price range",
+	ErrBadUnitType:              "bad unit type",
+	ErrBillingType:              "bad billing type",
+	ErrBadOfferingStatusAction:  "bad offering status action",
 	ErrPasswordExists:           "password exists",
 	ErrProductNotFound:          "product not found",
 	ErrInvalidTemplateType:      "invalid template type",
 	ErrMalformedTemplate:        "malformed template",
-	ErrBadObjectType:            "bad object type",
 	ErrFailedToDecodePrivateKey: "failed to decode private key",
 	ErrFailedToDecryptPKey:      "failed to decrypt private key from json blob",
 	ErrPrivateKeyNotFound:       "private key not found",

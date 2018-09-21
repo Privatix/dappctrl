@@ -52,7 +52,7 @@ func (tc *TrafficControl) SetRateLimit(
 
 	if downMbps > 0 {
 		cid := classID(ip)
-		rate := fmt.Sprintf("%fMbit", downMbps)
+		rate := fmt.Sprintf("%dkbit", int(downMbps))
 		_, err = tc.run(logger, tc.conf.TcPath,
 			"class", "add", "dev", iface, "parent", "1:",
 			"classid", cid, "htb", "rate", rate, "ceil", rate)

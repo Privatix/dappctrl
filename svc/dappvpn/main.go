@@ -134,7 +134,7 @@ func handleConnect() {
 	}
 
 	err = tctrl.SetRateLimit(
-		os.Getenv("dev"), os.Getenv("trusted_ip"), 0.1, 0.1)
+		os.Getenv("dev"), os.Getenv("trusted_ip"), 10, 10)
 	if err != nil {
 		logger.Fatal("failed to set rate limit: " + err.Error())
 	}

@@ -113,14 +113,14 @@ func handleConnect() {
 		logger.Fatal("failed to start session: " + err.Error())
 	}
 
-	if len(channel) != 0 {
+	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
 		return
 	}
 
 	var params vpndata.OfferingParams
 	err = json.Unmarshal(res.Offering.AdditionalParams, &params)
 	if err != nil {
-		logger.Fatal(
+		logger.Add("offering_params", res.Offering.AdditionalParams).Fatal(
 			"failed to unmarshal offering params: " + err.Error())
 	}
 

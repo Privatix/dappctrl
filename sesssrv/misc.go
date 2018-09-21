@@ -22,7 +22,7 @@ func (s *Server) findProduct(logger log.Logger,
 	w http.ResponseWriter, productID string) (*data.Product, bool) {
 	var prod data.Product
 	if err := s.db.FindByPrimaryKeyTo(&prod, productID); err != nil {
-		logger.Error(err.Error())
+		logger.Add("productID", productID).Error(err.Error())
 		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return nil, false
 	}
@@ -61,7 +61,7 @@ func (s *Server) identClient(logger log.Logger,
 	var ch data.Channel
 	if prod.ClientIdent == data.ClientIdentByChannelID {
 		if err := s.db.FindByPrimaryKeyTo(&ch, clientID); err != nil {
-			logger.Error(err.Error())
+			logger.Add("clientID", clientID).Error(err.Error())
 			s.RespondError(logger, w, ErrChannelNotFound)
 			return nil, false
 		}

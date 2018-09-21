@@ -8,10 +8,7 @@ VALUES ('efc61769-96c8-4c0d-b50a-e4d11fc30523',
             "schema": {
                 "properties": {
                     "additionalParams": {
-                        "default": {
-                            "minUploadMbps": 1,
-                            "minDownloadMbps": 1
-                        },
+                        "default": {},
                         "minUploadMbps": {
                             "title": "minimum upload speed (Mbps)",
                             "type": "number"
@@ -322,7 +319,7 @@ VALUES ('eth.max.deposit',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.10.0',
+        '0.11.0',
         1,
         'Version of database.',
         'db version');

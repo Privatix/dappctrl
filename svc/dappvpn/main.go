@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
-	vpndata "github.com/privatix/dappctrl/svc/dappvpn/data"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/svc/dappvpn/msg"
 	"github.com/privatix/dappctrl/svc/dappvpn/prepare"
@@ -131,19 +129,12 @@ func handleConnect() {
 		logger.Fatal("failed to start session: " + err.Error())
 	}
 
-	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
+	if len(channel) != 0 {
 		return
 	}
 
-	var params vpndata.OfferingParams
-	err = json.Unmarshal(res.Offering.AdditionalParams, &params)
-	if err != nil {
-		logger.Add("offering_params", res.Offering.AdditionalParams).Fatal(
-			"failed to unmarshal offering params: " + err.Error())
-	}
-
-	err = tctrl.SetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"),
-		params.MinUploadMbits, params.MinDownloadMbits)
+	err = tctrl.SetRateLimit(
+		os.Getenv("dev"), os.Getenv("trusted_ip"), 0.1, 0.1)
 	if err != nil {
 		logger.Fatal("failed to set rate limit: " + err.Error())
 	}

@@ -155,6 +155,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 
 *Description*: Returns total units used for a given channel.
 
+
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
@@ -173,6 +174,22 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 3. Gas price (number)
 
 *Result*: None.
+
+
+### Endpoints
+
+#### Get Endpoints
+
+*Method*:	`getEndpoints`
+
+*Description*: get endpoints.
+
+*Parameters*:
+1. Password (string)
+2. Channel id (string)
+3. Template id (string)
+
+*Result (array of `data.Endpoint` objects)*: endpoints.
 
 
 ### Objects

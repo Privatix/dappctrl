@@ -44,6 +44,12 @@ type Monitor struct {
 	mtx    sync.Mutex     // To guard the exit channels.
 	exit   chan struct{}
 	exited chan struct{}
+	// The channel is only needed for tests.
+	// It allows to get a result of a processing.
+	processErrors chan error
+	// The channel is only needed for tests.
+	// It allows to get a result of a posting of cheques.
+	postChequeErrors chan error
 }
 
 // NewMonitor creates a new client billing monitor.
@@ -94,6 +100,12 @@ L:
 
 		for _, v := range chans {
 			err := m.processChannel(v.(*data.Channel))
+
+			select {
+			case m.processErrors <- err:
+			default:
+			}
+
 			if err != nil {
 				break L
 			}
@@ -176,12 +188,20 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
 	m.logger.Add("amount", amount).Info("posting cheque")
+	handleErr := func(err error) {
+		select {
+		case m.postChequeErrors <- err:
+		default:
+		}
+	}
+
 	pscHex := data.HexFromBytes(common.HexToAddress(m.psc).Bytes())
 	err := m.post(m.db, ch, pscHex, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout, m.pr)
 	if err != nil {
 		m.logger.Add("channel", ch, "amount",
 			amount).Error(err.Error())
+		go handleErr(err)
 		return
 	}
 
@@ -192,10 +212,12 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 	if err != nil {
 		m.logger.Add("channel", ch, "amount",
 			amount).Error(ErrUpdateReceiptBalance.Error())
+		go handleErr(err)
 		return
 	}
 
-	if n, err := res.RowsAffected(); err != nil {
+	n, err := res.RowsAffected()
+	if err != nil {
 		if n != 0 {
 			m.logger.Add("channel", ch, "amount",
 				amount).Info("updated receipt balance")
@@ -204,4 +226,5 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 				"receipt balance isn't updated")
 		}
 	}
+	go handleErr(err)
 }

@@ -23,7 +23,7 @@ func TestMonitorLogCollect(t *testing.T) {
 	defer cancel()
 
 	ticker := newMockTicker()
-	mon.start(ctx, ticker.C, nil)
+	signals := mon.start(ctx, ticker.C, nil)
 
 	_, agentAddress := insertNewAccount(t, db, agentPass)
 	_, clientAddress := insertNewAccount(t, db, clientPass)
@@ -92,7 +92,12 @@ func TestMonitorLogCollect(t *testing.T) {
 	for _, c := range cases {
 		setUint64Setting(t, db, data.SettingMinConfirmations, c.confirmations)
 		setUint64Setting(t, db, data.SettingFreshBlocks, c.freshnum)
+
+		wg := waitSignal(signals.collect)
 		ticker.tick()
+
+		wg.Wait()
+
 		name := fmt.Sprintf("with %d confirmations and %d freshnum",
 			c.confirmations, c.freshnum)
 		logs = expectLogs(t, c.lognum, name, "")

@@ -17,25 +17,15 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
-type testConfig struct {
-	ExecPeriod time.Duration // Test process execution period, in milliseconds.
-}
-
-func newTestConfig() *testConfig {
-	return &testConfig{
-		ExecPeriod: 100,
-	}
-}
-
 var (
 	conf struct {
-		DB                *data.DBConfig
-		FileLog           *log.FileConfig
-		Log               *util.LogConfig
-		Job               *job.Config
-		Proc              *proc.Config
-		ServiceRunner     *Config
-		ServiceRunnerTest *testConfig
+		DB            *data.DBConfig
+		FileLog       *log.FileConfig
+		Log           *util.LogConfig
+		Job           *job.Config
+		Proc          *proc.Config
+		ServiceRunner *Config
+		TestTimeout   uint64
 	}
 
 	logger log.Logger
@@ -87,15 +77,19 @@ func TestStart(t *testing.T) {
 	runner := newTestServiceRunner()
 	defer runner.StopAll()
 
+	runner.done = make(chan bool)
+
+	err := runner.Start(fxt.Channel.ID)
+	util.TestExpectResult(t, "Start service", nil, err)
+
+	err = runner.Start(fxt.Channel.ID)
 	util.TestExpectResult(t, "Start service",
-		nil, runner.Start(fxt.Channel.ID))
+		ErrAlreadyStarted, err)
 
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond / 2)
-
-	util.TestExpectResult(t, "Start service",
-		ErrAlreadyStarted, runner.Start(fxt.Channel.ID))
-
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond)
+	select {
+	case <-runner.done:
+	case <-time.After(time.Duration(conf.TestTimeout) * time.Second):
+	}
 
 	assertNotRunning(t, runner, fxt.Channel.ID)
 	assertJobAdded(t, fxt.Channel.ID)
@@ -108,15 +102,12 @@ func TestStop(t *testing.T) {
 	runner := newTestServiceRunner()
 	defer runner.StopAll()
 
+	err := runner.Start(fxt.Channel.ID)
 	util.TestExpectResult(t, "Start service",
-		nil, runner.Start(fxt.Channel.ID))
-
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond / 3)
+		nil, err)
 
 	util.TestExpectResult(t, "Stop service",
 		nil, runner.Stop(fxt.Channel.ID))
-
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond / 3)
 
 	assertNotRunning(t, runner, fxt.Channel.ID)
 	assertJobAdded(t, fxt.Channel.ID)
@@ -143,15 +134,13 @@ func TestStopAll(t *testing.T) {
 
 	runner := newTestServiceRunner()
 
-	util.TestExpectResult(t, "Start service 1",
-		nil, runner.Start(fxt.Channel.ID))
-	util.TestExpectResult(t, "Start service 2", nil, runner.Start(ch.ID))
+	err := runner.Start(fxt.Channel.ID)
+	util.TestExpectResult(t, "Start service 1", nil, err)
 
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond / 3)
+	err = runner.Start(ch.ID)
+	util.TestExpectResult(t, "Start service 2", nil, err)
 
 	runner.StopAll()
-
-	time.Sleep(conf.ServiceRunnerTest.ExecPeriod * time.Millisecond / 3)
 
 	assertNotRunning(t, runner, fxt.Channel.ID)
 	assertJobAdded(t, fxt.Channel.ID)
@@ -165,7 +154,6 @@ func TestMain(m *testing.M) {
 	conf.Job = job.NewConfig()
 	conf.Proc = proc.NewConfig()
 	conf.ServiceRunner = NewConfig()
-	conf.ServiceRunnerTest = newTestConfig()
 	util.ReadTestConfig(&conf)
 
 	l, err := log.NewStderrLogger(conf.FileLog)

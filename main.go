@@ -275,8 +275,8 @@ func main() {
 	}()
 
 	if conf.Role == data.RoleClient {
-		cmon := cbill.NewMonitor(conf.ClientMonitor,
-			logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, pr,
+			conf.Eth.Contract.PSCAddrHex, pwdStorage)
 		go func() {
 			fatal <- cmon.Run()
 		}()

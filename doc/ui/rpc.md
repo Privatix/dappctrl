@@ -275,6 +275,21 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
+### Sessions
+
+#### Get Sessions
+
+*Method*:	`getSessions`
+
+*Description*: get sessions.
+
+*Parameters*:
+1. Password (string)
+2. Channel id (string)
+
+*Result (array of `data.Session` objects)*: sessions.
+
+
 ### Settings
 
 #### Get Settings

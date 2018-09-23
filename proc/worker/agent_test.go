@@ -458,7 +458,7 @@ func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
 func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	// 1. PSC.registerServiceOffering()
 	// 2. msg_status="bchain_publishing"
-	// 3. offer_status="register"
+	// 3. offer_status="registered"
 
 	testCountry := "YY"
 	testCountryField := "testCountry"
@@ -530,9 +530,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		t.Fatalf("wrong msg status, wanted: %s, got: %s",
 			data.MsgBChainPublishing, offering.Status)
 	}
-	if offering.OfferStatus != data.OfferRegister {
+	if offering.OfferStatus != data.OfferRegistering {
 		t.Fatalf("wrong offering status, wanted: %s, got: %s",
-			data.OfferRegister, offering.OfferStatus)
+			data.OfferRegistering, offering.OfferStatus)
 	}
 
 	testCommonErrors(t, env.worker.AgentPreOfferingMsgBCPublish,
@@ -555,6 +555,10 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	if offering.Status != data.MsgBChainPublished {
 		t.Fatalf("wrong msg status, wanted: %s, got: %s",
 			data.MsgBChainPublished, offering.Status)
+	}
+	if offering.OfferStatus != data.OfferRegistered {
+		t.Fatalf("wrong offer status, wanted: %s, got: %s",
+			data.OfferRegistered, offering.OfferStatus)
 	}
 
 	// Test somc publish job created.
@@ -622,9 +626,9 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 	updated := data.Offering{}
 	env.findTo(t, &updated, fxt.job.RelatedID)
 
-	if updated.OfferStatus != data.OfferRemove {
+	if updated.OfferStatus != data.OfferRemoved {
 		t.Fatalf("expected offering status: %s, got: %s",
-			data.OfferRemove, updated.OfferStatus)
+			data.OfferRemoved, updated.OfferStatus)
 	}
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingDelete, *fxt.job)
@@ -647,7 +651,7 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 		t.Fatal("offering status not validated")
 	}
 
-	fxt.Offering.OfferStatus = data.OfferRegister
+	fxt.Offering.OfferStatus = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
 	runJob(t, env.worker.AgentPreOfferingDelete, fxt.job)
@@ -660,6 +664,11 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 	env.ethBack.testCalled(t, "RemoveServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.RemoveServiceOffering,
 		[common.HashLength]byte(offeringHash))
+
+	env.db.Reload(fxt.Offering)
+	if fxt.Offering.OfferStatus != data.OfferRemoving {
+		t.Fatal("offering status not updated")
+	}
 }
 
 func TestAgentPreOfferingPopUp(t *testing.T) {
@@ -685,7 +694,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.insertToTestDB(t, &duplicatedJob)
 	defer env.deleteFromTestDB(t, &duplicatedJob)
 
-	fxt.Offering.OfferStatus = data.OfferRegister
+	fxt.Offering.OfferStatus = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
 	if err := env.worker.AgentPreOfferingPopUp(
@@ -722,6 +731,12 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash))
+
+	env.db.Reload(fxt.Offering)
+
+	if fxt.Offering.OfferStatus != data.OfferPoppingUp {
+		t.Fatal("offering status not updated")
+	}
 }
 
 func TestAgentAfterOfferingPopUp(t *testing.T) {
@@ -758,5 +773,9 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 
 	if offering.BlockNumberUpdated != ethLog.BlockNumber {
 		t.Fatal("offering block number was not updated")
+	}
+
+	if offering.OfferStatus != data.OfferPoppedUp {
+		t.Fatal("offering status not updated")
 	}
 }

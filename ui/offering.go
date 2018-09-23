@@ -275,7 +275,7 @@ func (h *Handler) fillOffering(
 	}
 
 	offering.ID = util.NewUUID()
-	offering.OfferStatus = data.OfferRegister
+	offering.OfferStatus = data.OfferEmpty
 	offering.Status = data.MsgUnpublished
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1

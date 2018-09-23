@@ -708,7 +708,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
 	expectedOffering.Status = data.MsgChPublished
-	expectedOffering.OfferStatus = data.OfferRegister
+	expectedOffering.OfferStatus = data.OfferRegistered
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
@@ -799,9 +799,9 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 	updated := data.Offering{}
 	env.findTo(t, &updated, fxt.job.RelatedID)
 
-	if updated.OfferStatus != data.OfferRemove {
+	if updated.OfferStatus != data.OfferRemoved {
 		t.Fatalf("expected offering status: %s, got: %s",
-			data.OfferRemove, updated.OfferStatus)
+			data.OfferRemoved, updated.OfferStatus)
 	}
 
 	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
@@ -864,7 +864,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
 	expectedOffering.Status = data.MsgChPublished
-	expectedOffering.OfferStatus = data.OfferRegister
+	expectedOffering.OfferStatus = data.OfferPoppedUp
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,

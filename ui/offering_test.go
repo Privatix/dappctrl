@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/reform.v1"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -202,17 +202,17 @@ func TestGetClientOfferings(t *testing.T) {
 	var offerings []reform.Record
 
 	testData := []testOfferingData{
-		{agent.EthAddr, data.OfferRegister, data.MsgChPublished,
+		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
 			"US", false, 11, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferRegister, data.MsgChPublished,
+		{other.EthAddr, data.OfferRegistered, data.MsgChPublished,
 			"SU", false, 11111, fxt.Offering.CurrentSupply},
 		{other.EthAddr, data.OfferEmpty, "",
 			"SU", false, 111, fxt.Offering.CurrentSupply},
 		{other.EthAddr, data.OfferEmpty, "",
 			"", true, 111111, fxt.Offering.CurrentSupply},
-		{agent.EthAddr, data.OfferRegister, "",
+		{agent.EthAddr, data.OfferRegistered, "",
 			"SU", false, 2, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferRegister, data.MsgChPublished,
+		{other.EthAddr, data.OfferPoppedUp, data.MsgChPublished,
 			"US", false, 222, 0},
 	}
 
@@ -225,7 +225,6 @@ func TestGetClientOfferings(t *testing.T) {
 
 	for _, offering := range offerings {
 		data.InsertToTestDB(t, db, offering)
-
 	}
 
 	defer data.DeleteFromTestDB(t, db, offerings...)
@@ -267,13 +266,13 @@ func TestGetAgentOfferings(t *testing.T) {
 	defer data.DeleteFromTestDB(t, fxt.DB, acc1, acc2)
 
 	testData := []testOfferingData{
-		{fxt.Account.EthAddr, data.OfferRegister, "", "",
+		{fxt.Account.EthAddr, data.OfferRegistered, "", "",
 			false, 1, fxt.Offering.CurrentSupply},
 		{fxt.Account.EthAddr, data.OfferEmpty, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{acc1.EthAddr, data.OfferRegister, "", "",
+		{acc1.EthAddr, data.OfferRegistering, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{acc2.EthAddr, data.OfferRegister, "", "",
+		{acc2.EthAddr, data.OfferRegistered, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
 	}
 

@@ -962,6 +962,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 
 	// Existing offering, just update offering status.
 	offering.BlockNumberUpdated = ethLog.BlockNumber
+	offering.OfferStatus = data.OfferPoppedUp
 
 	return w.saveRecord(logger, &offering)
 }
@@ -1052,7 +1053,7 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		Product:            product.ID,
 		Hash:               offeringData.Hash,
 		Status:             data.MsgChPublished,
-		OfferStatus:        data.OfferRegister,
+		OfferStatus:        data.OfferRegistered,
 		BlockNumberUpdated: blockNumber,
 		Agent:              agentAddr,
 		RawMsg:             data.FromBytes(offeringData.Offering),
@@ -1079,5 +1080,5 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 // ClientAfterOfferingDelete sets offer status to `remove`;
 func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
 	return w.updateRelatedOffering(
-		job, data.JobClientAfterOfferingDelete, data.OfferRemove)
+		job, data.JobClientAfterOfferingDelete, data.OfferRemoved)
 }

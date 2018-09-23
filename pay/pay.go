@@ -26,7 +26,7 @@ func (s *Server) handlePay(
 	if !s.ParseRequest(logger, w, r, payload) {
 		return
 	}
-	logger = logger.Add("payload", payload)
+	logger = logger.Add("payload", *payload)
 
 	ch, ok := s.findChannel(logger, w,
 		payload.OfferingHash,

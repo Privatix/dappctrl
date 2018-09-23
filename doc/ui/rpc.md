@@ -244,7 +244,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Parameters*:
 1. Password (string)
 2. Product id (string)
-3. Offering status (string, can be `empty`, `register` or `remove`)
+3. Offering status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
 
 *Result (array of `data.Offering` objects)*: offerings.
 

@@ -13,7 +13,7 @@ import (
 
 const (
 	activeOfferingCondition = `
-		offer_status = 'register'
+		offer_status in ('registered', 'popped_up')
 			AND status = 'msg_channel_published'
 			AND NOT is_local
 			AND current_supply > 0

@@ -99,9 +99,13 @@ const (
 
 // Offering statuses.
 const (
-	OfferEmpty    = "empty"
-	OfferRegister = "register"
-	OfferRemove   = "remove"
+	OfferEmpty       = "empty"
+	OfferPoppingUp   = "popping_up"
+	OfferPoppedUp    = "popped_up"
+	OfferRegistering = "registering"
+	OfferRegistered  = "registered"
+	OfferRemoving    = "removing"
+	OfferRemoved     = "removed"
 )
 
 // Offering is a service offering.

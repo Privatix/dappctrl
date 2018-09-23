@@ -59,11 +59,15 @@ CREATE TYPE msg_status AS ENUM (
     'msg_channel_published' -- published in messaging channel
 );
 
--- Offering status
+-- Offering statuses
 CREATE TYPE offer_status AS ENUM (
+    'popping_up', -- popping up
+    'popped_up', -- popped up
     'empty', -- saved in DB, but not published to blockchain
-    'register', -- in registration or registered in blockchain
-    'remove' -- being removed or already removed from blockchain
+    'registering', -- registring in blockchain
+    'registered', -- registered in blockchain
+    'removing', -- removing from blockchain
+    'removed' -- removed from blockchain
 );
 
 -- Transaction statuses.

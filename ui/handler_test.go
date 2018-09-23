@@ -25,7 +25,7 @@ type fixture struct {
 func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
 	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
-	fxt.Offering.OfferStatus = data.OfferRegister
+	fxt.Offering.OfferStatus = data.OfferRegistered
 	fxt.Offering.Status = data.MsgChPublished
 	data.SaveToTestDB(t, db, fxt.Offering)
 

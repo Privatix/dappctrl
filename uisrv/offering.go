@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	clientGetOfferFilter = `offer_status = 'register'
+	clientGetOfferFilter = `offer_status in ('registered', 'popped_up')
                                 AND status = 'msg_channel_published'
 				AND NOT is_local
 				AND offerings.current_supply > 0
@@ -156,6 +156,9 @@ func invalidBillingType(v string) bool {
 func (s *Server) fillOffering(offering *data.Offering) error {
 	if offering.ID == "" {
 		offering.ID = util.NewUUID()
+		offering.OfferStatus = data.OfferEmpty
+	} else {
+		offering.OfferStatus = data.OfferRegistered
 	}
 
 	agent := &data.Account{}
@@ -163,7 +166,6 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 		return err
 	}
 
-	offering.OfferStatus = data.OfferRegister
 	offering.Status = data.MsgUnpublished
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
@@ -307,7 +309,7 @@ func (s *Server) handlePutClientOfferingStatus(
 		return
 	}
 
-	logger = logger.Add("payload", req)
+	logger = logger.Add("payload", *req)
 
 	if req.Action != AcceptOffering {
 		s.replyInvalidAction(logger, w)

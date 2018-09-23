@@ -648,7 +648,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	offering.Status = data.MsgBChainPublishing
-	offering.OfferStatus = data.OfferRegister
+	offering.OfferStatus = data.OfferRegistering
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -670,6 +670,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	offering.Status = data.MsgBChainPublished
+	offering.OfferStatus = data.OfferRegistered
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -718,8 +719,8 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 
 // AgentAfterOfferingDelete set offering status to `remove`
 func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
-	return w.updateRelatedOffering(
-		job, data.JobAgentAfterOfferingDelete, data.OfferRemove)
+	return w.updateRelatedOffering(job, data.JobAgentAfterOfferingDelete,
+		data.OfferRemoved)
 }
 
 // AgentPreOfferingDelete calls psc remove an offering.
@@ -732,7 +733,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	if offering.OfferStatus != data.OfferRegister {
+	if offering.OfferStatus != data.OfferRegistered &&
+		offering.OfferStatus != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 
@@ -761,6 +763,11 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())
 		return ErrPSCRemoveOffering
+	}
+
+	offering.OfferStatus = data.OfferRemoving
+	if err := w.saveRecord(logger, offering); err != nil {
+		return err
 	}
 
 	return w.saveEthTX(logger, job, tx, "RemoveServiceOffering",
@@ -837,7 +844,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 
 	logger = logger.Add("offering", offering.ID)
 
-	if offering.OfferStatus != data.OfferRegister {
+	if offering.OfferStatus != data.OfferRegistered &&
+		offering.Status != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 
@@ -878,6 +886,11 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return ErrPSCPopUpOffering
 	}
 
+	offering.OfferStatus = data.OfferPoppingUp
+	if err := w.saveRecord(logger, offering); err != nil {
+		return err
+	}
+
 	return w.saveEthTX(logger, job, tx, "PopupServiceOffering",
 		job.RelatedType, job.RelatedID, offering.Agent,
 		data.HexFromBytes(w.pscAddr.Bytes()))
@@ -909,6 +922,7 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	offering.BlockNumberUpdated = ethLog.BlockNumber
+	offering.OfferStatus = data.OfferPoppedUp
 
 	return w.saveRecord(logger, &offering)
 }

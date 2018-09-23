@@ -262,15 +262,18 @@ func TestGetAgentOfferings(t *testing.T) {
 	}
 
 	var offerings []reform.Record
+	acc1 := createNotUsedAcc(t)
+	acc2 := createNotUsedAcc(t)
+	defer data.DeleteFromTestDB(t, fxt.DB, acc1, acc2)
 
 	testData := []testOfferingData{
 		{fxt.Account.EthAddr, data.OfferRegister, "", "",
 			false, 1, fxt.Offering.CurrentSupply},
 		{fxt.Account.EthAddr, data.OfferEmpty, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{createNotUsedAcc(t).EthAddr, data.OfferRegister, "", "",
+		{acc1.EthAddr, data.OfferRegister, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{createNotUsedAcc(t).EthAddr, data.OfferRegister, "", "",
+		{acc2.EthAddr, data.OfferRegister, "", "",
 			false, 2, fxt.Offering.CurrentSupply},
 	}
 

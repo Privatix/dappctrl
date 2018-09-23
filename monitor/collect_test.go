@@ -90,8 +90,8 @@ func TestMonitorLogCollect(t *testing.T) {
 
 	var logs []*data.EthLog
 	for _, c := range cases {
-		setUint64Setting(t, db, minConfirmationsKey, c.confirmations)
-		setUint64Setting(t, db, freshBlocksKey, c.freshnum)
+		setUint64Setting(t, db, data.SettingMinConfirmations, c.confirmations)
+		setUint64Setting(t, db, data.SettingFreshBlocks, c.freshnum)
 		ticker.tick()
 		name := fmt.Sprintf("with %d confirmations and %d freshnum",
 			c.confirmations, c.freshnum)

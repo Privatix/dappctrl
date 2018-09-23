@@ -14,8 +14,8 @@ const (
 	ErrChannelNotFound
 	ErrDefailtGasPriceNotFound
 	ErrEmptyPassword
+	ErrMinConfirmationsNotFound
 	ErrOfferingNotFound
-	ErrSettingNotFound
 	ErrPasswordExists
 	ErrProductNotFound
 	ErrInvalidTemplateType
@@ -41,8 +41,8 @@ var errMsgs = errors.Messages{
 	ErrChannelNotFound:          "channel not found",
 	ErrDefailtGasPriceNotFound:  "default gas price setting not found",
 	ErrEmptyPassword:            "invalid password",
+	ErrMinConfirmationsNotFound: "min confirmations setting not found",
 	ErrOfferingNotFound:         "offering not found",
-	ErrSettingNotFound:          "setting not found",
 	ErrBadObjectType:            "bad object type",
 	ErrDepositTooSmall:          "deposit is too small",
 	ErrBadUnitPriceRange:        "bad unit price range",

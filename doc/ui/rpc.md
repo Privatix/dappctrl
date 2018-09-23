@@ -175,6 +175,23 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
+### Objects
+
+#### Get object
+
+*Method*:	`getObject`
+
+*Description*: Get an object of a specified type.
+
+*Parameters*:
+1. Password (string)
+2. Object type (string, can be `account`, `user`, `template`, `product`,
+ `offering`, `channel`, `session`, `contract`, `endpoint`, `job`, `ethTx` or `ethLog`)
+3. Object id (string)
+
+*Result (object)*: object of a given type.
+
+
 ### Offerings
 
 #### Accept Offering
@@ -271,21 +288,18 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Result*: None.
 
 
-### Objects
+### Ethereum Logs
 
-#### Get object
+#### Get Last Block Number
 
-*Method*:	`getObject`
+*Method*:   `getLastBlockNumber`
 
-*Description*: Get an object of a specified type..
+*Description*: returns max(block_number) of collected ethereum logs + min confirmations setting value.
 
 *Parameters*:
 1. Password (string)
-2. Object type (string, can be `account`, `user`, `template`, `product`,
- `offering`, `channel`, `session`, `contract`, `endpoint`, `job`, `ethTx` or `ethLog`)
-3. Object id (string)
 
-*Result (object)*: object of a given type.
+*Result*: Block Number (number)
 
 
 ### Products

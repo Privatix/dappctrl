@@ -71,19 +71,37 @@ func (h *Handler) jobPublishData(
 }
 
 func (h *Handler) defaultGasPrice(logger log.Logger) (uint64, error) {
-	gasPriceSettings := &data.Setting{}
-	if err := h.findByColumn(logger, ErrDefailtGasPriceNotFound,
-		gasPriceSettings, "key", data.SettingDefaultGasPrice); err != nil {
+	return h.findSettingsUint64(logger, data.SettingDefaultGasPrice)
+}
+
+func (h *Handler) minConfirmations(logger log.Logger) (uint64, error) {
+	return h.findSettingsUint64(logger, data.SettingMinConfirmations)
+}
+
+func (h *Handler) findSettingsUint64(logger log.Logger, key string) (uint64, error) {
+	logger = logger.Add("settingKey", key)
+
+	gasPriceSettings, err := h.findSetting(logger, key)
+	if err != nil {
 		return 0, err
 	}
 
 	val, err := strconv.ParseUint(gasPriceSettings.Value, 10, 64)
 	if err != nil {
-		logger.Add("error", err).Error("failed to parse default gas price")
+		logger.Add("error", err).Error("failed to parse setting value")
 		return 0, ErrInternal
 	}
 
 	return val, nil
+}
+
+func (h *Handler) findSetting(logger log.Logger, key string) (*data.Setting, error) {
+	setting := &data.Setting{}
+	if err := h.findByColumn(logger, ErrMinConfirmationsNotFound,
+		setting, "key", key); err != nil {
+		return nil, err
+	}
+	return setting, nil
 }
 
 func (h *Handler) catchError(logger log.Logger, err error) error {

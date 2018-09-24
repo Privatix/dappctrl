@@ -21,6 +21,8 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
+const defaultCountry = "ZZ"
+
 // AgentAfterChannelCreate registers client and creates pre service create job.
 func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 	if w.isJobInvalid(job, data.JobAgentAfterChannelCreate, data.JobChannel) {
@@ -574,6 +576,13 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	if err != nil {
 		return err
 	}
+
+	country, err := w.getCountry()
+	if err != nil {
+		country = defaultCountry
+	}
+
+	offering.Country = country
 
 	msg := offer.OfferingMessage(agent, template, offering)
 

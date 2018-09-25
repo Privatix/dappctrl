@@ -337,6 +337,8 @@ func (h *Handler) CreateOffering(password string,
 		return nil, err
 	}
 
+	offering.ID = util.NewUUID()
+
 	err = h.prepareOffering(logger, offering)
 	if err != nil {
 		return nil, err

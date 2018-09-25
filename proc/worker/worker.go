@@ -2,13 +2,13 @@ package worker
 
 import (
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
@@ -43,13 +43,6 @@ type GasConf struct {
 	}
 }
 
-// CountryConfig is the configuration for obtaining a country code.
-type CountryConfig struct {
-	Field   string
-	Timeout time.Duration // in seconds.
-	URL     string
-}
-
 // Worker has all worker routines.
 type Worker struct {
 	abi            abi.ABI
@@ -66,14 +59,15 @@ type Worker struct {
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
-	countryConfig  *CountryConfig
+	countryConfig  *country.Config
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
-	payAddr string, pwdGetter data.PWDGetter, countryConf *CountryConfig,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config) (*Worker, error) {
+	payAddr string, pwdGetter data.PWDGetter,
+	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
+	eptConf *ept.Config) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -98,13 +92,6 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		somc:           somc,
 		countryConfig:  countryConf,
 	}, nil
-}
-
-// NewCountryConfig creates new configuration for obtaining a country code.
-func NewCountryConfig() *CountryConfig {
-	return &CountryConfig{
-		Timeout: 30,
-	}
 }
 
 // SetQueue sets a queue for handlers.

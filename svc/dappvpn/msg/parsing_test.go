@@ -50,7 +50,7 @@ func TestParsingVpnConfigFile(t *testing.T) {
 
 	createTestFile(t, filepath.Join(dir, configName), parameters)
 
-	result, err := vpnParams(logger2, config, parameterKeys(parameters))
+	result, err := vpnParams(logger, config, parameterKeys(parameters))
 	if err != nil {
 		t.Fatal(err)
 	}

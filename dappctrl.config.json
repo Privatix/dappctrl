@@ -21,7 +21,7 @@
     "Country": {
         "Field" : "country_code",
         "Timeout": 30,
-        "URL" : "https://ipleak.net/json"
+        "URLTemplate" : "https://ipleak.net/json/{{ip}}"
     },
     "DB": {
         "Conn": {

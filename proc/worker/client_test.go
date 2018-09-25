@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
@@ -181,7 +182,8 @@ func sealMessage(t *testing.T, env *workerTest,
 	return sealed
 }
 
-func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
+func testClientPreEndpointMsgSOMCGet(t *testing.T,
+	countryFromAgent, resultCountry, wantedCountryStatus string) {
 	env := newWorkerTest(t)
 	defer env.close()
 
@@ -190,6 +192,17 @@ func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
 	defer fxt.Close()
 
 	swapAgentWithClient(t, fxt)
+
+	testCountryField := "testCountry"
+
+	fxt.Offering.Country = countryFromAgent
+	env.updateInTestDB(t, fxt.Offering)
+
+	ts := country.NewServerMock(testCountryField, resultCountry)
+	defer ts.Close()
+
+	conf.Country.URLTemplate = ts.Server.URL
+	conf.Country.Field = testCountryField
 
 	msg := ept.Message{
 		TemplateHash:           "test-hash",
@@ -223,8 +236,30 @@ func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
 		*endp.ServiceEndpointAddress != msg.ServiceEndpointAddress ||
 		endp.Username == nil || *endp.Username != msg.Username ||
 		endp.Password == nil || *endp.Password != msg.Password ||
-		string(endp.AdditionalParams) != string(params) {
+		string(endp.AdditionalParams) != string(params) ||
+		endp.CountryStatus == nil ||
+		*endp.CountryStatus != wantedCountryStatus {
 		t.Fatalf("bad endpoint content")
+	}
+}
+
+type clientPreEndpointMsgSOMCGetTestData struct {
+	countryFromAgent    string
+	resultCountry       string
+	wantedCountryStatus string
+}
+
+func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
+	testData := []*clientPreEndpointMsgSOMCGetTestData{
+		{"YY", "YY", data.CountryStatusValid},
+		{"YY", "FF", data.CountryStatusInvalid},
+		{"YY", "Y", data.CountryStatusUnknown},
+	}
+
+	for _, v := range testData {
+		testClientPreEndpointMsgSOMCGet(t, v.countryFromAgent,
+			v.resultCountry, v.wantedCountryStatus)
+
 	}
 }
 

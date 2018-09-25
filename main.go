@@ -14,6 +14,7 @@ import (
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
@@ -66,7 +67,7 @@ type config struct {
 	SOMC          *somc.Config
 	StaticPasword string
 	UI            *ui.Config
-	Country       *worker.CountryConfig
+	Country       *country.Config
 }
 
 func newConfig() *config {
@@ -88,7 +89,7 @@ func newConfig() *config {
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
-		Country:       worker.NewCountryConfig(),
+		Country:       country.NewConfig(),
 	}
 }
 
@@ -283,7 +284,7 @@ func main() {
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

@@ -127,6 +127,16 @@ func (w *Worker) offering(logger log.Logger, pk string) (*data.Offering, error) 
 	return offering, nil
 }
 
+func (w *Worker) productByPK(logger log.Logger, pk string) (*data.Product, error) {
+	product := &data.Product{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, product, pk)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrProductNotFound
+	}
+	return product, nil
+}
+
 func (w *Worker) offeringByHash(logger log.Logger,
 	hash common.Hash) (*data.Offering, error) {
 	hashStr := data.FromBytes(hash.Bytes())

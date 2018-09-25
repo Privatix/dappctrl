@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -15,6 +16,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
@@ -373,6 +375,21 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 		return err
 	}
 
+	url := strings.Replace(w.countryConfig.URLTemplate,
+		"{{ip}}", msg.ServiceEndpointAddress, 1)
+
+	var countryStatus string
+
+	c, err := country.GetCountry(w.countryConfig.Timeout, url,
+		w.countryConfig.Field)
+	if err != nil || len(c) != 2 {
+		countryStatus = data.CountryStatusUnknown
+	} else if c == offer.Country {
+		countryStatus = data.CountryStatusValid
+	} else {
+		countryStatus = data.CountryStatusInvalid
+	}
+
 	params, _ := json.Marshal(msg.AdditionalParams)
 
 	return w.db.InTransaction(func(tx *reform.TX) error {
@@ -390,6 +407,7 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			Username:               pointer.ToString(msg.Username),
 			Password:               pointer.ToString(msg.Password),
 			AdditionalParams:       params,
+			CountryStatus:          pointer.ToString(countryStatus),
 		}
 		if err = w.db.Insert(&endp); err != nil {
 			logger.Add("endpoint", endp).Error(err.Error())

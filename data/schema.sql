@@ -18,6 +18,9 @@ CREATE TYPE contract_type AS ENUM ('ptc','psc');
 -- Client identification types.
 CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
+-- Country status types.
+CREATE TYPE country_status_type AS ENUM ('unknown', 'valid', 'invalid');
+
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
@@ -167,7 +170,8 @@ CREATE TABLE products (
     password bcrypt_hash NOT NULL,
     client_ident client_ident_type NOT NULL,
     config json,  -- Store configuration of product --
-    service_endpoint_address varchar(106) -- address ("hostname") of service endpoint. Can be dns or IP.
+    service_endpoint_address varchar(106), -- address ("hostname") of service endpoint. Can be dns or IP.
+    country char(2) -- ISO 3166-1 alpha-2
 );
 
 -- Service offerings.
@@ -285,7 +289,8 @@ CREATE TABLE endpoints (
     username varchar(100),
     password varchar(48),
     additional_params json, -- all additional parameters stored as JSON
-    raw_msg text NOT NULL -- raw message in base64 (RFC-4648)
+    raw_msg text NOT NULL, -- raw message in base64 (RFC-4648)
+    country_status country_status_type -- result of checking a country by agent`s ip address.
 );
 
 -- Job queue.

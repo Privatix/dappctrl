@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
@@ -54,7 +55,15 @@ func TestPushConfig(t *testing.T) {
 	fxt := data.NewTestFixture(t, db)
 	defer fxt.Close()
 
-	s := newTestSessSrv(t, 0)
+	countryField := "testCountry"
+	resultCountry := "YY"
+
+	cs := country.NewServerMock(countryField, resultCountry)
+	defer cs.Close()
+
+	countryConf := newTestCountryConfig(countryField, cs.Server.URL)
+
+	s := newTestSessSrv(t, 0, countryConf)
 	defer s.Close()
 
 	rootDir, err := ioutil.TempDir("", util.NewUUID())
@@ -66,9 +75,18 @@ func TestPushConfig(t *testing.T) {
 
 	pusher := NewPusher(createTestConfig(t, rootDir),
 		conf.SessionServer.Config, fxt.Product.ID, data.TestPassword,
-		logger2)
+		logger)
 	if err := pusher.PushConfiguration(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+
+	product := &data.Product{}
+	if err := db.FindByPrimaryKeyTo(product, fxt.Product.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if product.Country == nil || *product.Country != resultCountry {
+		t.Fatal("failed to country detection")
 	}
 }
 

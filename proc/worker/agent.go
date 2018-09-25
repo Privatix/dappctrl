@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
@@ -20,8 +21,6 @@ import (
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
-
-const defaultCountry = "ZZ"
 
 // AgentAfterChannelCreate registers client and creates pre service create job.
 func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
@@ -577,12 +576,16 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	country, err := w.getCountry()
+	product, err := w.productByPK(logger, offering.Product)
 	if err != nil {
-		country = defaultCountry
+		return err
 	}
 
-	offering.Country = country
+	offering.Country = country.UndefinedCountry
+
+	if product.Country != nil && len(*product.Country) == 2 {
+		offering.Country = *product.Country
+	}
 
 	msg := offer.OfferingMessage(agent, template, offering)
 

@@ -34,4 +34,5 @@ DROP TYPE unit_type;
 DROP TYPE bill_type;
 DROP TYPE tpl_kind;
 DROP TYPE usage_rep_type;
+DROP TYPE country_status_type;
 

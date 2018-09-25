@@ -19,6 +19,9 @@ CREATE TYPE contract_type AS ENUM ('ptc','psc');
 -- Client identification types.
 CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
+-- Country status types.
+CREATE TYPE country_status_type AS ENUM ('unknown', 'valid', 'invalid');
+
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 

@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -272,60 +270,4 @@ func (w *Worker) saveRecord(logger log.Logger, rec reform.Record) error {
 		return ErrInternal
 	}
 	return nil
-}
-
-func (w *Worker) do(
-	ctx context.Context, req *http.Request) (*http.Response, error) {
-	res, err := http.DefaultClient.Do(req.WithContext(ctx))
-	if err != nil {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (w *Worker) getCountry() (string, error) {
-	logger := w.logger.Add("method", "getCountry")
-
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Second*w.countryConfig.Timeout)
-	defer cancel()
-
-	req, err := http.NewRequest(http.MethodGet, w.countryConfig.URL, nil)
-	if err != nil {
-		logger.Error(err.Error())
-		return "", ErrInternal
-	}
-	res, err := w.do(ctx, req)
-	if err != nil {
-		logger.Error(err.Error())
-		return "", ErrInternal
-	}
-	defer res.Body.Close()
-
-	object := make(map[string]interface{})
-	if err := json.NewDecoder(res.Body).Decode(&object); err != nil {
-		logger.Error(err.Error())
-		return "", ErrInternal
-	}
-
-	logger = logger.Add("fields", object)
-
-	field, ok := object[w.countryConfig.Field]
-	if !ok {
-		logger.Error(ErrCountryNotFound.Error())
-		return "", ErrCountryNotFound
-	}
-
-	country, ok := field.(string)
-	if !ok {
-		logger.Error(ErrCountryNotFound.Error())
-		return "", ErrCountryNotFound
-	}
-
-	return strings.TrimSpace(strings.ToUpper(country)), nil
 }

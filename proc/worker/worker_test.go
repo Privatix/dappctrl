@@ -15,6 +15,7 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/job"
@@ -44,7 +45,7 @@ type testConfig struct {
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
 	pscAddr   common.Address
-	Country   *CountryConfig
+	Country   *country.Config
 }
 
 func newTestConfig() *testConfig {
@@ -58,7 +59,7 @@ func newTestConfig() *testConfig {
 		SOMC:     somc.NewConfig(),
 		SOMCTest: somc.NewTestConfig(),
 		pscAddr:  common.HexToAddress("0x1"),
-		Country:  NewCountryConfig(),
+		Country:  country.NewConfig(),
 	}
 }
 

@@ -75,6 +75,7 @@ type Product struct {
 	ClientIdent            string          `json:"clientIdent" reform:"client_ident"`
 	Config                 json.RawMessage `json:"config" reform:"config"`
 	ServiceEndpointAddress *string         `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	Country                *string         `json:"country" reform:"country"`
 }
 
 // Unit used for billing calculation.
@@ -227,6 +228,13 @@ type Setting struct {
 	Name        string  `json:"name" reform:"name"`
 }
 
+// Country statuses.
+const (
+	CountryStatusUnknown = "unknown"
+	CountryStatusValid   = "valid"
+	CountryStatusInvalid = "invalid"
+)
+
 // Endpoint messages is info about service access.
 //reform:endpoints
 type Endpoint struct {
@@ -241,6 +249,7 @@ type Endpoint struct {
 	Username               *string `json:"username" reform:"username"`
 	Password               *string `json:"password" reform:"password"`
 	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
+	CountryStatus          *string `json:"countryStatus" reform:"country_status"`
 }
 
 // EndpointUI contains only certain fields of endpoints table.

@@ -208,7 +208,7 @@ func (b *testEthBackend) PSCGetOfferingInfo(opts *bind.CallOpts,
 		b.offeringIsActive, nil
 }
 
-func (b *testEthBackend) PSCGetChallengePeriod(
+func (b *testEthBackend) PSCGetPopUpPeriod(
 	opts *bind.CallOpts) (uint32, error) {
 	return b.challengePeriod, nil
 }

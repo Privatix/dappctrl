@@ -1,20 +1,6 @@
 [
 	{
 		"constant": true,
-		"inputs": [],
-		"name": "challenge_period",
-		"outputs": [
-			{
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"payable": false,
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"constant": true,
 		"inputs": [
 			{
 				"name": "",
@@ -50,6 +36,20 @@
 		"constant": true,
 		"inputs": [],
 		"name": "network_fee",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "popup_period",
 		"outputs": [
 			{
 				"name": "",
@@ -132,6 +132,20 @@
 	{
 		"constant": true,
 		"inputs": [],
+		"name": "remove_period",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
 		"name": "meta_version",
 		"outputs": [
 			{
@@ -182,7 +196,11 @@
 				"type": "address"
 			},
 			{
-				"name": "_challenge_period",
+				"name": "_popup_period",
+				"type": "uint32"
+			},
+			{
+				"name": "_remove_period",
 				"type": "uint32"
 			}
 		],
@@ -753,10 +771,6 @@
 			{
 				"name": "",
 				"type": "uint32"
-			},
-			{
-				"name": "",
-				"type": "bool"
 			}
 		],
 		"payable": false,

@@ -807,7 +807,7 @@ func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 		return ErrOfferingNotActive
 	}
 
-	period, err := w.ethBack.PSCGetChallengePeriod(&bind.CallOpts{})
+	period, err := w.ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal

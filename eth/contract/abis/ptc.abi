@@ -135,12 +135,21 @@
 		"name": "balanceOf",
 		"outputs": [
 			{
-				"name": "balance",
+				"name": "",
 				"type": "uint256"
 			}
 		],
 		"payable": false,
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -235,7 +244,7 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "newOwner",
+				"name": "_newOwner",
 				"type": "address"
 			}
 		],
@@ -266,6 +275,18 @@
 		"anonymous": false,
 		"inputs": [],
 		"name": "MintFinished",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"name": "previousOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipRenounced",
 		"type": "event"
 	},
 	{

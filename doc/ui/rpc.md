@@ -278,6 +278,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePa
 
 *Description*: Returns total units used for a given channel.
 
+
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
@@ -328,6 +329,22 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 ```
 </details>
 </details>
+
+
+### Endpoints
+
+#### Get Endpoints
+
+*Method*:	`getEndpoints`
+
+*Description*: get endpoints.
+
+*Parameters*:
+1. Password (string)
+2. Channel id (string)
+3. Template id (string)
+
+*Result (array of `data.Endpoint` objects)*: endpoints.
 
 
 ### Objects

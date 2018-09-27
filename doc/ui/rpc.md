@@ -861,6 +861,21 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 </details>
 
 
+### Sessions
+
+#### Get Sessions
+
+*Method*:	`getSessions`
+
+*Description*: get sessions.
+
+*Parameters*:
+1. Password (string)
+2. Channel id (string)
+
+*Result (array of `data.Session` objects)*: sessions.
+
+
 ### Settings
 
 #### Get Settings

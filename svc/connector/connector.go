@@ -21,7 +21,7 @@ type Connector interface {
 	// AuthSession authenticates client session via dappctrl.
 	AuthSession(args *sesssrv.AuthArgs) error
 	// StartSession reports session start.
-	StartSession(args *sesssrv.StartArgs) error
+	StartSession(args *sesssrv.StartArgs) (*sesssrv.StartResult, error)
 	// StopSession reports session stop.
 	StopSession(args *sesssrv.StopArgs) error
 	// UpdateSessionUsage reports last usage update.
@@ -59,9 +59,12 @@ func (c *cntr) AuthSession(args *sesssrv.AuthArgs) error {
 }
 
 // StartSession sends a request for session start.
-func (c *cntr) StartSession(args *sesssrv.StartArgs) error {
-	return sesssrv.Post(c.config.Config, c.logger, c.config.Username,
-		c.config.Password, sesssrv.PathStart, args, nil)
+func (c *cntr) StartSession(
+	args *sesssrv.StartArgs) (*sesssrv.StartResult, error) {
+	var res *sesssrv.StartResult
+	err := sesssrv.Post(c.config.Config, c.logger, c.config.Username,
+		c.config.Password, sesssrv.PathStart, args, &res)
+	return res, err
 }
 
 // StopSession sends a request for session stop.
@@ -88,6 +91,6 @@ func (c *cntr) GetEndpointMessage(
 	args *sesssrv.EndpointMsgArgs) (*data.Endpoint, error) {
 	var endpoint *data.Endpoint
 	err := sesssrv.Post(c.config.Config, c.logger, c.config.Username,
-		c.config.Password, sesssrv.PathProductConfig, args, &endpoint)
+		c.config.Password, sesssrv.PathEndpointMsg, args, &endpoint)
 	return endpoint, err
 }

@@ -12,6 +12,7 @@ const (
 	ErrObjectNotFound
 	ErrAccountNotFound
 	ErrChannelNotFound
+	ErrTemplateNotFound
 	ErrDefailtGasPriceNotFound
 	ErrEmptyPassword
 	ErrMinConfirmationsNotFound
@@ -39,6 +40,7 @@ var errMsgs = errors.Messages{
 	ErrObjectNotFound:           "object not found",
 	ErrAccountNotFound:          "account not found",
 	ErrChannelNotFound:          "channel not found",
+	ErrTemplateNotFound:         "template not found",
 	ErrDefailtGasPriceNotFound:  "default gas price setting not found",
 	ErrEmptyPassword:            "invalid password",
 	ErrMinConfirmationsNotFound: "min confirmations setting not found",

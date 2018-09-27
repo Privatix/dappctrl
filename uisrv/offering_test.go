@@ -61,10 +61,6 @@ func postOffering(t *testing.T, v *data.Offering) *http.Response {
 	return sendOffering(t, v, http.MethodPost)
 }
 
-func putOffering(t *testing.T, v *data.Offering) *http.Response {
-	return sendOffering(t, v, "PUT")
-}
-
 func TestPostOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
@@ -73,9 +69,11 @@ func TestPostOfferingSuccess(t *testing.T) {
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
-	res := postOffering(t, &payload)
-	if res.StatusCode != http.StatusCreated {
-		t.Errorf("failed to create, response: %d", res.StatusCode)
+	for _, req := range []data.Offering{payload, payload} {
+		res := postOffering(t, &req)
+		if res.StatusCode != http.StatusCreated {
+			t.Errorf("failed to create, response: %d", res.StatusCode)
+		}
 	}
 }
 
@@ -147,23 +145,6 @@ func TestPostOfferingValidation(t *testing.T) {
 		if res.StatusCode != http.StatusBadRequest {
 			t.Errorf("failed with response: %d", res.StatusCode)
 		}
-	}
-}
-
-func TestPutOfferingSuccess(t *testing.T) {
-	defer cleanDB(t)
-	setTestUserCredentials(t)
-
-	createOfferingFixtures(t)
-	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	insertItems(t, testOffering)
-
-	// Successful offering creation.
-	payload := validOfferingPayload()
-	payload.ID = testOffering.ID
-	res := putOffering(t, &payload)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("failed to put, response: %d", res.StatusCode)
 	}
 }
 

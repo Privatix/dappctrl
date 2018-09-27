@@ -24,16 +24,16 @@ import (
 )
 
 // TestEncryptedKey is a key encryption simplified for tests performance.
-func TestEncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
-	return FromBytes(crypto.FromECDSA(pkey)) + "AUTH:" + auth, nil
+func TestEncryptedKey(pkey *ecdsa.PrivateKey, _ string) (string, error) {
+	return FromBytes(crypto.FromECDSA(pkey)) + "AUTH:" + TestPassword, nil
 }
 
 // TestToPrivateKey is a key decryption simplified for tests performance.
-func TestToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
+func TestToPrivateKey(keyB64, _ string) (*ecdsa.PrivateKey, error) {
 	split := strings.Split(keyB64, "AUTH:")
 	keyB64 = split[0]
 	authStored := split[1]
-	if auth != authStored {
+	if TestPassword != authStored {
 		return nil, fmt.Errorf("passphrase didn't match")
 	}
 	keyBytes, err := ToBytes(keyB64)

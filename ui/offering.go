@@ -1,11 +1,16 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -265,12 +270,51 @@ func (h *Handler) GetAgentOfferings(
 	return result, nil
 }
 
+// setOfferingHash computes and sets values for raw msg and hash fields.
+func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
+	template *data.Template, agent *data.Account) error {
+	handleErr := func(err error) error {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+	msg := offer.OfferingMessage(agent, template, offering)
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return handleErr(err)
+	}
+
+	agentKey, err := h.decryptKeyFunc(agent.PrivateKey, h.pwdStorage.Get())
+	if err != nil {
+		return handleErr(err)
+	}
+
+	packed, err := messages.PackWithSignature(msgBytes, agentKey)
+	if err != nil {
+		return handleErr(err)
+	}
+
+	offering.RawMsg = data.FromBytes(packed)
+
+	hashBytes := common.BytesToHash(crypto.Keccak256(packed))
+
+	offering.Hash = data.FromBytes(hashBytes.Bytes())
+
+	return nil
+}
+
 // fillOffering fills offerings nonce, status, hash and signature.
 func (h *Handler) fillOffering(
 	logger log.Logger, offering *data.Offering) error {
 	agent := &data.Account{}
 	if err := h.findByPrimaryKey(logger,
 		ErrAccountNotFound, agent, offering.Agent); err != nil {
+		return err
+	}
+
+	template := &data.Template{}
+	if err := h.findByPrimaryKey(logger,
+		ErrTemplateNotFound, template, offering.Template); err != nil {
 		return err
 	}
 
@@ -283,7 +327,7 @@ func (h *Handler) fillOffering(
 	// TODO: remove once prepaid is implemented.
 	offering.BillingType = data.BillingPostpaid
 
-	return nil
+	return h.setOfferingHash(logger, offering, template, agent)
 }
 
 func (h *Handler) prepareOffering(
@@ -336,8 +380,6 @@ func (h *Handler) CreateOffering(password string,
 	if err != nil {
 		return nil, err
 	}
-
-	offering.ID = util.NewUUID()
 
 	err = h.prepareOffering(logger, offering)
 	if err != nil {

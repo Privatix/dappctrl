@@ -17,7 +17,6 @@ import (
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
-	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -571,11 +570,6 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	template, err := w.template(logger, offering.Template)
-	if err != nil {
-		return err
-	}
-
 	product, err := w.productByPK(logger, offering.Product)
 	if err != nil {
 		return err
@@ -587,29 +581,12 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		offering.Country = *product.Country
 	}
 
-	msg := offer.OfferingMessage(agent, template, offering)
-
-	logger = logger.Add("msg", msg)
-
-	msgBytes, err := json.Marshal(msg)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	packed, err := messages.PackWithSignature(msgBytes, agentKey)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	offering.RawMsg = data.FromBytes(packed)
-
-	offeringHash := common.BytesToHash(crypto.Keccak256(packed))
-
-	offering.Hash = data.FromBytes(offeringHash.Bytes())
-
 	publishData, err := w.publishData(logger, job)
+	if err != nil {
+		return err
+	}
+
+	offeringHash, err := data.ToBytes(offering.Hash)
 	if err != nil {
 		return err
 	}
@@ -642,7 +619,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	auth.GasPrice = new(big.Int).SetUint64(publishData.GasPrice)
 
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
-		[common.HashLength]byte(offeringHash),
+		[common.HashLength]byte(common.BytesToHash(offeringHash)),
 		new(big.Int).SetUint64(minDeposit), offering.Supply)
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,

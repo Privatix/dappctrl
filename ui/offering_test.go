@@ -378,14 +378,14 @@ func TestCreateOffering(t *testing.T) {
 	_, err := handler.CreateOffering("wrong-password", offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	res, err := handler.CreateOffering(data.TestPassword, offering)
-	assertMatchErr(nil, err)
-
-	offering2 := &data.Offering{}
-	err = db.FindByPrimaryKeyTo(offering2, res)
-	assertMatchErr(nil, err)
-
-	data.DeleteFromTestDB(t, db, offering2)
+	for _, item := range []data.Offering{*offering, *offering} {
+		res, err := handler.CreateOffering(data.TestPassword, &item)
+		assertMatchErr(nil, err)
+		offering2 := &data.Offering{}
+		err = db.FindByPrimaryKeyTo(offering2, res)
+		assertMatchErr(nil, err)
+		defer data.DeleteFromTestDB(t, db, offering2)
+	}
 }
 
 func TestUpdateOffering(t *testing.T) {

@@ -3,7 +3,6 @@
 
 DROP TABLE log_events;
 DROP TYPE log_level;
-DROP TABLE eth_logs;
 DROP TABLE eth_txs;
 DROP TABLE jobs;
 DROP TABLE endpoints;

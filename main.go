@@ -280,15 +280,13 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
-		conf.Role, ethClient.CloseIdleConnections)
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethClient.EthClient(),
+		ethClient.CloseIdleConnections, db, logger, pscAddr, ptcAddr,
+		conf.Role, queue)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-	if err := mon.Start(); err != nil {
-		logger.Fatal(err.Error())
-	}
+	mon.Start()
 	defer mon.Stop()
 
 	go func() {

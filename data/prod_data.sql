@@ -255,15 +255,6 @@ VALUES ('eth.min.confirmations',
         'ethereum confirmation blocks');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.event.maxretry',
-        '7',
-        2,
-        'have value (stored as string) that is null or integer and' ||
-        ' represents how many times event should try to create job,' ||
-        ' until it is ignored. null or zero considered unlimited.',
-        'event processing max retry');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
         '11520',
         2,
@@ -316,6 +307,13 @@ VALUES ('eth.max.deposit',
         'We temporarily limit total token deposits in a channel to 300' ||
         ' PRIX. This is just for the bug bounty release, as a safety measure.',
         'maximum deposit');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.lastProcessedBlock',
+        '0',
+        2,
+        'Last block number in blockchain stores last proccessed block.',
+        'last processed block');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',

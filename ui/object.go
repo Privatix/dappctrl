@@ -36,7 +36,6 @@ var objectTypes = map[string]reform.Table{
 	TypeEndpoint: data.EndpointTable,
 	TypeJob:      data.JobTable,
 	TypeEthTx:    data.EthTxTable,
-	TypeEthLog:   data.EthLogTable,
 }
 
 // GetObject finds object in a database by id,

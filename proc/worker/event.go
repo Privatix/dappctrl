@@ -90,14 +90,9 @@ func init() {
 	}
 }
 
-func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannelTopUpInput, error) {
-	dataBytes, err := data.ToBytes(log.Data)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseEthLog
-	}
-
-	dataUnpacked, err := logChannelTopUpDataArguments.UnpackValues(dataBytes)
+func extractLogChannelToppedUp(
+	logger log.Logger, log *data.JobEthLog) (*logChannelTopUpInput, error) {
+	dataUnpacked, err := logChannelTopUpDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseEthLog
@@ -134,14 +129,9 @@ func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannel
 	}, nil
 }
 
-func extractLogChannelCreated(logger log.Logger, log *data.EthLog) (*logChannelCreatedInput, error) {
-	dataBytes, err := data.ToBytes(log.Data)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseEthLog
-	}
-
-	dataUnpacked, err := logChannelCreatedDataArguments.UnpackValues(dataBytes)
+func extractLogChannelCreated(logger log.Logger,
+	log *data.JobEthLog) (*logChannelCreatedInput, error) {
+	dataUnpacked, err := logChannelCreatedDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseEthLog
@@ -179,18 +169,12 @@ func extractLogChannelCreated(logger log.Logger, log *data.EthLog) (*logChannelC
 }
 
 func extractLogOfferingCreated(logger log.Logger,
-	log *data.EthLog) (*logOfferingCreatedInput, error) {
+	log *data.JobEthLog) (*logOfferingCreatedInput, error) {
 	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 
-	dataBytes, err := data.ToBytes(log.Data)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseJobData
-	}
-
-	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(dataBytes)
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseJobData
@@ -218,7 +202,7 @@ func extractLogOfferingCreated(logger log.Logger,
 }
 
 func extractLogOfferingPopUp(logger log.Logger,
-	log *data.EthLog) (*logOfferingPopUpInput, error) {
+	log *data.JobEthLog) (*logOfferingPopUpInput, error) {
 	if len(log.Topics) != 3 {
 		return nil, ErrWrongLogTopicsNumber
 	}

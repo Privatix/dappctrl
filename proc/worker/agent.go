@@ -84,7 +84,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
 		Offering:      offering.ID,
-		Block:         uint32(ethLog.BlockNumber),
+		Block:         uint32(ethLog.Block),
 	}
 
 	if err := tx.Insert(channel); err != nil {
@@ -913,7 +913,7 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 		return ErrInternal
 	}
 
-	offering.BlockNumberUpdated = ethLog.BlockNumber
+	offering.BlockNumberUpdated = ethLog.Block
 	offering.OfferStatus = data.OfferPoppedUp
 
 	return w.saveRecord(logger, &offering)

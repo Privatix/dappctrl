@@ -8,10 +8,8 @@
         "EthCallTimeout": 5
     },
     "BlockMonitor": {
-        "CollectPause": 6,
-        "SchedulePause": 6,
-        "CollectTimeout": 60,
-        "ScheduleTimeout": 60
+        "QueryPause": 6,
+        "EthCallTimeout": 60
     },
     "ClientMonitor": {
         "CollectPeriod": 5000,

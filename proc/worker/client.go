@@ -259,7 +259,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	logger = logger.Add("channel", ch, "ethLog", ethLog)
 
-	ch.Block = uint32(ethLog.BlockNumber)
+	ch.Block = uint32(ethLog.Block)
 	ch.ChannelStatus = data.ChannelActive
 	if err = w.saveRecord(logger, ch); err != nil {
 		return err
@@ -943,7 +943,7 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	return w.clientRetrieveAndSaveOffering(logger, job,
-		ethLog.BlockNumber, logOfferingCreated.agentAddr,
+		ethLog.Block, logOfferingCreated.agentAddr,
 		logOfferingCreated.offeringHash)
 }
 
@@ -970,7 +970,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
 		return w.clientRetrieveAndSaveOffering(logger, job,
-			ethLog.BlockNumber, logOfferingPopUp.agentAddr,
+			ethLog.Block, logOfferingPopUp.agentAddr,
 			logOfferingPopUp.offeringHash)
 	}
 	if err != nil {
@@ -979,7 +979,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	// Existing offering, just update offering status.
-	offering.BlockNumberUpdated = ethLog.BlockNumber
+	offering.BlockNumberUpdated = ethLog.Block
 	offering.OfferStatus = data.OfferPoppedUp
 
 	return w.saveRecord(logger, &offering)
@@ -1015,7 +1015,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	offering.CurrentSupply = cSupply
 
 	if err := data.Insert(w.db.Querier, offering); err != nil {
-		logger.Error(err.Error())
+		logger.Add("offering", offering).Error(err.Error())
 		return ErrInternal
 	}
 

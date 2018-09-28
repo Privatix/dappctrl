@@ -9,15 +9,16 @@ import (
 
 // Setting keys.
 const (
+	SettingAppVersion         = "system.version.app"
+	SettingBlockLimit         = "eth.event.blocklimit"
+	SettingDefaultGasPrice    = "eth.default.gasprice"
 	SettingEthChallengePeriod = "eth.challenge.period"
+	SettingFreshBlocks        = "eth.event.freshblocks"
+	SettingOfferingAutoPopUp  = "offering.autopopup"
+	SettingLastProcessedBlock = "eth.event.lastProcessedBlock"
+	SettingMinConfirmations   = "eth.min.confirmations"
 	SettingPasswordHash       = "system.password"
 	SettingPasswordSalt       = "system.salt"
-	SettingAppVersion         = "system.version.app"
-	SettingDefaultGasPrice    = "eth.default.gasprice"
-	SettingMinConfirmations   = "eth.min.confirmations"
-	SettingFreshBlocks        = "eth.event.freshblocks"
-	SettingBlockLimit         = "eth.event.blocklimit"
-	SettingOfferingAutoPopUp  = "offering.autopopup"
 )
 
 // ReadSetting reads value of a given setting.

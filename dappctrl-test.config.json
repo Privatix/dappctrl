@@ -36,10 +36,8 @@
     },
 
     "BlockMonitor": {
-        "CollectPause": 6,
-        "SchedulePause": 6,
-        "CollectTimeout": 60,
-        "ScheduleTimeout": 5
+        "QueryPause": 6,
+        "EthCallTimeout": 60
     },
 
     "DB": {

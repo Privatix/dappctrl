@@ -102,9 +102,21 @@ func NewQueue(conf *Config, logger log.Logger, db *reform.DB,
 }
 
 func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
-	_, err := q.db.SelectOneFrom(data.JobTable,
-		"WHERE related_id = $1 AND type = $2", j.RelatedID, j.Type)
-
+	jdata := &data.JobData{}
+	json.Unmarshal(j.Data, jdata)
+	var err error
+	if jdata.EthLog != nil {
+		_, err = q.db.SelectOneFrom(data.JobTable,
+			`WHERE related_id = $1
+			    AND type = $2
+			    AND ((data->'ethereumLog'->'transactionHash') IS NULL
+			    OR data->'ethereumLog'->>'transactionHash'=$3)`,
+			j.RelatedID, j.Type, jdata.EthLog.TxHash)
+	} else {
+		_, err = q.db.SelectOneFrom(data.JobTable,
+			"WHERE related_id = $1 AND type = $2",
+			j.RelatedID, j.Type)
+	}
 	if err == nil {
 		logger.Debug(ErrDuplicatedJob.Error())
 		return ErrDuplicatedJob

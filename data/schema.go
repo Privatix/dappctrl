@@ -342,6 +342,17 @@ const (
 	JobIncrementCurrentSupply               = "incrementCurrentSupply"
 )
 
+type JobEthLog struct {
+	Block  uint64    `json:"block"`
+	Data   []byte    `json:"data"`
+	Topics LogTopics `json:"topics"`
+	TxHash string    `json:"transactionHash"`
+}
+
+type JobData struct {
+	EthLog *JobEthLog `json:"ethereumLog"`
+}
+
 // JobBalanceData is a data required for transfer jobs.
 type JobBalanceData struct {
 	GasPrice uint64
@@ -391,21 +402,6 @@ type EthTx struct {
 	TxRaw       []byte    `reform:"tx_raw" json:"txRaw"`
 	RelatedType string    `reform:"related_type" json:"relatedType"`
 	RelatedID   string    `reform:"related_id" json:"relatedID"`
-}
-
-// EthLog is an ethereum log entry.
-//reform:eth_logs
-type EthLog struct {
-	ID          string    `reform:"id,pk"`
-	TxHash      string    `reform:"tx_hash"`
-	TxStatus    string    `reform:"status"`
-	JobID       *string   `reform:"job"`
-	BlockNumber uint64    `reform:"block_number"`
-	Addr        string    `reform:"addr"`
-	Data        string    `reform:"data"`
-	Topics      LogTopics `reform:"topics"`
-	Failures    uint64    `reform:"failures"`
-	Ignore      bool      `reform:"ignore"`
 }
 
 // LogEvent is a log event.

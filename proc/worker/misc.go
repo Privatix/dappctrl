@@ -77,7 +77,7 @@ func (w *Worker) unmarshalDataTo(
 	return nil
 }
 
-func (w *Worker) ethLogTx(logger log.Logger, ethLog *data.EthLog) (*types.Transaction, error) {
+func (w *Worker) ethLogTx(logger log.Logger, ethLog *data.JobEthLog) (*types.Transaction, error) {
 	hash, err := data.HexToHash(ethLog.TxHash)
 	if err != nil {
 		logger.Error(err.Error())

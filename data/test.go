@@ -259,16 +259,6 @@ func NewTestJob(jobType, createdBy, relType string) *Job {
 	}
 }
 
-// NewTestEthLog returns a default test eth log.
-func NewTestEthLog() *EthLog {
-	return &EthLog{
-		ID:          util.NewUUID(),
-		TxStatus:    TxMined,
-		BlockNumber: uint64(rand.Intn(9999)),
-		Topics:      LogTopics{},
-	}
-}
-
 // BeginTestTX begins a test transaction.
 func BeginTestTX(t *testing.T, db *reform.DB) *reform.TX {
 	tx, err := db.Begin()
@@ -360,7 +350,7 @@ func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 // CleanTestDB deletes all records from all test DB tables.
 func CleanTestDB(t *testing.T, db *reform.DB) {
 	tx := BeginTestTX(t, db)
-	for _, v := range []reform.View{EthTxTable, EthLogTable, JobTable,
+	for _, v := range []reform.View{EthTxTable, JobTable,
 		EndpointTable, SessionTable, ChannelTable, OfferingTable,
 		UserTable, AccountTable, ProductTable, TemplateTable,
 		ContractTable, SettingTable, LogEventView} {

@@ -258,6 +258,7 @@ type EndpointUI struct {
 	ID                     string  `json:"id" reform:"id,pk"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
 	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	CountryStatus          *string `json:"countryStatus" reform:"country_status"`
 }
 
 // Job creators.

@@ -496,14 +496,6 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 			*fixture.Product.Country, offering.Country)
 	}
 
-	if offering.RawMsg == fixture.Offering.RawMsg {
-		t.Fatal("raw msg was not set")
-	}
-
-	if offering.Hash == fixture.Offering.Hash {
-		t.Fatal("hash was not set")
-	}
-
 	offeringHash := data.TestToHash(t, offering.Hash)
 
 	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,

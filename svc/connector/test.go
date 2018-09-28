@@ -22,8 +22,9 @@ func (m *Mock) AuthSession(args *sesssrv.AuthArgs) error {
 }
 
 // StartSession is a mock implementation for the StartSession connector method.
-func (m *Mock) StartSession(args *sesssrv.StartArgs) error {
-	return m.Error
+func (m *Mock) StartSession(
+	args *sesssrv.StartArgs) (*sesssrv.StartResult, error) {
+	return nil, m.Error
 }
 
 // StopSession is a mock implementation for the StopSession connector method.

@@ -94,6 +94,8 @@ func handleAuth() {
 	storeChannel(user, user) // Needed when using username-as-common-name.
 }
 
+const maxRateMbps float32 = 1000000
+
 func handleConnect() {
 	port, err := strconv.Atoi(os.Getenv("trusted_port"))
 	if err != nil || port <= 0 || port > 0xFFFF {
@@ -113,19 +115,25 @@ func handleConnect() {
 		logger.Fatal("failed to start session: " + err.Error())
 	}
 
-	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
+	if len(channel) != 0 {
 		return
 	}
 
-	var params vpndata.OfferingParams
-	err = json.Unmarshal(res.Offering.AdditionalParams, &params)
-	if err != nil {
-		logger.Add("offering_params", res.Offering.AdditionalParams).Fatal(
-			"failed to unmarshal offering params: " + err.Error())
+	logger = logger.Add("offering", res.Offering)
+
+	upMbits, downMbits := maxRateMbps, maxRateMbps
+	if res.Offering.AdditionalParams != nil {
+		var params vpndata.OfferingParams
+		err = json.Unmarshal(res.Offering.AdditionalParams, &params)
+		if err != nil {
+			logger.Fatal("failed to unmarshal offering params: " +
+				err.Error())
+		}
+		upMbits = params.MinUploadMbits
+		downMbits = params.MinDownloadMbits
 	}
 
-	err = tctrl.SetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"),
-		params.MinUploadMbits, params.MinDownloadMbits)
+	err = tctrl.SetRateLimit(os.Getenv("trusted_ip"), upMbits, downMbits)
 	if err != nil {
 		logger.Fatal("failed to set rate limit: " + err.Error())
 	}
@@ -153,7 +161,7 @@ func handleDisconnect() {
 		logger.Fatal("failed to stop session: " + err.Error())
 	}
 
-	err = tctrl.UnsetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"))
+	err = tctrl.UnsetRateLimit(os.Getenv("trusted_ip"))
 	if err != nil {
 		logger.Fatal("failed to unset rate limit: " + err.Error())
 	}

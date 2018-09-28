@@ -12,12 +12,12 @@ func NewConfig() *Config {
 // SetRateLimit sets a rate limit for a given client IP address on a given
 // network interface.
 func (tc *TrafficControl) SetRateLimit(
-	iface, clientIP string, upMbps, downMbps float32) error {
+	clientIP string, upMbits, downMbits float32) error {
 	return nil
 }
 
 // UnsetRateLimit removes a rate limit for a given client IP address on a given
 // network interface.
-func (tc *TrafficControl) UnsetRateLimit(iface, clientIP string) error {
+func (tc *TrafficControl) UnsetRateLimit(clientIP string) error {
 	return nil
 }

@@ -758,6 +758,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
+	env.ethBack.offeringIsActive = true
 	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
 	env.ethBack.offerMaxSupply = expectedOffering.Supply
 	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
@@ -914,6 +915,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
+	env.ethBack.offeringIsActive = true
 	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
 	env.ethBack.offerMaxSupply = expectedOffering.Supply
 	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(

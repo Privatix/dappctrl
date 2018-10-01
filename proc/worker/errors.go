@@ -62,6 +62,7 @@ const (
 	ErrFindOfferings
 	ErrSOMCNoOfferings
 	ErrOfferNotRegistered
+	ErrOfferNotCorrespondToTemplate
 	ErrChannelReceiptBalance
 	ErrInvalidChannelStatus
 	ErrInvalidServiceStatus
@@ -137,6 +138,7 @@ var errMsgs = errors.Messages{
 	ErrFindOfferings:                "could not find offerings",
 	ErrSOMCNoOfferings:              "no offering returned from somc",
 	ErrOfferNotRegistered:           "offering is not registered",
+	ErrOfferNotCorrespondToTemplate: "offer not correspond to template",
 	ErrChannelReceiptBalance:        "receipt balance more than deposit",
 	ErrInvalidChannelStatus:         "channel status forbids procedure",
 	ErrInvalidServiceStatus:         "service status forbids procedure",

@@ -117,7 +117,7 @@ func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannel
 		return nil, ErrParseEthLog
 	}
 
-	if len(log.Topics) != 3 {
+	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 

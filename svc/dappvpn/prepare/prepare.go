@@ -23,8 +23,7 @@ func ClientConfig(logger log.Logger, channel string,
 		adapterConfig.Server.Username, adapterConfig.Server.Password,
 		sesssrv.PathEndpointMsg, args, &endpoint)
 	if err != nil {
-		logger.Add("channel", channel).Error(err.Error())
-		return ErrGetEndpoint
+		return err
 	}
 
 	save := func(str *string) string {
@@ -37,12 +36,8 @@ func ClientConfig(logger log.Logger, channel string,
 	target := filepath.Join(
 		adapterConfig.OpenVPN.ConfigRoot, endpoint.Channel)
 
-	err = msg.MakeFiles(logger, target,
+	return msg.MakeFiles(logger, target,
 		save(endpoint.ServiceEndpointAddress), save(endpoint.Username),
 		save(endpoint.Password), endpoint.AdditionalParams,
 		msg.SpecificOptions(adapterConfig.Monitor))
-	if err != nil {
-		return ErrMakeConfig
-	}
-	return nil
 }

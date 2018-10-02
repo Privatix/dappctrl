@@ -1038,7 +1038,7 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(offeringData.Offering))
 
-	// check hash match to that in registered in blockchain.
+	// Check hash match to that in registered in blockchain.
 	_, _, _, _, _, active, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hashBytes)
 	if err != nil {
@@ -1073,7 +1073,7 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		return nil, err
 	}
 
-	// validate offering JSON compliant with offering template JSON
+	// Validate offering JSON compliant with offering template JSON
 	if !offer.ValidMsg(template.Raw, msg) {
 		return nil, ErrOfferNotCorrespondToTemplate
 	}

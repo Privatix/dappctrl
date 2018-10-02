@@ -214,6 +214,8 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
 	topics := data.LogTopics{
+		// First topic is always the event.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,

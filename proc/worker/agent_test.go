@@ -57,7 +57,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 	topics := data.LogTopics{
-		// Don't know what the first topic is, but it appears in real logs.
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
@@ -731,11 +731,11 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
-	clientAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 
 	topics := data.LogTopics{
+		// First topic is always the event.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
-		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,
 	}
 

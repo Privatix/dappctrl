@@ -772,6 +772,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 	minDeposit := big.NewInt(10000)
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
@@ -861,6 +862,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash([]byte{}),
 		offeringHash,
@@ -922,6 +924,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,

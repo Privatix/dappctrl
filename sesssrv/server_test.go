@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -97,7 +98,14 @@ func TestBadProductAuth(t *testing.T) {
 	}
 }
 
-func TestMain(m *testing.M) {
+func newTestCountryConfig(field, url string) *country.Config {
+	c := country.NewConfig()
+	c.Field = field
+	c.URLTemplate = url
+	return c
+}
+
+func testMain(m *testing.M) int {
 	conf.DB = data.NewDBConfig()
 	conf.FileLog = log.NewFileConfig()
 	conf.SessionServer = NewConfig()
@@ -114,7 +122,15 @@ func TestMain(m *testing.M) {
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	server = NewServer(conf.SessionServer, logger, db)
+	countryField := "testCountry"
+	resultCountry := "YY"
+
+	cs := country.NewServerMock(countryField, resultCountry)
+	defer cs.Close()
+
+	countryConf := newTestCountryConfig(countryField, cs.Server.URL)
+
+	server = NewServer(conf.SessionServer, logger, db, countryConf)
 	defer server.Close()
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
@@ -126,5 +142,9 @@ func TestMain(m *testing.M) {
 	time.Sleep(time.Duration(conf.SessionServerTest.ServerStartupDelay) *
 		time.Millisecond)
 
-	os.Exit(m.Run())
+	return m.Run()
+}
+
+func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
 }

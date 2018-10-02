@@ -14,6 +14,7 @@ import (
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
 	"github.com/privatix/dappctrl/eth"
@@ -66,6 +67,7 @@ type config struct {
 	SOMC          *somc.Config
 	StaticPasword string
 	UI            *ui.Config
+	Country       *country.Config
 }
 
 func newConfig() *config {
@@ -87,6 +89,7 @@ func newConfig() *config {
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
+		Country:       country.NewConfig(),
 	}
 }
 
@@ -226,9 +229,8 @@ func main() {
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout), conf.Gas,
-		pscAddr, conf.PayAddress, pwdStorage, data.ToPrivateKey,
-		conf.EptMsg)
+			conf.Eth.Timeout), conf.Gas, pscAddr, conf.PayAddress,
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -274,15 +276,15 @@ func main() {
 	}()
 
 	if conf.Role == data.RoleClient {
-		cmon := cbill.NewMonitor(conf.ClientMonitor,
-			logger, db, pr, conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, pr,
+			conf.Eth.Contract.PSCAddrHex, pwdStorage)
 		go func() {
 			fatal <- cmon.Run()
 		}()
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db)
+	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

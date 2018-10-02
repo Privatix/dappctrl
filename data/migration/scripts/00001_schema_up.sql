@@ -19,6 +19,9 @@ CREATE TYPE contract_type AS ENUM ('ptc','psc');
 -- Client identification types.
 CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 
+-- Country status types.
+CREATE TYPE country_status_type AS ENUM ('unknown', 'valid', 'invalid');
+
 -- SHA3-256 in base64 (RFC-4648).
 CREATE DOMAIN sha3_256 AS char(44);
 
@@ -59,11 +62,15 @@ CREATE TYPE msg_status AS ENUM (
     'msg_channel_published' -- published in messaging channel
 );
 
--- Offering status
+-- Offering statuses
 CREATE TYPE offer_status AS ENUM (
+    'popping_up', -- popping up
+    'popped_up', -- popped up
     'empty', -- saved in DB, but not published to blockchain
-    'register', -- in registration or registered in blockchain
-    'remove' -- being removed or already removed from blockchain
+    'registering', -- registring in blockchain
+    'registered', -- registered in blockchain
+    'removing', -- removing from blockchain
+    'removed' -- removed from blockchain
 );
 
 -- Transaction statuses.

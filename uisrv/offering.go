@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/messages"
+	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -24,7 +28,7 @@ const (
 )
 
 const (
-	clientGetOfferFilter = `offer_status = 'register'
+	clientGetOfferFilter = `offer_status in ('registered', 'popped_up')
                                 AND status = 'msg_channel_published'
 				AND NOT is_local
 				AND offerings.current_supply > 0
@@ -62,10 +66,6 @@ func (s *Server) handleOfferings(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if r.Method == http.MethodPost {
 			s.handlePostOffering(w, r)
-			return
-		}
-		if r.Method == http.MethodPut {
-			s.handlePutOffering(w, r)
 			return
 		}
 		if r.Method == http.MethodGet {
@@ -111,27 +111,6 @@ func (s *Server) handlePostOffering(w http.ResponseWriter, r *http.Request) {
 	s.replyEntityCreated(logger, w, offering.ID)
 }
 
-// handlePutOffering updates offering.
-func (s *Server) handlePutOffering(w http.ResponseWriter, r *http.Request) {
-	logger := s.logger.Add("method", "handlePutOffering")
-
-	offering := &data.Offering{}
-	if !s.parseOfferingPayload(logger, w, r, offering) {
-		return
-	}
-	err := s.fillOffering(offering)
-	if err != nil {
-		s.replyUnexpectedErr(logger, w)
-		return
-	}
-	if err := s.db.Update(offering); err != nil {
-		s.logger.Warn(fmt.Sprintf("failed to update offering: %v", err))
-		s.replyUnexpectedErr(logger, w)
-		return
-	}
-	s.replyEntityUpdated(logger, w, offering.ID)
-}
-
 func (s *Server) parseOfferingPayload(logger log.Logger,
 	w http.ResponseWriter, r *http.Request, offering *data.Offering) bool {
 	if !s.parsePayload(logger, w, r, offering) ||
@@ -156,6 +135,9 @@ func invalidBillingType(v string) bool {
 func (s *Server) fillOffering(offering *data.Offering) error {
 	if offering.ID == "" {
 		offering.ID = util.NewUUID()
+		offering.OfferStatus = data.OfferEmpty
+	} else {
+		offering.OfferStatus = data.OfferRegistered
 	}
 
 	agent := &data.Account{}
@@ -163,13 +145,45 @@ func (s *Server) fillOffering(offering *data.Offering) error {
 		return err
 	}
 
-	offering.OfferStatus = data.OfferRegister
+	template := &data.Template{}
+	if err := s.db.FindByPrimaryKeyTo(template, offering.Template); err != nil {
+		return err
+	}
+
 	offering.Status = data.MsgUnpublished
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
 	offering.CurrentSupply = offering.Supply
 	// TODO: remove once prepaid is implemented.
 	offering.BillingType = data.BillingPostpaid
+
+	return s.setOfferingHash(offering, template, agent)
+}
+
+func (s *Server) setOfferingHash(offering *data.Offering,
+	template *data.Template, agent *data.Account) error {
+	msg := offer.OfferingMessage(agent, template, offering)
+
+	msgBytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	agentKey, err := s.decryptKeyFunc(agent.PrivateKey, s.pwdStorage.Get())
+	if err != nil {
+		return err
+	}
+
+	packed, err := messages.PackWithSignature(msgBytes, agentKey)
+	if err != nil {
+		return err
+	}
+
+	offering.RawMsg = data.FromBytes(packed)
+
+	hashBytes := common.BytesToHash(crypto.Keccak256(packed))
+
+	offering.Hash = data.FromBytes(hashBytes.Bytes())
 
 	return nil
 }
@@ -307,7 +321,7 @@ func (s *Server) handlePutClientOfferingStatus(
 		return
 	}
 
-	logger = logger.Add("payload", req)
+	logger = logger.Add("payload", *req)
 
 	if req.Action != AcceptOffering {
 		s.replyInvalidAction(logger, w)

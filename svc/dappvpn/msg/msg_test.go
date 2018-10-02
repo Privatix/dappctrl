@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
@@ -26,9 +27,8 @@ var (
 		VPNMonitor        *mon.Config
 	}
 
-	db      *reform.DB
-	logger  *util.Logger
-	logger2 log.Logger
+	db     *reform.DB
+	logger log.Logger
 
 	parameters map[string]string
 )
@@ -53,8 +53,9 @@ func newPusherTestConf() *pusherTestConf {
 	}
 }
 
-func newTestSessSrv(t *testing.T, timeout time.Duration) *testSessSrv {
-	s := sesssrv.NewServer(conf.SessionServer, logger2, db)
+func newTestSessSrv(t *testing.T, timeout time.Duration,
+	countryConfig *country.Config) *testSessSrv {
+	s := sesssrv.NewServer(conf.SessionServer, logger, db, countryConfig)
 	go func() {
 		time.Sleep(timeout)
 		if err := s.ListenAndServe(); err != http.ErrServerClosed {
@@ -78,6 +79,13 @@ func newSessSrvTestConfig() *testSessSrvConfig {
 	}
 }
 
+func newTestCountryConfig(field, url string) *country.Config {
+	c := country.NewConfig()
+	c.Field = field
+	c.URLTemplate = url
+	return c
+}
+
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
@@ -89,14 +97,12 @@ func TestMain(m *testing.M) {
 
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
-
 	l, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}
 
-	logger2 = l
+	logger = l
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)

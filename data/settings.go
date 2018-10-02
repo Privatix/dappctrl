@@ -14,6 +14,9 @@ const (
 	SettingPasswordSalt       = "system.salt"
 	SettingAppVersion         = "system.version.app"
 	SettingDefaultGasPrice    = "eth.default.gasprice"
+	SettingMinConfirmations   = "eth.min.confirmations"
+	SettingFreshBlocks        = "eth.event.freshblocks"
+	SettingBlockLimit         = "eth.event.blocklimit"
 )
 
 // ReadSetting reads value of a given setting.

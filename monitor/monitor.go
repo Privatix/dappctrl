@@ -20,6 +20,11 @@ const (
 	scheduleName = "schedule"
 )
 
+type heartbeat struct {
+	collect  chan struct{}
+	schedule chan struct{}
+}
+
 // Config for blockchain monitor.
 type Config struct {
 	CollectPause    int64 // pause between collect iterations
@@ -119,14 +124,22 @@ func (m *Monitor) errorProcessing(ctx context.Context) {
 }
 
 func (m *Monitor) start(ctx context.Context, collectTicker,
-	scheduleTicker <-chan time.Time) {
+	scheduleTicker <-chan time.Time) *heartbeat {
+	collectSignalChan := make(chan struct{})
+	scheduleSignalChan := make(chan struct{})
+
 	go m.errorProcessing(ctx)
 	go m.repeatEvery(ctx, collectTicker, collectName,
-		func() { m.collect(ctx) })
+		func() { m.collect(ctx) }, collectSignalChan)
 	go m.repeatEvery(ctx, scheduleTicker, scheduleName,
-		func() { m.schedule(ctx) })
+		func() { m.schedule(ctx) }, scheduleSignalChan)
 
 	m.logger.Debug("blockchain monitor started")
+
+	return &heartbeat{
+		collect:  collectSignalChan,
+		schedule: scheduleSignalChan,
+	}
 }
 
 // Start starts the monitor. It will continue collecting logs and scheduling
@@ -158,13 +171,17 @@ func (m *Monitor) Stop() error {
 // repeatEvery calls a given action function repeatedly every time a read on
 // ticker channel succeeds. To stop the loop, cancel the context.
 func (m *Monitor) repeatEvery(ctx context.Context, ticker <-chan time.Time,
-	name string, action func()) {
+	name string, action func(), signalChan chan struct{}) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker:
 			action()
+			select {
+			case signalChan <- struct{}{}:
+			default:
+			}
 		}
 	}
 }

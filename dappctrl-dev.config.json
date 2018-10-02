@@ -18,6 +18,11 @@
         "RequestTLS": false,
         "RequestTimeout": 2500
     },
+    "Country": {
+        "Field" : "country_code",
+        "Timeout": 30,
+        "URLTemplate" : "https://ipleak.net/json/{{ip}}"
+    },
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
@@ -37,7 +42,7 @@
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0xae6bfd07c02b1fca7e1cbc160a87729f3fafb794"
+            "PSCAddrHex": "0xaef4e0f2924864cbab778cee08d469501f23e47f"
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
         "Timeout": 60,

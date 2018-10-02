@@ -11,19 +11,9 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
-// CreateTemplateResult is a CreateTemplate result.
-type CreateTemplateResult struct {
-	Template string `json:"template"`
-}
-
-// GetTemplatesResult is a GetTemplates result.
-type GetTemplatesResult struct {
-	Templates []data.Template `json:"templates"`
-}
-
 // GetTemplates returns templates.
 func (h *Handler) GetTemplates(
-	password, tplType string) (*GetTemplatesResult, error) {
+	password, tplType string) ([]data.Template, error) {
 	logger := h.logger.Add(
 		"method", "GetTemplates", "type", tplType)
 
@@ -47,10 +37,10 @@ func (h *Handler) GetTemplates(
 		return nil, err
 	}
 
-	result := &GetTemplatesResult{}
+	result := make([]data.Template, 0)
 
 	for _, v := range templates {
-		result.Templates = append(result.Templates, *v.(*data.Template))
+		result = append(result, *v.(*data.Template))
 	}
 
 	return result, nil
@@ -72,7 +62,7 @@ func checkTemplate(logger log.Logger, template *data.Template) error {
 
 // CreateTemplate creates template.
 func (h *Handler) CreateTemplate(
-	password string, template *data.Template) (*CreateTemplateResult, error) {
+	password string, template *data.Template) (*string, error) {
 	logger := h.logger.Add("method", "CreateTemplate",
 		"template", template)
 
@@ -93,5 +83,5 @@ func (h *Handler) CreateTemplate(
 	if err != nil {
 		return nil, err
 	}
-	return &CreateTemplateResult{template.ID}, nil
+	return &template.ID, nil
 }

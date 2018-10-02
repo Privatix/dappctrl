@@ -17,10 +17,7 @@ import (
 )
 
 const (
-	minConfirmationsKey = "eth.min.confirmations"
-	freshBlocksKey      = "eth.event.freshblocks"
-	blockLimitKey       = "eth.event.blocklimit"
-	txMinedStatus       = "mined"
+	txMinedStatus = "mined"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.
@@ -186,15 +183,15 @@ func (m *Monitor) getAddressesInUse() ([]common.Hash, error) {
 // the min confirmations setting.
 func (m *Monitor) getRangeOfInterest(
 	ctx context.Context) (first, last uint64, err error) {
-	unreliableNum, err := data.GetUint64Setting(m.db, minConfirmationsKey)
+	unreliableNum, err := data.GetUint64Setting(m.db, data.SettingMinConfirmations)
 	if err != nil {
-		m.logger.Add("setting", minConfirmationsKey).Error(err.Error())
+		m.logger.Add("setting", data.SettingMinConfirmations).Error(err.Error())
 		return 0, 0, err
 	}
 
-	freshNum, err := data.GetUint64Setting(m.db, freshBlocksKey)
+	freshNum, err := data.GetUint64Setting(m.db, data.SettingFreshBlocks)
 	if err != nil {
-		m.logger.Add("setting", freshBlocksKey).Error(err.Error())
+		m.logger.Add("setting", data.SettingFreshBlocks).Error(err.Error())
 		return 0, 0, err
 	}
 
@@ -216,9 +213,9 @@ func (m *Monitor) getRangeOfInterest(
 		first = max(first, safeSub(last, freshNum))
 	}
 
-	limitNum, err := data.GetUint64Setting(m.db, blockLimitKey)
+	limitNum, err := data.GetUint64Setting(m.db, data.SettingBlockLimit)
 	if err != nil {
-		m.logger.Add("setting", blockLimitKey).Warn(err.Error())
+		m.logger.Add("setting", data.SettingBlockLimit).Warn(err.Error())
 		return first, last, nil
 	}
 

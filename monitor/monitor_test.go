@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -56,6 +57,8 @@ var (
 	someHash    = common.HexToHash(someHashStr)
 
 	blockNum uint64
+
+	testTimeout time.Duration
 )
 
 type testConf struct {
@@ -64,6 +67,7 @@ type testConf struct {
 	Log          *log.FileConfig
 	Job          *job.Config
 	Eth          *eth.Config
+	TestTimeout  uint64
 }
 
 type mockClient struct {
@@ -90,6 +94,21 @@ func newTestConf() *testConf {
 	conf.Job = job.NewConfig()
 	conf.Eth = eth.NewConfig()
 	return conf
+}
+
+func waitSignal(signalChan chan struct{}) *sync.WaitGroup {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		select {
+		case <-signalChan:
+		case <-time.After(testTimeout):
+		}
+	}()
+
+	return &wg
 }
 
 func addressIsAmong(x *common.Address, addresses []common.Address) bool {
@@ -154,24 +173,18 @@ func cleanDB(t *testing.T) {
 
 func expectLogs(t *testing.T, expected int, errMsg, tail string,
 	args ...interface{}) []*data.EthLog {
-	var (
-		actual int
-	)
-	for i := 0; i < 10; i++ {
-		time.Sleep(100 * time.Millisecond)
-		structs, err := db.SelectAllFrom(data.EthLogTable,
-			tail, args...)
-		if err != nil {
-			t.Fatalf("failed to select log entries: %v", err)
+	structs, err := db.SelectAllFrom(data.EthLogTable,
+		tail, args...)
+	if err != nil {
+		t.Fatalf("failed to select log entries: %v", err)
+	}
+	actual := len(structs)
+	if actual == expected {
+		logs := make([]*data.EthLog, actual)
+		for li, s := range structs {
+			logs[li] = s.(*data.EthLog)
 		}
-		actual = len(structs)
-		if actual == expected {
-			logs := make([]*data.EthLog, actual)
-			for li, s := range structs {
-				logs[li] = s.(*data.EthLog)
-			}
-			return logs
-		}
+		return logs
 	}
 	t.Fatalf("%s: wrong number of log entries collected:"+
 		" got %d, expected %d", errMsg, actual, expected)
@@ -247,16 +260,11 @@ func (mq *mockQueue) expect(comment string, condition func(j *data.Job) bool) {
 		expectation{condition, comment})
 }
 
-func (mq *mockQueue) awaitCompletion(timeout time.Duration) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if len(mq.expectations) == 0 {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
+func (mq *mockQueue) checkExpectations(t *testing.T) {
+	if len(mq.expectations) != 0 {
+		t.Fatalf("not all expected jobs scheduled: %d left",
+			len(mq.expectations))
 	}
-	mq.t.Fatalf("not all expected jobs scheduled: %d left",
-		len(mq.expectations))
 }
 
 func newMockClient() *mockClient {
@@ -403,6 +411,8 @@ func TestMain(m *testing.M) {
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
+
+	testTimeout = time.Duration(conf.TestTimeout) * time.Second
 
 	os.Exit(m.Run())
 }

@@ -33,9 +33,8 @@ var (
 		VPNMonitor        *mon.Config
 	}
 
-	db      *reform.DB
-	logger  *util.Logger
-	logger2 log.Logger
+	db     *reform.DB
+	logger log.Logger
 )
 
 type testSessSrvConfig struct {
@@ -55,14 +54,12 @@ func TestMain(m *testing.M) {
 
 	util.ReadTestConfig(&conf)
 
-	logger = util.NewTestLogger(conf.Log)
-
 	l, err := log.NewStderrLogger(conf.FileLog)
 	if err != nil {
 		panic(err)
 	}
 
-	logger2 = l
+	logger = l
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
@@ -71,7 +68,7 @@ func TestMain(m *testing.M) {
 }
 
 func newTestSessSrv(t *testing.T, timeout time.Duration) *testSessSrv {
-	s := sesssrv.NewServer(conf.SessionServer, logger2, db)
+	s := sesssrv.NewServer(conf.SessionServer, logger, db, nil)
 	go func() {
 		time.Sleep(timeout)
 		if err := s.ListenAndServe(); err != http.ErrServerClosed {
@@ -136,7 +133,7 @@ func TestClientConfig(t *testing.T) {
 	adapterConfig.Monitor = conf.VPNMonitor
 	adapterConfig.FileLog = conf.FileLog
 
-	if err := ClientConfig(logger2, fxt.Channel.ID,
+	if err := ClientConfig(logger, fxt.Channel.ID,
 		adapterConfig); err != nil {
 		t.Fatal(err)
 	}

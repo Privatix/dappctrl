@@ -75,6 +75,7 @@ type Product struct {
 	ClientIdent            string          `json:"clientIdent" reform:"client_ident"`
 	Config                 json.RawMessage `json:"config" reform:"config"`
 	ServiceEndpointAddress *string         `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	Country                *string         `json:"country" reform:"country"`
 }
 
 // Unit used for billing calculation.
@@ -99,9 +100,13 @@ const (
 
 // Offering statuses.
 const (
-	OfferEmpty    = "empty"
-	OfferRegister = "register"
-	OfferRemove   = "remove"
+	OfferEmpty       = "empty"
+	OfferPoppingUp   = "popping_up"
+	OfferPoppedUp    = "popped_up"
+	OfferRegistering = "registering"
+	OfferRegistered  = "registered"
+	OfferRemoving    = "removing"
+	OfferRemoved     = "removed"
 )
 
 // Offering is a service offering.
@@ -223,6 +228,13 @@ type Setting struct {
 	Name        string  `json:"name" reform:"name"`
 }
 
+// Country statuses.
+const (
+	CountryStatusUnknown = "unknown"
+	CountryStatusValid   = "valid"
+	CountryStatusInvalid = "invalid"
+)
+
 // Endpoint messages is info about service access.
 //reform:endpoints
 type Endpoint struct {
@@ -237,6 +249,7 @@ type Endpoint struct {
 	Username               *string `json:"username" reform:"username"`
 	Password               *string `json:"password" reform:"password"`
 	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
+	CountryStatus          *string `json:"countryStatus" reform:"country_status"`
 }
 
 // EndpointUI contains only certain fields of endpoints table.
@@ -245,6 +258,7 @@ type EndpointUI struct {
 	ID                     string  `json:"id" reform:"id,pk"`
 	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
 	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	CountryStatus          *string `json:"countryStatus" reform:"country_status"`
 }
 
 // Job creators.

@@ -8,6 +8,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/client/svcrun"
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
@@ -58,13 +59,15 @@ type Worker struct {
 	processor      *proc.Processor
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
+	countryConfig  *country.Config
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config) (*Worker, error) {
+	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
+	eptConf *ept.Config) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -87,6 +90,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
+		countryConfig:  countryConf,
 	}, nil
 }
 

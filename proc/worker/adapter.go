@@ -50,7 +50,7 @@ type EthBackend interface {
 		minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
 		updateBlockNumber uint32, active bool, err error)
 
-	PSCGetChallengePeriod(
+	PSCGetPopUpPeriod(
 		opts *bind.CallOpts) (uint32, error)
 
 	PSCCreateChannel(opts *bind.TransactOpts,
@@ -229,8 +229,9 @@ func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 
 	opts.Context = ctx2
 
-	agentAddr, minDeposit, maxSupply, currentSupply, updateBlockNumber,
-		active, err = b.psc.GetOfferingInfo(opts, hash)
+	agentAddr, minDeposit, maxSupply, currentSupply,
+		updateBlockNumber, err = b.psc.GetOfferingInfo(opts, hash)
+	active = updateBlockNumber != 0
 	if err != nil {
 		err = fmt.Errorf("failed to get PSC offering supply: %s", err)
 	}
@@ -238,14 +239,14 @@ func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 		updateBlockNumber, active, err
 }
 
-func (b *ethBackendInstance) PSCGetChallengePeriod(
+func (b *ethBackendInstance) PSCGetPopUpPeriod(
 	opts *bind.CallOpts) (uint32, error) {
 	ctx2, cancel := b.AddTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
 
-	return b.psc.ChallengePeriod(opts)
+	return b.psc.PopupPeriod(opts)
 }
 
 func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,

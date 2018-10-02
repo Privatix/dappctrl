@@ -1,4 +1,4 @@
-ignored = ["github.com/satori/go.uuid"]
+ignored = ["github.com/satori/go.uuid", "github.com/rjeczalik/notify"]
 
 [[constraint]]
   name = "github.com/ethereum/go-ethereum"

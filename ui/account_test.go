@@ -80,7 +80,7 @@ func fromPrivateKeyToECDSA(t *testing.T, privateKey string) *ecdsa.PrivateKey {
 }
 
 func testAccountFields(t *testing.T,
-	expected *data.Account, created *data.Account) {
+	expected *ui.AccountParams, created *data.Account) {
 	if created.Name != expected.Name {
 		t.Fatal("wrong name stored")
 	}
@@ -94,7 +94,8 @@ func testAccountFields(t *testing.T,
 	}
 }
 
-func checkGeneratedAccount(t *testing.T, expected, created *data.Account) {
+func checkGeneratedAccount(t *testing.T,
+	expected *ui.AccountParams, created *data.Account) {
 	testAccountFields(t, expected, created)
 
 	_, err := data.TestToPrivateKey(created.PrivateKey, "")
@@ -103,8 +104,8 @@ func checkGeneratedAccount(t *testing.T, expected, created *data.Account) {
 	}
 }
 
-func testAccount(t *testing.T,
-	expected, created *data.Account, key *ecdsa.PrivateKey) {
+func testAccount(t *testing.T, expected *ui.AccountParams,
+	created *data.Account, key *ecdsa.PrivateKey) {
 	testAccountFields(t, expected, created)
 
 	expectedKey := fromPrivateKeyToECDSA(
@@ -132,8 +133,8 @@ func testAccount(t *testing.T,
 	}
 }
 
-func testImportAccount(t *testing.T, expID string,
-	expAccount *data.Account, expPK *ecdsa.PrivateKey, expJob *data.Job) {
+func testImportAccount(t *testing.T, expID *string,
+	params *ui.AccountParams, expPK *ecdsa.PrivateKey, expJob *data.Job) {
 	account2 := &data.Account{}
 	err := data.FindByPrimaryKeyTo(db.Querier, account2, expID)
 	if err != nil {
@@ -141,10 +142,9 @@ func testImportAccount(t *testing.T, expID string,
 	}
 	defer data.DeleteFromTestDB(t, db, account2)
 
-	testAccount(t, expAccount, account2, expPK)
+	testAccount(t, params, account2, expPK)
 
 	if expJob == nil || expJob.RelatedType != data.JobAccount ||
-		expJob.RelatedID != expAccount.ID ||
 		expJob.Type != data.JobAccountUpdateBalances ||
 		expJob.CreatedBy != data.JobUser {
 		t.Fatalf("expected job not created")
@@ -155,20 +155,20 @@ func TestGenerateAccount(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "GenerateAccount")
 	defer fxt.close()
 
-	account := *fxt.Account
-	account.Name = util.NewUUID()[:30]
+	params := &ui.AccountParams{}
+	params.Name = util.NewUUID()[:30]
 
-	res, err := handler.GenerateAccount(data.TestPassword, &account)
+	res, err := handler.GenerateAccount(data.TestPassword, params)
 	assertMatchErr(nil, err)
 
-	account2 := &data.Account{}
-	err = data.FindByPrimaryKeyTo(db.Querier, account2, res)
+	account := &data.Account{}
+	err = data.FindByPrimaryKeyTo(db.Querier, account, res)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer data.DeleteFromTestDB(t, db, account2)
+	defer data.DeleteFromTestDB(t, db, account)
 
-	checkGeneratedAccount(t, &account, account2)
+	checkGeneratedAccount(t, params, account)
 }
 
 func TestImportAccountFromHex(t *testing.T) {
@@ -189,14 +189,14 @@ func TestImportAccountFromHex(t *testing.T) {
 
 	pk, _ := crypto.GenerateKey()
 
-	account := *fxt.Account
-	account.Name = util.NewUUID()[:30]
-	account.PrivateKey = data.FromBytes(crypto.FromECDSA(pk))
+	params := &ui.AccountParamsWithHexKey{}
+	params.Name = util.NewUUID()[:30]
+	params.PrivateKeyHex = data.HexFromBytes(crypto.FromECDSA(pk))
 
-	res, err := handler.ImportAccountFromHex(data.TestPassword, &account)
+	res, err := handler.ImportAccountFromHex(data.TestPassword, params)
 	assertMatchErr(nil, err)
 
-	testImportAccount(t, res, &account, pk, j)
+	testImportAccount(t, res, &params.AccountParams, pk, j)
 }
 
 func TestImportAccountFromJSON(t *testing.T) {
@@ -217,14 +217,14 @@ func TestImportAccountFromJSON(t *testing.T) {
 
 	pk, _ := crypto.GenerateKey()
 	key, pass := privateKeyToJSON(pk)
-	account := *fxt.Account
-	account.Name = util.NewUUID()[:30]
+	params := &ui.AccountParams{}
+	params.Name = util.NewUUID()[:30]
 
 	res, err := handler.ImportAccountFromJSON(
-		data.TestPassword, &account, key, pass)
+		data.TestPassword, params, key, pass)
 	assertMatchErr(nil, err)
 
-	testImportAccount(t, res, &account, pk, j)
+	testImportAccount(t, res, params, pk, j)
 }
 
 func TestTransferTokens(t *testing.T) {

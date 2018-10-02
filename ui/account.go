@@ -14,6 +14,30 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
+// AccountParams is format of input to create an account.
+type AccountParams struct {
+	Name      string `json:"name"`
+	IsDefault bool   `json:"isDefault"`
+	InUse     bool   `json:"inUse"`
+}
+
+// AccountParamsWithHexKey is format of input to create account with given key.
+type AccountParamsWithHexKey struct {
+	AccountParams
+	PrivateKeyHex string `json:"privateKeyHex"`
+}
+
+func (p *AccountParams) prefilledAccount() *data.Account {
+	if p == nil {
+		return &data.Account{}
+	}
+	return &data.Account{
+		Name:      p.Name,
+		IsDefault: p.IsDefault,
+		InUse:     p.InUse,
+	}
+}
+
 // ExportPrivateKey returns a private key in base64 encoding by account id.
 func (h *Handler) ExportPrivateKey(
 	password, account string) ([]byte, error) {
@@ -69,7 +93,7 @@ func (h *Handler) hexPrivateKeyToECDSA(
 	logger := h.logger.Add("method", "hexPrivateKeyToECDSA")
 
 	return func() (*ecdsa.PrivateKey, error) {
-		pkBytes, err := data.ToBytes(privateKey)
+		pkBytes, err := data.HexToBytes(privateKey)
 		if err != nil {
 			logger.Error(err.Error())
 			return nil, ErrFailedToDecodePrivateKey
@@ -146,68 +170,61 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 
 // GenerateAccount generates new private key and creates new account.
 func (h *Handler) GenerateAccount(
-	password string, account *data.Account) (string, error) {
+	password string, params *AccountParams) (*string, error) {
 	logger := h.logger.Add("method", "GenerateAccount")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if account == nil {
-		account = &data.Account{}
-	}
+	account := params.prefilledAccount()
 
 	id, err := h.fillAndSaveAccount(
 		logger, account, crypto.GenerateKey, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // ImportAccountFromHex imports private key from hex, creates account
 // and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromHex(
-	password string, account *data.Account) (string, error) {
+	password string, params *AccountParamsWithHexKey) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromHex")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if account == nil {
-		account = &data.Account{}
-	}
+	makeECDSAFunc := h.hexPrivateKeyToECDSA(params.PrivateKeyHex)
 
-	makeECDSAFunc := h.hexPrivateKeyToECDSA(account.PrivateKey)
+	account := params.prefilledAccount()
 
-	id, err := h.fillAndSaveAccount(
-		logger, account, makeECDSAFunc, true)
+	id, err := h.fillAndSaveAccount(logger, account, makeECDSAFunc, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // ImportAccountFromJSON imports private key from JSON blob with password,
 // creates account and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromJSON(
-	password string, account *data.Account, jsonBlob json.RawMessage,
-	jsonKeyStorePassword string) (string, error) {
+	password string, params *AccountParams, jsonBlob json.RawMessage,
+	jsonKeyStorePassword string) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromJSON")
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if account == nil {
-		account = &data.Account{}
-	}
+	account := params.prefilledAccount()
 
 	makeECDSAFunc := h.jsonPrivateKeyToECDSA(
 		jsonBlob, jsonKeyStorePassword)
@@ -215,10 +232,10 @@ func (h *Handler) ImportAccountFromJSON(
 	id, err := h.fillAndSaveAccount(
 		logger, account, makeECDSAFunc, true)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return id, nil
+	return &id, nil
 }
 
 // TransferTokens initiates JobPreAccountAddBalanceApprove

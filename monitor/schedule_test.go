@@ -6,7 +6,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -38,11 +37,11 @@ func TestMonitorSchedule(t *testing.T) {
 	defer cancel()
 
 	ticker := newMockTicker()
-	mon.start(ctx, nil, ticker.C)
+	signals := mon.start(ctx, nil, ticker.C)
 
 	td := generateTestData(t)
 
-	scheduleTest(t, td, queue, ticker, mon)
+	scheduleTest(t, td, queue, ticker, mon, signals)
 }
 
 func toHashes(t *testing.T, topics []interface{}) []common.Hash {
@@ -125,7 +124,7 @@ func insertEvent(t *testing.T, db *reform.DB, blockNumber uint64,
 }
 
 func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker, mon *Monitor) {
+	ticker *mockTicker, mon *Monitor, signalChan chan struct{}) {
 	mon.dappRole = data.RoleAgent
 
 	// LogChannelCreated good
@@ -283,14 +282,19 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 			td.offering[0].Hash, // offering
 		}, []interface{}{uint32(td.channel[1].Block), new(big.Int)})
 
+	wg := waitSignal(signalChan)
+
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second * 5)
+
+	wg.Wait()
+
+	queue.checkExpectations(t)
 }
 
 func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker, mon *Monitor) {
+	ticker *mockTicker, mon *Monitor, signalChan chan struct{}) {
 	mon.dappRole = data.RoleClient
 
 	// LogChannelCreated good
@@ -471,14 +475,19 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 		return j.Type == data.JobIncrementCurrentSupply
 	})
 
+	wg := waitSignal(signalChan)
+
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second * 5)
+
+	wg.Wait()
+
+	queue.checkExpectations(t)
 }
 
 func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker) {
+	ticker *mockTicker, signalChan chan struct{}) {
 
 	insertEvent(t, db, nextBlock(), 0, eth.EthTokenApproval,
 		td.addr[0], pscAddr, 123)
@@ -501,18 +510,23 @@ func commonSchedule(t *testing.T, td *testData, queue *mockQueue,
 		return j.Type == data.JobAfterAccountAddBalance
 	})
 
+	wg := waitSignal(signalChan)
+
 	// Tick here on purpose, so that not all events are ignored because
 	// the offering's been deleted.
 	ticker.tick()
-	queue.awaitCompletion(time.Second * 5)
+
+	wg.Wait()
+
+	queue.checkExpectations(t)
 }
 
 func scheduleTest(t *testing.T, td *testData, queue *mockQueue,
-	ticker *mockTicker, mon *Monitor) {
+	ticker *mockTicker, mon *Monitor, signals *heartbeat) {
 	mon.dappRole = data.RoleAgent
-	commonSchedule(t, td, queue, ticker)
+	commonSchedule(t, td, queue, ticker, signals.schedule)
 	mon.dappRole = data.RoleClient
-	commonSchedule(t, td, queue, ticker)
-	agentSchedule(t, td, queue, ticker, mon)
-	clientSchedule(t, td, queue, ticker, mon)
+	commonSchedule(t, td, queue, ticker, signals.schedule)
+	agentSchedule(t, td, queue, ticker, mon, signals.schedule)
+	clientSchedule(t, td, queue, ticker, mon, signals.schedule)
 }

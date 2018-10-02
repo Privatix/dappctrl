@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 
+	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -46,6 +49,15 @@ func (s *Server) handleProductConfig(
 
 	delete(args.Config, externalIP)
 
+	if product.ServiceEndpointAddress != nil {
+		c := findCountry(
+			s.countryConf, *product.ServiceEndpointAddress, logger)
+		if len(c) != 2 {
+			c = country.UndefinedCountry
+		}
+		product.Country = &c
+	}
+
 	prodConf, err := json.Marshal(args.Config)
 	if err != nil {
 		logger.Error(err.Error())
@@ -61,6 +73,22 @@ func (s *Server) handleProductConfig(
 	}
 
 	s.RespondResult(logger, w, nil)
+}
+
+func findCountry(config *country.Config,
+	ip string, logger log.Logger) string {
+	url := strings.Replace(config.URLTemplate, "{{ip}}", ip, 1)
+
+	logger = logger.Add("url", url, "field", config.Field,
+		"timeout", config.Timeout, "ip", ip)
+
+	c, err := country.GetCountry(
+		config.Timeout, url, config.Field)
+	if err != nil {
+		logger.Error(err.Error())
+		return country.UndefinedCountry
+	}
+	return c
 }
 
 func serviceEndpointAddress(config map[string]string,

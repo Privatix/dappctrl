@@ -53,6 +53,10 @@ type serviceRunner struct {
 	newCmd newCmdFunc
 	mtx    sync.Mutex
 	cmds   map[string]*exec.Cmd
+	// The channel is only needed for tests.
+	// It allows to receive a notification
+	// about the end of a service launch.
+	done chan bool
 }
 
 // NewServiceRunner creates a new service runner.
@@ -151,8 +155,15 @@ func (r *serviceRunner) getKey(channel string) (*ServiceConfig, string, error) {
 	return &conf, channel, nil
 }
 
-func (r *serviceRunner) wait(
-	channel, key string, cmd *exec.Cmd, stderr io.ReadCloser) {
+func (r *serviceRunner) wait(channel, key string, cmd *exec.Cmd,
+	stderr io.ReadCloser) {
+	defer func() {
+		select {
+		case r.done <- true:
+		default:
+		}
+	}()
+
 	logger := r.logger.Add("method", "wait", "channel", channel)
 
 	go func() {

@@ -24,7 +24,7 @@ const (
 	production          = "production"
 	staging             = "staging"
 
-	currentAPIKey = "c021f92e9c199c79d870adf34365e372"
+	currentAPIKey = "5d98bc82cbbd99bcd413cb67dbe823bb"
 	key           = "error.sendremote"
 )
 

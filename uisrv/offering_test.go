@@ -61,10 +61,6 @@ func postOffering(t *testing.T, v *data.Offering) *http.Response {
 	return sendOffering(t, v, http.MethodPost)
 }
 
-func putOffering(t *testing.T, v *data.Offering) *http.Response {
-	return sendOffering(t, v, "PUT")
-}
-
 func TestPostOfferingSuccess(t *testing.T) {
 	defer cleanDB(t)
 	setTestUserCredentials(t)
@@ -73,9 +69,11 @@ func TestPostOfferingSuccess(t *testing.T) {
 
 	// Successful offering creation.
 	payload := validOfferingPayload()
-	res := postOffering(t, &payload)
-	if res.StatusCode != http.StatusCreated {
-		t.Errorf("failed to create, response: %d", res.StatusCode)
+	for _, req := range []data.Offering{payload, payload} {
+		res := postOffering(t, &req)
+		if res.StatusCode != http.StatusCreated {
+			t.Errorf("failed to create, response: %d", res.StatusCode)
+		}
 	}
 }
 
@@ -150,23 +148,6 @@ func TestPostOfferingValidation(t *testing.T) {
 	}
 }
 
-func TestPutOfferingSuccess(t *testing.T) {
-	defer cleanDB(t)
-	setTestUserCredentials(t)
-
-	createOfferingFixtures(t)
-	testOffering := data.NewTestOffering(testAgent.EthAddr, testProd.ID, testTpl.ID)
-	insertItems(t, testOffering)
-
-	// Successful offering creation.
-	payload := validOfferingPayload()
-	payload.ID = testOffering.ID
-	res := putOffering(t, &payload)
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("failed to put, response: %d", res.StatusCode)
-	}
-}
-
 func testGetOfferings(t *testing.T, id, product, status string, exp int) {
 	res := getResources(t, offeringsPath,
 		map[string]string{
@@ -224,7 +205,7 @@ func TestGetOffering(t *testing.T) {
 	// Insert test offerings.
 	off1 := data.NewTestOffering(testAgent.EthAddr,
 		testProd.ID, testTpl.ID)
-	off1.OfferStatus = data.OfferRegister
+	off1.OfferStatus = data.OfferRegistered
 	off1.BlockNumberUpdated = 1
 
 	off2 := data.NewTestOffering(testAgent.EthAddr,
@@ -234,11 +215,11 @@ func TestGetOffering(t *testing.T) {
 
 	off3 := data.NewTestOffering(createNotUsedAcc(t).EthAddr,
 		testProd.ID, testTpl.ID)
-	off3.OfferStatus = data.OfferRegister
+	off3.OfferStatus = data.OfferRegistered
 
 	off4 := data.NewTestOffering(genEthAddr(t),
 		testProd.ID, testTpl.ID)
-	off4.OfferStatus = data.OfferRegister
+	off4.OfferStatus = data.OfferRegistered
 
 	insertItems(t, off1, off2, off3, off4)
 
@@ -287,14 +268,14 @@ func TestGetClientOffering(t *testing.T) {
 
 	// Insert test offerings.
 	off1 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
-	off1.OfferStatus = data.OfferRegister
+	off1.OfferStatus = data.OfferRegistered
 	off1.Status = data.MsgChPublished
 	off1.IsLocal = false
 	off1.Country = "US"
 	off1.BlockNumberUpdated = 11
 
 	off2 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
-	off2.OfferStatus = data.OfferRegister
+	off2.OfferStatus = data.OfferRegistered
 	off2.Status = data.MsgChPublished
 	off2.IsLocal = false
 	off2.Country = "SU"
@@ -313,13 +294,13 @@ func TestGetClientOffering(t *testing.T) {
 
 	off5 := data.NewTestOffering(testAgent.EthAddr, testProd.ID,
 		testTpl.ID)
-	off5.OfferStatus = data.OfferRegister
+	off5.OfferStatus = data.OfferRegistered
 	off5.IsLocal = false
 	off5.Country = "SU"
 	off5.BlockNumberUpdated = 2
 
 	off6 := data.NewTestOffering(genEthAddr(t), testProd.ID, testTpl.ID)
-	off6.OfferStatus = data.OfferRegister
+	off6.OfferStatus = data.OfferRegistered
 	off6.Status = data.MsgChPublished
 	off6.IsLocal = false
 	off6.Country = "US"
@@ -474,7 +455,7 @@ func TestPutClientOfferingStatus(t *testing.T) {
 
 	offer := data.NewTestOffering(genEthAddr(t),
 		testProd.ID, testTpl.ID)
-	offer.OfferStatus = data.OfferRegister
+	offer.OfferStatus = data.OfferRegistered
 	offer.Status = data.MsgChPublished
 	offer.IsLocal = false
 	offer.Country = "US"

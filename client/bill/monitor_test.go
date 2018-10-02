@@ -5,6 +5,7 @@ package bill
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,26 +22,14 @@ type pwStore struct{}
 
 func (s *pwStore) Get() string { return "test-password" }
 
-type testConfig struct {
-	MonitorStartupDelay uint // In milliseconds.
-	ReactionDelay       uint // In milliseconds.
-}
-
-func newTestConfig() *testConfig {
-	return &testConfig{
-		MonitorStartupDelay: 10,
-		ReactionDelay:       2,
-	}
-}
-
 var (
 	conf struct {
-		ClientBilling     *Config
-		ClientBillingTest *testConfig
-		DB                *data.DBConfig
-		Job               *job.Config
-		FileLog           *log.FileConfig
-		Proc              *proc.Config
+		ClientBilling *Config
+		DB            *data.DBConfig
+		Job           *job.Config
+		FileLog       *log.FileConfig
+		Proc          *proc.Config
+		TestTimeout   uint64
 	}
 
 	logger log.Logger
@@ -49,15 +38,15 @@ var (
 	pws    *pwStore
 )
 
-func newTestMonitor() (*Monitor, chan error) {
-	mon := NewMonitor(conf.ClientBilling,
-		logger, db, pr, "test-psc-address", pws)
+func newTestMonitor(
+	processErrChan, postErrChan chan error) (*Monitor, chan error) {
+	mon := NewMonitor(conf.ClientBilling, logger, db, pr,
+		"test-psc-address", pws)
+	mon.processErrors = processErrChan
+	mon.postChequeErrors = postErrChan
 
 	ch := make(chan error)
 	go func() { ch <- mon.Run() }()
-
-	time.Sleep(time.Duration(conf.ClientBillingTest.MonitorStartupDelay) *
-		time.Millisecond)
 
 	return mon, ch
 }
@@ -65,11 +54,6 @@ func newTestMonitor() (*Monitor, chan error) {
 func closeTestMonitor(t *testing.T, mon *Monitor, ch chan error) {
 	mon.Close()
 	util.TestExpectResult(t, "Run", ErrMonitorClosed, <-ch)
-}
-
-func delay() {
-	time.Sleep(time.Duration(conf.ClientBillingTest.ReactionDelay) *
-		time.Millisecond)
 }
 
 func newFixture(t *testing.T, db *reform.DB) *data.TestFixture {
@@ -80,6 +64,47 @@ func newFixture(t *testing.T, db *reform.DB) *data.TestFixture {
 	return fxt
 }
 
+func newWaitGroup() *sync.WaitGroup {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	return &wg
+}
+
+func awaitingProcessing(wg *sync.WaitGroup, processErrors chan error) {
+	defer wg.Done()
+
+	select {
+	case <-processErrors:
+	case <-time.After(
+		time.Duration(conf.TestTimeout) * time.Second):
+	}
+}
+
+func awaitingPosting(wg *sync.WaitGroup, postErrors chan error) {
+	defer wg.Done()
+
+	select {
+	case <-postErrors:
+	case <-time.After(
+		time.Duration(conf.TestTimeout) * time.Second):
+	}
+}
+
+func awaitingGoodPosting(wg *sync.WaitGroup, postErrors chan error) {
+	defer wg.Done()
+	for {
+		select {
+		case e := <-postErrors:
+			if e == nil {
+				return
+			}
+		case <-time.After(
+			time.Duration(conf.TestTimeout) * time.Second):
+			return
+		}
+	}
+}
+
 func TestTerminate(t *testing.T) {
 	fxt := newFixture(t, db)
 	defer fxt.Close()
@@ -88,10 +113,24 @@ func TestTerminate(t *testing.T) {
 	fxt.Channel.ReceiptBalance = 10
 	data.SaveToTestDB(t, db, fxt.Channel)
 
-	mon, ch := newTestMonitor()
+	processSig := make(chan error)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		select {
+		case <-processSig:
+		case <-time.After(
+			time.Duration(conf.TestTimeout) * time.Second):
+		}
+	}()
+
+	mon, ch := newTestMonitor(processSig, nil)
 	defer closeTestMonitor(t, mon, ch)
 
-	delay()
+	wg.Wait()
 
 	jobs, err := db.FindAllFrom(data.JobTable, "related_id", fxt.Channel.ID)
 	util.TestExpectResult(t, "Find jobs for channel", nil, err)
@@ -132,7 +171,13 @@ func TestPayment(t *testing.T) {
 	data.SaveToTestDB(t, db, fxt.Offering, fxt.Channel, sess)
 	defer data.DeleteFromTestDB(t, db, sess)
 
-	mon, ch := newTestMonitor()
+	processErrors := make(chan error)
+	postErrors := make(chan error)
+
+	wg := newWaitGroup()
+	go awaitingProcessing(wg, processErrors)
+
+	mon, ch := newTestMonitor(processErrors, postErrors)
 	defer closeTestMonitor(t, mon, ch)
 
 	called := false
@@ -144,30 +189,39 @@ func TestPayment(t *testing.T) {
 		return err
 	}
 
-	delay()
+	wg.Wait()
+
 	if called {
 		t.Fatalf("unexpected payment triggering")
 	}
+
+	wg = newWaitGroup()
+	go awaitingPosting(wg, postErrors)
 
 	sess2 := data.NewTestSession(fxt.Channel.ID)
 	sess2.UnitsUsed = 2
 	data.SaveToTestDB(t, db, sess2)
 	defer data.DeleteFromTestDB(t, db, sess2)
 
-	delay()
+	wg.Wait()
+
 	if !called {
 		t.Fatalf("no payment triggered")
 	}
 	expectBalance(t, fxt, 4)
 
+	wg = newWaitGroup()
+	go awaitingGoodPosting(wg, postErrors)
+
 	err = nil
-	delay()
+
+	wg.Wait()
+
 	expectBalance(t, fxt, 8)
 }
 
 func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
-	conf.ClientBillingTest = newTestConfig()
 	conf.FileLog = log.NewFileConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()

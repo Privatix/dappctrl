@@ -117,13 +117,13 @@ func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannel
 		return nil, ErrParseEthLog
 	}
 
-	if len(log.Topics) != 3 {
+	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 
-	agentAddr := common.BytesToAddress(log.Topics[0].Bytes())
-	clientAddr := common.BytesToAddress(log.Topics[1].Bytes())
-	offeringHash := log.Topics[2]
+	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
+	clientAddr := common.BytesToAddress(log.Topics[2].Bytes())
+	offeringHash := log.Topics[3]
 
 	return &logChannelTopUpInput{
 		agentAddr:    agentAddr,

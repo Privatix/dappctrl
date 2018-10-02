@@ -16,11 +16,6 @@
         "CollectPeriod":  1
     },
 
-    "ClientBillingTest": {
-        "MonitorStartupDelay": 10,
-        "ReactionDelay": 200
-    },
-
     "BillingTest": {
         "Channel": {
             "BigDeposit":1000,
@@ -185,10 +180,6 @@
         }
     },
 
-    "ServiceRunnerTest": {
-        "ExecPeriod": 100
-    },
-
     "SessionServer": {
         "Addr": "localhost:8000",
         "TLS": null
@@ -210,6 +201,8 @@
     "SOMCTest": {
         "ServerStartupDelay": 10
     },
+
+    "TestTimeout": 30,
 
     "VPNConfigPusher": {
         "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",

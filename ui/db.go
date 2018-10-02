@@ -1,10 +1,21 @@
 package ui
 
 import (
+	"fmt"
+
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/util/log"
 )
+
+func (h *Handler) tailElements(conditions []string) (elements []string) {
+	for k, v := range conditions {
+		condition := fmt.Sprintf(
+			"%s = %s", v, h.db.Placeholder(k+1))
+		elements = append(elements, condition)
+	}
+	return elements
+}
 
 func (h *Handler) findByPrimaryKey(logger log.Logger,
 	notFoundError error, record reform.Record, id string) error {

@@ -40,6 +40,8 @@ func (h *Handler) checkPassword(logger log.Logger, password string) error {
 		return ErrAccessDenied
 	}
 
+	h.pwdStorage.Set(password)
+
 	return nil
 }
 

@@ -92,12 +92,17 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("unable to commit changes: %v", err)
+	if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgCreate,
+		data.JobChannel, channel.ID); err != nil {
+		return err
 	}
 
-	return w.addJob(logger, data.JobAgentPreEndpointMsgCreate,
-		data.JobChannel, channel.ID)
+	if err := tx.Commit(); err != nil {
+		logger.Error("unable to commit changes: " + err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }
 
 // AgentAfterChannelTopUp updates deposit of a channel.
@@ -186,7 +191,7 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
@@ -215,7 +220,7 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
@@ -465,14 +470,19 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
+	if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgSOMCPublish,
+		data.JobEndpoint, newEndpoint.ID); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	if err = tx.Commit(); err != nil {
 		logger.Error(err.Error())
 		tx.Rollback()
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentPreEndpointMsgSOMCPublish,
-		data.JobEndpoint, newEndpoint.ID)
+	return nil
 }
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
@@ -509,7 +519,7 @@ func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentAfterEndpointMsgSOMCPublish,
+	return w.addJob(logger, nil, data.JobAgentAfterEndpointMsgSOMCPublish,
 		data.JobChannel, endpoint.Channel)
 }
 
@@ -634,8 +644,9 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.saveEthTX(logger, job, tx, "RegisterServiceOffering", job.RelatedType,
-		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
+	return w.saveEthTX(logger, job, tx, "RegisterServiceOffering",
+		job.RelatedType, job.RelatedID, agent.EthAddr,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates
@@ -656,7 +667,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentPreOfferingMsgSOMCPublish,
+	return w.addJob(logger, nil, data.JobAgentPreOfferingMsgSOMCPublish,
 		data.JobOffering, offering.ID)
 }
 
@@ -694,7 +705,8 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger, data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+	return w.addJob(logger, nil,
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterOfferingDelete set offering status to `remove`

@@ -165,7 +165,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.queue.Add(&data.Job{
+	if err := s.queue.Add(nil, &data.Job{
 		RelatedType: data.JobAccount,
 		RelatedID:   acc.ID,
 		Type:        data.JobAccountUpdateBalances,
@@ -225,7 +225,7 @@ func (s *Server) handleAccountTransferBalance(
 		return
 	}
 
-	if err = s.queue.Add(&data.Job{
+	if err = s.queue.Add(nil, &data.Job{
 		Type:        jobType,
 		RelatedType: data.JobAccount,
 		RelatedID:   id,
@@ -247,7 +247,7 @@ func (s *Server) handleCreateUpdateBalancesJob(
 		return
 	}
 
-	if err := s.queue.Add(&data.Job{
+	if err := s.queue.Add(nil, &data.Job{
 		Type:        data.JobAccountUpdateBalances,
 		RelatedType: data.JobAccount,
 		RelatedID:   id,

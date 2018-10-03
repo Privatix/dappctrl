@@ -284,7 +284,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
-	err = w.addJobWithData(logger, data.JobClientPreEndpointMsgSOMCGet,
+	err = w.addJobWithData(logger, nil, data.JobClientPreEndpointMsgSOMCGet,
 		data.JobChannel, ch.ID, ep.Endpoint)
 	if err != nil {
 		return err
@@ -295,7 +295,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
@@ -414,7 +414,7 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			return ErrInternal
 		}
 
-		return w.addJobWithData(logger,
+		return w.addJobWithData(logger, tx,
 			data.JobClientAfterEndpointMsgSOMCGet,
 			data.JobChannel, ch.ID, endp.ID)
 	})
@@ -481,7 +481,7 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
@@ -517,7 +517,7 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
@@ -922,8 +922,8 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.addJobWithDelay(
-		logger, data.JobClientPreUncooperativeClose, data.JobChannel,
+	return w.addJobWithDelay(logger, nil,
+		data.JobClientPreUncooperativeClose, data.JobChannel,
 		ch.ID, time.Duration(blocks)*eth.BlockDuration)
 }
 

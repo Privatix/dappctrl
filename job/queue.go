@@ -68,7 +68,7 @@ type subEntry struct {
 
 // Queue is a job processing queue.
 type Queue interface {
-	Add(j *data.Job) error
+	Add(tx *reform.TX, j *data.Job) error
 	Process() error
 	Close()
 	Subscribe(relatedIDs []string, subID string, subFunc SubFunc) error
@@ -118,8 +118,8 @@ func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
 	return nil
 }
 
-// Add adds a new job to the job queue.
-func (q *queue) Add(j *data.Job) error {
+// Add adds a new job to the job queue (optionally within a given transaction).
+func (q *queue) Add(tx *reform.TX, j *data.Job) error {
 	logger := q.logger.Add("method", "Add", "job", j)
 	tconf := q.typeConfig(j)
 	if !tconf.Duplicated {
@@ -136,10 +136,16 @@ func (q *queue) Add(j *data.Job) error {
 	j.Status = data.JobActive
 	j.CreatedAt = time.Now()
 
-	if err := q.db.Insert(j); err != nil {
+	db := q.db.Querier
+	if tx != nil {
+		db = tx.Querier
+	}
+
+	if err := db.Insert(j); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
 	}
+
 	return nil
 }
 
@@ -404,7 +410,7 @@ func (q *queue) typeConfig(job *data.Job) TypeConfig {
 
 // AddWithDataAndDelay is convenience method to add a job with given data
 // and delay.
-func AddWithDataAndDelay(q Queue,
+func AddWithDataAndDelay(q Queue, tx *reform.TX,
 	jobType, relatedType, relatedID, creator string,
 	jobData interface{}, delay time.Duration) error {
 	data2, err := json.Marshal(jobData)
@@ -412,7 +418,7 @@ func AddWithDataAndDelay(q Queue,
 		return err
 	}
 
-	return q.Add(&data.Job{
+	return q.Add(tx, &data.Job{
 		Type:        jobType,
 		RelatedType: relatedType,
 		RelatedID:   relatedID,
@@ -423,23 +429,25 @@ func AddWithDataAndDelay(q Queue,
 }
 
 // AddWithData is convenience method to add a job with given data.
-func AddWithData(q Queue, jobType, relatedType, relatedID, creator string,
+func AddWithData(q Queue, tx *reform.TX,
+	jobType, relatedType, relatedID, creator string,
 	jobData interface{}) error {
-	return AddWithDataAndDelay(q, jobType,
+	return AddWithDataAndDelay(q, tx, jobType,
 		relatedType, relatedID, creator, jobData, time.Duration(0))
 }
 
 // AddSimple is convenience method to add a job.
-func AddSimple(q Queue,
+func AddSimple(q Queue, tx *reform.TX,
 	jobType, relatedType, relatedID, creator string) error {
-	return AddWithData(
-		q, jobType, relatedType, relatedID, creator, &struct{}{})
+	return AddWithData(q, tx,
+		jobType, relatedType, relatedID, creator, &struct{}{})
 }
 
 // AddWithDelay is convenience method to add a job with given data delay.
-func AddWithDelay(q Queue, jobType, relatedType, relatedID, creator string,
+func AddWithDelay(q Queue, tx *reform.TX,
+	jobType, relatedType, relatedID, creator string,
 	delay time.Duration) error {
-	return AddWithDataAndDelay(q,
+	return AddWithDataAndDelay(q, tx,
 		jobType, relatedType, relatedID, creator, &struct{}{}, delay)
 }
 

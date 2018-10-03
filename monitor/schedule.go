@@ -407,7 +407,7 @@ func (m *Monitor) scheduleUpdateCurrentSupply(el *data.EthLog, jobType string) {
 		CreatedBy:   data.JobBCMonitor,
 	}
 
-	if err := m.queue.Add(j); err != nil {
+	if err := m.queue.Add(nil, j); err != nil {
 		m.logger.Error(err.Error())
 	}
 }
@@ -617,7 +617,7 @@ func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	if j.Data == nil {
 		j.Data = []byte("{}")
 	}
-	err := m.queue.Add(j)
+	err := m.queue.Add(nil, j)
 	switch err {
 	case nil:
 		m.updateEventJobID(el, j.ID)

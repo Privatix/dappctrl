@@ -64,7 +64,7 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 	rid := util.NewUUID()
 	jobData := &worker.ClientPreChannelCreateData{Account: account,
 		Offering: offering, GasPrice: gasPrice, Deposit: deposit}
-	if err := job.AddWithData(h.queue, data.JobClientPreChannelCreate,
+	if err := job.AddWithData(h.queue, nil, data.JobClientPreChannelCreate,
 		data.JobChannel, rid, data.JobUser, jobData); err != nil {
 		logger.Error(err.Error())
 		return nil, ErrInternal
@@ -98,7 +98,7 @@ func (h *Handler) ChangeOfferingStatus(
 	}
 
 	jobData := &data.JobPublishData{GasPrice: gasPrice}
-	if err := job.AddWithData(h.queue, jobType, data.JobOffering,
+	if err := job.AddWithData(h.queue, nil, jobType, data.JobOffering,
 		offering, data.JobUser, jobData); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal

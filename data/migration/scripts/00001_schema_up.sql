@@ -223,7 +223,9 @@ CREATE TABLE offerings (
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
 
-    additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
+    additional_params json, -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
+
+    auto_pop_up bool -- if is true, then allow the offering to automatically pop up.
 );
 
 -- State channels.

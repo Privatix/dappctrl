@@ -24,6 +24,7 @@ import (
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -65,7 +66,7 @@ func newTestConfig() *testConfig {
 
 type workerTest struct {
 	db       *reform.DB
-	ethBack  *testEthBackend
+	ethBack  *adapter.TestEthBackend
 	fakeSOMC *somc.FakeSOMC
 	somcConn *somc.Conn
 	worker   *Worker
@@ -90,7 +91,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
-	ethBack := newTestEthBackend(conf.pscAddr)
+	ethBack := adapter.NewTestEthBackend(conf.pscAddr)
 
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
@@ -226,7 +227,7 @@ func (e *workerTest) newTestFixture(t *testing.T,
 	e.insertToTestDB(t, job)
 
 	// Clear call stack.
-	e.ethBack.callStack = []testEthBackCall{}
+	e.ethBack.CallStack = []adapter.TestEthBackCall{}
 
 	return &workerTestFixture{f, job}
 }

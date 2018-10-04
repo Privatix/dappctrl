@@ -19,6 +19,7 @@ import (
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -47,19 +48,19 @@ func TestClientPreChannelCreate(t *testing.T) {
 	})
 
 	minDeposit := data.MinDeposit(fxt.Offering)
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit)
 	util.TestExpectResult(t, "Job run", ErrOfferingNoSupply,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.offerCurrentSupply = 1
+	env.ethBack.OfferCurrentSupply = 1
 
 	customDeposit := 99
-	env.ethBack.balancePSC = big.NewInt(100)
+	env.ethBack.BalancePSC = big.NewInt(100)
 	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
 		Offering: fxt.Offering.ID,
@@ -88,9 +89,9 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Account.EthAddr ||
 		tx.AddrTo != fxt.Offering.Agent ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
@@ -100,7 +101,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		fxt.Account.EthAddr, fxt.Account.PublicKey)
 	env.deleteFromTestDB(t, &agentUserRec)
 
-	env.ethBack.testCalled(t,
+	env.ethBack.TestCalled(t,
 		"PSCCreateChannel",
 		data.TestToAddress(t, fxt.Account.EthAddr),
 		env.gasConf.PSC.CreateChannel,
@@ -296,18 +297,18 @@ func TestClientPreChannelTopUp(t *testing.T) {
 	defer fxt.Close()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(testTXGasPrice),
+		GasPrice: uint64(adapter.TestTXGasPrice),
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
 		fxt.Offering.SetupPrice
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelTopUp(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit)
 
 	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
 
@@ -321,9 +322,9 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -360,7 +361,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	issued := time.Now()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(testTXGasPrice),
+		GasPrice: uint64(adapter.TestTXGasPrice),
 	})
 
 	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
@@ -379,9 +380,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -489,9 +490,9 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -758,10 +759,10 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
-	env.ethBack.offeringIsActive = true
-	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
-	env.ethBack.offerMaxSupply = expectedOffering.Supply
-	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+	env.ethBack.OfferingIsActive = true
+	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.OfferMaxSupply = expectedOffering.Supply
+	env.ethBack.OfferMinDeposit = new(big.Int).SetUint64(
 		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
@@ -917,10 +918,10 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
-	env.ethBack.offeringIsActive = true
-	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
-	env.ethBack.offerMaxSupply = expectedOffering.Supply
-	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+	env.ethBack.OfferingIsActive = true
+	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.OfferMaxSupply = expectedOffering.Supply
+	env.ethBack.OfferMinDeposit = new(big.Int).SetUint64(
 		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.

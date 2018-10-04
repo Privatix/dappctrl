@@ -148,6 +148,12 @@
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "agentPreOfferingPopUp": {
+                "Duplicated": true
+            },
+            "agentAfterOfferingPopUp": {
+                "Duplicated": true
             }
         }
     },

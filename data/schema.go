@@ -140,6 +140,7 @@ type Offering struct {
 	MaxInactiveTimeSec *uint64         `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
 	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
+	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
 }
 
 // State channel statuses.

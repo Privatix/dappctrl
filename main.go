@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
@@ -23,7 +27,9 @@ import (
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/proc/handlers"
+	"github.com/privatix/dappctrl/proc/looper"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/report/bugsnag"
 	rlog "github.com/privatix/dappctrl/report/log"
@@ -67,6 +73,7 @@ type config struct {
 	StaticPasword string
 	UI            *ui.Config
 	Country       *country.Config
+	Looper        *looper.Config
 }
 
 func newConfig() *config {
@@ -89,6 +96,7 @@ func newConfig() *config {
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
 		Country:       country.NewConfig(),
+		Looper:        looper.NewConfig(),
 	}
 }
 
@@ -165,6 +173,39 @@ func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
 	return server, nil
 }
 
+func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config,
+	logger log.Logger, db *reform.DB, queue job.Queue,
+	ethBack adapter.EthBackend) error {
+	popUpPeriod, err := ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	var timeout time.Duration
+	if cfg.AutoOfferingPopUpTimeout != 0 {
+		timeout = time.Second *
+			time.Duration(cfg.AutoOfferingPopUpTimeout)
+	} else {
+		timeout = time.Duration(popUpPeriod) * looper.BlockTime / 2
+
+	}
+
+	serviceContractABI, err := abi.JSON(strings.NewReader(
+		contract.PrivatixServiceContractABI))
+	if err != nil {
+		return err
+	}
+
+	autoPopUpOfferingFunc := func() []*data.Job {
+		return looper.AutoOfferingPopUp(
+			logger, serviceContractABI, db, ethBack, time.Now)
+	}
+
+	looper.Loop(ctx, logger, db, queue, timeout, autoPopUpOfferingFunc)
+
+	return err
+}
+
 func main() {
 	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
 		panic(fmt.Sprintf("failed to execute command: %s", err))
@@ -218,9 +259,11 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
+	ethBack := adapter.NewEthBackend(
+		psc, ptc, ethClient.EthClient(), conf.Eth.Timeout)
+
 	worker, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout), conf.Gas, pscAddr, conf.PayAddress,
+		ethBack, conf.Gas, pscAddr, conf.PayAddress,
 		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg)
 	if err != nil {
 		logger.Fatal(err.Error())
@@ -282,6 +325,15 @@ func main() {
 	defer sess.Close()
 
 	if conf.Role == data.RoleAgent {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err = startAutoPopUpLoop(
+			ctx, conf.Looper, logger, db, queue, ethBack)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+
 		paySrv := pay.NewServer(conf.PayServer, logger, db)
 		go func() {
 			fatal <- paySrv.ListenAndServe()

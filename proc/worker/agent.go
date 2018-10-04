@@ -837,7 +837,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	logger = logger.Add("offering", offering.ID)
 
 	if offering.OfferStatus != data.OfferRegistered &&
-		offering.Status != data.OfferPoppedUp {
+		offering.OfferStatus != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 

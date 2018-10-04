@@ -45,7 +45,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.updateInTestDB(t, fixture.Channel)
 
 	auth := bind.NewKeyedTransactor(key)
-	env.ethBack.setTransaction(t, auth, nil)
+	env.ethBack.SetTransaction(t, auth, nil)
 
 	// Create related eth log record.
 	var deposit int64 = 100
@@ -64,7 +64,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
 	ethLog := data.NewTestEthLog()
-	ethLog.TxHash = data.HexFromBytes(env.ethBack.tx.Hash().Bytes())
+	ethLog.TxHash = data.HexFromBytes(env.ethBack.Tx.Hash().Bytes())
 	ethLog.JobID = &fixture.job.ID
 	ethLog.Data = data.FromBytes(logData)
 	ethLog.Topics = topics
@@ -313,7 +313,7 @@ func testCooperativeCloseCalled(t *testing.T, env *workerTest,
 		t.Fatal(err)
 	}
 
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+	env.ethBack.TestCalled(t, "CooperativeClose", agentAddr,
 		env.gasConf.PSC.CooperativeClose, agentAddr,
 		uint32(fixture.Channel.Block),
 		[common.HashLength]byte(offeringHash), balance,
@@ -480,9 +480,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	minDeposit := fixture.Offering.MinUnits*fixture.Offering.UnitPrice +
 		fixture.Offering.SetupPrice
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit*
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit*
 		uint64(fixture.Offering.Supply) + 1)
-	env.ethBack.balanceEth = big.NewInt(99999)
+	env.ethBack.BalanceEth = big.NewInt(99999)
 
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 
@@ -498,7 +498,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	offeringHash := data.TestToHash(t, offering.Hash)
 
-	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply)
@@ -640,7 +640,7 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
-	env.ethBack.testCalled(t, "RemoveServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "RemoveServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.RemoveServiceOffering,
 		[common.HashLength]byte(offeringHash))
 
@@ -689,16 +689,16 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 		t.Fatal("offering is active")
 	}
 
-	env.ethBack.offeringIsActive = true
-	env.ethBack.challengePeriod = 300
-	env.ethBack.offerUpdateBlockNumber = 5
+	env.ethBack.OfferingIsActive = true
+	env.ethBack.ChallengePeriod = 300
+	env.ethBack.OfferUpdateBlockNumber = 5
 
 	if err := env.worker.AgentPreOfferingPopUp(
 		fxt.job); err != ErrPopUpOfferingTryAgain {
 		t.Fatal("period of challenge has expired")
 	}
 
-	env.ethBack.blockNumber = big.NewInt(1000)
+	env.ethBack.BlockNumber = big.NewInt(1000)
 
 	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
 
@@ -707,7 +707,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
-	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash))
 

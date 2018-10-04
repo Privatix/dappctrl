@@ -239,7 +239,7 @@ func newMockQueue(t *testing.T, db *reform.DB) *mockQueue {
 	return &mockQueue{t: t, db: db}
 }
 
-func (mq *mockQueue) Add(j *data.Job) error {
+func (mq *mockQueue) Add(tx *reform.TX, j *data.Job) error {
 	if len(mq.expectations) == 0 {
 		mq.t.Fatalf("unexpected job added, expected none, got %#v", *j)
 	}

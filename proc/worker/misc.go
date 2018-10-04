@@ -109,8 +109,9 @@ func (w *Worker) newUser(logger log.Logger, tx *types.Transaction) (*data.User, 
 	}, true, nil
 }
 
-func (w *Worker) addJob(logger log.Logger, jType, rType, rID string) error {
-	err := job.AddSimple(w.queue, jType, rType, rID, data.JobTask)
+func (w *Worker) addJob(logger log.Logger,
+	tx *reform.TX, jType, rType, rID string) error {
+	err := job.AddSimple(w.queue, tx, jType, rType, rID, data.JobTask)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrAddJob
@@ -118,9 +119,10 @@ func (w *Worker) addJob(logger log.Logger, jType, rType, rID string) error {
 	return nil
 }
 
-func (w *Worker) addJobWithData(logger log.Logger,
+func (w *Worker) addJobWithData(logger log.Logger, tx *reform.TX,
 	jType, rType, rID string, jData interface{}) error {
-	err := job.AddWithData(w.queue, jType, rType, rID, data.JobTask, jData)
+	err := job.AddWithData(w.queue, tx,
+		jType, rType, rID, data.JobTask, jData)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrAddJob
@@ -128,9 +130,10 @@ func (w *Worker) addJobWithData(logger log.Logger,
 	return nil
 }
 
-func (w *Worker) addJobWithDelay(logger log.Logger,
+func (w *Worker) addJobWithDelay(logger log.Logger, tx *reform.TX,
 	jType, rType, rID string, delay time.Duration) error {
-	err := job.AddWithDelay(w.queue, jType, rType, rID, data.JobTask, delay)
+	err := job.AddWithDelay(w.queue, tx,
+		jType, rType, rID, data.JobTask, delay)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrAddJob

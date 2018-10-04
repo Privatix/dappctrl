@@ -25,6 +25,6 @@ func (h *Handler) TopUpChannel(password, channel string, gasPrice uint64) error 
 		return err
 	}
 
-	return job.AddWithData(h.queue, data.JobClientPreChannelTopUp,
+	return job.AddWithData(h.queue, nil, data.JobClientPreChannelTopUp,
 		data.JobChannel, ch.ID, data.JobUser, jdata)
 }

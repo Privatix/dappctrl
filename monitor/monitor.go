@@ -35,7 +35,7 @@ type Config struct {
 
 // Queue is a job processing queue.
 type Queue interface {
-	Add(j *data.Job) error
+	Add(tx *reform.TX, j *data.Job) error
 }
 
 // Monitor implements blockchain monitor which fetches logs from the blockchain

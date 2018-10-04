@@ -536,7 +536,7 @@ func (s *Server) createPreUncooperativeCloseRequest(w http.ResponseWriter, id st
 		return
 	}
 
-	err = s.queue.Add(&data.Job{
+	err = s.queue.Add(nil, &data.Job{
 		Type:        data.JobClientPreUncooperativeCloseRequest,
 		CreatedBy:   data.JobUser,
 		RelatedID:   id,

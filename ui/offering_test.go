@@ -48,8 +48,9 @@ func TestAcceptOffering(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
@@ -422,8 +423,9 @@ func TestChangeOfferingStatus(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2

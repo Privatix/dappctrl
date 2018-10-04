@@ -93,7 +93,7 @@ func (p *Processor) alterServiceStatus(id, jobCreator, jobType,
 		Data:        []byte("{}"),
 	}
 
-	if err = p.queue.Add(j); err != nil {
+	if err = p.queue.Add(tx, j); err != nil {
 		return "", err
 	}
 

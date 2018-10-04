@@ -157,7 +157,7 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 	}
 
 	if updateBalances {
-		err = job.AddSimple(h.queue, data.JobAccountUpdateBalances,
+		err = job.AddSimple(h.queue, nil, data.JobAccountUpdateBalances,
 			data.JobAccount, account.ID, data.JobUser)
 		if err != nil {
 			logger.Error(err.Error())
@@ -275,7 +275,7 @@ func (h *Handler) TransferTokens(
 		GasPrice: gasPrice,
 	}
 
-	err = job.AddWithData(h.queue, jobType,
+	err = job.AddWithData(h.queue, nil, jobType,
 		data.JobAccount, account, data.JobUser, jobData)
 	if err != nil {
 		logger.Error(err.Error())
@@ -300,7 +300,7 @@ func (h *Handler) UpdateBalance(password, account string) error {
 		return err
 	}
 
-	err = job.AddSimple(h.queue, data.JobAccountUpdateBalances,
+	err = job.AddSimple(h.queue, nil, data.JobAccountUpdateBalances,
 		data.JobAccount, account, data.JobUser)
 	if err != nil {
 		logger.Error(err.Error())

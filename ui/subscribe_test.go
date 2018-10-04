@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/ui"
@@ -18,8 +20,9 @@ func TestObjectChange(t *testing.T) {
 	unsubscribed := false
 	j1 := &data.Job{RelatedID: fxt.Channel.ID}
 	j2 := &data.Job{RelatedID: util.NewUUID()}
-	handler.SetMockQueue(job.QueueMock(func(method int, j3 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j3 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockSubscribe:
 			go func() {

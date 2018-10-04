@@ -38,7 +38,7 @@ var (
 )
 
 func add(t *testing.T, queue *queue, job *data.Job, expected error) {
-	if err := queue.Add(job); err != expected {
+	if err := queue.Add(nil, job); err != expected {
 		if err == nil {
 			queue.db.Delete(job)
 		}
@@ -222,7 +222,7 @@ func TestSubscribe(t *testing.T) {
 			if j.TryCount == 0 {
 				return errors.New("some error")
 			}
-			return q.Add(&job2)
+			return q.Add(nil, &job2)
 		},
 		"b": func(j *data.Job) error { return nil },
 	}
@@ -241,7 +241,7 @@ func TestSubscribe(t *testing.T) {
 
 	go func() { q.Process() }()
 
-	util.TestExpectResult(t, "Add job", nil, q.Add(&job1))
+	util.TestExpectResult(t, "Add job", nil, q.Add(nil, &job1))
 	util.TestExpectResult(t, "Subscribe", nil,
 		q.Subscribe([]string{job1.RelatedID}, "1234", subf))
 	util.TestExpectResult(t, "Subscribe", ErrSubscriptionExists,

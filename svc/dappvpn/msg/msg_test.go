@@ -20,7 +20,7 @@ var (
 	conf struct {
 		DB                *data.DBConfig
 		Log               *util.LogConfig
-		FileLog           *log.FileConfig
+		StderrLog         *log.WriterConfig
 		SessionServer     *sesssrv.Config
 		SessionServerTest *testSessSrvConfig
 		VPNConfigPusher   *pusherTestConf
@@ -89,7 +89,7 @@ func newTestCountryConfig(field, url string) *country.Config {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.SessionServer = sesssrv.NewConfig()
 	conf.SessionServerTest = newSessSrvTestConfig()
 	conf.VPNConfigPusher = newPusherTestConf()
@@ -97,7 +97,7 @@ func TestMain(m *testing.M) {
 
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

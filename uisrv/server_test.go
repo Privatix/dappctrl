@@ -42,16 +42,16 @@ func TestMain(m *testing.M) {
 		AgentServerTest *testConfig
 		DB              *data.DBConfig
 		Job             *job.Config
-		FileLog         *log.FileConfig
+		StderrLog       *log.WriterConfig
 	}
 	conf.DB = data.NewDBConfig()
 	conf.AgentServerTest = &testConfig{}
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	util.ReadTestConfig(&conf)
 	db := data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

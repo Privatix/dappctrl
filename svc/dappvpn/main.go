@@ -39,6 +39,22 @@ var (
 	fatal   = make(chan string)
 )
 
+func createLogger() (log.Logger, io.Closer, error) {
+	elog, err := log.NewStderrLogger(conf.FileLog.WriterConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	flog, closer, err := log.NewFileLogger(conf.FileLog)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger := log.NewMultiLogger(elog, flog)
+
+	return logger, closer, nil
+}
+
 func main() {
 	v := flag.Bool("version", false, "Prints current dappctrl version")
 
@@ -59,10 +75,12 @@ func main() {
 
 	var err error
 
-	logger, err = log.NewStderrLogger(conf.FileLog)
+	var closer io.Closer
+	logger, closer, err = createLogger()
 	if err != nil {
-		panic(fmt.Sprintf("failed to create logger: %s\n", err))
+		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
+	defer closer.Close()
 
 	tctrl = tc.NewTrafficControl(conf.TC, logger)
 

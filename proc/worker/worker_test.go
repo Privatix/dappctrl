@@ -40,7 +40,7 @@ type testConfig struct {
 	Eth       *eth.Config
 	Job       *job.Config
 	Log       *util.LogConfig
-	FileLog   *log.FileConfig
+	StderrLog *log.WriterConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
@@ -50,16 +50,16 @@ type testConfig struct {
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		DB:       data.NewDBConfig(),
-		EptMsg:   ept.NewConfig(),
-		Eth:      eth.NewConfig(),
-		Job:      job.NewConfig(),
-		Log:      util.NewLogConfig(),
-		FileLog:  log.NewFileConfig(),
-		SOMC:     somc.NewConfig(),
-		SOMCTest: somc.NewTestConfig(),
-		pscAddr:  common.HexToAddress("0x1"),
-		Country:  country.NewConfig(),
+		DB:        data.NewDBConfig(),
+		EptMsg:    ept.NewConfig(),
+		Eth:       eth.NewConfig(),
+		Job:       job.NewConfig(),
+		Log:       util.NewLogConfig(),
+		StderrLog: log.NewWriterConfig(),
+		SOMC:      somc.NewConfig(),
+		SOMCTest:  somc.NewTestConfig(),
+		pscAddr:   common.HexToAddress("0x1"),
+		Country:   country.NewConfig(),
 	}
 }
 
@@ -129,7 +129,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	logger, err = log.NewStderrLogger(conf.FileLog)
+	logger, err = log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

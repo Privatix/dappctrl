@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
@@ -116,20 +115,12 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
-	elog, err := log.NewStderrLogger(conf.FileLog)
+	elog, err := log.NewStderrLogger(conf.FileLog.WriterConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	name := fmt.Sprintf(
-		"/var/log/dappctrl-%s.log", time.Now().Format("2006-01-02"))
-	file, err := os.OpenFile(
-		name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	flog, err := log.NewFileLogger(conf.FileLog, file)
+	flog, closer, err := log.NewFileLogger(conf.FileLog)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -155,7 +146,7 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 	blog2.Reporter(reporter)
 	blog2.Logger(logger)
 
-	return logger, file, nil
+	return logger, closer, nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,

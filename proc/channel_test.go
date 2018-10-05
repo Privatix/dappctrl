@@ -17,10 +17,10 @@ import (
 
 var (
 	conf struct {
-		DB      *data.DBConfig
-		Job     *job.Config
-		FileLog *log.FileConfig
-		Proc    *Config
+		DB        *data.DBConfig
+		Job       *job.Config
+		StderrLog *log.WriterConfig
+		Proc      *Config
 	}
 
 	db   *reform.DB
@@ -139,11 +139,11 @@ func TestTerminateChannelClient(t *testing.T) {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.Proc = NewConfig()
 	util.ReadTestConfig(&conf)
 
-	logger, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

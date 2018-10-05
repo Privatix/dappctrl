@@ -402,7 +402,7 @@ func TestMain(m *testing.M) {
 	conf = newTestConf()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.Log)
+	l, err := log.NewStderrLogger(conf.Log.WriterConfig)
 	if err != nil {
 		panic(err)
 	}

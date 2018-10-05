@@ -79,20 +79,20 @@ var client *rpc.Client
 
 func TestMain(m *testing.M) {
 	var conf struct {
-		DB      *data.DBConfig
-		FileLog *log.FileConfig
-		Job     *job.Config
-		UI      *ui.Config
+		DB        *data.DBConfig
+		StderrLog *log.WriterConfig
+		Job       *job.Config
+		UI        *ui.Config
 	}
 
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	util.ReadTestConfig(&conf)
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err.Error())
 	}

@@ -18,9 +18,9 @@ import (
 )
 
 var conf struct {
-	FileLog  *log.FileConfig
-	SOMC     *Config
-	SOMCTest *TestConfig
+	StderrLog *log.WriterConfig
+	SOMC      *Config
+	SOMCTest  *TestConfig
 }
 
 var logger log.Logger
@@ -201,12 +201,12 @@ func TestGetEndpoint(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.SOMC = NewConfig()
 	conf.SOMCTest = NewTestConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err.Error())
 	}

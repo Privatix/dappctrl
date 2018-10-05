@@ -20,7 +20,7 @@ import (
 var (
 	conf struct {
 		DB            *data.DBConfig
-		FileLog       *log.FileConfig
+		StderrLog     *log.WriterConfig
 		Log           *util.LogConfig
 		Job           *job.Config
 		Proc          *proc.Config
@@ -150,13 +150,13 @@ func TestStopAll(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.Job = job.NewConfig()
 	conf.Proc = proc.NewConfig()
 	conf.ServiceRunner = NewConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

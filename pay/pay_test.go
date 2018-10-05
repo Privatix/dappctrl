@@ -28,7 +28,7 @@ var (
 	testDB     *reform.DB
 	conf       struct {
 		DB            *data.DBConfig
-		FileLog       *log.FileConfig
+		StderrLog     *log.WriterConfig
 		PayServer     *Config
 		PayServerTest struct {
 			ServerStartupDelay uint // In milliseconds.
@@ -211,14 +211,14 @@ func TestServiceTerminate(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.PayServer = NewConfig()
 	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
 	testDB = data.NewTestDB(conf.DB)
 	defer data.CloseDB(testDB)
 
-	logger, err := log.NewStderrLogger(conf.FileLog)
+	logger, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err.Error())
 	}

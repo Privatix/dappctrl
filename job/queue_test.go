@@ -28,10 +28,10 @@ func newTestConfig() *testConfig {
 
 var (
 	conf struct {
-		DB      *data.DBConfig
-		Job     *Config
-		JobTest *testConfig
-		FileLog *log.FileConfig
+		DB        *data.DBConfig
+		Job       *Config
+		JobTest   *testConfig
+		StderrLog *log.WriterConfig
 	}
 	logger log.Logger
 	db     *reform.DB
@@ -268,10 +268,10 @@ func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = NewConfig()
 	conf.JobTest = newTestConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

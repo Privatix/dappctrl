@@ -59,7 +59,9 @@
         "Level": "info",
         "StackLevel": "error",
         "Prefix": "",
-        "UTC": false
+        "UTC": false,
+        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
+        "FileMode": 420
     },
     "Gas": {
         "PTC": {

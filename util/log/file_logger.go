@@ -5,32 +5,35 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/leekchan/timeutil"
 )
 
-// FileConfig is FileLogger configuration.
-type FileConfig struct {
+// WriterConfig is an io.Writer based logger configuration.
+type WriterConfig struct {
 	*BaseConfig
 	Prefix string
 	UTC    bool
 }
 
-// NewFileConfig creates a new FileLogger configuration.
-func NewFileConfig() *FileConfig {
-	return &FileConfig{
+// NewWriterConfig creates a new io.Writer based logger configuration.
+func NewWriterConfig() *WriterConfig {
+	return &WriterConfig{
 		BaseConfig: NewBaseConfig(),
 		Prefix:     "",
 		UTC:        false,
 	}
 }
 
-type fileLogger struct {
+type writerLogger struct {
 	*LoggerBase
 	logger *log.Logger
 }
 
-// NewFileLogger creates a new FileLogger.
-func NewFileLogger(conf *FileConfig, out io.Writer) (Logger, error) {
-	l := &fileLogger{}
+// NewWriterLogger creates a new io.Writer based logger.
+func NewWriterLogger(conf *WriterConfig, out io.Writer) (Logger, error) {
+	l := &writerLogger{}
 
 	base, err := NewLoggerBase(conf.BaseConfig, l.log)
 	if err != nil {
@@ -48,12 +51,51 @@ func NewFileLogger(conf *FileConfig, out io.Writer) (Logger, error) {
 	return l, nil
 }
 
-// NewStderrLogger creates a new FileLogger for standard error stream.
-func NewStderrLogger(conf *FileConfig) (Logger, error) {
-	return NewFileLogger(conf, os.Stderr)
+// NewStderrLogger creates a new logger for standard error stream.
+func NewStderrLogger(conf *WriterConfig) (Logger, error) {
+	return NewWriterLogger(conf, os.Stderr)
 }
 
-func (l *fileLogger) log(lvl Level, msg string,
+// FileConfig is a file based logger configuration.
+type FileConfig struct {
+	*WriterConfig
+	Filename string
+	FileMode os.FileMode
+}
+
+// NewFileConfig creates a new file logger configuration.
+func NewFileConfig() *FileConfig {
+	return &FileConfig{
+		WriterConfig: NewWriterConfig(),
+		Filename:     "dappctrl-%Y-%m-%d.log",
+		FileMode:     0644,
+	}
+}
+
+// NewFileLogger creates a new file logger.
+func NewFileLogger(conf *FileConfig) (Logger, io.Closer, error) {
+	now := time.Now()
+	if conf.UTC {
+		now = now.UTC()
+	}
+
+	file, err := os.OpenFile(
+		timeutil.Strftime(&now, conf.Filename),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, conf.FileMode)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger, err := NewWriterLogger(conf.WriterConfig, file)
+	if err != nil {
+		file.Close()
+		return nil, nil, err
+	}
+
+	return logger, file, nil
+}
+
+func (l *writerLogger) log(lvl Level, msg string,
 	ctx map[string]interface{}, stack *string) error {
 	var stack2 string
 	if stack != nil {

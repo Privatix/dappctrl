@@ -215,6 +215,10 @@ var agentOfferingSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleAgentOfferingCreated,
 		data.JobAgentAfterOfferingPopUp,
 	},
+	common.HexToHash(eth.EthOfferingDeleted): {
+		(*Monitor).scheduleOfferingDeleted,
+		data.JobAgentAfterOfferingDelete,
+	},
 }
 
 var offeringSchedulers = map[common.Hash]funcAndType{
@@ -226,12 +230,10 @@ var offeringSchedulers = map[common.Hash]funcAndType{
 		(*Monitor).scheduleClientOfferingPopUp,
 		data.JobClientAfterOfferingPopUp,
 	},
-	/* // FIXME: uncomment if monitor should actually delete the offering
-	common.HexToHash(eth.EthCOfferingDeleted): {
-		(*Monitor).scheduleClient_OfferingDeleted,
-		"",
+	common.HexToHash(eth.EthOfferingDeleted): {
+		(*Monitor).scheduleOfferingDeleted,
+		data.JobClientAfterOfferingDelete,
 	},
-	*/
 }
 
 var clientUpdateCurrentSupplySchedulers = map[common.Hash]funcAndType{
@@ -597,20 +599,24 @@ func (m *Monitor) scheduleClientOfferingPopUp(el *data.EthLog,
 	m.scheduleCommon(el, j)
 }
 
-/* // FIXME: uncomment if monitor should actually delete the offering
+func (m *Monitor) scheduleOfferingDeleted(el *data.EthLog, jobType string) {
+	hashB64 := data.FromBytes(el.Topics[2].Bytes())
 
-// scheduleClient_OfferingDeleted is a special case, which does not
-// actually schedule any task, it deletes the offering instead.
-func (m *Monitor) scheduleClient_OfferingDeleted(el *data.EthLog, jobType string) {
-	offeringHash := common.HexToHash(el.Topics[1])
-	tail := "where hash = $1"
-	_, err := m.db.DeleteFrom(data.OfferingTable, tail, data.FromBytes(offeringHash.Bytes()))
-	if err != nil {
-		panic(err)
+	offering := &data.Offering{}
+	if err := m.db.FindOneTo(offering,
+		"hash", hashB64); err != nil {
+		m.ignoreEvent(el)
+		return
 	}
-	m.ignoreEvent(el)
+
+	j := &data.Job{
+		Type:        jobType,
+		RelatedID:   offering.ID,
+		RelatedType: data.JobOffering,
+	}
+
+	m.scheduleCommon(el, j)
 }
-*/
 
 func (m *Monitor) scheduleCommon(el *data.EthLog, j *data.Job) {
 	j.CreatedBy = data.JobBCMonitor

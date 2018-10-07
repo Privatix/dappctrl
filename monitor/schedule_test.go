@@ -225,9 +225,6 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 				data.JobAgentAfterOfferingMsgBCPublish
 		})
 
-	// LogOfferingDeleted good
-	// TODO(maxim) implementation after afterOfferingDelete job implementation
-
 	// LogOfferingPopedUp good
 	pscEvent(t, mon, "", LogOfferingPopedUp, []interface{}{
 		someAddress,         // agent
@@ -281,6 +278,24 @@ func agentSchedule(t *testing.T, td *testData, queue *mockQueue,
 			someAddress,         // client
 			td.offering[0].Hash, // offering
 		}, []interface{}{uint32(td.channel[1].Block), new(big.Int)})
+
+	// LogOfferingDeleted good
+	pscEvent(t, mon, "", LogOfferingDeleted, []interface{}{
+		td.addr[0],          // agent
+		td.offering[0].Hash, // offering
+	}, nil)
+
+	// LogOfferingDeleted ignored
+	pscEvent(t, mon, "", LogOfferingDeleted, []interface{}{
+		td.addr[1], // agent
+		someHash,   // offering
+	}, nil)
+
+	queue.expect(data.JobAgentAfterOfferingDelete,
+		func(j *data.Job) bool {
+			return j.Type ==
+				data.JobAgentAfterOfferingDelete
+		})
 
 	wg := waitSignal(signalChan)
 
@@ -402,9 +417,6 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 				data.JobClientAfterOfferingMsgBCPublish
 		})
 
-	// LogOfferingDeleted good
-	// TODO(maxim) implementation after afterOfferingDelete job implementation
-
 	// LogOfferingPopedUp good
 	pscEvent(t, mon, "", LogOfferingPopedUp, []interface{}{
 		someAddress,         // agent
@@ -474,6 +486,24 @@ func clientSchedule(t *testing.T, td *testData, queue *mockQueue,
 	queue.expect(data.JobIncrementCurrentSupply, func(j *data.Job) bool {
 		return j.Type == data.JobIncrementCurrentSupply
 	})
+
+	// LogOfferingDeleted good
+	pscEvent(t, mon, "", LogOfferingDeleted, []interface{}{
+		someAddress,         // agent
+		td.offering[0].Hash, // offering
+	}, nil)
+
+	queue.expect(data.JobClientAfterOfferingDelete,
+		func(j *data.Job) bool {
+			return j.Type ==
+				data.JobClientAfterOfferingDelete
+		})
+
+	// LogOfferingDeleted ignored
+	pscEvent(t, mon, "", LogOfferingDeleted, []interface{}{
+		someAddress, // agent
+		someHash,    // offering
+	}, nil)
 
 	wg := waitSignal(signalChan)
 

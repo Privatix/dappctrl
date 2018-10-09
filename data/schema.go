@@ -20,7 +20,7 @@ type Account struct {
 	InUse            bool       `json:"inUse" reform:"in_use"`
 	Name             string     `json:"name" reform:"name"`
 	PTCBalance       uint64     `json:"ptcBalance" reform:"ptc_balance"`
-	PSCBalance       uint64     `json:"psc_balance" reform:"psc_balance"`
+	PSCBalance       uint64     `json:"pscBalance" reform:"psc_balance"`
 	EthBalance       B64BigInt  `json:"ethBalance" reform:"eth_balance"`
 	LastBalanceCheck *time.Time `json:"lastBalanceCheck" reform:"last_balance_check"`
 }
@@ -113,7 +113,7 @@ const (
 //reform:offerings
 type Offering struct {
 	ID                 string          `json:"id" reform:"id,pk"`
-	IsLocal            bool            `json:"is_local" reform:"is_local"`
+	IsLocal            bool            `json:"isLocal" reform:"is_local"`
 	Template           string          `json:"template" reform:"tpl" validate:"required"`    // Offering's.
 	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
 	Hash               string          `json:"hash" reform:"hash"`                           // Offering's hash.

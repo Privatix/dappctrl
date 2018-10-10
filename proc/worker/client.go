@@ -1036,6 +1036,20 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		return nil, ErrOfferingExists
 	}
 
+	hashBytes := common.BytesToHash(crypto.Keccak256(offeringData.Offering))
+
+	// Check hash match to that in registered in blockchain.
+	_, _, _, _, _, active, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, hashBytes)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
+	if !active {
+		return nil, ErrOfferingNotActive
+	}
+
 	msgRaw, sig := messages.UnpackSignature(offeringData.Offering)
 
 	msg := offer.Message{}
@@ -1057,6 +1071,11 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 	template, err := w.templateByHash(logger, msg.TemplateHash)
 	if err != nil {
 		return nil, err
+	}
+
+	// Validate offering JSON compliant with offering template JSON
+	if !offer.ValidMsg(template.Raw, msg) {
+		return nil, ErrOfferNotCorrespondToTemplate
 	}
 
 	product := &data.Product{}

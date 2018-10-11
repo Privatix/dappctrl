@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"gopkg.in/reform.v1"
+
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -67,12 +69,53 @@ func (h *Handler) UpdatePassword(current, new string) error {
 	}
 	defer tx.Rollback()
 
+	if err := h.updatePrivateKeys(logger, tx, current, new); err != nil {
+		return err
+	}
+
 	if err := update(logger, tx.Querier,
 		saltSetting(salt), passwordHashSetting(hashed)); err != nil {
 		return err
 	}
 
-	return commitTX(logger, tx)
+	err = commitTX(logger, tx)
+	if err != nil {
+		return err
+	}
+
+	h.SetPassword(new)
+
+	return nil
+}
+
+func (h *Handler) updatePrivateKeys(
+	logger log.Logger, tx *reform.TX, current, new string) error {
+	accounts, err := tx.SelectAllFrom(data.AccountTable, "")
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	for _, v := range accounts {
+		acc := v.(*data.Account)
+		logger = logger.Add("account", acc)
+
+		key, err := h.decryptKeyFunc(acc.PrivateKey, current)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+
+		acc.PrivateKey, err = h.encryptKeyFunc(key, new)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+		if err := update(logger, tx.Querier, acc); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *Handler) validatePasswordNotSet(logger log.Logger) error {

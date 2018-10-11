@@ -1,7 +1,13 @@
 package ui_test
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rpc"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/ui"
@@ -30,40 +36,87 @@ func TestSetPassword(t *testing.T) {
 	}
 }
 
+func updateAccountsPKeys(t *testing.T,
+	accounts []reform.Struct, privateKey *ecdsa.PrivateKey) {
+	newEncryptedKey, err := data.EncryptedKey(
+		privateKey, data.TestPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, v := range accounts {
+		v.(*data.Account).PrivateKey = newEncryptedKey
+		data.SaveToTestDB(t, db, v.(*data.Account))
+	}
+}
+
+func checkAccountsPKeys(t *testing.T, accounts []reform.Struct,
+	privateKey *ecdsa.PrivateKey, password string) {
+	for _, v := range accounts {
+		acc := v.(*data.Account)
+		db.Reload(acc)
+
+		_, err := data.ToPrivateKey(
+			acc.PrivateKey, data.TestPassword)
+		if err == nil {
+			t.Fatal("private key must not be decrypted")
+		}
+
+		pkAfter, err := data.ToPrivateKey(
+			acc.PrivateKey, password)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(privateKey.D.Bytes(), pkAfter.D.Bytes()) {
+			t.Fatal("private keys are not equal")
+		}
+	}
+}
+
 func TestUpdatePassword(t *testing.T) {
-	password := "foo"
-	salt := "salt"
-	hash, err := data.HashPassword(password, salt)
-	util.TestExpectResult(t, "data.HashPassword", nil, err)
-
-	saltSetting := &data.Setting{
-		Key:   data.SettingPasswordSalt,
-		Value: salt,
-		Name:  "salt",
+	server := rpc.NewServer()
+	pwdStorage := new(data.PWDStorage)
+	handler := ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
+		data.EncryptedKey, data.ToPrivateKey)
+	err := server.RegisterName("ui2", handler)
+	if err != nil {
+		t.Fatal(err)
 	}
-	passwordSetting := &data.Setting{
-		Key:   data.SettingPasswordHash,
-		Value: hash,
-		Name:  "password",
+
+	client := rpc.DialInProc(server)
+	defer client.Close()
+
+	fxt, assertMatchErr := newTest(t, "UpdatePassword")
+	defer fxt.close()
+
+	accounts, err := db.SelectAllFrom(data.AccountTable, "")
+	if err != nil {
+		t.Fatal(err)
 	}
-	data.InsertToTestDB(t, db, saltSetting, passwordSetting)
-	defer data.DeleteFromTestDB(t, db, saltSetting, passwordSetting)
 
-	err = handler.UpdatePassword("wrong-password", "bar")
-	util.TestExpectResult(t, "UpdatePassword", ui.ErrAccessDenied, err)
+	privateKey, _ := crypto.GenerateKey()
 
-	err = handler.UpdatePassword(password, "")
-	util.TestExpectResult(t, "UpdatePassword", ui.ErrEmptyPassword, err)
+	updateAccountsPKeys(t, accounts, privateKey)
+
+	assertMatchErr(handler.UpdatePassword(
+		"wrong-password", "bar"), ui.ErrAccessDenied)
+
+	assertMatchErr(handler.UpdatePassword(
+		data.TestPassword, ""), ui.ErrEmptyPassword)
 
 	newPassword := "new-password"
 
-	err = handler.UpdatePassword(password, newPassword)
-	util.TestExpectResult(t, "UpdatePassword", nil, err)
+	assertMatchErr(handler.UpdatePassword(
+		data.TestPassword, newPassword), nil)
 
-	db.Reload(passwordSetting)
-	db.Reload(saltSetting)
+	db.Reload(fxt.hash)
+	db.Reload(fxt.salt)
+
 	if data.ValidatePassword(
-		passwordSetting.Value, newPassword, saltSetting.Value) != nil {
+		fxt.hash.Value, newPassword, fxt.salt.Value) != nil {
 		t.Fatal("password not updated")
 	}
+
+	checkAccountsPKeys(t, accounts, privateKey, newPassword)
 }

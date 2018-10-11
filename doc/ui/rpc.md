@@ -533,7 +533,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
             "maxSuspendTime":1800,
             "maxInactiveTimeSec":null,
             "freeUnits":0,
-            "additionalParams":{}}]
+            "additionalParams":{},
+            "autoPopUp":false}]
 }
 ```
 </details>
@@ -593,7 +594,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
             "maxSuspendTime":1800,
             "maxInactiveTimeSec":null,
             "freeUnits":0,
-            "additionalParams":{}}]
+            "additionalParams":{},
+            "autoPopUp":null}]
 }
 ```
 </details>
@@ -671,7 +673,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getOffer
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"unpublished","offerStatus":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000,"minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{}}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"unpublished","offerStatus":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000,"minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{},"autoPopUp":true}], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -904,7 +906,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 *Parameters*:
 1. Password (string)
 
-*Result (object)*: object with keys as setting names and values as setting values.
+*Result (object)*: object with keys as setting keys and values as setting values.
 
 <details><summary>Example</summary>
     
@@ -917,15 +919,16 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSetti
     "id": 67,
     "jsonrpc": "2.0",
     "result": {
-        "challenge period":"50",
-        "db version":"0.11.0",
-        "default gas price":"20000000000",
-        "error reporting":"true",
-        "ethereum confirmation blocks":"1",
-        "event processing max retry":"7",
-        "last events blocks":"11520",
-        "maximum deposit":"30000000000",
-        "maximum events blocks":"80"
+        "eth.min.confirmations": "1",
+        "eth.event.maxretry": "7",
+        "eth.event.freshblocks": "11520",
+        "eth.event.blocklimit": "80",
+        "error.sendremote": "true",
+        "eth.default.gasprice": "20000000000",
+        "eth.challenge.period": "50", 
+        "eth.max.deposit": "30000000000",
+        "system.version.db": "0.12.0",
+        "offering.autopopup": "true"
     }
 }
 ```

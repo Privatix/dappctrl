@@ -39,7 +39,6 @@ type TestEthBackend struct {
 	OfferMaxSupply         uint16
 	OfferUpdateBlockNumber uint32
 	OfferingIsActive       bool
-	ChallengePeriod        uint32
 	GasPrice               *big.Int
 	EstimatedGas           uint64
 }
@@ -241,12 +240,6 @@ func (b *TestEthBackend) PSCGetOfferingInfo(opts *bind.CallOpts,
 	return b.OfferingAgent, b.OfferMinDeposit, b.OfferMaxSupply,
 		b.OfferCurrentSupply, b.OfferUpdateBlockNumber,
 		b.OfferingIsActive, nil
-}
-
-// PSCGetPopUpPeriod is mock to PSCGetPopUpPeriod.
-func (b *TestEthBackend) PSCGetPopUpPeriod(
-	opts *bind.CallOpts) (uint32, error) {
-	return b.ChallengePeriod, nil
 }
 
 // Test constants.

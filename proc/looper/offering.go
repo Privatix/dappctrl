@@ -23,7 +23,8 @@ import (
 // pop up all offerings, then no one of them is popped up. Function calculates
 // the pop up time.
 func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
-	ethBack adapter.EthBackend, timeNowFunc func() time.Time) []*data.Job {
+	ethBack adapter.EthBackend, timeNowFunc func() time.Time,
+	period uint32) []*data.Job {
 	logger = logger.Add("method", "AutoOfferingPopUp")
 
 	logger.Debug("started AutoOfferingPopUp")
@@ -36,7 +37,8 @@ func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 	var jobs []*data.Job
 
 	if do {
-		jobs = autoOfferingPopUp(logger, abi, db, ethBack, timeNowFunc)
+		jobs = autoOfferingPopUp(logger, abi, db, ethBack,
+			timeNowFunc, period)
 		logger.Debug(fmt.Sprintf("found %d offerings to pop upped",
 			len(jobs)))
 	}
@@ -120,7 +122,8 @@ func findOfferingsToPopUp(logger log.Logger, db *reform.DB) []reform.Struct {
 }
 
 func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
-	ethBack adapter.EthBackend, timeNowFunc func() time.Time) []*data.Job {
+	ethBack adapter.EthBackend, timeNowFunc func() time.Time,
+	period uint32) []*data.Job {
 	offerings := findOfferingsToPopUp(logger, db)
 	if len(offerings) == 0 {
 		logger.Debug("no offerings to pop up")
@@ -155,12 +158,6 @@ func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 		return nil
 	}
 
-	popUpPeriod, err := ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
-	if err != nil {
-		logger.Error(err.Error())
-		return nil
-	}
-
 	lastBlock, err := ethBack.LatestBlockNumber(context.Background())
 	if err != nil {
 		logger.Error(err.Error())
@@ -176,7 +173,7 @@ func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 		}
 
 		delay, err := calcDelayToOfferingPopUp(
-			hash, ethBack, popUpPeriod, lastBlock)
+			hash, ethBack, period, lastBlock)
 		if err != nil {
 			logger.Error(err.Error())
 			return nil

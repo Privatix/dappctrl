@@ -98,7 +98,8 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
 		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		conf.Country, data.TestToPrivateKey, conf.EptMsg)
+		conf.Country, data.TestToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

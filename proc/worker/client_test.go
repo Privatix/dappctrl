@@ -429,10 +429,6 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
 	defer fxt.close()
 
-	st := data.Setting{Key: data.SettingEthChallengePeriod, Value: "0"}
-	data.InsertToTestDB(t, db, &st)
-	defer data.DeleteFromTestDB(t, db, &st)
-
 	runJob(t, env.worker.ClientAfterUncooperativeCloseRequest, fxt.job)
 
 	ch := new(data.Channel)

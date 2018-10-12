@@ -288,19 +288,6 @@ VALUES ('eth.default.gasprice',
         'default gas price');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.challenge.period',
-        '50',
-        2,
-        'Number of blocks to wait from an uncooperativeClose initiated' ||
-        ' by the Client in order to give the Agent a chance to respond' ||
-        ' with a balance proof in case the Client cheats. After the ' ||
-        'challenge period, the Client can settle and delete the channel.' ||
-        ' Number of blocks Agent will wait from registerServiceOffering' ||
-        ' or from createChannel before he can delete service offering' ||
-        ' and recieve Agent''s deposit back.',
-        'challenge period');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.max.deposit',
         '30000000000',
         2,

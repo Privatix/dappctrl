@@ -757,6 +757,10 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
+	if err := w.checkOfferingDelete(logger, offeringHash); err != nil {
+		return err
+	}
+
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
@@ -807,21 +811,9 @@ func (w *Worker) agentOfferingPopUpFindRelatedJobs(
 
 func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 	hash common.Hash) error {
-	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
-		&bind.CallOpts{}, hash)
+	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
 	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	if !active {
-		return ErrOfferingNotActive
-	}
-
-	period, err := w.ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
+		return err
 	}
 
 	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
@@ -830,11 +822,48 @@ func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 		return ErrInternal
 	}
 
-	if uint64(updateBlockNumber+period) > lastBlock.Uint64() {
-		return ErrPopUpOfferingTryAgain
+	if uint64(updateBlockNumber+w.pscPeriods.PopUp) > lastBlock.Uint64() {
+		return ErrPopUpPeriodIsNotOver
 	}
 
 	return nil
+}
+
+func (w *Worker) checkOfferingDelete(logger log.Logger,
+	hash common.Hash) error {
+	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
+	if err != nil {
+		return err
+	}
+
+	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if uint64(updateBlockNumber+w.pscPeriods.Remove) > lastBlock.Uint64() {
+		return ErrOfferingDeletePeriodIsNotOver
+	}
+
+	return nil
+}
+
+func (w *Worker) getOfferingBlockNumber(logger log.Logger,
+	hash common.Hash) (uint32, error) {
+
+	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return 0, ErrInternal
+	}
+
+	if !active {
+		return 0, ErrOfferingNotActive
+	}
+
+	return updateBlockNumber, err
 }
 
 // AgentPreOfferingPopUp pop ups an offering.

@@ -40,7 +40,12 @@
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x9a08d2e1f8f32cf0fb3670af323a8d8ed987347d"
+            "PSCAddrHex": "0x182e0724f997ca79f9eb7318fce1752f8d88c736",
+            "Periods": {
+                "PopUp": 500,
+                "Challenge": 5000,
+                "Remove": 100
+            }
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
         "Timeout": 60,

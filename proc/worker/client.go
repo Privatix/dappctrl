@@ -915,16 +915,9 @@ func (w *Worker) ClientAfterUncooperativeCloseRequest(job *data.Job) error {
 		return ErrInternal
 	}
 
-	blocks, err := data.ReadUintSetting(
-		w.db.Querier, data.SettingEthChallengePeriod)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
 	return w.addJobWithDelay(logger, nil,
 		data.JobClientPreUncooperativeClose, data.JobChannel,
-		ch.ID, time.Duration(blocks)*eth.BlockDuration)
+		ch.ID, time.Duration(w.pscPeriods.Challenge)*eth.BlockDuration)
 }
 
 // ClientAfterOfferingMsgBCPublish creates offering.

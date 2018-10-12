@@ -1,6 +1,20 @@
 [
 	{
 		"constant": true,
+		"inputs": [],
+		"name": "challenge_period",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
 		"inputs": [
 			{
 				"name": "",
@@ -146,11 +160,11 @@
 	{
 		"constant": true,
 		"inputs": [],
-		"name": "meta_version",
+		"name": "network_fee_address",
 		"outputs": [
 			{
 				"name": "",
-				"type": "string"
+				"type": "address"
 			}
 		],
 		"payable": false,
@@ -202,6 +216,10 @@
 			{
 				"name": "_remove_period",
 				"type": "uint32"
+			},
+			{
+				"name": "_challenge_period",
+				"type": "uint32"
 			}
 		],
 		"payable": false,
@@ -230,11 +248,6 @@
 				"indexed": false,
 				"name": "_deposit",
 				"type": "uint192"
-			},
-			{
-				"indexed": false,
-				"name": "_authentication_hash",
-				"type": "bytes32"
 			}
 		],
 		"name": "LogChannelCreated",
@@ -346,38 +359,6 @@
 			}
 		],
 		"name": "LogOfferingDeleted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"name": "_agent",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "_client",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"indexed": false,
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"indexed": false,
-				"name": "_endpoint_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "LogOfferingEndpoint",
 		"type": "event"
 	},
 	{
@@ -579,10 +560,6 @@
 			{
 				"name": "_deposit",
 				"type": "uint192"
-			},
-			{
-				"name": "_authentication_hash",
-				"type": "bytes32"
 			}
 		],
 		"name": "createChannel",
@@ -781,32 +758,6 @@
 		"constant": false,
 		"inputs": [
 			{
-				"name": "_client_address",
-				"type": "address"
-			},
-			{
-				"name": "_offering_hash",
-				"type": "bytes32"
-			},
-			{
-				"name": "_open_block_number",
-				"type": "uint32"
-			},
-			{
-				"name": "_endpoint_hash",
-				"type": "bytes32"
-			}
-		],
-		"name": "publishServiceOfferingEndpoint",
-		"outputs": [],
-		"payable": false,
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"constant": false,
-		"inputs": [
-			{
 				"name": "_offering_hash",
 				"type": "bytes32"
 			},
@@ -820,12 +771,7 @@
 			}
 		],
 		"name": "registerServiceOffering",
-		"outputs": [
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
+		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -839,12 +785,7 @@
 			}
 		],
 		"name": "removeServiceOffering",
-		"outputs": [
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
+		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -858,12 +799,7 @@
 			}
 		],
 		"name": "popupServiceOffering",
-		"outputs": [
-			{
-				"name": "success",
-				"type": "bool"
-			}
-		],
+		"outputs": [],
 		"payable": false,
 		"stateMutability": "nonpayable",
 		"type": "function"

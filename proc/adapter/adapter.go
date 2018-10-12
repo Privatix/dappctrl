@@ -319,7 +319,7 @@ func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 
 	opts.Context = ctx2
 
-	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit, common.Hash{})
+	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit)
 	if err != nil {
 		err = fmt.Errorf("failed to create PSC channel: %s", err)
 	}

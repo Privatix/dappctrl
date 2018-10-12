@@ -598,7 +598,7 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobAgentAfterOfferingDelete, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	runJob(t, env.worker.AgentAfterOfferingDelete, fxt.job)
 

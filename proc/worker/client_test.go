@@ -29,7 +29,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreChannelCreate, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	offeringMsg := offer.OfferingMessage(fxt.Account, fxt.TemplateOffer,
 		fxt.Offering)
@@ -117,7 +117,7 @@ func TestClientAfterChannelCreate(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterChannelCreate, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	ethLog := &data.JobEthLog{
 		Block: 12345,
@@ -190,7 +190,7 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreEndpointMsgSOMCGet, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	swapAgentWithClient(t, fxt)
 
@@ -270,7 +270,7 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterEndpointMsgSOMCGet, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.job.Data = []byte("\"" + fxt.Endpoint.ID + "\"")
 
@@ -294,7 +294,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreChannelTopUp, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
 		GasPrice: uint64(adapter.TestTXGasPrice),
@@ -351,7 +351,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreUncooperativeCloseRequest, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.Channel.TotalDeposit = 1
 	fxt.Channel.ReceiptBalance = 1
@@ -427,7 +427,7 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	st := data.Setting{Key: data.SettingEthChallengePeriod, Value: "0"}
 	data.InsertToTestDB(t, db, &st)
@@ -468,7 +468,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreUncooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	issued := time.Now()
 
@@ -505,7 +505,7 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.Channel.ServiceStatus = data.ServiceTerminated
 	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
@@ -532,7 +532,7 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterCooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	testJobCreatedAndStatusChanged := func(svcStatus string) {
 		fxt.Channel.ServiceStatus = svcStatus
@@ -732,7 +732,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterOfferingMsgBCPublish, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	// Set id for offerring that is about to be created.
 	fxt.job.RelatedID = util.NewUUID()
@@ -831,7 +831,7 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterOfferingDelete, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	runJob(t, env.worker.ClientAfterOfferingDelete, fxt.job)
 

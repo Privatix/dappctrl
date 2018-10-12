@@ -2,6 +2,7 @@ package ui
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 // GetLastBlockNumber returns last known block number.
@@ -24,6 +25,7 @@ func (h *Handler) GetLastBlockNumber(password string) (*uint64, error) {
 		return nil, ErrInternal
 	}
 
+	logger.Error(fmt.Sprint(queryRet.Int64))
 	ret := uint64(queryRet.Int64) + minConfirmations
 	return &ret, nil
 }

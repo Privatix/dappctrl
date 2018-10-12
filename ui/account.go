@@ -309,3 +309,30 @@ func (h *Handler) UpdateBalance(password, account string) error {
 
 	return nil
 }
+
+// UpdateAccount updates an account.
+func (h *Handler) UpdateAccount(password, account, name string,
+	isDefault, inUse bool) error {
+	logger := h.logger.Add("method", "UpdateAccount",
+		"account", account)
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return err
+	}
+
+	acc := data.Account{}
+	err := h.findByPrimaryKey(
+		logger, ErrAccountNotFound, &acc, account)
+	if err != nil {
+		return err
+	}
+
+	if name != "" {
+		acc.Name = name
+	}
+
+	acc.IsDefault = isDefault
+	acc.InUse = inUse
+
+	return update(logger, h.db.Querier, &acc)
+}

@@ -68,11 +68,11 @@ func TestPreAccountAddBalance(t *testing.T) {
 
 	txHash := "d238f7"
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fixture.job.ID
-	ethLog.TxHash = txHash
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			TxHash: txHash,
+		},
+	})
 
 	tx := &data.EthTx{
 		ID:          util.NewUUID(),
@@ -224,12 +224,12 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 		t.Fatal(err)
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fixture.job.ID
-	ethLog.Data = data.FromBytes(eventData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			Data:   eventData,
+			Topics: topics,
+		},
+	})
 
 	var job func(*data.Job) error
 

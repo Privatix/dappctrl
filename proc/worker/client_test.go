@@ -119,16 +119,16 @@ func TestClientAfterChannelCreate(t *testing.T) {
 		data.JobClientAfterChannelCreate, data.JobChannel)
 	defer fxt.Close()
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	data.SaveToTestDB(t, db, ethLog)
+	ethLog := &data.JobEthLog{
+		Block: 12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
-	defer data.DeleteFromTestDB(t, db, ethLog)
 
 	channelKey, _ := data.ChannelKey(fxt.Channel.Client, fxt.Channel.Agent,
-		uint32(ethLog.BlockNumber), fxt.Offering.Hash)
+		uint32(ethLog.Block), fxt.Offering.Hash)
 
 	go func() {
 		// Mock reply from SOMC.
@@ -780,12 +780,13 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		offeringHash,
 		common.BytesToHash(minDeposit.Bytes()),
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Data = data.FromBytes(logData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Data:   logData,
+		Topics: topics,
+		Block:  12345,
+	}
+
+	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
 	go func() {
 		// Mock reply from SOMC.
@@ -870,18 +871,20 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 		offeringHash,
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Topics: topics,
+		Block:  12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: ethLog,
+	})
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
 
 	offering := data.Offering{}
 	env.findTo(t, &offering, fxt.Offering.ID)
 
-	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+	if offering.BlockNumberUpdated != ethLog.Block {
 		t.Fatal("offering block number was not updated")
 	}
 }
@@ -932,11 +935,12 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			Topics: topics,
+			Block:  123456,
+		},
+	})
 
 	go func() {
 		// Mock reply from SOMC.

@@ -18,7 +18,7 @@ func (h *Handler) GetLastBlockNumber(password string) (*uint64, error) {
 	}
 
 	var queryRet sql.NullInt64
-	row := h.db.QueryRow("SELECT max(block_number) from eth_logs")
+	row := h.db.QueryRow("SELECT max((data->'ethereumLog'->>'block') :: bigint) from jobs")
 	if err := row.Scan(&queryRet); err != nil {
 		logger.Error(err.Error())
 		return nil, ErrInternal

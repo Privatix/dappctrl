@@ -63,13 +63,13 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.TxHash = data.HexFromBytes(env.ethBack.Tx.Hash().Bytes())
-	ethLog.JobID = &fixture.job.ID
-	ethLog.Data = data.FromBytes(logData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			TxHash: data.HexFromBytes(env.ethBack.Tx.Hash().Bytes()),
+			Data:   logData,
+			Topics: topics,
+		},
+	})
 
 	runJob(t, env.worker.AgentAfterChannelCreate, fixture.job)
 
@@ -739,18 +739,20 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 		offeringHash,
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Topics: topics,
+		Block:  12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: ethLog,
+	})
 
 	runJob(t, env.worker.AgentAfterOfferingPopUp, fxt.job)
 
 	offering := data.Offering{}
 	env.findTo(t, &offering, fxt.Offering.ID)
 
-	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+	if offering.BlockNumberUpdated != ethLog.Block {
 		t.Fatal("offering block number was not updated")
 	}
 

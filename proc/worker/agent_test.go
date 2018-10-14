@@ -267,7 +267,7 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreServiceUnsuspend, *fixture.job)
 }
 
-func TestAgentPreServiceTerminate(t *testing.T) {
+func testAgentPreServiceTerminate(t *testing.T, receiptBalance uint64) {
 	// svc_status="Terminated"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceTerminate,
@@ -275,13 +275,23 @@ func TestAgentPreServiceTerminate(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	fixture.Channel.ReceiptBalance = receiptBalance
+	env.updateInTestDB(t, fixture.Channel)
+
 	runJob(t, env.worker.AgentPreServiceTerminate, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
 
-	testCooperativeCloseCalled(t, env, fixture)
+	if receiptBalance > 0 {
+		testCooperativeCloseCalled(t, env, fixture)
+	}
 
 	testCommonErrors(t, env.worker.AgentPreServiceTerminate, *fixture.job)
+}
+
+func TestAgentPreServiceTerminate(t *testing.T) {
+	testAgentPreServiceTerminate(t, 0)
+	testAgentPreServiceTerminate(t, 1)
 }
 
 func testCooperativeCloseCalled(t *testing.T, env *workerTest,

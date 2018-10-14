@@ -248,6 +248,11 @@ func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
 	if err != nil {
 		return err
 	}
+
+	if channel.ReceiptBalance == 0 {
+		return nil
+	}
+
 	return w.agentCooperativeClose(logger, job, channel)
 }
 

@@ -53,6 +53,11 @@ func (m *Monitor) clientJobsProducers() JobsProducers {
 }
 
 func (m *Monitor) agentOnChannelCreated(l *data.JobEthLog) ([]data.Job, error) {
+	offering := l.Topics[3]
+	oid := m.findOfferingID(offering)
+	if oid == "" {
+		return nil, nil
+	}
 	return m.produceCommon(l, util.NewUUID(), data.JobChannel,
 		data.JobAgentAfterChannelCreate)
 }

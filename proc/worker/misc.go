@@ -141,14 +141,19 @@ func (w *Worker) addJobWithDelay(logger log.Logger, tx *reform.TX,
 	return nil
 }
 
-func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
-	logger := w.logger.Add("method", "updateAccountBalances", "job", job)
+func (w *Worker) updateAccountBalancesJob(job *data.Job, jobType string) error {
+	logger := w.logger.Add("method", "updateAccountBalancesJob", "job", job)
 
 	acc, err := w.relatedAccount(logger, job, jobType)
 	if err != nil {
 		return err
 	}
 
+	return w.updateBalances(logger, w.db.Querier, acc)
+}
+
+func (w *Worker) updateBalances(logger log.Logger,
+	db *reform.Querier, acc *data.Account) error {
 	agentAddr, err := data.HexToAddress(acc.EthAddr)
 	if err != nil {
 		logger.Error(err.Error())
@@ -183,7 +188,7 @@ func (w *Worker) updateAccountBalances(job *data.Job, jobType string) error {
 
 	acc.LastBalanceCheck = &now
 
-	return w.saveRecord(logger, acc)
+	return w.saveRecord(logger, db, acc)
 }
 
 func (w *Worker) ethBalance(logger log.Logger, addr common.Address) (*big.Int, error) {
@@ -262,12 +267,12 @@ func (w *Worker) updateRelatedOffering(job *data.Job, jobType, status string) er
 
 	offering.OfferStatus = status
 
-	// internal
-	return w.saveRecord(logger, offering)
+	return w.saveRecord(logger, w.db.Querier, offering)
 }
 
-func (w *Worker) saveRecord(logger log.Logger, rec reform.Record) error {
-	err := data.Save(w.db.Querier, rec)
+func (w *Worker) saveRecord(logger log.Logger,
+	db *reform.Querier, rec reform.Record) error {
+	err := data.Save(db, rec)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal

@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -140,7 +141,8 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 	return nil
 }
 
-func (w *Worker) incrementCurrentSupply(logger log.Logger, pk string) error {
+func (w *Worker) incrementCurrentSupply(logger log.Logger,
+	db *reform.Querier, pk string) error {
 	offering, err := w.offering(logger, pk)
 	if err != nil {
 		logger.Error(err.Error())
@@ -148,7 +150,7 @@ func (w *Worker) incrementCurrentSupply(logger log.Logger, pk string) error {
 	}
 
 	offering.CurrentSupply++
-	if err := w.db.Update(offering); err != nil {
+	if err := db.Update(offering); err != nil {
 		logger.Add("offering", offering).Error(err.Error())
 		return ErrInternal
 	}
@@ -182,7 +184,8 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
+	if err := w.incrementCurrentSupply(logger,
+		w.db.Querier, channel.Offering); err != nil {
 		return err
 	}
 
@@ -205,23 +208,26 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	channel.ChannelStatus = data.ChannelClosedCoop
-	if err := w.db.Update(channel); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
+	return w.db.InTransaction(func(tx *reform.TX) error {
+		channel.ChannelStatus = data.ChannelClosedCoop
+		if err := tx.Update(channel); err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 
-	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
-		return err
-	}
+		if err := w.incrementCurrentSupply(logger, tx.Querier,
+			channel.Offering); err != nil {
+			return err
+		}
 
-	agent, err := w.account(logger, channel.Agent)
-	if err != nil {
-		return err
-	}
+		agent, err := w.account(logger, channel.Agent)
+		if err != nil {
+			return err
+		}
 
-	return w.addJob(logger, nil,
-		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+		return w.addJob(logger, tx,
+			data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+	})
 }
 
 // AgentPreServiceSuspend marks service as suspended.
@@ -763,7 +769,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	}
 
 	offering.OfferStatus = data.OfferRemoving
-	if err := w.saveRecord(logger, offering); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier,
+		offering); err != nil {
 		return err
 	}
 
@@ -884,7 +891,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	}
 
 	offering.OfferStatus = data.OfferPoppingUp
-	if err := w.saveRecord(logger, offering); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
 		return err
 	}
 
@@ -921,5 +928,5 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 	offering.BlockNumberUpdated = ethLog.Block
 	offering.OfferStatus = data.OfferPoppedUp
 
-	return w.saveRecord(logger, &offering)
+	return w.saveRecord(logger, w.db.Querier, &offering)
 }

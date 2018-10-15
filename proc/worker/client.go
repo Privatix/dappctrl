@@ -261,7 +261,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	ch.Block = uint32(ethLog.Block)
 	ch.ChannelStatus = data.ChannelActive
-	if err = w.saveRecord(logger, ch); err != nil {
+	if err = w.saveRecord(logger, w.db.Querier, ch); err != nil {
 		return err
 	}
 
@@ -437,7 +437,7 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 
 	return w.db.InTransaction(func(tx *reform.TX) error {
 		endp.Status = data.MsgChPublished
-		if err := w.saveRecord(logger, endp); err != nil {
+		if err := w.saveRecord(logger, w.db.Querier, endp); err != nil {
 			return err
 		}
 
@@ -449,7 +449,7 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		ch.ServiceStatus = data.ServiceSuspended
 		changedTime := time.Now()
 		ch.ServiceChangedTime = &changedTime
-		err = w.saveRecord(logger, ch)
+		err = w.saveRecord(logger, w.db.Querier, ch)
 		if err != nil {
 			logger.Error(err.Error())
 			return ErrInternal
@@ -472,17 +472,17 @@ func (w *Worker) ClientAfterUncooperativeClose(job *data.Job) error {
 	logger = logger.Add("channel", ch)
 
 	ch.ChannelStatus = data.ChannelClosedUncoop
-	if err := w.saveRecord(logger, ch); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier, ch); err != nil {
 		return err
 	}
 
-	agent, err := w.account(logger, ch.Agent)
+	client, err := w.account(logger, ch.Client)
 	if err != nil {
 		return err
 	}
 
 	return w.addJob(logger, nil,
-		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
 // ClientAfterCooperativeClose changed channel status
@@ -500,7 +500,7 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 	logger = logger.Add("channel", ch)
 
 	ch.ChannelStatus = data.ChannelClosedCoop
-	if err := w.saveRecord(logger, ch); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier, ch); err != nil {
 		return err
 	}
 
@@ -512,13 +512,13 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		}
 	}
 
-	agent, err := w.account(logger, ch.Agent)
+	client, err := w.account(logger, ch.Client)
 	if err != nil {
 		return err
 	}
 
 	return w.addJob(logger, nil,
-		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
 func (w *Worker) stopService(logger log.Logger, ch string) error {
@@ -552,7 +552,7 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	ch.ServiceStatus = data.ServiceTerminated
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	err = w.saveRecord(logger, ch)
+	err = w.saveRecord(logger, w.db.Querier, ch)
 	if err != nil {
 		return err
 	}
@@ -577,7 +577,7 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 	ch.ServiceStatus = data.ServiceSuspended
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	err = w.saveRecord(logger, ch)
+	err = w.saveRecord(logger, w.db.Querier, ch)
 	if err != nil {
 		return err
 	}
@@ -604,7 +604,7 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	ch.ServiceStatus = data.ServiceActive
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	return w.saveRecord(logger, ch)
+	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
 func (w *Worker) assertCanSettle(ctx context.Context, logger log.Logger,
@@ -715,7 +715,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 
 	ch.ChannelStatus = data.ChannelWaitUncoop
 
-	return w.saveRecord(logger, ch)
+	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
 // ClientPreChannelTopUpData is a job data for ClientPreChannelTopUp.
@@ -859,7 +859,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 
 	ch.ChannelStatus = data.ChannelWaitChallenge
 
-	return w.saveRecord(logger, ch)
+	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
 // ClientPreUncooperativeCloseRequest requests the closing of the channel
@@ -982,7 +982,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	offering.BlockNumberUpdated = ethLog.Block
 	offering.OfferStatus = data.OfferPoppedUp
 
-	return w.saveRecord(logger, &offering)
+	return w.saveRecord(logger, w.db.Querier, &offering)
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,

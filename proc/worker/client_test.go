@@ -515,7 +515,7 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 
 	// Test update balances job was created.
 	env.deleteJob(t,
-		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		data.JobAccountUpdateBalances, data.JobAccount, fxt.UserAcc.ID)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -542,8 +542,8 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 		runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
 		// Test update balances job was created.
-		env.deleteJob(t,
-			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		env.deleteJob(t, data.JobAccountUpdateBalances,
+			data.JobAccount, fxt.UserAcc.ID)
 
 		var ch data.Channel
 		env.findTo(t, &ch, fxt.Channel.ID)

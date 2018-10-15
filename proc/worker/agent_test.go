@@ -145,8 +145,10 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 		fxt.Channel.ServiceStatus = svcStatus
 		fxt.Channel.ReceiptBalance = balance
 		env.updateInTestDB(t, fxt.Channel)
+
 		runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
 			fxt.job)
+
 		testChannelStatusChanged(t, fxt.job, env,
 			data.ChannelInChallenge)
 	}

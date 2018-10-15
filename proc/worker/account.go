@@ -132,17 +132,17 @@ func (w *Worker) approvedBalanceData(logger log.Logger,
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.
 func (w *Worker) AfterAccountAddBalance(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAfterAccountAddBalance)
+	return w.updateAccountBalancesJob(job, data.JobAfterAccountAddBalance)
 }
 
 // AfterAccountReturnBalance updates psc and ptc balance of an account.
 func (w *Worker) AfterAccountReturnBalance(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAfterAccountReturnBalance)
+	return w.updateAccountBalancesJob(job, data.JobAfterAccountReturnBalance)
 }
 
 // AccountUpdateBalances updates ptc, psc and eth balance values.
 func (w *Worker) AccountUpdateBalances(job *data.Job) error {
-	return w.updateAccountBalances(job, data.JobAccountUpdateBalances)
+	return w.updateAccountBalancesJob(job, data.JobAccountUpdateBalances)
 }
 
 // PreAccountReturnBalance returns from psc to ptc.

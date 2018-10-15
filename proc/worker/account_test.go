@@ -166,8 +166,14 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 
 	runJob(t, worker, fixture.job)
 
+	checkBalances(t, env, fixture.Account.ID, 200, 100, 2)
+
+	testCommonErrors(t, worker, *fixture.job)
+}
+
+func checkBalances(t *testing.T, env *workerTest, accID string, psc, ptc, eth uint) {
 	account := &data.Account{}
-	env.findTo(t, account, fixture.Account.ID)
+	env.findTo(t, account, accID)
 	if account.PTCBalance != 100 {
 		t.Fatalf("wrong ptc balance, wanted: %v, got: %v", 100,
 			account.PTCBalance)
@@ -182,8 +188,6 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 			data.FromBytes(env.ethBack.BalanceEth.Bytes()))
 		t.Fatal("wrong eth balance")
 	}
-
-	testCommonErrors(t, worker, *fixture.job)
 }
 
 func testAfterChannelTopUp(t *testing.T, agent bool) {

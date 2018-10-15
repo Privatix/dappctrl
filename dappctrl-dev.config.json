@@ -48,7 +48,7 @@
             }
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
-        "Timeout": 60,
+        "Timeout": 120,
         "HttpClient": {
             "DialTimeout": 10,
             "TLSHandshakeTimeout": 5,

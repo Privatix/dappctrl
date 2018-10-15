@@ -184,6 +184,36 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_transfer
 ```
 </details>
 
+#### Update account
+
+*Method*:	`updateAccount`
+
+*Description*: Updates an account.
+
+*Parameters*:
+1. Password (string)
+2. Account id (string)
+3. Name (string)
+4. IsDefault (bool)
+5. inUse (bool)
+
+*Result*: None.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateAccount", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", "user", true, true], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": null
+}
+```
+</details>
+
 #### Update balance
 
 *Method*:	`updateBalance`

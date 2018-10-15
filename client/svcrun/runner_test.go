@@ -1,15 +1,13 @@
-// +build !noclientsvcruntest
-
 package svcrun
 
 import (
 	"os"
-	"os/exec"
 	"testing"
 	"time"
 
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun/exec"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
@@ -55,9 +53,9 @@ func newTestServiceRunner() *serviceRunner {
 	runner := NewServiceRunner(
 		conf.ServiceRunner, logger, db, pr).(*serviceRunner)
 
-	runner.newCmd = func(
-		name string, args []string, channel string) *exec.Cmd {
-		return exec.Command(name, args...)
+	runner.startProc = func(name string, args []string,
+		channel string) (*exec.Process, error) {
+		return exec.StartProcess(name, args...)
 	}
 
 	return runner

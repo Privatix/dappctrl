@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"sync"
-	"syscall"
 
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun/exec"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/log"
@@ -43,16 +42,17 @@ func NewConfig() *Config {
 	}
 }
 
-type newCmdFunc func(name string, args []string, channel string) *exec.Cmd
+type startProcFunc func(
+	name string, args []string, channel string) (*exec.Process, error)
 
 type serviceRunner struct {
-	conf   *Config
-	logger log.Logger
-	db     *reform.DB
-	pr     *proc.Processor
-	newCmd newCmdFunc
-	mtx    sync.Mutex
-	cmds   map[string]*exec.Cmd
+	conf      *Config
+	logger    log.Logger
+	db        *reform.DB
+	pr        *proc.Processor
+	startProc startProcFunc
+	mtx       sync.Mutex
+	procs     map[string]*exec.Process
 	// The channel is only needed for tests.
 	// It allows to receive a notification
 	// about the end of a service launch.
@@ -62,17 +62,18 @@ type serviceRunner struct {
 // NewServiceRunner creates a new service runner.
 func NewServiceRunner(conf *Config, logger log.Logger,
 	db *reform.DB, pr *proc.Processor) ServiceRunner {
-	newCmd := func(name string, args []string, channel string) *exec.Cmd {
-		return exec.Command(name, append(args, "-channel="+channel)...)
+	startProc := func(name string,
+		args []string, channel string) (*exec.Process, error) {
+		return exec.StartProcess(name, append(args, "-channel="+channel)...)
 	}
 
 	return &serviceRunner{
-		conf:   conf,
-		logger: logger.Add("type", "svcrun.serviceRunner"),
-		db:     db,
-		pr:     pr,
-		newCmd: newCmd,
-		cmds:   make(map[string]*exec.Cmd),
+		conf:      conf,
+		logger:    logger.Add("type", "svcrun.serviceRunner"),
+		db:        db,
+		pr:        pr,
+		startProc: startProc,
+		procs:     make(map[string]*exec.Process),
 	}
 }
 
@@ -82,8 +83,8 @@ func (r *serviceRunner) StopAll() error {
 	defer r.mtx.Unlock()
 
 	var err error
-	for _, v := range r.cmds {
-		err2 := syscall.Kill(-v.Process.Pid, syscall.SIGKILL)
+	for _, v := range r.procs {
+		err2 := v.Kill()
 		if err == nil {
 			err = err2
 		}
@@ -104,28 +105,20 @@ func (r *serviceRunner) Start(channel string) error {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
-	if _, ok := r.cmds[key]; ok {
+	if _, ok := r.procs[key]; ok {
 		return ErrAlreadyStarted
 	}
 
-	cmd := r.newCmd(conf.Name, conf.Args, channel)
-
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	stderr, err := cmd.StderrPipe()
+	proc, err := r.startProc(conf.Name, conf.Args, channel)
 	if err != nil {
-		return err
-	}
-
-	if err := cmd.Start(); err != nil {
 		return err
 	}
 
 	logger.Warn("service adapter has started")
 
-	r.cmds[key] = cmd
+	r.procs[key] = proc
 
-	go r.wait(channel, key, cmd, stderr)
+	go r.wait(channel, key, proc)
 
 	return nil
 }
@@ -155,8 +148,7 @@ func (r *serviceRunner) getKey(channel string) (*ServiceConfig, string, error) {
 	return &conf, channel, nil
 }
 
-func (r *serviceRunner) wait(channel, key string, cmd *exec.Cmd,
-	stderr io.ReadCloser) {
+func (r *serviceRunner) wait(channel, key string, proc *exec.Process) {
 	defer func() {
 		select {
 		case r.done <- true:
@@ -167,20 +159,20 @@ func (r *serviceRunner) wait(channel, key string, cmd *exec.Cmd,
 	logger := r.logger.Add("method", "wait", "channel", channel)
 
 	go func() {
-		scanner := bufio.NewScanner(stderr)
+		scanner := bufio.NewScanner(proc.Stderr)
 		for scanner.Scan() {
 			io.WriteString(
 				os.Stderr, "dappvpn: "+scanner.Text()+"\n")
 		}
-		stderr.Close()
+		proc.Close()
 	}()
 
-	logger.Warn(fmt.Sprintf("service adapter has exited: %v", cmd.Wait()))
+	logger.Warn(fmt.Sprintf("service adapter has exited: %v", proc.Wait()))
 
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
-	delete(r.cmds, key)
+	delete(r.procs, key)
 
 	_, err := r.pr.SuspendChannel(channel, data.JobServiceAdapter, false)
 	if err != nil {
@@ -198,12 +190,12 @@ func (r *serviceRunner) Stop(channel string) error {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
-	cmd, ok := r.cmds[key]
+	proc, ok := r.procs[key]
 	if !ok {
 		return ErrNotRunning
 	}
 
-	return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	return proc.Kill()
 }
 
 // IsRunning returns whether a service for a given channel is running.
@@ -216,7 +208,7 @@ func (r *serviceRunner) IsRunning(channel string) (bool, error) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
-	_, ok := r.cmds[key]
+	_, ok := r.procs[key]
 
 	return ok, nil
 }

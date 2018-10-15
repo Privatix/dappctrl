@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
@@ -173,20 +172,15 @@ func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
 	return server, nil
 }
 
-func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config,
+func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
 	logger log.Logger, db *reform.DB, queue job.Queue,
 	ethBack adapter.EthBackend) error {
-	popUpPeriod, err := ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-
 	var timeout time.Duration
 	if cfg.AutoOfferingPopUpTimeout != 0 {
 		timeout = time.Second *
 			time.Duration(cfg.AutoOfferingPopUpTimeout)
 	} else {
-		timeout = time.Duration(popUpPeriod) * looper.BlockTime / 2
+		timeout = time.Duration(period) * looper.BlockTime / 2
 
 	}
 
@@ -197,8 +191,8 @@ func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config,
 	}
 
 	autoPopUpOfferingFunc := func() []*data.Job {
-		return looper.AutoOfferingPopUp(
-			logger, serviceContractABI, db, ethBack, time.Now)
+		return looper.AutoOfferingPopUp(logger, serviceContractABI,
+			db, ethBack, time.Now, period)
 	}
 
 	looper.Loop(ctx, logger, db, queue, timeout, autoPopUpOfferingFunc)
@@ -264,7 +258,8 @@ func main() {
 
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		ethBack, conf.Gas, pscAddr, conf.PayAddress,
-		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg)
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -326,8 +321,9 @@ func main() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		err = startAutoPopUpLoop(
-			ctx, conf.Looper, logger, db, queue, ethBack)
+		err = startAutoPopUpLoop(ctx, conf.Looper,
+			conf.Eth.Contract.Periods.PopUp,
+			logger, db, queue, ethBack)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}

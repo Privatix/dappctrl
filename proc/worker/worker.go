@@ -61,6 +61,7 @@ type Worker struct {
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
+	pscPeriods     *eth.PSCPeriods
 }
 
 // NewWorker returns new instance of worker.
@@ -68,7 +69,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack adapter.EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
-	eptConf *ept.Config) (*Worker, error) {
+	eptConf *ept.Config, pscPeriods *eth.PSCPeriods) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -92,6 +93,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
+		pscPeriods:     pscPeriods,
 	}, nil
 }
 

@@ -955,7 +955,6 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSetti
         "eth.event.blocklimit": "80",
         "error.sendremote": "true",
         "eth.default.gasprice": "20000000000",
-        "eth.challenge.period": "50", 
         "eth.max.deposit": "30000000000",
         "system.version.db": "0.12.0",
         "offering.autopopup": "true"

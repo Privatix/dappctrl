@@ -66,7 +66,12 @@
     "Eth": {
         "Contract" : {
             "PTCAddrHex": "",
-            "PSCAddrHex": ""
+            "PSCAddrHex": "",
+            "Periods": {
+                "PopUp": 0,
+                "Challenge": 0,
+                "Remove": 0
+            }
         },
         "GethURL": "http://localhost:8545",
         "TruffleAPIURL": "",

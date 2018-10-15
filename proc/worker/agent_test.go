@@ -645,6 +645,17 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 	fxt.Offering.OfferStatus = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
+	env.ethBack.OfferingIsActive = true
+	conf.Eth.Contract.Periods.Remove = 10
+	env.ethBack.OfferUpdateBlockNumber = 10
+	env.ethBack.BlockNumber = big.NewInt(10)
+
+	err := env.worker.AgentPreOfferingDelete(fxt.job)
+	if err != ErrOfferingDeletePeriodIsNotOver {
+		t.Fatal("must check offering delete period")
+	}
+
+	env.ethBack.BlockNumber = big.NewInt(100)
 	runJob(t, env.worker.AgentPreOfferingDelete, fxt.job)
 
 	// Test transaction was recorded.
@@ -702,16 +713,16 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	}
 
 	env.ethBack.OfferingIsActive = true
-	env.ethBack.ChallengePeriod = 300
-	env.ethBack.OfferUpdateBlockNumber = 5
+	conf.Eth.Contract.Periods.PopUp = 3
+	env.ethBack.OfferUpdateBlockNumber = 3
+	env.ethBack.BlockNumber = big.NewInt(4)
 
 	if err := env.worker.AgentPreOfferingPopUp(
-		fxt.job); err != ErrPopUpOfferingTryAgain {
+		fxt.job); err != ErrPopUpPeriodIsNotOver {
 		t.Fatal("period of challenge has expired")
 	}
 
-	env.ethBack.BlockNumber = big.NewInt(1000)
-
+	env.ethBack.BlockNumber = big.NewInt(7)
 	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
 
 	// Test transaction was recorded.

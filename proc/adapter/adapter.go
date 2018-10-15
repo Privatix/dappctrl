@@ -56,9 +56,6 @@ type EthBackend interface {
 		minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
 		updateBlockNumber uint32, active bool, err error)
 
-	PSCGetPopUpPeriod(
-		opts *bind.CallOpts) (uint32, error)
-
 	PSCCreateChannel(opts *bind.TransactOpts,
 		agent common.Address, hash [common.HashLength]byte,
 		deposit *big.Int) (*types.Transaction, error)
@@ -285,17 +282,6 @@ func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 		updateBlockNumber, active, err
 }
 
-// PSCGetPopUpPeriod gets popup_period variable from Privatix service contract.
-func (b *ethBackendInstance) PSCGetPopUpPeriod(
-	opts *bind.CallOpts) (uint32, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
-	defer cancel()
-
-	opts.Context = ctx2
-
-	return b.psc.PopupPeriod(opts)
-}
-
 // PSCGetChannelInfo calls getChannelInfo method of Privatix service contract.
 func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 	client common.Address, agent common.Address,
@@ -319,7 +305,7 @@ func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 
 	opts.Context = ctx2
 
-	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit, common.Hash{})
+	tx, err := b.psc.CreateChannel(opts, agent, hash, deposit)
 	if err != nil {
 		err = fmt.Errorf("failed to create PSC channel: %s", err)
 	}

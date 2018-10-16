@@ -45,7 +45,13 @@ func (m *Monitor) queryLogsAndCreateJobs(
 				TxHash: data.HexFromBytes(log.TxHash.Bytes()),
 			}
 
-			jobs, err := producers[log.Topics[0]](jEthLog)
+			producerF, ok := producers[log.Topics[0]]
+			if !ok {
+				logger.Error("no producer function for event: " +
+					log.Topics[0].Hex() + ". skipping")
+				continue
+			}
+			jobs, err := producerF(jEthLog)
 			if err != nil {
 				return err
 			}

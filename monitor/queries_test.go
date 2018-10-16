@@ -140,7 +140,19 @@ func testAgentQueries(t *testing.T, from, to uint64, psc, ptc common.Address,
 	}
 
 	assertTopicsEqual(t, [][]common.Hash{
-		nil,
+		{
+			eth.ServiceChannelCreated,
+			eth.ServiceChannelToppedUp,
+			eth.ServiceChannelCloseRequested,
+			eth.ServiceOfferingCreated,
+			eth.ServiceOfferingDeleted,
+			eth.ServiceOfferingPopedUp,
+			eth.ServiceCooperativeChannelClose,
+			eth.ServiceUnCooperativeChannelClose,
+
+			eth.TokenApproval,
+			eth.TokenTransfer,
+		},
 		addressesInDB,
 	}, q1.Topics)
 

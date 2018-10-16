@@ -25,6 +25,7 @@
 
 import sys
 import random
+import string
 import logging
 import socket
 from signal import SIGINT, signal, pause
@@ -2285,7 +2286,8 @@ class AutoOffer:
     def __init__(self):
         self.id = 1
         self.url = 'http://localhost:8888/http'
-        self.pswd = 'q1w2e3r4t5y6XXX'
+        self.pswdSymbol = 12
+        self.pswd = self.__random_pswd()
         self.acc_name = 'TestAcc'
         self.botUrl = 'http://89.38.96.53:3000/getprix'
         self.botAuth = 'dXNlcjpoRmZWRWRVMkNva0Y='
@@ -2303,6 +2305,13 @@ class AutoOffer:
         self.waitBot = 1
         self.waitblockchain = 60
         self.vpnConf = '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json'
+
+    def __random_pswd(self):
+        return ''.join(random.SystemRandom().choice(
+            string.ascii_uppercase +
+            string.ascii_lowercase +
+            string.digits
+        ) for _ in range(self.pswdSymbol))
 
     def _getAgentOffer(self,mark):
         logging.info('Get Offerings. Mark: {}'.format(mark))
@@ -2768,8 +2777,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             mess = '    Congratulations, you posted your offer!\n' \
                                    '    It will be published once an hour.\n' \
                                    '    Your ethereum address: 0x{}\n' \
+                                   '    Your pasword : {}\n' \
                                    '    Please press enter to finalize the application.'.format(
-                                self.ethAddr)
+                                self.ethAddr, self.pswd)
                             raw_input(mess)
                         self._finalizer(rw=True)
                     except BaseException as mexpt:

@@ -9,7 +9,7 @@ import (
 // Logs hexes.
 var (
 	// PSC logs.
-	ServiceChannelCreated            = common.HexToHash("a6153987181667023837aee39c3f1a702a16e5e146323ef10fb96844a526143c")
+	ServiceChannelCreated            = common.HexToHash("78ef868cbadb8c73fc1170b8a09d99704c4cdf400c9c94534811b0ae60b8913a")
 	ServiceChannelToppedUp           = common.HexToHash("a3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce")
 	ServiceChannelCloseRequested     = common.HexToHash("b40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e")
 	ServiceOfferingCreated           = common.HexToHash("32c1913dfde418197923027c2f2260f19903a2e86a93ed83c4689ac91a96bafd")

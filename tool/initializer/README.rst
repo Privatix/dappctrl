@@ -37,13 +37,36 @@ Description of initializer arguments
     * Run initializer in auto offer mode,but with unique offer parameters from offer.json
     * Path and file name, arbitrary. File format - JSON.
     * Run example: python initializer.py --cli --file /home/offer.json.
-    * Example structure of offer file:
+    * Example of all default parameters and offer file structure:
 
-      ``{"billingInterval": 1800,``
-      ``"maxSuspendTime": 1800,``
-      ``"freeUnits": 0}``
+    .. code-block:: json
+
+        {
+            "serviceName": "my service",
+            "description": "my service description",
+            "country": "UA",
+            "supply": 3,
+            "unitType": "units",
+            "billingType": "postpaid",
+            "setupPrice": 0,
+            "unitPrice": 100000,
+            "minUnits": 100,
+            "billingInterval": 1800,
+            "maxBillingUnitLag": 1800,
+            "maxSuspendTime": 1800,
+            "freeUnits": 0,
+            "additionalParams": {}
+        }
+
+    * If you like, you can set all your parameters, or selectively. If you specify only specific parameters, the rest will be the default. You can create a file and specify in it for example:
+
+    .. code-block:: json
+
+        {
+            "serviceName": "Test Name",
+            "country": "UK",
+        }
 
 * python initializer.py --clean
     * Stop all run containers and clear all dirs where store containers, gui and initializer.pid file.
 
-e'

@@ -19,6 +19,7 @@ import (
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -28,7 +29,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreChannelCreate, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	offeringMsg := offer.OfferingMessage(fxt.Account, fxt.TemplateOffer,
 		fxt.Offering)
@@ -47,19 +48,19 @@ func TestClientPreChannelCreate(t *testing.T) {
 	})
 
 	minDeposit := data.MinDeposit(fxt.Offering)
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit)
 	util.TestExpectResult(t, "Job run", ErrOfferingNoSupply,
 		env.worker.ClientPreChannelCreate(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.offerCurrentSupply = 1
+	env.ethBack.OfferCurrentSupply = 1
 
 	customDeposit := 99
-	env.ethBack.balancePSC = big.NewInt(100)
+	env.ethBack.BalancePSC = big.NewInt(100)
 	setJobData(t, fxt.DB, fxt.job, ClientPreChannelCreateData{
 		Account:  fxt.Account.ID,
 		Offering: fxt.Offering.ID,
@@ -88,9 +89,9 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Account.EthAddr ||
 		tx.AddrTo != fxt.Offering.Agent ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
@@ -100,7 +101,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		fxt.Account.EthAddr, fxt.Account.PublicKey)
 	env.deleteFromTestDB(t, &agentUserRec)
 
-	env.ethBack.testCalled(t,
+	env.ethBack.TestCalled(t,
 		"PSCCreateChannel",
 		data.TestToAddress(t, fxt.Account.EthAddr),
 		env.gasConf.PSC.CreateChannel,
@@ -116,18 +117,18 @@ func TestClientAfterChannelCreate(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterChannelCreate, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	data.SaveToTestDB(t, db, ethLog)
+	ethLog := &data.JobEthLog{
+		Block: 12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
-	defer data.DeleteFromTestDB(t, db, ethLog)
 
 	channelKey, _ := data.ChannelKey(fxt.Channel.Client, fxt.Channel.Agent,
-		uint32(ethLog.BlockNumber), fxt.Offering.Hash)
+		uint32(ethLog.Block), fxt.Offering.Hash)
 
 	go func() {
 		// Mock reply from SOMC.
@@ -189,7 +190,7 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreEndpointMsgSOMCGet, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	swapAgentWithClient(t, fxt)
 
@@ -269,7 +270,7 @@ func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterEndpointMsgSOMCGet, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.job.Data = []byte("\"" + fxt.Endpoint.ID + "\"")
 
@@ -293,21 +294,21 @@ func TestClientPreChannelTopUp(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreChannelTopUp, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(testTXGasPrice),
+		GasPrice: uint64(adapter.TestTXGasPrice),
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
 		fxt.Offering.SetupPrice
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit - 1)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelTopUp(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit)
 
 	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
 
@@ -321,9 +322,9 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -350,7 +351,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreUncooperativeCloseRequest, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.Channel.TotalDeposit = 1
 	fxt.Channel.ReceiptBalance = 1
@@ -360,7 +361,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	issued := time.Now()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(testTXGasPrice),
+		GasPrice: uint64(adapter.TestTXGasPrice),
 	})
 
 	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
@@ -379,9 +380,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -426,11 +427,7 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
-	defer fxt.Close()
-
-	st := data.Setting{Key: data.SettingEthChallengePeriod, Value: "0"}
-	data.InsertToTestDB(t, db, &st)
-	defer data.DeleteFromTestDB(t, db, &st)
+	defer fxt.close()
 
 	runJob(t, env.worker.ClientAfterUncooperativeCloseRequest, fxt.job)
 
@@ -467,7 +464,7 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreUncooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	issued := time.Now()
 
@@ -489,9 +486,9 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(testTXNonce) ||
-		tx.GasPrice != uint64(testTXGasPrice) ||
-		tx.Gas != uint64(testTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
+		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
+		tx.Gas != uint64(adapter.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -504,7 +501,7 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.Channel.ServiceStatus = data.ServiceTerminated
 	fxt.Channel.ChannelStatus = data.ChannelWaitUncoop
@@ -514,7 +511,7 @@ func TestClientAfterUncooperativeClose(t *testing.T) {
 
 	// Test update balances job was created.
 	env.deleteJob(t,
-		data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		data.JobAccountUpdateBalances, data.JobAccount, fxt.UserAcc.ID)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -531,7 +528,7 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterCooperativeClose, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	testJobCreatedAndStatusChanged := func(svcStatus string) {
 		fxt.Channel.ServiceStatus = svcStatus
@@ -541,8 +538,8 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 		runJob(t, env.worker.ClientAfterCooperativeClose, fxt.job)
 
 		// Test update balances job was created.
-		env.deleteJob(t,
-			data.JobAccountUpdateBalances, data.JobAccount, fxt.Account.ID)
+		env.deleteJob(t, data.JobAccountUpdateBalances,
+			data.JobAccount, fxt.UserAcc.ID)
 
 		var ch data.Channel
 		env.findTo(t, &ch, fxt.Channel.ID)
@@ -731,7 +728,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterOfferingMsgBCPublish, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	// Set id for offerring that is about to be created.
 	fxt.job.RelatedID = util.NewUUID()
@@ -758,9 +755,10 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
-	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
-	env.ethBack.offerMaxSupply = expectedOffering.Supply
-	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+	env.ethBack.OfferingIsActive = true
+	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.OfferMaxSupply = expectedOffering.Supply
+	env.ethBack.OfferMinDeposit = new(big.Int).SetUint64(
 		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
@@ -772,17 +770,19 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 	minDeposit := big.NewInt(10000)
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
 		common.BytesToHash(minDeposit.Bytes()),
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Data = data.FromBytes(logData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Data:   logData,
+		Topics: topics,
+		Block:  12345,
+	}
+
+	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
 	go func() {
 		// Mock reply from SOMC.
@@ -827,7 +827,7 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterOfferingDelete, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	runJob(t, env.worker.ClientAfterOfferingDelete, fxt.job)
 
@@ -861,23 +861,26 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash([]byte{}),
 		offeringHash,
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Topics: topics,
+		Block:  12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: ethLog,
+	})
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
 
 	offering := data.Offering{}
 	env.findTo(t, &offering, fxt.Offering.ID)
 
-	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+	if offering.BlockNumberUpdated != ethLog.Block {
 		t.Fatal("offering block number was not updated")
 	}
 }
@@ -914,23 +917,26 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
 	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
 
-	env.ethBack.offerCurrentSupply = expectedOffering.CurrentSupply
-	env.ethBack.offerMaxSupply = expectedOffering.Supply
-	env.ethBack.offerMinDeposit = new(big.Int).SetUint64(
+	env.ethBack.OfferingIsActive = true
+	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
+	env.ethBack.OfferMaxSupply = expectedOffering.Supply
+	env.ethBack.OfferMinDeposit = new(big.Int).SetUint64(
 		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 	topics := data.LogTopics{
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			Topics: topics,
+			Block:  123456,
+		},
+	})
 
 	go func() {
 		// Mock reply from SOMC.

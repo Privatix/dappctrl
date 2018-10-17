@@ -5,7 +5,9 @@
         "Level": "info",
         "StackLevel": "error",
         "Prefix": "",
-        "UTC": false
+        "UTC": false,
+        "Filename": "/var/log/dappvpn-%Y-%m-%d.log",
+        "FileMode": 420
     },
 
     "Monitor": {

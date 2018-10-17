@@ -255,15 +255,6 @@ VALUES ('eth.min.confirmations',
         'ethereum confirmation blocks');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.event.maxretry',
-        '7',
-        2,
-        'have value (stored as string) that is null or integer and' ||
-        ' represents how many times event should try to create job,' ||
-        ' until it is ignored. null or zero considered unlimited.',
-        'event processing max retry');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
         '11520',
         2,
@@ -297,19 +288,6 @@ VALUES ('eth.default.gasprice',
         'default gas price');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.challenge.period',
-        '50',
-        2,
-        'Number of blocks to wait from an uncooperativeClose initiated' ||
-        ' by the Client in order to give the Agent a chance to respond' ||
-        ' with a balance proof in case the Client cheats. After the ' ||
-        'challenge period, the Client can settle and delete the channel.' ||
-        ' Number of blocks Agent will wait from registerServiceOffering' ||
-        ' or from createChannel before he can delete service offering' ||
-        ' and recieve Agent''s deposit back.',
-        'challenge period');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.max.deposit',
         '30000000000',
         2,
@@ -318,10 +296,24 @@ VALUES ('eth.max.deposit',
         'maximum deposit');
 
 INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.lastProcessedBlock',
+        '0',
+        2,
+        'Last block number in blockchain stores last proccessed block.',
+        'last processed block');
+
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.12.0',
+        '0.13.0',
         1,
         'Version of database.',
         'db version');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('offering.autopopup',
+        'true',
+        2,
+        'Allow offerings to pop up automatically.',
+        'offering autopopup');
 
 END TRANSACTION;

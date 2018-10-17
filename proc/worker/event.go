@@ -19,18 +19,17 @@ type logChannelTopUpInput struct {
 }
 
 type logChannelCreatedInput struct {
-	agentAddr          common.Address
-	clientAddr         common.Address
-	offeringHash       common.Hash
-	deposit            *big.Int
-	authenticationHash common.Hash
+	agentAddr    common.Address
+	clientAddr   common.Address
+	offeringHash common.Hash
+	deposit      *big.Int
 }
 
 type logOfferingCreatedInput struct {
-	agentAddr    common.Address
-	offeringHash common.Hash
-	minDeposit   *big.Int
-	maxSupply    uint16
+	agentAddr     common.Address
+	offeringHash  common.Hash
+	minDeposit    *big.Int
+	currentSupply uint16
 }
 
 type logOfferingPopUpInput struct {
@@ -55,11 +54,6 @@ func init() {
 		panic(err)
 	}
 
-	abiBytes32, err := abi.NewType("bytes32")
-	if err != nil {
-		panic(err)
-	}
-
 	abiUint16, err := abi.NewType("uint16")
 	if err != nil {
 		panic(err)
@@ -78,9 +72,6 @@ func init() {
 		{
 			Type: abiUint192,
 		},
-		{
-			Type: abiBytes32,
-		},
 	}
 
 	logOfferingCreatedDataArguments = abi.Arguments{
@@ -90,14 +81,9 @@ func init() {
 	}
 }
 
-func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannelTopUpInput, error) {
-	dataBytes, err := data.ToBytes(log.Data)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseEthLog
-	}
-
-	dataUnpacked, err := logChannelTopUpDataArguments.UnpackValues(dataBytes)
+func extractLogChannelToppedUp(
+	logger log.Logger, log *data.JobEthLog) (*logChannelTopUpInput, error) {
+	dataUnpacked, err := logChannelTopUpDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseEthLog
@@ -134,29 +120,19 @@ func extractLogChannelToppedUp(logger log.Logger, log *data.EthLog) (*logChannel
 	}, nil
 }
 
-func extractLogChannelCreated(logger log.Logger, log *data.EthLog) (*logChannelCreatedInput, error) {
-	dataBytes, err := data.ToBytes(log.Data)
+func extractLogChannelCreated(logger log.Logger,
+	log *data.JobEthLog) (*logChannelCreatedInput, error) {
+	dataUnpacked, err := logChannelCreatedDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseEthLog
 	}
 
-	dataUnpacked, err := logChannelCreatedDataArguments.UnpackValues(dataBytes)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseEthLog
-	}
-
-	if len(dataUnpacked) != 2 {
+	if len(dataUnpacked) != 1 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	deposit, ok := dataUnpacked[0].(*big.Int)
-	if !ok {
-		return nil, ErrParseEthLog
-	}
-
-	authHashB, ok := dataUnpacked[1].([common.HashLength]byte)
 	if !ok {
 		return nil, ErrParseEthLog
 	}
@@ -170,27 +146,20 @@ func extractLogChannelCreated(logger log.Logger, log *data.EthLog) (*logChannelC
 	offeringHash := log.Topics[3]
 
 	return &logChannelCreatedInput{
-		agentAddr:          agentAddr,
-		clientAddr:         clientAddr,
-		offeringHash:       offeringHash,
-		deposit:            deposit,
-		authenticationHash: common.Hash(authHashB),
+		agentAddr:    agentAddr,
+		clientAddr:   clientAddr,
+		offeringHash: offeringHash,
+		deposit:      deposit,
 	}, nil
 }
 
 func extractLogOfferingCreated(logger log.Logger,
-	log *data.EthLog) (*logOfferingCreatedInput, error) {
+	log *data.JobEthLog) (*logOfferingCreatedInput, error) {
 	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 
-	dataBytes, err := data.ToBytes(log.Data)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrParseJobData
-	}
-
-	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(dataBytes)
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseJobData
@@ -210,15 +179,15 @@ func extractLogOfferingCreated(logger log.Logger,
 	minDeposit := big.NewInt(0).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingCreatedInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
-		minDeposit:   minDeposit,
-		maxSupply:    curSupply,
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
+		minDeposit:    minDeposit,
+		currentSupply: curSupply,
 	}, nil
 }
 
 func extractLogOfferingPopUp(logger log.Logger,
-	log *data.EthLog) (*logOfferingPopUpInput, error) {
+	log *data.JobEthLog) (*logOfferingPopUpInput, error) {
 	if len(log.Topics) != 3 {
 		return nil, ErrWrongLogTopicsNumber
 	}

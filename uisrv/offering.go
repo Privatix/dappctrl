@@ -288,7 +288,7 @@ func (s *Server) handlePutOfferingStatus(
 		return
 	}
 
-	if err := s.queue.Add(&data.Job{
+	if err := s.queue.Add(nil, &data.Job{
 		Type:        jobType,
 		RelatedType: data.JobOffering,
 		RelatedID:   id,
@@ -360,7 +360,7 @@ func (s *Server) handlePutClientOfferingStatus(
 		s.replyUnexpectedErr(logger, w)
 		return
 	}
-	if err := s.queue.Add(&data.Job{
+	if err := s.queue.Add(nil, &data.Job{
 		Type:        data.JobClientPreChannelCreate,
 		RelatedType: data.JobChannel,
 		RelatedID:   util.NewUUID(),

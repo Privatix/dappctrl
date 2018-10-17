@@ -26,20 +26,20 @@ func TestPreAccountAddBalanceApprove(t *testing.T) {
 		Amount: uint64(transferAmount),
 	})
 
-	env.ethBack.balancePTC = big.NewInt(transferAmount)
-	env.ethBack.balanceEth = big.NewInt(999999)
+	env.ethBack.BalancePTC = big.NewInt(transferAmount)
+	env.ethBack.BalanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
-	env.ethBack.testCalled(t, "PTCIncreaseApproval", agentAddr,
+	env.ethBack.TestCalled(t, "PTCIncreaseApproval", agentAddr,
 		env.gasConf.PTC.Approve,
 		conf.pscAddr,
 		big.NewInt(transferAmount))
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PTCBalanceOf", noCallerAddr, 0,
+	env.ethBack.TestCalled(t, "PTCBalanceOf", noCallerAddr, 0,
 		agentAddr)
 
 	// Test eth transaction was recorded.
@@ -68,11 +68,11 @@ func TestPreAccountAddBalance(t *testing.T) {
 
 	txHash := "d238f7"
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fixture.job.ID
-	ethLog.TxHash = txHash
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			TxHash: txHash,
+		},
+	})
 
 	tx := &data.EthTx{
 		ID:          util.NewUUID(),
@@ -93,7 +93,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
-	env.ethBack.testCalled(t, "PSCAddBalanceERC20", agentAddr,
+	env.ethBack.TestCalled(t, "PSCAddBalanceERC20", agentAddr,
 		env.gasConf.PSC.AddBalanceERC20, big.NewInt(transferAmount))
 
 	// Test eth transaction was recorded.
@@ -117,17 +117,17 @@ func TestPreAccountReturnBalance(t *testing.T) {
 		Amount: uint64(amount),
 	})
 
-	env.ethBack.balancePSC = big.NewInt(amount)
-	env.ethBack.balanceEth = big.NewInt(999999)
+	env.ethBack.BalancePSC = big.NewInt(amount)
+	env.ethBack.BalanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountReturnBalance, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.testCalled(t, "PSCBalanceOf", noCallerAddr, 0, agentAddr)
+	env.ethBack.TestCalled(t, "PSCBalanceOf", noCallerAddr, 0, agentAddr)
 
-	env.ethBack.testCalled(t, "PSCReturnBalanceERC20", agentAddr,
+	env.ethBack.TestCalled(t, "PSCReturnBalanceERC20", agentAddr,
 		env.gasConf.PSC.ReturnBalanceERC20, big.NewInt(amount))
 
 	// Test eth transaction was recorded.
@@ -160,14 +160,20 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 	fixture := env.newTestFixture(t, jobType, data.JobAccount)
 	defer fixture.close()
 
-	env.ethBack.balanceEth = big.NewInt(2)
-	env.ethBack.balancePTC = big.NewInt(100)
-	env.ethBack.balancePSC = big.NewInt(200)
+	env.ethBack.BalanceEth = big.NewInt(2)
+	env.ethBack.BalancePTC = big.NewInt(100)
+	env.ethBack.BalancePSC = big.NewInt(200)
 
 	runJob(t, worker, fixture.job)
 
+	checkBalances(t, env, fixture.Account.ID, 200, 100, 2)
+
+	testCommonErrors(t, worker, *fixture.job)
+}
+
+func checkBalances(t *testing.T, env *workerTest, accID string, psc, ptc, eth uint) {
 	account := &data.Account{}
-	env.findTo(t, account, fixture.Account.ID)
+	env.findTo(t, account, accID)
 	if account.PTCBalance != 100 {
 		t.Fatalf("wrong ptc balance, wanted: %v, got: %v", 100,
 			account.PTCBalance)
@@ -177,13 +183,11 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 			account.PSCBalance)
 	}
 	if strings.TrimSpace(string(account.EthBalance)) !=
-		data.FromBytes(env.ethBack.balanceEth.Bytes()) {
+		data.FromBytes(env.ethBack.BalanceEth.Bytes()) {
 		t.Logf("%v!=%v", string(account.EthBalance),
-			data.FromBytes(env.ethBack.balanceEth.Bytes()))
+			data.FromBytes(env.ethBack.BalanceEth.Bytes()))
 		t.Fatal("wrong eth balance")
 	}
-
-	testCommonErrors(t, worker, *fixture.job)
 }
 
 func testAfterChannelTopUp(t *testing.T, agent bool) {
@@ -214,6 +218,8 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 	clientAddr := data.TestToAddress(t, fixture.Channel.Client)
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
 	topics := data.LogTopics{
+		// First topic is always the event.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,
@@ -222,12 +228,12 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 		t.Fatal(err)
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fixture.job.ID
-	ethLog.Data = data.FromBytes(eventData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			Data:   eventData,
+			Topics: topics,
+		},
+	})
 
 	var job func(*data.Job) error
 

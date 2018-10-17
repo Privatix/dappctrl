@@ -223,7 +223,9 @@ CREATE TABLE offerings (
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)
         CONSTRAINT positive_free_units CHECK (offerings.free_units >= 0),
 
-    additional_params json -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
+    additional_params json, -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
+
+    auto_pop_up bool -- if is true, then allow the offering to automatically pop up.
 );
 
 -- State channels.
@@ -328,22 +330,6 @@ CREATE TABLE eth_txs (
     tx_raw jsonb, -- raw tx as was sent
     related_type related_type NOT NULL, -- name of object that relid point on (offering, channel, endpoint, etc.)
     related_id uuid NOT NULL -- related object (offering, channel, endpoint, etc.)
-);
-
--- Ethereum events.
-CREATE TABLE eth_logs (
-    id uuid PRIMARY KEY,
-    tx_hash tx_hash_hex, -- transaction hash
-    status tx_status NOT NULL, -- tx status (custom)
-    job uuid REFERENCES jobs(id), -- corresponding job id
-    block_number bigint
-        CONSTRAINT positive_block_number CHECK (eth_logs.block_number > 0),
-
-    addr eth_addr NOT NULL, -- address of contract from which this log originated
-    data text NOT NULL, -- contains one or more 32 Bytes non-indexed arguments of the log
-    topics jsonb, -- array of 0 to 4 32 Bytes DATA of indexed log arguments.
-    failures int NOT NULL DEFAULT 0, -- how many times we failed to schedule a job
-    ignore boolean NOT NULL DEFAULT FALSE
 );
 
 -- Log event severity.

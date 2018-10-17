@@ -15,6 +15,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -50,7 +51,7 @@ type Worker struct {
 	db             *reform.DB
 	decryptKeyFunc data.ToPrivateKeyFunc
 	ept            *ept.Service
-	ethBack        EthBackend
+	ethBack        adapter.EthBackend
 	gasConf        *GasConf
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
@@ -60,14 +61,15 @@ type Worker struct {
 	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
+	pscPeriods     *eth.PSCPeriods
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack EthBackend, gasConc *GasConf, pscAddr common.Address,
+	ethBack adapter.EthBackend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
-	eptConf *ept.Config) (*Worker, error) {
+	eptConf *ept.Config, pscPeriods *eth.PSCPeriods) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -91,6 +93,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
+		pscPeriods:     pscPeriods,
 	}, nil
 }
 

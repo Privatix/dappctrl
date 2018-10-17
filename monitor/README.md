@@ -27,21 +27,32 @@ and:
 
 These are the rules for filtering logs on the blockchain:
 
-1. Events for Agent
+For Agents:
+1. all events with agent account address as topic[1]
   * Topics[0]: any
   * Topics[1]: one of accounts with `in_use = true`
-1. Events for Client
+2. all incoming transfers
+  * Topics[0]: Transfer
+  * Topics[2]: one of accounts with `in_use = true`
+
+For Clients:
+1.
   * Topics[0]: one of these hashes
-    * LogChannelCreated
+    * Transfer
     * LogChannelToppedUp
     * LogChannelCloseRequested
-    * LogCooperativeChannelClose
-    * LogUnCooperativeChannelClose
-    * Topics[2]: one of the accounts with `in_use = true`
-1. Offering events
+  * Topics[2]: one of the accounts with `in_use = true`
+2.
   * Topics[0]: one of these hashes
+    * Tranfer
+    * Approval
+  * Topics[1]: one of the accounts with `in_use = true`
+3.
+  * Topics[0]: one of these hashes
+    * LogChannelCreated
     * LogOfferingCreated
     * LogOfferingDeleted
     * LogOfferingPopedUp
-  * Topics[1]: not one of the accounts with `in_use = true`
-  * Topics[2]: one of the accounts with `in_use = true`
+    * LogCooperativeChannelClose
+    * LogUnCooperativeChannelClose
+ 

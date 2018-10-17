@@ -45,31 +45,29 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.updateInTestDB(t, fixture.Channel)
 
 	auth := bind.NewKeyedTransactor(key)
-	env.ethBack.setTransaction(t, auth, nil)
+	env.ethBack.SetTransaction(t, auth, nil)
 
 	// Create related eth log record.
 	var deposit int64 = 100
-	logData, err := logChannelCreatedDataArguments.Pack(
-		big.NewInt(deposit),
-		common.HexToHash("0x12312"))
+	logData, err := logChannelCreatedDataArguments.Pack(big.NewInt(deposit))
 	if err != nil {
 		t.Fatal(err)
 	}
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 	topics := data.LogTopics{
-		// Don't know what the first topic is, but it appears in real logs.
+		// First topic is always the event.
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		common.BytesToHash(clientAddr.Bytes()),
 		data.TestToHash(t, fixture.Offering.Hash),
 	}
-	ethLog := data.NewTestEthLog()
-	ethLog.TxHash = data.HexFromBytes(env.ethBack.tx.Hash().Bytes())
-	ethLog.JobID = &fixture.job.ID
-	ethLog.Data = data.FromBytes(logData)
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	setJobData(t, db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			TxHash: data.HexFromBytes(env.ethBack.Tx.Hash().Bytes()),
+			Data:   logData,
+			Topics: topics,
+		},
+	})
 
 	runJob(t, env.worker.AgentAfterChannelCreate, fixture.job)
 
@@ -145,8 +143,10 @@ func TestAgentAfterUncooperativeCloseRequest(t *testing.T) {
 		fxt.Channel.ServiceStatus = svcStatus
 		fxt.Channel.ReceiptBalance = balance
 		env.updateInTestDB(t, fxt.Channel)
+
 		runJob(t, env.worker.AgentAfterUncooperativeCloseRequest,
 			fxt.job)
+
 		testChannelStatusChanged(t, fxt.job, env,
 			data.ChannelInChallenge)
 	}
@@ -267,7 +267,7 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 	testCommonErrors(t, env.worker.AgentPreServiceUnsuspend, *fixture.job)
 }
 
-func TestAgentPreServiceTerminate(t *testing.T) {
+func testAgentPreServiceTerminate(t *testing.T, receiptBalance uint64) {
 	// svc_status="Terminated"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreServiceTerminate,
@@ -275,13 +275,23 @@ func TestAgentPreServiceTerminate(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	fixture.Channel.ReceiptBalance = receiptBalance
+	env.updateInTestDB(t, fixture.Channel)
+
 	runJob(t, env.worker.AgentPreServiceTerminate, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
 
-	testCooperativeCloseCalled(t, env, fixture)
+	if receiptBalance > 0 {
+		testCooperativeCloseCalled(t, env, fixture)
+	}
 
 	testCommonErrors(t, env.worker.AgentPreServiceTerminate, *fixture.job)
+}
+
+func TestAgentPreServiceTerminate(t *testing.T) {
+	testAgentPreServiceTerminate(t, 0)
+	testAgentPreServiceTerminate(t, 1)
 }
 
 func testCooperativeCloseCalled(t *testing.T, env *workerTest,
@@ -313,7 +323,7 @@ func testCooperativeCloseCalled(t *testing.T, env *workerTest,
 		t.Fatal(err)
 	}
 
-	env.ethBack.testCalled(t, "CooperativeClose", agentAddr,
+	env.ethBack.TestCalled(t, "CooperativeClose", agentAddr,
 		env.gasConf.PSC.CooperativeClose, agentAddr,
 		uint32(fixture.Channel.Block),
 		[common.HashLength]byte(offeringHash), balance,
@@ -480,9 +490,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	minDeposit := fixture.Offering.MinUnits*fixture.Offering.UnitPrice +
 		fixture.Offering.SetupPrice
 
-	env.ethBack.balancePSC = new(big.Int).SetUint64(minDeposit*
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit*
 		uint64(fixture.Offering.Supply) + 1)
-	env.ethBack.balanceEth = big.NewInt(99999)
+	env.ethBack.BalanceEth = big.NewInt(99999)
 
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
 
@@ -498,7 +508,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	offeringHash := data.TestToHash(t, offering.Hash)
 
-	env.ethBack.testCalled(t, "RegisterServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply)
@@ -598,7 +608,7 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobAgentAfterOfferingDelete, data.JobOffering)
-	defer fxt.Close()
+	defer fxt.close()
 
 	runJob(t, env.worker.AgentAfterOfferingDelete, fxt.job)
 
@@ -633,6 +643,17 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 	fxt.Offering.OfferStatus = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
+	env.ethBack.OfferingIsActive = true
+	conf.Eth.Contract.Periods.Remove = 10
+	env.ethBack.OfferUpdateBlockNumber = 10
+	env.ethBack.BlockNumber = big.NewInt(10)
+
+	err := env.worker.AgentPreOfferingDelete(fxt.job)
+	if err != ErrOfferingDeletePeriodIsNotOver {
+		t.Fatal("must check offering delete period")
+	}
+
+	env.ethBack.BlockNumber = big.NewInt(100)
 	runJob(t, env.worker.AgentPreOfferingDelete, fxt.job)
 
 	// Test transaction was recorded.
@@ -640,7 +661,7 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
-	env.ethBack.testCalled(t, "RemoveServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "RemoveServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.RemoveServiceOffering,
 		[common.HashLength]byte(offeringHash))
 
@@ -689,17 +710,17 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 		t.Fatal("offering is active")
 	}
 
-	env.ethBack.offeringIsActive = true
-	env.ethBack.challengePeriod = 300
-	env.ethBack.offerUpdateBlockNumber = 5
+	env.ethBack.OfferingIsActive = true
+	conf.Eth.Contract.Periods.PopUp = 3
+	env.ethBack.OfferUpdateBlockNumber = 3
+	env.ethBack.BlockNumber = big.NewInt(4)
 
 	if err := env.worker.AgentPreOfferingPopUp(
-		fxt.job); err != ErrPopUpOfferingTryAgain {
+		fxt.job); err != ErrPopUpPeriodIsNotOver {
 		t.Fatal("period of challenge has expired")
 	}
 
-	env.ethBack.blockNumber = big.NewInt(1000)
-
+	env.ethBack.BlockNumber = big.NewInt(7)
 	runJob(t, env.worker.AgentPreOfferingPopUp, fxt.job)
 
 	// Test transaction was recorded.
@@ -707,7 +728,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 
 	agentAddr := data.TestToAddress(t, fxt.Offering.Agent)
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
-	env.ethBack.testCalled(t, "PopupServiceOffering", agentAddr,
+	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash))
 
@@ -731,26 +752,28 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
-	clientAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 
 	topics := data.LogTopics{
+		// First topic is always the event.
+		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
-		common.BytesToHash(clientAddr.Bytes()),
 		offeringHash,
 	}
 
-	ethLog := data.NewTestEthLog()
-	ethLog.JobID = &fxt.job.ID
-	ethLog.Topics = topics
-	env.insertToTestDB(t, ethLog)
-	defer env.deleteFromTestDB(t, ethLog)
+	ethLog := &data.JobEthLog{
+		Topics: topics,
+		Block:  12345,
+	}
+	setJobData(t, db, fxt.job, &data.JobData{
+		EthLog: ethLog,
+	})
 
 	runJob(t, env.worker.AgentAfterOfferingPopUp, fxt.job)
 
 	offering := data.Offering{}
 	env.findTo(t, &offering, fxt.Offering.ID)
 
-	if offering.BlockNumberUpdated != ethLog.BlockNumber {
+	if offering.BlockNumberUpdated != ethLog.Block {
 		t.Fatal("offering block number was not updated")
 	}
 

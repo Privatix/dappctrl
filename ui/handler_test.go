@@ -16,6 +16,20 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
+var (
+	conf struct {
+		DB        *data.DBConfig
+		StderrLog *log.WriterConfig
+		Job       *job.Config
+		UI        *ui.Config
+	}
+	logger log.Logger
+
+	db      *reform.DB
+	handler *ui.Handler
+	client  *rpc.Client
+)
+
 type fixture struct {
 	*data.TestFixture
 	hash *data.Setting
@@ -73,26 +87,17 @@ func subscribe(client *rpc.Client, channel interface{}, method string,
 		"ui", channel, append([]interface{}{method}, args...)...)
 }
 
-var db *reform.DB
-var handler *ui.Handler
-var client *rpc.Client
-
 func TestMain(m *testing.M) {
-	var conf struct {
-		DB      *data.DBConfig
-		FileLog *log.FileConfig
-		Job     *job.Config
-		UI      *ui.Config
-	}
+	var err error
 
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	util.ReadTestConfig(&conf)
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err := log.NewStderrLogger(conf.FileLog)
+	logger, err = log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err.Error())
 	}

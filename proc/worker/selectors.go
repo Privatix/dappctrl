@@ -2,6 +2,7 @@ package worker
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -77,14 +78,14 @@ func (w *Worker) relatedAccount(logger log.Logger, job *data.Job,
 	return rec, err
 }
 
-func (w *Worker) ethLog(logger log.Logger, job *data.Job) (*data.EthLog, error) {
-	log := &data.EthLog{}
-	err := data.FindOneTo(w.db.Querier, log, "job", job.ID)
+func (w *Worker) ethLog(logger log.Logger, job *data.Job) (*data.JobEthLog, error) {
+	jdata := &data.JobData{}
+	err := json.Unmarshal(job.Data, jdata)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrEthLogNotFound
 	}
-	return log, nil
+	return jdata.EthLog, nil
 }
 
 func (w *Worker) channel(logger log.Logger, pk string) (*data.Channel, error) {

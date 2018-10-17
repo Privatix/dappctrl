@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -176,8 +177,9 @@ func TestImportAccountFromHex(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
@@ -204,8 +206,9 @@ func TestImportAccountFromJSON(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
@@ -232,8 +235,9 @@ func TestTransferTokens(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
@@ -325,8 +329,9 @@ func TestUpdateBalance(t *testing.T) {
 	defer fxt.close()
 
 	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, j2 *data.Job,
-		relatedIDs []string, subID string, subFunc job.SubFunc) error {
+	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
 		switch method {
 		case job.MockAdd:
 			j = j2
@@ -346,5 +351,47 @@ func TestUpdateBalance(t *testing.T) {
 		j.RelatedID != fxt.Account.ID ||
 		j.Type != data.JobAccountUpdateBalances {
 		t.Fatalf("wrong result job")
+	}
+}
+
+func TestUpdateAccount(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "UpdateAccount")
+	defer fxt.close()
+
+	res := handler.UpdateAccount(
+		"wrong-password", fxt.Account.ID, "", false, false)
+	assertMatchErr(ui.ErrAccessDenied, res)
+
+	oldName := fxt.Account.Name
+	newName := util.NewUUID()[:30]
+
+	type testStruct struct {
+		name      string
+		expName   string
+		isDefault bool
+		inUse     bool
+	}
+
+	testData := []*testStruct{
+		{"", oldName, false, false},
+		{newName, newName, true, true},
+	}
+
+	for _, td := range testData {
+		res = handler.UpdateAccount(data.TestPassword,
+			fxt.Account.ID, td.name, td.isDefault, td.inUse)
+		assertMatchErr(nil, res)
+
+		db.Reload(fxt.Account)
+
+		if fxt.Account.Name != td.expName {
+			t.Fatalf("expected account name: %s, got: %s",
+				td.expName, fxt.Account.Name)
+		}
+
+		if fxt.Account.InUse != td.inUse ||
+			fxt.Account.IsDefault != td.isDefault {
+			t.Fatal("failed to update account status")
+		}
 	}
 }

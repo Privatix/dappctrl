@@ -157,7 +157,7 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 	}
 
 	if updateBalances {
-		err = job.AddSimple(h.queue, data.JobAccountUpdateBalances,
+		err = job.AddSimple(h.queue, nil, data.JobAccountUpdateBalances,
 			data.JobAccount, account.ID, data.JobUser)
 		if err != nil {
 			logger.Error(err.Error())
@@ -275,7 +275,7 @@ func (h *Handler) TransferTokens(
 		GasPrice: gasPrice,
 	}
 
-	err = job.AddWithData(h.queue, jobType,
+	err = job.AddWithData(h.queue, nil, jobType,
 		data.JobAccount, account, data.JobUser, jobData)
 	if err != nil {
 		logger.Error(err.Error())
@@ -300,7 +300,7 @@ func (h *Handler) UpdateBalance(password, account string) error {
 		return err
 	}
 
-	err = job.AddSimple(h.queue, data.JobAccountUpdateBalances,
+	err = job.AddSimple(h.queue, nil, data.JobAccountUpdateBalances,
 		data.JobAccount, account, data.JobUser)
 	if err != nil {
 		logger.Error(err.Error())
@@ -308,4 +308,31 @@ func (h *Handler) UpdateBalance(password, account string) error {
 	}
 
 	return nil
+}
+
+// UpdateAccount updates an account.
+func (h *Handler) UpdateAccount(password, account, name string,
+	isDefault, inUse bool) error {
+	logger := h.logger.Add("method", "UpdateAccount",
+		"account", account)
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return err
+	}
+
+	acc := data.Account{}
+	err := h.findByPrimaryKey(
+		logger, ErrAccountNotFound, &acc, account)
+	if err != nil {
+		return err
+	}
+
+	if name != "" {
+		acc.Name = name
+	}
+
+	acc.IsDefault = isDefault
+	acc.InUse = inUse
+
+	return update(logger, h.db.Querier, &acc)
 }

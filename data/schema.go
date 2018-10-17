@@ -20,7 +20,7 @@ type Account struct {
 	InUse            bool       `json:"inUse" reform:"in_use"`
 	Name             string     `json:"name" reform:"name"`
 	PTCBalance       uint64     `json:"ptcBalance" reform:"ptc_balance"`
-	PSCBalance       uint64     `json:"psc_balance" reform:"psc_balance"`
+	PSCBalance       uint64     `json:"pscBalance" reform:"psc_balance"`
 	EthBalance       B64BigInt  `json:"ethBalance" reform:"eth_balance"`
 	LastBalanceCheck *time.Time `json:"lastBalanceCheck" reform:"last_balance_check"`
 }
@@ -113,7 +113,7 @@ const (
 //reform:offerings
 type Offering struct {
 	ID                 string          `json:"id" reform:"id,pk"`
-	IsLocal            bool            `json:"is_local" reform:"is_local"`
+	IsLocal            bool            `json:"isLocal" reform:"is_local"`
 	Template           string          `json:"template" reform:"tpl" validate:"required"`    // Offering's.
 	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
 	Hash               string          `json:"hash" reform:"hash"`                           // Offering's hash.
@@ -140,6 +140,7 @@ type Offering struct {
 	MaxInactiveTimeSec *uint64         `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
 	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
+	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
 }
 
 // State channel statuses.
@@ -341,6 +342,17 @@ const (
 	JobIncrementCurrentSupply               = "incrementCurrentSupply"
 )
 
+type JobEthLog struct {
+	Block  uint64    `json:"block"`
+	Data   []byte    `json:"data"`
+	Topics LogTopics `json:"topics"`
+	TxHash string    `json:"transactionHash"`
+}
+
+type JobData struct {
+	EthLog *JobEthLog `json:"ethereumLog"`
+}
+
 // JobBalanceData is a data required for transfer jobs.
 type JobBalanceData struct {
 	GasPrice uint64
@@ -390,21 +402,6 @@ type EthTx struct {
 	TxRaw       []byte    `reform:"tx_raw" json:"txRaw"`
 	RelatedType string    `reform:"related_type" json:"relatedType"`
 	RelatedID   string    `reform:"related_id" json:"relatedID"`
-}
-
-// EthLog is an ethereum log entry.
-//reform:eth_logs
-type EthLog struct {
-	ID          string    `reform:"id,pk"`
-	TxHash      string    `reform:"tx_hash"`
-	TxStatus    string    `reform:"status"`
-	JobID       *string   `reform:"job"`
-	BlockNumber uint64    `reform:"block_number"`
-	Addr        string    `reform:"addr"`
-	Data        string    `reform:"data"`
-	Topics      LogTopics `reform:"topics"`
-	Failures    uint64    `reform:"failures"`
-	Ignore      bool      `reform:"ignore"`
 }
 
 // LogEvent is a log event.

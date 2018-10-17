@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	reform "gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -84,7 +85,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
 		Offering:      offering.ID,
-		Block:         uint32(ethLog.BlockNumber),
+		Block:         uint32(ethLog.Block),
 	}
 
 	if err := tx.Insert(channel); err != nil {
@@ -92,12 +93,17 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("unable to commit changes: %v", err)
+	if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgCreate,
+		data.JobChannel, channel.ID); err != nil {
+		return err
 	}
 
-	return w.addJob(logger, data.JobAgentPreEndpointMsgCreate,
-		data.JobChannel, channel.ID)
+	if err := tx.Commit(); err != nil {
+		logger.Error("unable to commit changes: " + err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }
 
 // AgentAfterChannelTopUp updates deposit of a channel.
@@ -135,7 +141,8 @@ func (w *Worker) AgentAfterUncooperativeCloseRequest(job *data.Job) error {
 	return nil
 }
 
-func (w *Worker) incrementCurrentSupply(logger log.Logger, pk string) error {
+func (w *Worker) incrementCurrentSupply(logger log.Logger,
+	db *reform.Querier, pk string) error {
 	offering, err := w.offering(logger, pk)
 	if err != nil {
 		logger.Error(err.Error())
@@ -143,7 +150,7 @@ func (w *Worker) incrementCurrentSupply(logger log.Logger, pk string) error {
 	}
 
 	offering.CurrentSupply++
-	if err := w.db.Update(offering); err != nil {
+	if err := db.Update(offering); err != nil {
 		logger.Add("offering", offering).Error(err.Error())
 		return ErrInternal
 	}
@@ -177,7 +184,8 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
+	if err := w.incrementCurrentSupply(logger,
+		w.db.Querier, channel.Offering); err != nil {
 		return err
 	}
 
@@ -186,7 +194,7 @@ func (w *Worker) AgentAfterUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger,
+	return w.addJob(logger, nil,
 		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
@@ -200,23 +208,26 @@ func (w *Worker) AgentAfterCooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	channel.ChannelStatus = data.ChannelClosedCoop
-	if err := w.db.Update(channel); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
+	return w.db.InTransaction(func(tx *reform.TX) error {
+		channel.ChannelStatus = data.ChannelClosedCoop
+		if err := tx.Update(channel); err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 
-	if err := w.incrementCurrentSupply(logger, channel.Offering); err != nil {
-		return err
-	}
+		if err := w.incrementCurrentSupply(logger, tx.Querier,
+			channel.Offering); err != nil {
+			return err
+		}
 
-	agent, err := w.account(logger, channel.Agent)
-	if err != nil {
-		return err
-	}
+		agent, err := w.account(logger, channel.Agent)
+		if err != nil {
+			return err
+		}
 
-	return w.addJob(logger,
-		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+		return w.addJob(logger, tx,
+			data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+	})
 }
 
 // AgentPreServiceSuspend marks service as suspended.
@@ -243,6 +254,11 @@ func (w *Worker) AgentPreServiceTerminate(job *data.Job) error {
 	if err != nil {
 		return err
 	}
+
+	if channel.ReceiptBalance == 0 {
+		return nil
+	}
+
 	return w.agentCooperativeClose(logger, job, channel)
 }
 
@@ -465,14 +481,19 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
+	if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgSOMCPublish,
+		data.JobEndpoint, newEndpoint.ID); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	if err = tx.Commit(); err != nil {
 		logger.Error(err.Error())
 		tx.Rollback()
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentPreEndpointMsgSOMCPublish,
-		data.JobEndpoint, newEndpoint.ID)
+	return nil
 }
 
 // AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
@@ -509,7 +530,7 @@ func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentAfterEndpointMsgSOMCPublish,
+	return w.addJob(logger, nil, data.JobAgentAfterEndpointMsgSOMCPublish,
 		data.JobChannel, endpoint.Channel)
 }
 
@@ -634,8 +655,9 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.saveEthTX(logger, job, tx, "RegisterServiceOffering", job.RelatedType,
-		job.RelatedID, agent.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
+	return w.saveEthTX(logger, job, tx, "RegisterServiceOffering",
+		job.RelatedType, job.RelatedID, agent.EthAddr,
+		data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AgentAfterOfferingMsgBCPublish updates offering status and creates
@@ -656,7 +678,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return w.addJob(logger, data.JobAgentPreOfferingMsgSOMCPublish,
+	return w.addJob(logger, nil, data.JobAgentPreOfferingMsgSOMCPublish,
 		data.JobOffering, offering.ID)
 }
 
@@ -694,7 +716,8 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 		return err
 	}
 
-	return w.addJob(logger, data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
+	return w.addJob(logger, nil,
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterOfferingDelete set offering status to `remove`
@@ -734,6 +757,10 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
+	if err := w.checkOfferingDelete(logger, offeringHash); err != nil {
+		return err
+	}
+
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
@@ -746,7 +773,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 	}
 
 	offering.OfferStatus = data.OfferRemoving
-	if err := w.saveRecord(logger, offering); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier,
+		offering); err != nil {
 		return err
 	}
 
@@ -783,21 +811,9 @@ func (w *Worker) agentOfferingPopUpFindRelatedJobs(
 
 func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 	hash common.Hash) error {
-	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
-		&bind.CallOpts{}, hash)
+	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
 	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	if !active {
-		return ErrOfferingNotActive
-	}
-
-	period, err := w.ethBack.PSCGetPopUpPeriod(&bind.CallOpts{})
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
+		return err
 	}
 
 	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
@@ -806,11 +822,48 @@ func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 		return ErrInternal
 	}
 
-	if uint64(updateBlockNumber+period) > lastBlock.Uint64() {
-		return ErrPopUpOfferingTryAgain
+	if uint64(updateBlockNumber+w.pscPeriods.PopUp) > lastBlock.Uint64() {
+		return ErrPopUpPeriodIsNotOver
 	}
 
 	return nil
+}
+
+func (w *Worker) checkOfferingDelete(logger log.Logger,
+	hash common.Hash) error {
+	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
+	if err != nil {
+		return err
+	}
+
+	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	if uint64(updateBlockNumber+w.pscPeriods.Remove) > lastBlock.Uint64() {
+		return ErrOfferingDeletePeriodIsNotOver
+	}
+
+	return nil
+}
+
+func (w *Worker) getOfferingBlockNumber(logger log.Logger,
+	hash common.Hash) (uint32, error) {
+
+	_, _, _, _, updateBlockNumber, active, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return 0, ErrInternal
+	}
+
+	if !active {
+		return 0, ErrOfferingNotActive
+	}
+
+	return updateBlockNumber, err
 }
 
 // AgentPreOfferingPopUp pop ups an offering.
@@ -825,7 +878,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	logger = logger.Add("offering", offering.ID)
 
 	if offering.OfferStatus != data.OfferRegistered &&
-		offering.Status != data.OfferPoppedUp {
+		offering.OfferStatus != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 
@@ -867,7 +920,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	}
 
 	offering.OfferStatus = data.OfferPoppingUp
-	if err := w.saveRecord(logger, offering); err != nil {
+	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
 		return err
 	}
 
@@ -901,8 +954,8 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 		return ErrInternal
 	}
 
-	offering.BlockNumberUpdated = ethLog.BlockNumber
+	offering.BlockNumberUpdated = ethLog.Block
 	offering.OfferStatus = data.OfferPoppedUp
 
-	return w.saveRecord(logger, &offering)
+	return w.saveRecord(logger, w.db.Querier, &offering)
 }

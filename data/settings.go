@@ -9,14 +9,15 @@ import (
 
 // Setting keys.
 const (
-	SettingEthChallengePeriod = "eth.challenge.period"
+	SettingAppVersion         = "system.version.app"
+	SettingBlockLimit         = "eth.event.blocklimit"
+	SettingDefaultGasPrice    = "eth.default.gasprice"
+	SettingFreshBlocks        = "eth.event.freshblocks"
+	SettingOfferingAutoPopUp  = "offering.autopopup"
+	SettingLastProcessedBlock = "eth.event.lastProcessedBlock"
+	SettingMinConfirmations   = "eth.min.confirmations"
 	SettingPasswordHash       = "system.password"
 	SettingPasswordSalt       = "system.salt"
-	SettingAppVersion         = "system.version.app"
-	SettingDefaultGasPrice    = "eth.default.gasprice"
-	SettingMinConfirmations   = "eth.min.confirmations"
-	SettingFreshBlocks        = "eth.event.freshblocks"
-	SettingBlockLimit         = "eth.event.blocklimit"
 )
 
 // ReadSetting reads value of a given setting.
@@ -46,4 +47,19 @@ func ReadUintSetting(db *reform.Querier, key string) (uint, error) {
 	}
 
 	return uint(val2), nil
+}
+
+// ReadBoolSetting reads value of a given bool setting.
+func ReadBoolSetting(db *reform.Querier, key string) (bool, error) {
+	val, err := ReadSetting(db, key)
+	if err != nil {
+		return false, err
+	}
+
+	val2, err := strconv.ParseBool(val)
+	if err != nil {
+		return false, newSettingParseError(key, err)
+	}
+
+	return bool(val2), nil
 }

@@ -28,7 +28,7 @@ func (h *Handler) GetSettings(
 
 	for _, v := range settings {
 		setting := *v.(*data.Setting)
-		result[setting.Name] = setting.Value
+		result[setting.Key] = setting.Value
 	}
 
 	return result, err

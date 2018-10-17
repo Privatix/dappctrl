@@ -1,15 +1,13 @@
-// +build !noclientsvcruntest
-
 package svcrun
 
 import (
 	"os"
-	"os/exec"
 	"testing"
 	"time"
 
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/svcrun/exec"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
@@ -20,7 +18,7 @@ import (
 var (
 	conf struct {
 		DB            *data.DBConfig
-		FileLog       *log.FileConfig
+		StderrLog     *log.WriterConfig
 		Log           *util.LogConfig
 		Job           *job.Config
 		Proc          *proc.Config
@@ -55,9 +53,9 @@ func newTestServiceRunner() *serviceRunner {
 	runner := NewServiceRunner(
 		conf.ServiceRunner, logger, db, pr).(*serviceRunner)
 
-	runner.newCmd = func(
-		name string, args []string, channel string) *exec.Cmd {
-		return exec.Command(name, args...)
+	runner.startProc = func(name string, args []string,
+		channel string) (*exec.Process, error) {
+		return exec.StartProcess(name, args...)
 	}
 
 	return runner
@@ -150,13 +148,13 @@ func TestStopAll(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.Job = job.NewConfig()
 	conf.Proc = proc.NewConfig()
 	conf.ServiceRunner = NewConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

@@ -8,10 +8,8 @@
         "EthCallTimeout": 5
     },
     "BlockMonitor": {
-        "CollectPause": 6,
-        "SchedulePause": 6,
-        "CollectTimeout": 60,
-        "ScheduleTimeout": 60
+        "QueryPause": 6,
+        "EthCallTimeout": 60
     },
     "ClientMonitor": {
         "CollectPeriod": 5000,
@@ -42,10 +40,15 @@
     "Eth": {
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0xaef4e0f2924864cbab778cee08d469501f23e47f"
+            "PSCAddrHex": "0x67c3ce713b1c40b2364360d37a15eddbc5aa9420",
+            "Periods": {
+                "PopUp": 10,
+                "Challenge": 20,
+                "Remove": 5
+            }
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
-        "Timeout": 60,
+        "Timeout": 120,
         "HttpClient": {
             "DialTimeout": 10,
             "TLSHandshakeTimeout": 5,
@@ -59,7 +62,9 @@
         "Level": "info",
         "StackLevel": "error",
         "Prefix": "",
-        "UTC": false
+        "UTC": false,
+        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
+        "FileMode": 420
     },
     "Gas": {
         "PTC": {
@@ -175,8 +180,17 @@
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
+            },
+            "agentPreOfferingPopUp": {
+                "Duplicated": true
+            },
+            "agentAfterOfferingPopUp": {
+                "Duplicated": true
             }
         }
+    },
+    "Looper": {
+        "AutoOfferingPopUpTimeout": 3600
     },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {

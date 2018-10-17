@@ -27,7 +27,7 @@ var (
 	conf struct {
 		DB                *data.DBConfig
 		Log               *util.LogConfig
-		FileLog           *log.FileConfig
+		StderrLog         *log.WriterConfig
 		SessionServer     *sesssrv.Config
 		SessionServerTest *testSessSrvConfig
 		VPNMonitor        *mon.Config
@@ -48,13 +48,13 @@ type testSessSrv struct {
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Log = util.NewLogConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.SessionServer = sesssrv.NewConfig()
 	conf.SessionServerTest = newSessSrvTestConfig()
 
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +131,7 @@ func TestClientConfig(t *testing.T) {
 	adapterConfig.Server.Password = data.TestPassword
 	adapterConfig.OpenVPN.ConfigRoot = rootDir
 	adapterConfig.Monitor = conf.VPNMonitor
-	adapterConfig.FileLog = conf.FileLog
+	adapterConfig.FileLog.WriterConfig = conf.StderrLog
 
 	if err := ClientConfig(logger, fxt.Channel.ID,
 		adapterConfig); err != nil {

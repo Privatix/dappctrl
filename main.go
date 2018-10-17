@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
@@ -24,7 +26,9 @@ import (
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/proc/handlers"
+	"github.com/privatix/dappctrl/proc/looper"
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/report/bugsnag"
 	rlog "github.com/privatix/dappctrl/report/log"
@@ -68,6 +72,7 @@ type config struct {
 	StaticPasword string
 	UI            *ui.Config
 	Country       *country.Config
+	Looper        *looper.Config
 }
 
 func newConfig() *config {
@@ -90,6 +95,7 @@ func newConfig() *config {
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
 		Country:       country.NewConfig(),
+		Looper:        looper.NewConfig(),
 	}
 }
 
@@ -116,20 +122,12 @@ func getPWDStorage(conf *config) data.PWDGetSetter {
 }
 
 func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
-	elog, err := log.NewStderrLogger(conf.FileLog)
+	elog, err := log.NewStderrLogger(conf.FileLog.WriterConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	name := fmt.Sprintf(
-		"/var/log/dappctrl-%s.log", time.Now().Format("2006-01-02"))
-	file, err := os.OpenFile(
-		name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	flog, err := log.NewFileLogger(conf.FileLog, file)
+	flog, closer, err := log.NewFileLogger(conf.FileLog)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -155,7 +153,7 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 	blog2.Reporter(reporter)
 	blog2.Logger(logger)
 
-	return logger, file, nil
+	return logger, closer, nil
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
@@ -172,6 +170,34 @@ func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
 	}
 
 	return server, nil
+}
+
+func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
+	logger log.Logger, db *reform.DB, queue job.Queue,
+	ethBack adapter.EthBackend) error {
+	var timeout time.Duration
+	if cfg.AutoOfferingPopUpTimeout != 0 {
+		timeout = time.Second *
+			time.Duration(cfg.AutoOfferingPopUpTimeout)
+	} else {
+		timeout = time.Duration(period) * looper.BlockTime / 2
+
+	}
+
+	serviceContractABI, err := abi.JSON(strings.NewReader(
+		contract.PrivatixServiceContractABI))
+	if err != nil {
+		return err
+	}
+
+	autoPopUpOfferingFunc := func() []*data.Job {
+		return looper.AutoOfferingPopUp(logger, serviceContractABI,
+			db, ethBack, time.Now, period)
+	}
+
+	looper.Loop(ctx, logger, db, queue, timeout, autoPopUpOfferingFunc)
+
+	return err
 }
 
 func main() {
@@ -227,10 +253,13 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
+	ethBack := adapter.NewEthBackend(
+		psc, ptc, ethClient.EthClient(), conf.Eth.Timeout)
+
 	worker, err := worker.NewWorker(logger, db, somcConn,
-		worker.NewEthBackend(psc, ptc, ethClient.EthClient(),
-			conf.Eth.Timeout), conf.Gas, pscAddr, conf.PayAddress,
-		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg)
+		ethBack, conf.Gas, pscAddr, conf.PayAddress,
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -246,15 +275,13 @@ func main() {
 	defer runner.StopAll()
 	worker.SetRunner(runner)
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, logger, db, queue,
-		conf.Eth, pscAddr, ptcAddr, ethClient.EthClient(),
-		conf.Role, ethClient.CloseIdleConnections)
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethClient.EthClient(),
+		ethClient.CloseIdleConnections, db, logger, pscAddr, ptcAddr,
+		conf.Role, queue)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-	if err := mon.Start(); err != nil {
-		logger.Fatal(err.Error())
-	}
+	mon.Start()
 	defer mon.Stop()
 
 	go func() {
@@ -291,6 +318,16 @@ func main() {
 	defer sess.Close()
 
 	if conf.Role == data.RoleAgent {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		err = startAutoPopUpLoop(ctx, conf.Looper,
+			conf.Eth.Contract.Periods.PopUp,
+			logger, db, queue, ethBack)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+
 		paySrv := pay.NewServer(conf.PayServer, logger, db)
 		go func() {
 			fatal <- paySrv.ListenAndServe()

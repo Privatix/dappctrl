@@ -21,7 +21,7 @@ import (
 var (
 	conf struct {
 		DB                *data.DBConfig
-		FileLog           *log.FileConfig
+		StderrLog         *log.WriterConfig
 		SessionServer     *Config
 		SessionServerTest *testConfig
 	}
@@ -107,12 +107,12 @@ func newTestCountryConfig(field, url string) *country.Config {
 
 func testMain(m *testing.M) int {
 	conf.DB = data.NewDBConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.SessionServer = NewConfig()
 	conf.SessionServerTest = newTestConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

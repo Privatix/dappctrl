@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestGetLastBlockNumber(t *testing.T) {
 	assertBlockNumber := func(exp uint64, act *uint64, err error) {
 		assertErrEquals(nil, err)
 		if act == nil || exp != *act {
-			t.Fatalf("wrong result, wanted: %v, got: %v", exp, act)
+			t.Fatalf("wrong result, wanted: %v, got: %v", exp, *act)
 		}
 	}
 
@@ -41,12 +42,24 @@ func TestGetLastBlockNumber(t *testing.T) {
 	// Populate db with test records.
 	maxBlockStored := uint64(100)
 
-	log1 := data.NewTestEthLog()
-	log1.BlockNumber = maxBlockStored - 1
-	log2 := data.NewTestEthLog()
-	log2.BlockNumber = maxBlockStored
-	data.InsertToTestDB(t, db, log1, log2)
-	defer data.DeleteFromTestDB(t, db, log1, log2)
+	job1 := data.NewTestJob(data.JobClientPreChannelCreate,
+		data.JobBCMonitor, data.JobAccount)
+	job1.RelatedID = fxt.Account.ID
+	job1.Data, _ = json.Marshal(&data.JobData{
+		EthLog: &data.JobEthLog{
+			Block: maxBlockStored - 1,
+		},
+	})
+	job2 := data.NewTestJob(data.JobClientPreChannelCreate,
+		data.JobBCMonitor, data.JobAccount)
+	job2.RelatedID = fxt.Account.ID
+	job2.Data, _ = json.Marshal(&data.JobData{
+		EthLog: &data.JobEthLog{
+			Block: maxBlockStored,
+		},
+	})
+	data.InsertToTestDB(t, db, job1, job2)
+	defer data.DeleteFromTestDB(t, db, job2, job1)
 
 	ret, err = handler.GetLastBlockNumber(data.TestPassword)
 	assertBlockNumber(maxBlockStored+minConfVal, ret, err)

@@ -27,7 +27,7 @@ var (
 		ClientBilling *Config
 		DB            *data.DBConfig
 		Job           *job.Config
-		FileLog       *log.FileConfig
+		StderrLog     *log.WriterConfig
 		Proc          *proc.Config
 		TestTimeout   uint64
 	}
@@ -222,12 +222,12 @@ func TestPayment(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
-	conf.FileLog = log.NewFileConfig()
+	conf.StderrLog = log.NewWriterConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
 
-	l, err := log.NewStderrLogger(conf.FileLog)
+	l, err := log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}

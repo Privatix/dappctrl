@@ -24,6 +24,7 @@ import (
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -40,7 +41,7 @@ type testConfig struct {
 	Eth       *eth.Config
 	Job       *job.Config
 	Log       *util.LogConfig
-	FileLog   *log.FileConfig
+	StderrLog *log.WriterConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
 	SOMCTest  *somc.TestConfig
@@ -50,22 +51,22 @@ type testConfig struct {
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		DB:       data.NewDBConfig(),
-		EptMsg:   ept.NewConfig(),
-		Eth:      eth.NewConfig(),
-		Job:      job.NewConfig(),
-		Log:      util.NewLogConfig(),
-		FileLog:  log.NewFileConfig(),
-		SOMC:     somc.NewConfig(),
-		SOMCTest: somc.NewTestConfig(),
-		pscAddr:  common.HexToAddress("0x1"),
-		Country:  country.NewConfig(),
+		DB:        data.NewDBConfig(),
+		EptMsg:    ept.NewConfig(),
+		Eth:       eth.NewConfig(),
+		Job:       job.NewConfig(),
+		Log:       util.NewLogConfig(),
+		StderrLog: log.NewWriterConfig(),
+		SOMC:      somc.NewConfig(),
+		SOMCTest:  somc.NewTestConfig(),
+		pscAddr:   common.HexToAddress("0x1"),
+		Country:   country.NewConfig(),
 	}
 }
 
 type workerTest struct {
 	db       *reform.DB
-	ethBack  *testEthBackend
+	ethBack  *adapter.TestEthBackend
 	fakeSOMC *somc.FakeSOMC
 	somcConn *somc.Conn
 	worker   *Worker
@@ -90,14 +91,15 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
-	ethBack := newTestEthBackend(conf.pscAddr)
+	ethBack := adapter.NewTestEthBackend(conf.pscAddr)
 
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
 		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		conf.Country, data.TestToPrivateKey, conf.EptMsg)
+		conf.Country, data.TestToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()
@@ -129,7 +131,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	logger, err = log.NewStderrLogger(conf.FileLog)
+	logger, err = log.NewStderrLogger(conf.StderrLog)
 	if err != nil {
 		panic(err)
 	}
@@ -226,7 +228,7 @@ func (e *workerTest) newTestFixture(t *testing.T,
 	e.insertToTestDB(t, job)
 
 	// Clear call stack.
-	e.ethBack.callStack = []testEthBackCall{}
+	e.ethBack.CallStack = []adapter.TestEthBackCall{}
 
 	return &workerTestFixture{f, job}
 }

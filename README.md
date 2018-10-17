@@ -46,13 +46,6 @@ Prepare a `dappctrl` database instance:
 /scripts/create_database.sh
 ```
 
-Execute a `dappctrl` database migration scripts and initialize data:
-
-```bash
-dappctrl db-migrate -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port=5432'
-dappctrl db-init-data -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port=5432'
-```
-
 Make a copy of `dappctrl.config.json`:
 
 ```bash

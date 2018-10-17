@@ -105,5 +105,9 @@ func classID(ip net.IP) string {
 }
 
 func withMask(ip net.IP) string {
-	return fmt.Sprintf("%s/%d", ip, len(ip))
+	bytes := 16
+	if ip.To4() != nil {
+		bytes = 4
+	}
+	return fmt.Sprintf("%s/%d", ip, bytes*8)
 }

@@ -49,9 +49,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 
 	// Create related eth log record.
 	var deposit int64 = 100
-	logData, err := logChannelCreatedDataArguments.Pack(
-		big.NewInt(deposit),
-		common.HexToHash("0x12312"))
+	logData, err := logChannelCreatedDataArguments.Pack(big.NewInt(deposit))
 	if err != nil {
 		t.Fatal(err)
 	}

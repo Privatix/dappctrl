@@ -147,7 +147,7 @@ func writeAppVersion(logger *util.Logger, db *reform.DB) {
 			Permissions: data.ReadOnly,
 			Name:        "App version",
 		})
-	} else if err != nil {
+	} else if err == nil {
 		logger.Info("%s before update: %v",
 			data.SettingAppVersion, versionSetting.Value)
 

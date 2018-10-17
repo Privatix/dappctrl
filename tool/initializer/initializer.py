@@ -3038,7 +3038,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 logging.info('Build mode.')
                 self.build_file()
 
-            if self.in_args['cli']:
+            elif self.in_args['cli']:
                 logging.info('Auto offering.')
                 self.in_args['no_gui']=True
                 if self.in_args['file']:

@@ -771,6 +771,87 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLastB
 </details>
 </details>
 
+### Logs
+
+#### Get Logs
+
+*Method*:   `getLogs`
+
+*Description*: Get back end log, paginated.
+
+*Parameters*:
+1. Password (string)
+2. Offset (number)
+3. Limit (number)
+4. Search text (string)
+5. Log level (string, can be `debug`, `info`, `warning`, `error` or `fatal`) 
+6. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+7. Upper bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+
+*Result (object)*:
+- `items` (array of `data.LogEvent` objects) - log events.
+- `totalItems` (number) - total items.
+
+<details><summary>Example1</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", 0,1,"","error","2018-10-19T10:47:22","2019-10-19T10:47:22"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    {
+        "jsonrpc":"2.0",
+        "id":67,
+        "result":{
+            "items":[
+                {
+                    "time":"2018-10-21T14:56:42.718817+07:00",
+                    "level":"error",
+                    "message":"key eth.min.confirmations is not exist in Setting table",
+                    "context":{
+                        "type":"monitor.Monitor",
+                        "method":"Start"
+                    },
+                    "stack":"goroutine 8 [running]:\nruntime/debug.Stack(0x9db8e0, 0xc420293830, 0xc420409880)\n\t/usr/local/go/src/runtime/debug/stack.go:24 +0xa7\ngithub.com/privatix/dappctrl/util/log.(*LoggerBase).Log(0xc420443740, 0xad27bf, 0x5, 0xc4200dc700, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/logger.go:113 +0x1be\ngithub.com/privatix/dappctrl/util/log.multiLogger.Log(0xc420174c00, 0x4, 0x4, 0xad27bf, 0x5, 0xc4200dc700, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/multi_logger.go:20 +0x69\ngithub.com/privatix/dappctrl/util/log.multiLogger.Error(0xc420174c00, 0x4, 0x4, 0xc4200dc700, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/multi_logger.go:27 +0x68\ngithub.com/privatix/dappctrl/monitor.(*Monitor).Start.func2(0xb88de0, 0xc420174c80, 0xc420508460, 0xc42028a380, 0xb8bd20, 0xc420443780)\n\t/home/bik/go/src/github.com/privatix/dappctrl/monitor/monitor.go:119 +0x20b\ncreated by github.com/privatix/dappctrl/monitor.(*Monitor).Start\n\t/home/bik/go/src/github.com/privatix/dappctrl/monitor/monitor.go:110 +0x1c2\n"
+                }
+            ],
+            "totalItems":33
+        }
+    }
+}
+```
+
+<details><summary>Example2</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", 0,1,"monitor.Monitor","","",""], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "time":"2018-10-21T15:00:40.286333+07:00",
+                "level":"error",
+                "message":"key eth.min.confirmations is not exist in Setting table",
+                "context":{
+                    "type":"monitor.Monitor",
+                    "method":"Start"
+                },
+                "stack":"goroutine 11 [running]:\nruntime/debug.Stack(0x9db880, 0xc420299360, 0xc42040f860)\n\t/usr/local/go/src/runtime/debug/stack.go:24 +0xa7\ngithub.com/privatix/dappctrl/util/log.(*LoggerBase).Log(0xc4204db260, 0xad275f, 0x5, 0xc420211080, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/logger.go:113 +0x1be\ngithub.com/privatix/dappctrl/util/log.multiLogger.Log(0xc420158c80, 0x4, 0x4, 0xad275f, 0x5, 0xc420211080, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/multi_logger.go:20 +0x69\ngithub.com/privatix/dappctrl/util/log.multiLogger.Error(0xc420158c80, 0x4, 0x4, 0xc420211080, 0x37)\n\t/home/bik/go/src/github.com/privatix/dappctrl/util/log/multi_logger.go:27 +0x68\ngithub.com/privatix/dappctrl/monitor.(*Monitor).Start.func2(0xb88d80, 0xc420158cc0, 0xc420170460, 0xc420290380, 0xb8bcc0, 0xc4204db2a0)\n\t/home/bik/go/src/github.com/privatix/dappctrl/monitor/monitor.go:119 +0x20b\ncreated by github.com/privatix/dappctrl/monitor.(*Monitor).Start\n\t/home/bik/go/src/github.com/privatix/dappctrl/monitor/monitor.go:110 +0x1c2\n"
+            }
+        ],
+        "totalItems":110
+    }
+}
+```
+
+</details>
+</details>
 
 ### Products
 

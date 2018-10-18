@@ -407,9 +407,9 @@ type EthTx struct {
 // LogEvent is a log event.
 //reform:log_events
 type LogEvent struct {
-	Time    time.Time `reform:"time"`
-	Level   log.Level `reform:"level"`
-	Message string    `reform:"message"`
-	Context []byte    `reform:"context"`
-	Stack   *string   `reform:"stack"`
+	Time    time.Time       `json:"time" reform:"time"`
+	Level   log.Level       `json:"level" reform:"level"`
+	Message string          `json:"message" reform:"message"`
+	Context json.RawMessage `json:"context" reform:"context"`
+	Stack   *string         `json:"stack" reform:"stack"`
 }

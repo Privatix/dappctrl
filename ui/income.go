@@ -27,3 +27,12 @@ func (h *Handler) GetProductIncome(
 			  ON channels.offering=offerings.id
 		     	     AND offerings.product=$1`, productID)
 }
+
+// GetTotalIncome returns total receipt balance from all channels.
+func (h *Handler) GetTotalIncome(password string) (*uint, error) {
+	logger := h.logger.Add("method", "GetTotalIncome")
+
+	return h.uintFromQuery(logger, password,
+		`SELECT SUM(channels.receipt_balance)
+			FROM channels`)
+}

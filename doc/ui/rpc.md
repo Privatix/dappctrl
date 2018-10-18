@@ -331,6 +331,32 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
 </details>
 </details>
 
+#### Get Total Income
+
+*Method*:   `getTotalIncome`
+
+*Description*: Get total receipt balance from all channels.
+
+*Parameters*: 
+1. Password (string)
+
+*Result*: Amount (number)
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotalIncome", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": 12345
+```
+</details>
+</details>
+
 #### Top Up Channel
 
 *Method*: `topUpChannel`

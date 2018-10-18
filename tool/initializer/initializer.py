@@ -2532,8 +2532,8 @@ class AutoOffer:
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break
-                elif target == 'psc' and int(res[1].get('psc_balance', '0')):
-                    self.pscBalance = res[1]['psc_balance']
+                elif target == 'psc' and int(res[1].get('pscBalance', '0')):
+                    self.pscBalance = res[1]['pscBalance']
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break

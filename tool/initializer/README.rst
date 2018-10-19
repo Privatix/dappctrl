@@ -46,16 +46,24 @@ Description of initializer arguments
             "description": "my service description",
             "country": "UA",
             "supply": 3,
+            "unitName": "MB",
+            "autoPopUp": True,
             "unitType": "units",
             "billingType": "postpaid",
             "setupPrice": 0,
             "unitPrice": 100000,
             "minUnits": 100,
-            "billingInterval": 1800,
-            "maxBillingUnitLag": 1800,
+            "maxUnit": 200,
+            "billingInterval": 1,
+            "maxBillingUnitLag": 3,
             "maxSuspendTime": 1800,
-            "freeUnits": 0,
-            "additionalParams": {}
+            "maxInactiveTimeSec": 1800,
+            "additionalParams":
+                {
+                "minDownloadMbits":100,
+                "minUploadMbits":80
+                },
+
         }
 
     * If you like, you can set all your parameters, or selectively. If you specify only specific parameters, the rest will be the default. You can create a file and specify in it for example:

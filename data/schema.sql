@@ -35,9 +35,12 @@ CREATE DOMAIN eth_addr AS char(40);
 
 -- Service operational status.
 CREATE TYPE svc_status AS ENUM (
-    'pending', -- Service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
+    'pending', -- service is still not fully setup and cannot be used. E.g. waiting for authentication message/endpoint message.
+    'activating', -- service is transitioning into active state (for client only).
     'active', -- service is now active and can be used.
+    'suspending', -- service is transitioning into suspended state (for client only).
     'suspended', -- service usage is not allowed. Usually used to temporary disallow access.
+    'terminating', -- service is transitioning into terminated state (for client only).
     'terminated' -- service is permanently deactivated.
 );
 

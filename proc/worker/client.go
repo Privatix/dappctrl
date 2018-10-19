@@ -549,7 +549,12 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 		return err
 	}
 
-	ch.ServiceStatus = data.ServiceTerminated
+	if ch.ServiceStatus == data.ServiceActive {
+		ch.ServiceStatus = data.ServiceTerminating
+	} else {
+		ch.ServiceStatus = data.ServiceTerminated
+	}
+
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
 	err = w.saveRecord(logger, w.db.Querier, ch)
@@ -574,7 +579,7 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 		return err
 	}
 
-	ch.ServiceStatus = data.ServiceSuspended
+	ch.ServiceStatus = data.ServiceSuspending
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
 	err = w.saveRecord(logger, w.db.Querier, ch)
@@ -601,7 +606,7 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 		return ErrFailedStartService
 	}
 
-	ch.ServiceStatus = data.ServiceActive
+	ch.ServiceStatus = data.ServiceActivating
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
 	return w.saveRecord(logger, w.db.Querier, ch)

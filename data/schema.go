@@ -157,10 +157,13 @@ const (
 
 // Service operational statuses.
 const (
-	ServicePending    = "pending"
-	ServiceActive     = "active"
-	ServiceSuspended  = "suspended"
-	ServiceTerminated = "terminated"
+	ServicePending     = "pending"
+	ServiceActivating  = "activating"
+	ServiceActive      = "active"
+	ServiceSuspending  = "suspending"
+	ServiceSuspended   = "suspended"
+	ServiceTerminating = "terminating"
+	ServiceTerminated  = "terminated"
 )
 
 // Channel is a state channel.

@@ -609,9 +609,9 @@ func TestClientPreServiceTerminate(t *testing.T) {
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceTerminated {
+	if ch.ServiceStatus != data.ServiceTerminating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+			data.ServiceTerminating, ch.ServiceStatus)
 	}
 }
 
@@ -663,9 +663,9 @@ func TestClientPreServiceSuspend(t *testing.T) {
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceSuspended {
+	if ch.ServiceStatus != data.ServiceSuspending {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceSuspended, fxt.Channel.ServiceStatus)
+			data.ServiceSuspending, ch.ServiceStatus)
 	}
 }
 
@@ -716,9 +716,9 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceActive {
+	if ch.ServiceStatus != data.ServiceActivating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceActive, fxt.Channel.ServiceStatus)
+			data.ServiceActivating, ch.ServiceStatus)
 	}
 }
 

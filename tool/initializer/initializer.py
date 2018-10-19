@@ -2326,14 +2326,14 @@ class AutoOffer:
             ],
             'id': self.id,
         }
-        timeWait = 15*60
+        timeWait = 25*60
         timeStar = time()
         while time()-timeStar < timeWait:
             res = self.__urlOpen(data=data,key='result')
             if res[0]:
                 status = res[1][0].get('status')
                 offerStatus = res[1][0].get('offerStatus')
-                if status == 'bchain_published' and offerStatus == 'registered':
+                if status == 'msg_channel_published' and offerStatus == 'registered':
                     return True, 'All done'
             logging.debug('Wait')
             sleep(60)
@@ -2370,17 +2370,20 @@ class AutoOffer:
                     "description": "my service description",
                     "country": self.__getCountryName(),
                     "supply": 3,
+                    "unitName": "MB",
                     "autoPopUp": True,
                     "unitType": "units",
                     "billingType": "postpaid",
                     "setupPrice": 0,
                     "unitPrice": 100000,
                     "minUnits": 100,
-                    "billingInterval": 1800,
-                    "maxBillingUnitLag": 1800,
+                    "maxUnit": 200,
+                    "billingInterval": 1,
+                    "maxBillingUnitLag": 3,
                     "maxSuspendTime": 1800,
+                    "maxInactiveTimeSec": 1800,
                     "freeUnits": 0,
-                    "additionalParams": {}
+                    "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80},
                 }
 
         if self.offerData:

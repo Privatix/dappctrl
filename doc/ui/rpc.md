@@ -525,7 +525,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeOf
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOffering", "params": ["qwert", {"product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523", "agent": "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", "serviceName": "my service", "description": "my service description", "country": "KG", "supply": 3, "unitType": "units", "billingType": "postpaid", "setupPrice": 0, "unitPrice": 100000, "minUnits": 100, "billingInterval": 1800, "maxBillingUnitLag": 1800, "maxSuspendTime": 1800, "freeUnits": 0, "additionalParams": {}}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOffering", "params": ["qwert", {"product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523", "agent": "0ba0e5f1-17f4-4f6d-b410-745a53048fc3", "serviceName": "my service", "description": "my service description", "country": "KG", "supply": 3, "unitName": "MB", "unitType": "units", "billingType": "postpaid", "setupPrice": 0, "unitPrice": 100000, "minUnits": 100, "maxUnit": 200, "billingInterval": 1, "maxBillingUnitLag": 3, "maxSuspendTime": 1800, "maxInactiveTimeSec": 1800, "freeUnits": 0, "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80}, "autoPopUp":false}], "id": 67}' http://localhost:8888/http
 
 // Result
 {

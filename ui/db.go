@@ -41,6 +41,16 @@ func (h *Handler) findByColumn(logger log.Logger, notFoundError error,
 	return nil
 }
 
+func (h *Handler) findAllFrom(logger log.Logger, view reform.View,
+	column string, args ...interface{}) ([]reform.Struct, error) {
+	rows, err := h.db.FindAllFrom(view, column, args...)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+	return rows, err
+}
+
 func (h *Handler) selectAllFrom(logger log.Logger, view reform.View,
 	tail string, args ...interface{}) ([]reform.Struct, error) {
 	rows, err := h.db.SelectAllFrom(view, tail, args...)

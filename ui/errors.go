@@ -32,6 +32,9 @@ const (
 	ErrPrivateKeyNotFound
 	ErrTokenAmountTooSmall
 	ErrBadDestination
+	ErrBadAction
+	ErrNotAllowedForAgent
+	ErrJobNotFound
 )
 
 var errMsgs = errors.Messages{
@@ -60,6 +63,9 @@ var errMsgs = errors.Messages{
 	ErrPrivateKeyNotFound:       "private key not found",
 	ErrTokenAmountTooSmall:      "the amount of tokens is too small",
 	ErrBadDestination:           "bad destination",
+	ErrBadAction:                "bad action",
+	ErrNotAllowedForAgent:       "operation not allowed for agent",
+	ErrJobNotFound:              "job not found",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

@@ -378,15 +378,9 @@ func (h *Handler) getChannels(logger log.Logger, channelStatus, serviceStatus,
 		return nil, 0, err
 	}
 
-	var limitCondition string
+	offsetLimit := h.offsetLimit(offset, limit)
 
-	if limit != 0 {
-		limitCondition = fmt.Sprintf(" LIMIT %d ", limit)
-	}
-
-	offsetCondition := fmt.Sprintf(" OFFSET %d", offset)
-
-	tail = tail + limitCondition + offsetCondition
+	tail = tail + offsetLimit
 
 	result, err := h.selectAllFrom(
 		logger, data.ChannelTable, tail, args...)

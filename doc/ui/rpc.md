@@ -1104,11 +1104,11 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
 
 *Method*:	`getEthTransactions`
 
-*Description*: Get Ethereum transactions.
+*Description*: Get Ethereum transactions. If related type is `accountAggregated`, then get an Ethereum address of the account and find all transactions where this address is the sender.
 
 *Parameters*:
 1. Password (string)
-2. Related type (string, can be `offering`, `channel`, `endpoint`, `account` or empty)
+2. Related type (string, can be `offering`, `channel`, `endpoint`, `account`, `accountAggregated` or empty)
 3. Related id (string, either uuid or empty)
 
 *Result (array of `data.EthTx` objects)*: transactions.

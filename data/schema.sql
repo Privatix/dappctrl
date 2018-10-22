@@ -240,6 +240,7 @@ CREATE TABLE channels (
     channel_status chan_status NOT NULL, -- status related to blockchain
     service_status svc_status NOT NULL, -- operational status of service
     service_changed_time timestamp with time zone, -- timestamp, when service status changed. Used in aging scenarios. Specifically in suspend -> terminating scenario.
+    prepared_at timestamp with time zone NOT NULL, -- used by client to terminate inactive channels. TODO: review flow with service_changed_time
     total_deposit bigint NOT NULL -- total deposit after all top-ups
         CONSTRAINT positive_total_deposit CHECK (channels.total_deposit >= 0),
 

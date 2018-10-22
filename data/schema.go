@@ -174,6 +174,7 @@ type Channel struct {
 	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
 	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
 	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
+	PreparedAt         time.Time  `json:"preparedAt" reform:"prepared_at"`
 	TotalDeposit       uint64     `json:"totalDeposit" reform:"total_deposit"`
 	Salt               uint64     `json:"-" reform:"salt"`
 	Username           *string    `json:"-" reform:"username"`

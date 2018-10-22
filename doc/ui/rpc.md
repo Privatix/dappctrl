@@ -302,6 +302,146 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePa
 
 ### Channels
 
+#### Change Channel Status
+
+*Method*: `changeChannelStatus`
+
+*Description*: Update channel state.
+
+*Parameters*: 
+1. Password (string)
+2. Channel id (string)
+3. Action (string, can be `terminate`, `pause`, `resume` or `close`)
+
+*Result*: None.
+
+<details><summary>Example</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeChannelStatus", "params": ["qwerty","df78ff3e-666d-4b70-a158-240e6c655e8c","terminate"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+  "id": 67,
+  "jsonrpc": "2.0",
+  "result": null
+}
+```
+
+</details>
+
+#### Get Agent Channels
+
+*Method*: `getAgentChannels`
+
+*Description*: Get channels for agent.
+
+*Parameters*: 
+1. Password (string)
+2. Channel status (string)
+3. Service status (string)
+4. Offset (number)
+5. Limit (number)
+
+*Result (object)*:
+- `items` (array of `data.Channel` objects) - channels.
+- `totalItems` (number) - total channels.
+
+<details><summary>Example</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty","active","pending",0,1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id":"aa79a640-540b-4a87-892c-7675b3f058b2",
+                "agent":"829be313281957b2c7fb34c99c05b7b0affc09d3",
+                "client":"7b8063c922db492c7116f79e84c5398c277f6d01",
+                "offering":"c872f3bb-6e66-4fef-a70d-9d8e97542705",
+                "block":1298498081,
+                "channelStatus":"active",
+                "serviceStatus":"pending",
+                "serviceChangedTime":"2018-10-21T23:44:11.309Z",
+                "totalDeposit":100,
+                "receiptBalance":5
+            }
+        ],
+        "totalItems":70
+    }
+}
+```
+
+</details>
+
+#### Get Client Channels
+
+*Method*: `getClientChannels`
+
+*Description*: Get client channel information.
+
+*Parameters*: 
+1. Password (string)
+2. Channel status (string)
+3. Service status (string)
+4. Offset (number)
+5. Limit (number)
+
+*Result (object)*:
+- `items` (array of objects) - information of channels.
+- `totalItems` (number) - total channel.
+
+<details><summary>Example</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientChannels", "params": ["qwerty","active","pending",1,2], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id":"df78ff3e-666d-4b70-a158-240e6c655e8c",
+                "agent":"0x8D31cA7eBc9582874f15eac1caCa39A4782b3E06",
+                "client":"0xC1bAE9F48e5cF5f16839F4BC1e312069003d7519",
+                "offering":"a34bbecc-b294-4960-9a1c-bef468bd0617",
+                "deposit":10000,
+                "channelStatus":{
+                    "serviceStatus":"pending",
+                    "channelStatus":"active",
+                    "lastChanged":"2018-10-21T23:44:11.309Z",
+                    "maxInactiveTime":1800
+                },
+                "job":{
+                    "id":"0cc65b67-29b9-4acb-bc44-0146caa7c6b4",
+                    "jobtype":"clientPreChannelCreate",
+                    "status":"done",
+                    "createdAt":"2018-10-21T23:44:11.309Z"
+                },
+                "usage":{
+                    "current":400,
+                    "maxUsage":454,
+                    "unit":"units",
+                    "cost":8811
+                }
+            }
+        ],
+        "totalItems":2
+    }
+}
+```
+
+</details>
+
 #### Get Channel Usage
 
 *Method*: `getChannelUsage`

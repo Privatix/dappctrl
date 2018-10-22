@@ -1,9 +1,10 @@
 package ui
 
 import (
-	"database/sql"
+	"fmt"
 	"strconv"
 
+	"database/sql"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -129,4 +130,15 @@ func (h *Handler) uintFromQuery(logger log.Logger, password,
 
 	ret := uint(queryRet.Int64)
 	return &ret, nil
+}
+
+func (h *Handler) numberOfObjects(logger log.Logger, table, conditions string,
+	arguments []interface{}) (count int, err error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table, conditions)
+	err = h.db.QueryRow(query, arguments...).Scan(&count)
+	if err != nil {
+		logger.Error(err.Error())
+		return 0, ErrInternal
+	}
+	return count, err
 }

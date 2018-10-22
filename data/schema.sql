@@ -89,7 +89,8 @@ CREATE TYPE job_creator AS ENUM (
     'billing_checker', -- by billing checker procedure
     'bc_monitor', -- by blockchain monitor
     'task', -- by another task
-    'service_adapter' -- by service adapter
+    'service_adapter', -- by service adapter
+    'session_server' -- by session server
 );
 
 -- Job status.

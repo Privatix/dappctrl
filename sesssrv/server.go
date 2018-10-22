@@ -6,6 +6,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/country"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -29,6 +30,7 @@ type Server struct {
 	countryConf *country.Config
 	db          *reform.DB
 	logger      log.Logger
+	queue       job.Queue
 }
 
 // Service API paths.
@@ -44,13 +46,14 @@ const (
 
 // NewServer creates a new session server.
 func NewServer(conf *Config, logger log.Logger, db *reform.DB,
-	countryConf *country.Config) *Server {
+	countryConf *country.Config, queue job.Queue) *Server {
 	s := &Server{
 		Server:      srv.NewServer(conf.Config),
 		conf:        conf,
 		db:          db,
 		logger:      logger.Add("type", "sesssrv.Server"),
 		countryConf: countryConf,
+		queue:       queue,
 	}
 
 	modifyHandler := func(h srv.HandlerFunc) srv.HandlerFunc {

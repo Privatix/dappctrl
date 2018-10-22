@@ -69,7 +69,8 @@ func (s *Server) identClient(logger log.Logger,
 		logger.Fatal("unsupported client identification type")
 	}
 
-	if ch.ServiceStatus != data.ChannelActive {
+	if ch.ServiceStatus != data.ServiceActivating &&
+		ch.ServiceStatus != data.ServiceActive {
 		logger.Warn("non-active channel")
 		s.RespondError(logger, w, ErrNonActiveChannel)
 		return nil, false

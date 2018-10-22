@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -26,7 +28,7 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 	}
 	logger = logger.Add("arguments", args)
 
-	_, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
+	ch, ok := s.identClient(logger, w, ctx.Username, args.ClientID)
 	if !ok {
 		return
 	}
@@ -66,9 +68,30 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		sess.Stopped = pointer.ToTime(sess.LastUsageTime)
 	}
 
-	if err := s.db.Save(sess); err != nil {
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		if err := tx.Save(sess); err != nil {
+			return err
+		}
+
+		var status string
+		switch ch.ServiceStatus {
+			case data.ServiceSuspending:
+			status = data.ServiceSuspended
+		case data.ServiceTerminating:
+			status = data.ServiceTerminated
+		default:
+			return nil
+		}
+
+		return job.AddWithData(s.queue, tx,
+				data.JobClientCompleteServiceTransition,
+				data.JobChannel, ch.ID, data.JobSessionServer,
+				status)
+	})
+	if err != nil {
 		logger.Error(err.Error())
 		s.RespondError(logger, w, srv.ErrInternalServerError)
+		return
 	}
 
 	s.RespondResult(logger, w, nil)

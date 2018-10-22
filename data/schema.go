@@ -272,6 +272,7 @@ const (
 	JobBCMonitor      = "bc_monitor"
 	JobTask           = "task"
 	JobServiceAdapter = "service_adapter"
+	JobSessionServer  = "session_server"
 )
 
 // Job statuses.
@@ -317,6 +318,7 @@ const (
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
+	JobClientCompleteServiceTransition      = "completeServiceTransition"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"

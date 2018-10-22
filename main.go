@@ -311,7 +311,8 @@ func main() {
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country)
+	sess := sesssrv.NewServer(
+		conf.SessionServer, logger, db, conf.Country, queue)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

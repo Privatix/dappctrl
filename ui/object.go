@@ -21,7 +21,6 @@ const (
 	TypeEndpoint = "endpoint"
 	TypeJob      = "job"
 	TypeEthTx    = "ethTx"
-	TypeEthLog   = "ethLog"
 )
 
 var objectTypes = map[string]reform.Table{

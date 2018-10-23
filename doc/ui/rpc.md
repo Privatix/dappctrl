@@ -98,6 +98,21 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
 ```
 </details>
 
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", {"isDefault": true, "name": "my_acc"}], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": []
+}
+```
+</details>
+
 #### Import Account From Hex
 
 *Method*:	`importAccountFromHex`
@@ -380,6 +395,25 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 
 </details>
 
+<details><summary>Example 2</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty","active","pending",0,1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
+    }
+}
+```
+
+</details>
+
 #### Get Client Channels
 
 *Method*: `getClientChannels`
@@ -436,6 +470,25 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
             }
         ],
         "totalItems":2
+    }
+}
+```
+
+</details>
+
+<details><summary>Example 2</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientChannels", "params": ["qwerty","active","pending",1,2], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
     }
 }
 ```
@@ -687,6 +740,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
 1. Password (string)
 2. Product id (string)
 3. Offering status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
+4. Offset (number)
+5. Limit (number)
 
 *Result (array of `data.Offering` objects)*: offerings.
 
@@ -694,46 +749,68 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "empty"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "empty", 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": [
-        {
-            "id":"687f26ab-5c62-4b05-8225-12e102a99450",
-            "isLocal":false,
-            "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
-            "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
-            "hash":"                                            ",
-            "status":"unpublished",
-            "offerStatus":"empty",
-            "blockNumberUpdated":1,
-            "agent":"4638140465c0ee8fc796323971431c30250433b2",
-            "rawMsg":"",
-            "serviceName":"my service",
-            "description":"my service description",
-            "country":"KG",
-            "supply":3,
-            "currentSupply":3,
-            "unitName":"",
-            "unitType":"units",
-            "billingType":"postpaid",
-            "setupPrice":0,
-            "unitPrice":100000,
-            "minUnits":100,
-            "maxUnit":null,
-            "billingInterval":1800,
-            "maxBillingUnitLag":1800,
-            "maxSuspendTime":1800,
-            "maxInactiveTimeSec":null,
-            "freeUnits":0,
-            "additionalParams":{},
-            "autoPopUp":false}]
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id":"687f26ab-5c62-4b05-8225-12e102a99450",
+                "isLocal":false,
+                "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
+                "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
+                "hash":"FX3wZO08K1VcDWcMm83-omyKJIqE-jOD2EFQ5XV2Y38=",
+                "status":"unpublished",
+                "offerStatus":"empty",
+                "blockNumberUpdated":1,
+                "agent":"4638140465c0ee8fc796323971431c30250433b2",
+                "rawMsg":"",
+                "serviceName":"my service",
+                "description":"my service description",
+                "country":"KG",
+                "supply":3,
+                "currentSupply":3,
+                "unitName":"",
+                "unitType":"units",
+                "billingType":"postpaid",
+                "setupPrice":0,
+                "unitPrice":100000,
+                "minUnits":100,
+                "maxUnit":null,
+                "billingInterval":1800,
+                "maxBillingUnitLag":1800,
+                "maxSuspendTime":1800,
+                "maxInactiveTimeSec":null,
+                "freeUnits":0,
+                "additionalParams":{},
+                "autoPopUp":false
+            }
+        ],
+        "totalItems":10
+    }
 }
 ```
 </details>
+
+<details><summary>Example 2</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "empty", 0, 1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
+    }
+}
+```
 </details>
 
 #### Get Offerings For Client
@@ -755,46 +832,69 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"]], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": [
-        {
-            "id":"687f26ab-5c62-4b05-8225-12e102a99450",
-            "isLocal":false,
-            "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
-            "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
-            "hash":"                                            ",
-            "status":"unpublished",
-            "offerStatus":"empty",
-            "blockNumberUpdated":1,
-            "agent":"4638140465c0ee8fc796323971431c30250433b2",
-            "rawMsg":"",
-            "serviceName":"my service",
-            "description":"my service description",
-            "country":"KG",
-            "supply":3,
-            "currentSupply":3,
-            "unitName":"",
-            "unitType":"units",
-            "billingType":"postpaid",
-            "setupPrice":0,
-            "unitPrice":100000,
-            "minUnits":100,
-            "maxUnit":null,
-            "billingInterval":1800,
-            "maxBillingUnitLag":1800,
-            "maxSuspendTime":1800,
-            "maxInactiveTimeSec":null,
-            "freeUnits":0,
-            "additionalParams":{},
-            "autoPopUp":null}]
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id":"687f26ab-5c62-4b05-8225-12e102a99450",
+                "isLocal":false,
+                "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
+                "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
+                "hash":"                                            ",
+                "status":"unpublished",
+                "offerStatus":"empty",
+                "blockNumberUpdated":1,
+                "agent":"4638140465c0ee8fc796323971431c30250433b2",
+                "rawMsg":"",
+                "serviceName":"my service",
+                "description":"my service description",
+                "country":"KG",
+                "supply":3,
+                "currentSupply":3,
+                "unitName":"",
+                "unitType":"units",
+                "billingType":"postpaid",
+                "setupPrice":0,
+                "unitPrice":100000,
+                "minUnits":100,
+                "maxUnit":null,
+                "billingInterval":1800,
+                "maxBillingUnitLag":1800,
+                "maxSuspendTime":1800,
+                "maxInactiveTimeSec":null,
+                "freeUnits":0,
+                "additionalParams":{},
+                "autoPopUp":null
+            }
+        ],
+        "totalItems":10
+    }
 }
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], 0, 1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
+    }
+}
+```
+
 </details>
 
 #### Get Offering Income
@@ -1071,6 +1171,20 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getProdu
 }
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getProducts", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": []
+}
+```
 </details>
 
 #### Get Product Income
@@ -1316,6 +1430,20 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
 }
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTemplates", "params": ["qwert", "access"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": []
+}
+```
 </details>
 
 
@@ -1365,6 +1493,20 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
 }
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTransactions", "params": ["qwert", "channel"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": []
+}
+```
 </details>
 
 ## Subscriptions to asynchronous notifications

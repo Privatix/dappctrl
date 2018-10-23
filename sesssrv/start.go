@@ -22,7 +22,7 @@ type StartArgs struct {
 
 // StartResult is a result of session starting.
 type StartResult struct {
-	Offering *data.Offering
+	Offering *data.Offering `json:"offering"`
 }
 
 func (s *Server) handleStart(

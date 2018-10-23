@@ -55,7 +55,7 @@ Description of initializer arguments
             "minUnits": 10000,
             "maxUnit": 30000,
             "billingInterval": 1,
-            "maxBillingUnitLag": 3,
+            "maxBillingUnitLag": 100,
             "maxSuspendTime": 1800,
             "maxInactiveTimeSec": 1800,
             "additionalParams":

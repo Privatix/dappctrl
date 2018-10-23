@@ -2375,7 +2375,7 @@ class AutoOffer:
                     "unitType": "units",
                     "billingType": "postpaid",
                     "setupPrice": 0,
-                    "unitPrice": 100000,
+                    "unitPrice": 10000,
                     "minUnits": 10000,
                     "maxUnit": 30000,
                     "billingInterval": 1,

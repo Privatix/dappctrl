@@ -16,7 +16,7 @@ func TestIncome(t *testing.T) {
 	assertResult := func(exp uint, act *uint, err error) {
 		assertErrEqual(nil, err)
 		if act == nil || exp != *act {
-			t.Fatalf("wrong result, wanted: %v, got: %v", exp, act)
+			t.Fatalf("wrong result, wanted: %v, got: %v", exp, *act)
 		}
 	}
 
@@ -60,5 +60,11 @@ func TestIncome(t *testing.T) {
 
 	actual, err = handler.GetProductIncome(data.TestPassword, product.ID)
 	expected = uint(ch2.ReceiptBalance + ch3.ReceiptBalance)
+	assertResult(expected, actual, err)
+
+	// Test total income.
+	actual, err = handler.GetTotalIncome(data.TestPassword)
+	expected = uint(ch1.ReceiptBalance + ch2.ReceiptBalance +
+		ch3.ReceiptBalance)
 	assertResult(expected, actual, err)
 }

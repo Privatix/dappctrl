@@ -19,18 +19,17 @@ type logChannelTopUpInput struct {
 }
 
 type logChannelCreatedInput struct {
-	agentAddr          common.Address
-	clientAddr         common.Address
-	offeringHash       common.Hash
-	deposit            *big.Int
-	authenticationHash common.Hash
+	agentAddr    common.Address
+	clientAddr   common.Address
+	offeringHash common.Hash
+	deposit      *big.Int
 }
 
 type logOfferingCreatedInput struct {
-	agentAddr    common.Address
-	offeringHash common.Hash
-	minDeposit   *big.Int
-	maxSupply    uint16
+	agentAddr     common.Address
+	offeringHash  common.Hash
+	minDeposit    *big.Int
+	currentSupply uint16
 }
 
 type logOfferingPopUpInput struct {
@@ -55,11 +54,6 @@ func init() {
 		panic(err)
 	}
 
-	abiBytes32, err := abi.NewType("bytes32")
-	if err != nil {
-		panic(err)
-	}
-
 	abiUint16, err := abi.NewType("uint16")
 	if err != nil {
 		panic(err)
@@ -77,9 +71,6 @@ func init() {
 	logChannelCreatedDataArguments = abi.Arguments{
 		{
 			Type: abiUint192,
-		},
-		{
-			Type: abiBytes32,
 		},
 	}
 
@@ -137,16 +128,11 @@ func extractLogChannelCreated(logger log.Logger,
 		return nil, ErrParseEthLog
 	}
 
-	if len(dataUnpacked) != 2 {
+	if len(dataUnpacked) != 1 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	deposit, ok := dataUnpacked[0].(*big.Int)
-	if !ok {
-		return nil, ErrParseEthLog
-	}
-
-	authHashB, ok := dataUnpacked[1].([common.HashLength]byte)
 	if !ok {
 		return nil, ErrParseEthLog
 	}
@@ -160,11 +146,10 @@ func extractLogChannelCreated(logger log.Logger,
 	offeringHash := log.Topics[3]
 
 	return &logChannelCreatedInput{
-		agentAddr:          agentAddr,
-		clientAddr:         clientAddr,
-		offeringHash:       offeringHash,
-		deposit:            deposit,
-		authenticationHash: common.Hash(authHashB),
+		agentAddr:    agentAddr,
+		clientAddr:   clientAddr,
+		offeringHash: offeringHash,
+		deposit:      deposit,
 	}, nil
 }
 
@@ -194,10 +179,10 @@ func extractLogOfferingCreated(logger log.Logger,
 	minDeposit := big.NewInt(0).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingCreatedInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
-		minDeposit:   minDeposit,
-		maxSupply:    curSupply,
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
+		minDeposit:    minDeposit,
+		currentSupply: curSupply,
 	}, nil
 }
 

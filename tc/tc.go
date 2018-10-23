@@ -23,6 +23,8 @@ func (tc *TrafficControl) run(logger log.Logger,
 	name string, args ...string) (stdout string, err error) {
 	logger = logger.Add("cmd", name, "args", args)
 
+	logger.Info("run command")
+
 	cmd := exec.Command(name, args...)
 
 	var stderr bytes.Buffer

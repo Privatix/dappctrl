@@ -5,6 +5,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
 )
@@ -30,13 +31,16 @@ type Handler struct {
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
+	agent          bool
+	processor      *proc.Processor
 }
 
 // NewHandler creates a new handler.
 func NewHandler(conf *Config, logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter,
 	encryptKeyFunc data.EncryptedKeyFunc,
-	decryptKeyFunc data.ToPrivateKeyFunc) *Handler {
+	decryptKeyFunc data.ToPrivateKeyFunc, agent bool,
+	processor *proc.Processor) *Handler {
 	logger = logger.Add("type", "uisrv.Handler")
 	return &Handler{
 		conf:           conf,
@@ -46,5 +50,7 @@ func NewHandler(conf *Config, logger log.Logger, db *reform.DB,
 		pwdStorage:     pwdStorage,
 		encryptKeyFunc: encryptKeyFunc,
 		decryptKeyFunc: decryptKeyFunc,
+		agent:          agent,
+		processor:      processor,
 	}
 }

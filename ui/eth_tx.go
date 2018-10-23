@@ -6,6 +6,10 @@ import (
 	"github.com/privatix/dappctrl/data"
 )
 
+// AccountAggregatedType is related type to aggregate transactions for
+// a specific account.
+const AccountAggregatedType = "accountAggregated"
+
 // GetEthTransactions returns transactions by related object.
 func (h *Handler) GetEthTransactions(
 	password, relType, relID string) ([]data.EthTx, error) {
@@ -18,13 +22,26 @@ func (h *Handler) GetEthTransactions(
 
 	conds := make([]string, 0)
 	args := make([]interface{}, 0)
-	if relType != "" {
+	// If the relType is `accountAggregated`, then gets an Ethereum
+	// address of the account and find all transactions where this address
+	// is the sender.
+	if relType == AccountAggregatedType {
+		var acc data.Account
+		if err := h.findByPrimaryKey(
+			logger, ErrAccountNotFound, &acc, relID); err != nil {
+			return nil, err
+		}
+		args = append(args, acc.EthAddr)
+		conds = append(
+			conds,
+			"addr_from="+h.db.Placeholder(len(args)))
+	} else if relType != "" {
 		args = append(args, relType)
 		conds = append(
 			conds,
 			"related_type="+h.db.Placeholder(len(args)))
 	}
-	if relID != "" {
+	if relID != "" && relType != AccountAggregatedType {
 		args = append(args, relID)
 		conds = append(
 			conds,

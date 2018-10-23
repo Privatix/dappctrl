@@ -30,6 +30,18 @@ var OfferingChangeActions = map[string]string{
 	DeactivateOffering: data.JobAgentPreOfferingDelete,
 }
 
+// GetAgentOfferingsResult is result of GetAgentOfferings method.
+type GetAgentOfferingsResult struct {
+	Items      []data.Offering `json:"items"`
+	TotalItems int             `json:"totalItems"`
+}
+
+// GetClientOfferingsResult is result of GetClientOfferings method.
+type GetClientOfferingsResult struct {
+	Items      []data.Offering `json:"items"`
+	TotalItems int             `json:"totalItems"`
+}
+
 // AcceptOffering initiates JobClientPreChannelCreate job.
 func (h *Handler) AcceptOffering(password, account, offering string,
 	deposit, gasPrice uint64) (*string, error) {
@@ -170,9 +182,9 @@ func (h *Handler) getClientOfferingsConditions(
 }
 
 // GetClientOfferings returns active offerings available for a client.
-func (h *Handler) GetClientOfferings(
-	password, agent string, minUnitPrice, maxUnitPrice uint64,
-	countries []string) ([]data.Offering, error) {
+func (h *Handler) GetClientOfferings(password, agent string, minUnitPrice,
+	maxUnitPrice uint64, countries []string,
+	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
 		"maxUnitPrice", maxUnitPrice, "countries", countries)
@@ -190,36 +202,35 @@ func (h *Handler) GetClientOfferings(
 	cond, args := h.getClientOfferingsConditions(
 		agent, minUnitPrice, maxUnitPrice, countries)
 
-	objects, err := h.selectAllFrom(
-		logger, data.OfferingTable, cond, args...)
+	count, err := h.numberOfObjects(
+		logger, data.OfferingTable.Name(), cond, args)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []data.Offering
+	offsetLimit := h.offsetLimit(offset, limit)
 
-	for _, v := range objects {
-		result = append(result, *v.(*data.Offering))
-	}
+	tail := fmt.Sprintf("%s %s %s",
+		cond, activeOfferingSorting, offsetLimit)
 
-	return result, nil
-}
-
-// GetAgentOfferings returns active offerings available for a agent.
-func (h *Handler) GetAgentOfferings(
-	password, product, status string) ([]data.Offering, error) {
-	logger := h.logger.Add("method", "GetAgentOfferings",
-		"product", product, "status", status)
-
-	if err := h.checkPassword(logger, password); err != nil {
+	result, err := h.selectAllFrom(
+		logger, data.OfferingTable, tail, args...)
+	if err != nil {
 		return nil, err
 	}
 
-	var (
-		conditions string
-		args       []interface{}
-		index      = 1
-	)
+	offerings := make([]data.Offering, len(result))
+
+	for k, v := range result {
+		offerings[k] = *v.(*data.Offering)
+	}
+
+	return &GetClientOfferingsResult{offerings, count}, nil
+}
+
+func (h *Handler) getAgentOfferingsConditions(
+	product, status string) (conditions string, args []interface{}) {
+	index := 1
 
 	if product != "" {
 		conditions = fmt.Sprintf(
@@ -238,36 +249,59 @@ func (h *Handler) GetAgentOfferings(
 				"%s AND %s", conditions, condition)
 		}
 		args = append(args, status)
-		index++
 	}
 
-	prefix := "WHERE "
-
-	agentOfferingCondition := `
+	condition := `
 		agent IN (SELECT eth_addr FROM accounts)
-			AND (SELECT in_use FROM accounts WHERE eth_addr = agent)
-		      ORDER BY block_number_updated DESC`
+			AND (SELECT in_use FROM accounts WHERE eth_addr = agent)`
 
 	if conditions == "" {
-		conditions = prefix + agentOfferingCondition
+		conditions = "WHERE " + condition
 	} else {
-		conditions = fmt.Sprintf("%s %s AND %s",
-			prefix, conditions, agentOfferingCondition)
+		conditions = fmt.Sprintf("WHERE %s AND %s",
+			conditions, condition)
 	}
 
-	objects, err := h.selectAllFrom(
-		logger, data.OfferingTable, conditions, args...)
+	return conditions, args
+}
+
+// GetAgentOfferings returns active offerings available for a agent.
+func (h *Handler) GetAgentOfferings(password, product, status string,
+	offset, limit uint) (*GetAgentOfferingsResult, error) {
+	logger := h.logger.Add("method", "GetAgentOfferings",
+		"product", product, "status", status)
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	conditions, args := h.getAgentOfferingsConditions(product, status)
+
+	count, err := h.numberOfObjects(
+		logger, data.OfferingTable.Name(), conditions, args)
 	if err != nil {
 		return nil, err
 	}
 
-	var result []data.Offering
+	offsetLimit := h.offsetLimit(offset, limit)
 
-	for _, v := range objects {
-		result = append(result, *v.(*data.Offering))
+	sorting := `ORDER BY block_number_updated DESC`
+
+	tail := fmt.Sprintf("%s %s %s", conditions, sorting, offsetLimit)
+
+	result, err := h.selectAllFrom(
+		logger, data.OfferingTable, tail, args...)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	offerings := make([]data.Offering, len(result))
+
+	for k, v := range result {
+		offerings[k] = *v.(*data.Offering)
+	}
+
+	return &GetAgentOfferingsResult{offerings, count}, nil
 }
 
 // setOfferingHash computes and sets values for raw msg and hash fields.
@@ -357,7 +391,8 @@ func (h *Handler) UpdateOffering(password string,
 		return err
 	}
 
-	err = h.findByPrimaryKey(logger, ErrOfferingNotFound, &data.Offering{}, offering.ID)
+	err = h.findByPrimaryKey(
+		logger, ErrOfferingNotFound, &data.Offering{}, offering.ID)
 	if err != nil {
 		return err
 	}

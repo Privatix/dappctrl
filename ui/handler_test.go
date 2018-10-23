@@ -11,6 +11,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -22,6 +23,7 @@ var (
 		StderrLog *log.WriterConfig
 		Job       *job.Config
 		UI        *ui.Config
+		Proc      *proc.Config
 	}
 	logger log.Logger
 
@@ -92,6 +94,7 @@ func TestMain(m *testing.M) {
 
 	conf.DB = data.NewDBConfig()
 	conf.StderrLog = log.NewWriterConfig()
+	conf.Proc = proc.NewConfig()
 	util.ReadTestConfig(&conf)
 
 	db = data.NewTestDB(conf.DB)
@@ -105,7 +108,7 @@ func TestMain(m *testing.M) {
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
 	handler = ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
-		data.TestEncryptedKey, data.TestToPrivateKey)
+		data.TestEncryptedKey, data.TestToPrivateKey, true, nil)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

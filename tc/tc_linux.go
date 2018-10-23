@@ -52,7 +52,7 @@ func (tc *TrafficControl) SetRateLimit(
 
 	if downMbps > 0 {
 		cid := classID(ip)
-		rate := fmt.Sprintf("%dkbit", int(downMbps))
+		rate := fmt.Sprintf("%fMbit", downMbps)
 		_, err = tc.run(logger, tc.conf.TcPath,
 			"class", "add", "dev", iface, "parent", "1:",
 			"classid", cid, "htb", "rate", rate, "ceil", rate)
@@ -62,7 +62,7 @@ func (tc *TrafficControl) SetRateLimit(
 
 		_, err = tc.run(logger, tc.conf.IptablesPath,
 			"-t", "mangle", "-A", "POSTROUTING", "-o", iface, "-d",
-			withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
+			ip.String(), "-j", "CLASSIFY", "--set-class", cid)
 	}
 
 	if upMbps > 0 {
@@ -86,7 +86,7 @@ func (tc *TrafficControl) UnsetRateLimit(iface, clientIP string) error {
 	cid := classID(ip)
 	_, err := tc.run(logger, tc.conf.IptablesPath,
 		"-t", "mangle", "-D", "POSTROUTING", "-o", iface,
-		"-d", withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
+		"-d", ip.String(), "-j", "CLASSIFY", "--set-class", cid)
 	if err != nil {
 		return err
 	}
@@ -102,12 +102,4 @@ func (tc *TrafficControl) UnsetRateLimit(iface, clientIP string) error {
 
 func classID(ip net.IP) string {
 	return fmt.Sprintf("1:%x", uint16(crc32.ChecksumIEEE(ip)))
-}
-
-func withMask(ip net.IP) string {
-	bytes := 16
-	if ip.To4() != nil {
-		bytes = 4
-	}
-	return fmt.Sprintf("%s/%d", ip, bytes*8)
 }

@@ -10,6 +10,10 @@ There are three types of RPC endpoints:
 Endpoints are associated with namespaces. For example, UI endpoints are located
 in "ui" namespace.
 
+#### Conventions
+
+* Response field names should apply the `lowerCamelCase` convention.
+
 #### Call to synchronous method
 
 *Request template*:

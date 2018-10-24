@@ -8,6 +8,7 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/util"
 )
 
 func assertTopicsEqual(t *testing.T, wanted [][]common.Hash, got [][]common.Hash) {
@@ -21,7 +22,7 @@ func assertTopicsEqual(t *testing.T, wanted [][]common.Hash, got [][]common.Hash
 		}
 		for j, topic := range iTopics {
 			if got[i][j] != topic {
-				t.Fatal("wrong hash in topic ", i)
+				t.Fatalf("wrong hash in topic %d (%s)", i, util.Caller())
 			}
 		}
 	}

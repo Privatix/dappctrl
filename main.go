@@ -14,6 +14,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
+	"github.com/privatix/dappctrl/agent/somcserver"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -47,29 +48,32 @@ var (
 )
 
 type config struct {
-	AgentMonitor   *abill.Config
-	AgentServer    *uisrv.Config
-	BlockMonitor   *monitor.Config
-	ClientMonitor  *cbill.Config
-	DB             *data.DBConfig
-	DBLog          *dblog.Config
-	ReportLog      *rlog.Config
-	EptMsg         *ept.Config
-	Eth            *eth.Config
-	FileLog        *log.FileConfig
-	Gas            *worker.GasConf
-	Job            *job.Config
-	PayServer      *pay.Config
-	PayAddress     string
-	Proc           *proc.Config
-	Report         *bugsnag.Config
-	Role           string
-	SessionServer  *sesssrv.Config
-	SOMC           *somc.Config
-	StaticPassword string
-	UI             *ui.Config
-	Country        *country.Config
-	Looper         *looper.Config
+	AgentMonitor     *abill.Config
+	AgentServer      *uisrv.Config
+	BlockMonitor     *monitor.Config
+	ClientMonitor    *cbill.Config
+	Country          *country.Config
+	DB               *data.DBConfig
+	DBLog            *dblog.Config
+	ReportLog        *rlog.Config
+	EptMsg           *ept.Config
+	Eth              *eth.Config
+	FileLog          *log.FileConfig
+	Gas              *worker.GasConf
+	Job              *job.Config
+	Looper           *looper.Config
+	PayServer        *pay.Config
+	PayAddress       string
+	Proc             *proc.Config
+	Report           *bugsnag.Config
+	Role             string
+	SessionServer    *sesssrv.Config
+	SOMC             *somc.Config
+	SOMCServer       *rpcsrv.Config
+	StaticPassword   string
+	TorHostname      string
+	TorSocksListener uint
+	UI               *rpcsrv.Config
 }
 
 func newConfig() *config {
@@ -78,20 +82,22 @@ func newConfig() *config {
 		AgentServer:   uisrv.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
+		Country:       country.NewConfig(),
 		DB:            data.NewDBConfig(),
 		DBLog:         dblog.NewConfig(),
+		Looper:        looper.NewConfig(),
 		ReportLog:     rlog.NewConfig(),
 		EptMsg:        ept.NewConfig(),
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
+		PayServer:     pay.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
-		UI:            ui.NewConfig(),
-		Country:       country.NewConfig(),
-		Looper:        looper.NewConfig(),
+		SOMCServer:    rpcsrv.NewConfig(),
+		UI:            rpcsrv.NewConfig(),
 	}
 }
 
@@ -152,15 +158,15 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 	return logger, closer, nil
 }
 
-func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
+func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter, agent bool,
 	processor *proc.Processor) (*rpcsrv.Server, error) {
-	server, err := rpcsrv.NewServer(conf.Config)
+	server, err := rpcsrv.NewServer(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	handler := ui.NewHandler(conf, logger, db, queue, pwdStorage,
+	handler := ui.NewHandler(logger, db, queue, pwdStorage,
 		data.EncryptedKey, data.ToPrivateKey, agent, processor)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
@@ -201,6 +207,21 @@ func panicHunter(logger log.Logger) {
 	if err := recover(); err != nil {
 		logger.Fatal(fmt.Sprintf("panic raised: %+v", err))
 	}
+}
+
+func newAgentSOMCServer(conf *rpcsrv.Config, db *reform.DB,
+	logger log.Logger) (*rpcsrv.Server, error) {
+	server, err := rpcsrv.NewServer(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := somcserver.NewHandler(db, logger)
+	if err := server.AddHandler("api", handler); err != nil {
+		return nil, err
+	}
+
+	return server, nil
 }
 
 func main() {
@@ -249,9 +270,10 @@ func main() {
 
 	ethBack := eth.NewBackend(conf.Eth, logger)
 
-	worker, err := worker.NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.PayAddress, pwdStorage, conf.Country,
-		data.ToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods)
+	worker, err := worker.NewWorker(logger, db, somcConn,
+		ethBack, conf.Gas, ethBack.PSCAddress(), conf.PayAddress,
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods, conf.TorHostname, conf.TorSocksListener)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -289,6 +311,13 @@ func main() {
 		fatal <- uiSrv2.ListenAndServe()
 	}()
 
+	sess := sesssrv.NewServer(
+		conf.SessionServer, logger, db, conf.Country, queue)
+	go func() {
+		fatal <- sess.ListenAndServe()
+	}()
+	defer sess.Close()
+
 	if conf.Role == data.RoleClient {
 		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, pr,
 			conf.Eth.Contract.PSCAddrHex, pwdStorage)
@@ -298,14 +327,15 @@ func main() {
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(
-		conf.SessionServer, logger, db, conf.Country, queue)
-	go func() {
-		fatal <- sess.ListenAndServe()
-	}()
-	defer sess.Close()
-
 	if conf.Role == data.RoleAgent {
+		somcServer, err := newAgentSOMCServer(conf.SOMCServer, db, logger)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		go func() {
+			fatal <- somcServer.ListenAndServe()
+		}()
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 

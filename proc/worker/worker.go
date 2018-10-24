@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -16,6 +17,7 @@ import (
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/tor"
 )
 
 // GasConf amounts of gas limit to use for contracts calls.
@@ -59,14 +61,25 @@ type Worker struct {
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
 	pscPeriods     *eth.PSCPeriods
+	somcType       uint8
+	somcData       data.Base64String
+	torClient      *http.Client
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack eth.Backend, gasConc *GasConf, payAddr string,
-	pwdGetter data.PWDGetter, countryConf *country.Config,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	pscPeriods *eth.PSCPeriods) (*Worker, error) {
+	ethBack eth.Backend, gasConc *GasConf, pscAddr common.Address,
+	payAddr string, pwdGetter data.PWDGetter,
+	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
+	eptConf *ept.Config, pscPeriods *eth.PSCPeriods,
+	torHostname string, torSocksListener uint) (*Worker, error) {
+
+	somcType := data.OfferingSOMCShared
+	somcData := data.FromBytes([]byte(torHostname))
+	if len(somcData) > 0 {
+		somcType = data.OfferingSOMCTor
+	}
+
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -74,6 +87,11 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	}
 
 	eptService, err := ept.New(db, logger, payAddr, eptConf.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	torClient, err := tor.NewHTTPClient(torSocksListener)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +104,14 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		gasConf:        gasConc,
 		ept:            eptService,
 		ethBack:        ethBack,
-		pscAddr:        ethBack.PSCAddress(),
+		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
 		pscPeriods:     pscPeriods,
+		somcType:       somcType,
+		somcData:       somcData,
+		torClient:      torClient,
 	}, nil
 }
 

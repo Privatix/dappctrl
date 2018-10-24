@@ -296,7 +296,11 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 		return nil, err
 	}
 
+	logger = logger.Add("job", job2, "offering",
+		offering, "channel", channel)
+
 	if job2.Status != data.JobDone {
+		logger.Warn("job status is not done")
 		return nil, nil
 	}
 

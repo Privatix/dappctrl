@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -58,7 +57,6 @@ type Worker struct {
 	somc           *somc.Conn
 	queue          job.Queue
 	processor      *proc.Processor
-	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
 	pscPeriods     *eth.PSCPeriods
@@ -105,9 +103,4 @@ func (w *Worker) SetQueue(queue job.Queue) {
 // SetProcessor sets a processor.
 func (w *Worker) SetProcessor(processor *proc.Processor) {
 	w.processor = processor
-}
-
-// SetRunner sets a service runner.
-func (w *Worker) SetRunner(runner svcrun.ServiceRunner) {
-	w.runner = runner
 }

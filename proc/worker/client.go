@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -521,18 +520,6 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
-func (w *Worker) stopService(logger log.Logger, ch string) error {
-	if err := w.runner.Stop(ch); err != nil {
-		if err != svcrun.ErrNotRunning {
-			logger.Error(err.Error())
-			return ErrFailedStopService
-		}
-		logger.Warn(err.Error())
-	}
-
-	return nil
-}
-
 // ClientPreServiceTerminate terminates service.
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	logger := w.logger.Add("method", "ClientPreServiceTerminate", "job", job)
@@ -544,10 +531,6 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	}
 
 	logger = logger.Add("channel", ch)
-
-	if err := w.stopService(logger, ch.ID); err != nil {
-		return err
-	}
 
 	if ch.ServiceStatus == data.ServiceActive {
 		ch.ServiceStatus = data.ServiceTerminating
@@ -575,10 +558,6 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 
 	logger = logger.Add("channel", ch)
 
-	if err := w.stopService(logger, ch.ID); err != nil {
-		return err
-	}
-
 	ch.ServiceStatus = data.ServiceSuspending
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
@@ -600,11 +579,6 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	}
 
 	logger = logger.Add("channel", ch)
-
-	if err := w.runner.Start(ch.ID); err != nil {
-		logger.Error(err.Error())
-		return ErrFailedStartService
-	}
 
 	ch.ServiceStatus = data.ServiceActivating
 	changedTime := time.Now()

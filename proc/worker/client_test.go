@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
@@ -559,23 +558,6 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
-func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
-	workerF func(*data.Job) error, job *data.Job, runnerMethod int) {
-	calledMethod := -1
-	var calledChannel string
-	env.worker.runner = svcrun.Mock(
-		func(method int, channel string) (bool, error) {
-			calledMethod, calledChannel = method, channel
-			return false, nil
-		})
-
-	runJob(t, workerF, job)
-
-	if calledMethod != runnerMethod || calledChannel != job.RelatedID {
-		t.Fatalf("unexpected service runner call arguments")
-	}
-}
-
 func TestClientPreServiceTerminate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
@@ -603,8 +585,7 @@ func TestClientPreServiceTerminate(t *testing.T) {
 	var job data.Job
 	env.findTo(t, &job, jobID)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceTerminate, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceTerminate, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -657,8 +638,7 @@ func TestClientPreServiceSuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceSuspend, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceSuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
@@ -710,8 +690,7 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceUnsuspend, &job, svcrun.MockStart)
+	runJob(t, env.worker.ClientPreServiceUnsuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)

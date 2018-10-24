@@ -11,6 +11,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
@@ -68,7 +69,8 @@ func TestMain(m *testing.M) {
 }
 
 func newTestSessSrv(t *testing.T, timeout time.Duration) *testSessSrv {
-	s := sesssrv.NewServer(conf.SessionServer, logger, db, nil)
+	s := sesssrv.NewServer(conf.SessionServer,
+		logger, db, nil, job.NewDummyQueueMock())
 	go func() {
 		time.Sleep(timeout)
 		if err := s.ListenAndServe(); err != http.ErrServerClosed {

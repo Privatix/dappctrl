@@ -10,6 +10,7 @@ import (
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/mon"
 	"github.com/privatix/dappctrl/util"
@@ -55,7 +56,8 @@ func newPusherTestConf() *pusherTestConf {
 
 func newTestSessSrv(t *testing.T, timeout time.Duration,
 	countryConfig *country.Config) *testSessSrv {
-	s := sesssrv.NewServer(conf.SessionServer, logger, db, countryConfig)
+	s := sesssrv.NewServer(conf.SessionServer,
+		logger, db, countryConfig, job.NewDummyQueueMock())
 	go func() {
 		time.Sleep(timeout)
 		if err := s.ListenAndServe(); err != http.ErrServerClosed {

@@ -41,7 +41,7 @@
         "CheckTimeout": 10,
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x67c3ce713b1c40b2364360d37a15eddbc5aa9420",
+            "PSCAddrHex": "0x218d767e906d14e84683804f0a1f35a8ffdcb800",
             "Periods": {
                 "PopUp": 10,
                 "Challenge": 20,
@@ -207,6 +207,10 @@
         "ReconnPeriod": 5000,
         "URL": "ws://89.38.96.53:8080"
     },
+    "SOMCServer": {
+        "Addr": "localhost:5555",
+        "TLS": null
+    },
     "StaticPassword": "",
     "Report": {
         "ReleaseStage": "development",
@@ -225,6 +229,8 @@
         "Level": "info",
         "StackLevel": "error"
     },
+    "TorHostname": "plyzfy3qicjjvmeg.onion",
+    "TorSocksListener": 9999,
     "UI": {
         "Addr": "localhost:8888",
         "AllowedOrigins": ["*"],

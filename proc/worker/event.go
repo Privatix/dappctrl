@@ -30,17 +30,22 @@ type logOfferingCreatedInput struct {
 	offeringHash  common.Hash
 	minDeposit    *big.Int
 	currentSupply uint16
+	sourceType    uint8
+	source        []byte
 }
 
 type logOfferingPopUpInput struct {
 	agentAddr    common.Address
 	offeringHash common.Hash
+	sourceType   uint8
+	source       []byte
 }
 
 var (
 	logChannelTopUpDataArguments    abi.Arguments
 	logChannelCreatedDataArguments  abi.Arguments
 	logOfferingCreatedDataArguments abi.Arguments
+	logOfferingPopUpDataArguments   abi.Arguments
 )
 
 func init() {
@@ -55,6 +60,16 @@ func init() {
 	}
 
 	abiUint16, err := abi.NewType("uint16")
+	if err != nil {
+		panic(err)
+	}
+
+	abiUint8, err := abi.NewType("uint8")
+	if err != nil {
+		panic(err)
+	}
+
+	abiBytes, err := abi.NewType("bytes")
 	if err != nil {
 		panic(err)
 	}
@@ -77,6 +92,21 @@ func init() {
 	logOfferingCreatedDataArguments = abi.Arguments{
 		{
 			Type: abiUint16,
+		},
+		{
+			Type: abiUint8,
+		},
+		{
+			Type: abiBytes,
+		},
+	}
+
+	logOfferingPopUpDataArguments = abi.Arguments{
+		{
+			Type: abiUint8,
+		},
+		{
+			Type: abiBytes,
 		},
 	}
 }
@@ -165,11 +195,21 @@ func extractLogOfferingCreated(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	if len(dataUnpacked) != 1 {
+	if len(dataUnpacked) != 3 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	curSupply, ok := dataUnpacked[0].(uint16)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	sourceType, ok := dataUnpacked[1].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	source, ok := dataUnpacked[2].([]byte)
 	if !ok {
 		return nil, ErrParseJobData
 	}
@@ -183,6 +223,8 @@ func extractLogOfferingCreated(logger log.Logger,
 		offeringHash:  offeringHash,
 		minDeposit:    minDeposit,
 		currentSupply: curSupply,
+		sourceType:    sourceType,
+		source:        source,
 	}, nil
 }
 
@@ -192,11 +234,33 @@ func extractLogOfferingPopUp(logger log.Logger,
 		return nil, ErrWrongLogTopicsNumber
 	}
 
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(log.Data)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrParseJobData
+	}
+
+	if len(dataUnpacked) != 2 {
+		return nil, ErrWrongLogNonIndexedArgsNumber
+	}
+
+	sourceType, ok := dataUnpacked[0].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	source, ok := dataUnpacked[1].([]byte)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
 	offeringHash := log.Topics[2]
 
 	return &logOfferingPopUpInput{
 		agentAddr:    agentAddr,
 		offeringHash: offeringHash,
+		sourceType:   sourceType,
+		source:       source,
 	}, nil
 }

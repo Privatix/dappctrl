@@ -225,6 +225,10 @@
         "ReconnPeriod": 5000,
         "URL": "ws://190.2.137.9:8080"
     },
+    "SOMCServerAddr": {
+        "Addr": "localhost:5555",
+        "TLS": null
+    },
     "StaticPassword": "",
     "Report": {
         "ReleaseStage": "production",

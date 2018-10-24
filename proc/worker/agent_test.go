@@ -511,7 +511,8 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	env.ethBack.TestCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		new(big.Int).SetUint64(minDeposit), offering.Supply)
+		new(big.Int).SetUint64(minDeposit), offering.Supply,
+		env.worker.sourceType, env.worker.source)
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -741,7 +742,8 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
-		[common.HashLength]byte(offeringHash))
+		[common.HashLength]byte(offeringHash),
+		env.worker.sourceType, env.worker.source)
 
 	env.db.Reload(fxt.Offering)
 

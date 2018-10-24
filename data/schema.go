@@ -109,6 +109,12 @@ const (
 	OfferRemoved     = "removed"
 )
 
+// Offering source types.
+const (
+	OfferingSourceSOMC uint8 = iota
+	OfferingSourceTor
+)
+
 // Offering is a service offering.
 //reform:offerings
 type Offering struct {
@@ -141,6 +147,8 @@ type Offering struct {
 	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
+	SourceType         uint8           `json:"sourceType" reform:"source_type"`
+	Source             string          `json:"source" reform:"source"`
 }
 
 // State channel statuses.
@@ -314,8 +322,7 @@ const (
 	JobClientPreServiceSuspend              = "clientPreServiceSuspend"
 	JobClientPreServiceUnsuspend            = "clientPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
-	JobClientPreEndpointMsgSOMCGet          = "clientPreEndpointMsgSOMCGet"
-	JobClientAfterEndpointMsgSOMCGet        = "clientAfterEndpointMsgSOMCGet"
+	JobClientEndpointRestore                = "clientEndpointRestore"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
@@ -374,6 +381,11 @@ type JobPublishData struct {
 type JobCreateChannelData struct {
 	GasPrice uint64
 	Deposit  uint
+}
+
+// JobEndpointCreateData is a data for client endpoint create job.
+type JobEndpointCreateData struct {
+	EndpointSealed []byte
 }
 
 // Job is a task within persistent queue.

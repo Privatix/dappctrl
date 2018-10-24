@@ -44,21 +44,25 @@ type GasConf struct {
 
 // Worker has all worker routines.
 type Worker struct {
-	abi            abi.ABI
-	logger         log.Logger
-	db             *reform.DB
-	decryptKeyFunc data.ToPrivateKeyFunc
-	ept            *ept.Service
-	ethBack        eth.Backend
-	gasConf        *GasConf
-	pscAddr        common.Address
-	pwdGetter      data.PWDGetter
-	somc           *somc.Conn
-	queue          job.Queue
-	processor      *proc.Processor
-	ethConfig      *eth.Config
-	countryConfig  *country.Config
-	pscPeriods     *eth.PSCPeriods
+	abi              abi.ABI
+	logger           log.Logger
+	db               *reform.DB
+	decryptKeyFunc   data.ToPrivateKeyFunc
+	ept              *ept.Service
+	ethBack          eth.Backend
+	gasConf          *GasConf
+	pscAddr          common.Address
+	pwdGetter        data.PWDGetter
+	somc             *somc.Conn
+	queue            job.Queue
+	processor        *proc.Processor
+
+	ethConfig        *eth.Config
+	countryConfig    *country.Config
+	pscPeriods       *eth.PSCPeriods
+	sourceType       uint8
+	source           []byte
+	torSocksListener uint
 }
 
 // NewWorker returns new instance of worker.
@@ -66,7 +70,14 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack eth.Backend, gasConc *GasConf, payAddr string,
 	pwdGetter data.PWDGetter, countryConf *country.Config,
 	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	pscPeriods *eth.PSCPeriods) (*Worker, error) {
+	pscPeriods *eth.PSCPeriods,
+	torHostname string, torSocksListener uint) (*Worker, error) {
+
+	sourceType := data.OfferingSourceSOMC
+	source := []byte(torHostname)
+	if len(source) > 0 {
+		sourceType = data.OfferingSourceTor
+	}
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -79,18 +90,21 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	}
 
 	return &Worker{
-		abi:            abi,
-		logger:         logger.Add("type", "proc/worker.Worker"),
-		db:             db,
-		decryptKeyFunc: decryptKeyFunc,
-		gasConf:        gasConc,
-		ept:            eptService,
-		ethBack:        ethBack,
-		pscAddr:        ethBack.PSCAddress(),
-		pwdGetter:      pwdGetter,
-		somc:           somc,
-		countryConfig:  countryConf,
-		pscPeriods:     pscPeriods,
+		abi:              abi,
+		logger:           logger.Add("type", "proc/worker.Worker"),
+		db:               db,
+		decryptKeyFunc:   decryptKeyFunc,
+		gasConf:          gasConc,
+		ept:              eptService,
+		ethBack:          ethBack,
+		pscAddr:          ethBack.PSCAddress(),
+		pwdGetter:        pwdGetter,
+		somc:             somc,
+		countryConfig:    countryConf,
+		pscPeriods:       pscPeriods,
+		sourceType:       sourceType,
+		source:           source,
+		torSocksListener: torSocksListener,
 	}, nil
 }
 

@@ -182,13 +182,13 @@ func sealMessage(t *testing.T, env *workerTest,
 	return sealed
 }
 
-func testClientPreEndpointMsgSOMCGet(t *testing.T,
+func testClientEndpointCreate(t *testing.T,
 	countryFromAgent, resultCountry, wantedCountryStatus string) {
 	env := newWorkerTest(t)
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientPreEndpointMsgSOMCGet, data.JobChannel)
+		data.JobClientEndpointRestore, data.JobChannel)
 	defer fxt.close()
 
 	swapAgentWithClient(t, fxt)
@@ -217,7 +217,7 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 	sealed := sealMessage(t, env, fxt, &msg)
 
 	setJobData(t, fxt.DB, fxt.job, sealed)
-	runJob(t, env.worker.ClientPreEndpointMsgSOMCGet, fxt.job)
+	runJob(t, env.worker.ClientEndpointCreate, fxt.job)
 
 	var endp data.Endpoint
 	data.SelectOneFromTestDBTo(t, db, &endp,
@@ -244,47 +244,23 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 	}
 }
 
-type clientPreEndpointMsgSOMCGetTestData struct {
+type ClientEndpointCreateTestData struct {
 	countryFromAgent    string
 	resultCountry       string
 	wantedCountryStatus string
 }
 
-func TestClientPreEndpointMsgSOMCGet(t *testing.T) {
-	testData := []*clientPreEndpointMsgSOMCGetTestData{
+func TestClientEndpointCreate(t *testing.T) {
+	testData := []*ClientEndpointCreateTestData{
 		{"YY", "YY", data.CountryStatusValid},
 		{"YY", "FF", data.CountryStatusInvalid},
 		{"YY", "Y", data.CountryStatusUnknown},
 	}
 
 	for _, v := range testData {
-		testClientPreEndpointMsgSOMCGet(t, v.countryFromAgent,
+		testClientEndpointCreate(t, v.countryFromAgent,
 			v.resultCountry, v.wantedCountryStatus)
 
-	}
-}
-
-func TestClientAfterEndpointMsgSOMCGet(t *testing.T) {
-	env := newWorkerTest(t)
-	defer env.close()
-
-	fxt := env.newTestFixture(t,
-		data.JobClientAfterEndpointMsgSOMCGet, data.JobChannel)
-	defer fxt.close()
-
-	fxt.job.Data = []byte("\"" + fxt.Endpoint.ID + "\"")
-
-	runJob(t, env.worker.ClientAfterEndpointMsgSOMCGet, fxt.job)
-
-	var endp data.Endpoint
-	data.FindInTestDB(t, db, &endp, "id", fxt.Endpoint.ID)
-
-	var ch data.Channel
-	data.FindInTestDB(t, db, &ch, "id", fxt.Channel.ID)
-
-	if endp.Status != data.MsgChPublished ||
-		ch.ServiceStatus != data.ServiceSuspended {
-		t.Fatalf("bad endpoint or channel status")
 	}
 }
 
@@ -776,7 +752,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	// Create eth log records used by job.
 	var curSupply uint16 = expectedOffering.Supply
-	logData, err := logOfferingCreatedDataArguments.Pack(curSupply)
+	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}

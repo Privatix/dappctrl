@@ -89,12 +89,14 @@ func (b *TestEthBackend) CooperativeClose(opts *bind.TransactOpts,
 
 // RegisterServiceOffering is mock to RegisterServiceOffering.
 func (b *TestEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte, minDeposit *big.Int, maxSupply uint16) (*types.Transaction, error) {
+	offeringHash [32]byte, minDeposit *big.Int, maxSupply uint16,
+	source uint8, sourceType []byte) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		method: "RegisterServiceOffering",
 		caller: opts.From,
 		txOpts: opts,
-		args:   []interface{}{offeringHash, minDeposit, maxSupply},
+		args: []interface{}{offeringHash, minDeposit, maxSupply,
+			source, sourceType},
 	})
 	b.OfferingAgent = opts.From
 	b.OfferMinDeposit = minDeposit
@@ -342,12 +344,12 @@ func (b *TestEthBackend) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 
 // PSCPopupServiceOffering is mock to PSCPopupServiceOffering.
 func (b *TestEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte) (*types.Transaction, error) {
+	offeringHash [32]byte, sourceType uint8, source []byte) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		txOpts: opts,
 		method: "PopupServiceOffering",
 		caller: opts.From,
-		args:   []interface{}{offeringHash},
+		args:   []interface{}{offeringHash, sourceType, source},
 	})
 
 	nextBlock, _ := b.LatestBlockNumber(context.Background())

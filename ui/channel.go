@@ -193,7 +193,7 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 		return nil, err
 	}
 
-	var items []ClientChannelInfo
+	items := make([]ClientChannelInfo, 0)
 	for _, channel := range chs {
 		result, err := h.createClientChannelResult(logger, &channel)
 		if err != nil {

@@ -1022,12 +1022,12 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLastB
 
 *Parameters*:
 1. Password (string)
-2. Offset (number)
-3. Limit (number)
-4. Search text (string)
-5. Log level (string, can be `debug`, `info`, `warning`, `error` or `fatal`) 
-6. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
-7. Upper bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+2. Log levels (array of strings, strings can be `debug`, `info`, `warning`, `error` or `fatal`) 
+3. Search text (string)
+4. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+5. Upper bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+6. Offset (number)
+7. Limit (number)
 
 *Result (object)*:
 - `items` (array of `data.LogEvent` objects) - log events.
@@ -1037,7 +1037,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLastB
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", 0,1,"","error","2018-10-19T10:47:22","2019-10-19T10:47:22"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", ["error", "warning"], "","2018-10-19T10:47:22","2019-10-19T10:47:22", 0, 2], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -1067,7 +1067,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs"
 
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", 0,1,"monitor.Monitor","","",""], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", [], "monitor.Monitor","2018-10-19T10:47:22","2019-10-19T10:47:22", 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
@@ -14,7 +15,7 @@ type GetLogsResult struct {
 }
 
 type getLogsArgs struct {
-	level      string
+	level      []string
 	dateFrom   string
 	dateTo     string
 	searchText string
@@ -39,11 +40,6 @@ func (h *Handler) getLogsConditions(
 
 	var contextSearchSQL string
 
-	if args.searchText != "" {
-		contextSearchSQL = fmt.Sprintf("to_tsvector('english',"+
-			" context) @@ to_tsquery('%s:*')", args.searchText)
-	}
-
 	count := 1
 
 	index := func() string {
@@ -59,10 +55,25 @@ func (h *Handler) getLogsConditions(
 		return fmt.Sprintf("%s %s %s", conditions, operator, condition)
 	}
 
-	if args.level != "" {
-		condition := fmt.Sprintf("%s = %s", "level", index())
+	if args.searchText != "" {
+		contextSearchSQL = fmt.Sprintf("to_tsvector('english',"+
+			" context) @@ to_tsquery('%s:*')", args.searchText)
+
+		condition := fmt.Sprintf("%s like %s", "message", index())
 		conditions = join(conditions, "AND", condition)
-		arguments = append(arguments, args.level)
+		arguments = append(arguments, "%"+args.searchText+"%")
+	}
+
+	if len(args.level) != 0 {
+		indexes := h.db.Placeholders(count, len(args.level))
+		condition := fmt.Sprintf("%s in (%s)", "level",
+			strings.Join(indexes, ","))
+		conditions = join(conditions, "AND", condition)
+
+		for _, level := range args.level {
+			arguments = append(arguments, level)
+		}
+		count = count + len(args.level)
 	}
 
 	if args.dateFrom != "" {
@@ -115,11 +126,11 @@ func (h *Handler) getLogs(logger log.Logger, conditions string,
 }
 
 // GetLogs returns back end log, paginated.
-func (h *Handler) GetLogs(password string, offset, limit uint,
-	searchText, level, dateFrom, dateTo string) (*GetLogsResult, error) {
-	logger := h.logger.Add("method", "GetLogs", "offset", offset,
-		"limit", limit, "searchText", searchText, "level", level,
-		"dateFrom", dateFrom, "dateTo", dateTo)
+func (h *Handler) GetLogs(password string, levels []string, searchText,
+	dateFrom, dateTo string, offset, limit uint) (*GetLogsResult, error) {
+	logger := h.logger.Add("method", "GetLogs", "searchText",
+		searchText, "levels", levels, "dateFrom", dateFrom, "dateTo",
+		dateTo, "offset", offset, "limit", limit)
 
 	err := h.checkPassword(logger, password)
 	if err != nil {
@@ -127,7 +138,7 @@ func (h *Handler) GetLogs(password string, offset, limit uint,
 	}
 
 	args := &getLogsArgs{
-		level:      level,
+		level:      levels,
 		dateTo:     dateTo,
 		dateFrom:   dateFrom,
 		searchText: searchText,

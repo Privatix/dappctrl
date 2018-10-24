@@ -384,6 +384,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
                 "channelStatus":"active",
                 "serviceStatus":"pending",
                 "serviceChangedTime":"2018-10-21T23:44:11.309Z",
+                "preparedAt":"2018-11-21T23:44:11.309Z",
                 "totalDeposit":100,
                 "receiptBalance":5
             }
@@ -1091,6 +1092,24 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs"
 ```
 
 </details>
+
+<details><summary>Example 3</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs", "params": ["qwerty", 0,1,"monitor.Monitor","","",""], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
+    }
+}
+```
+
 </details>
 
 ### Products
@@ -1459,6 +1478,8 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
 1. Password (string)
 2. Related type (string, can be `offering`, `channel`, `endpoint`, `account`, `accountAggregated` or empty)
 3. Related id (string, either uuid or empty)
+4. Offset (number)
+5. Limit (number)
 
 *Result (array of `data.EthTx` objects)*: transactions.
 
@@ -1466,30 +1487,33 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTransactions", "params": ["qwert", "channel"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTransactions", "params": ["qwert", "channel", "d0dfbbb2-dd07-423a-8ce0-1e74ce50105b", 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": [
-        {
-            "id": "bc8310c8-6709-4cb0-9642-703f2bd3bb5d",
-            "hash": "36845db5d50bd1ac0ea31353a20b8a9616279dcf000b51eca995debca678c94c",
-            "method": "CreateChannel",
-            "status": "sent",
-            "job": "dd123187-ff00-4785-ac1f-f3f6fb28ac35",
-            "issued": "2018-09-18 10:01:22.055041+02",
-            "addrFrom": "e4b2ad904ab4b4e70c58c0beb04d6e46522b2858",
-            "addrTo": "0381ce1568a3219b0bf8f4126939322cf7248510",
-            "nonce": 168,
-            "gasPrice": 6000000000,
-            "gas": 200000,
-            "txRaw": {"r": "0x622029910b2949d4011df8d615744c4ce247629162f629ea38410749a10cb3e5", "s": "0x13215fa2b64a15cdc5371cff9baa1995ab8b7220c7117dbfedb520bf119a30a5", "v": "0x1b", "to": "0xae6bfd07c02b1fca7e1cbc160a87729f3fafb794", "gas": "0x30d40", "hash": "0x36845db5d50bd1ac0ea31353a20b8a9616279dcf000b51eca995debca678c94c", "input": "0x6bc371520000000000000000000000000381ce1568a3219b0bf8f4126939322cf7248510e6a24e1e28d3c2573db24fb07aaebe8aad05e08342bf7c8661d0ad7860acf04000000000000000000000000000000000000000000000000000000000007a12000000000000000000000000000000000000000000000000000000000000000000", "nonce": "0xa8", "value": "0x0", "gasPrice": "0x165a0bc00"},
-            "relatedType": "channel",
-            "relatedID": "1e9417f5-dea7-4944-9a8e-4b9a002c0c72",
-        }
-    ]
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id": "bc8310c8-6709-4cb0-9642-703f2bd3bb5d",
+                "hash": "36845db5d50bd1ac0ea31353a20b8a9616279dcf000b51eca995debca678c94c",
+                "method": "CreateChannel",
+                "status": "sent",
+                "job": "dd123187-ff00-4785-ac1f-f3f6fb28ac35",
+                "issued": "2018-09-18 10:01:22.055041+02",
+                "addrFrom": "e4b2ad904ab4b4e70c58c0beb04d6e46522b2858",
+                "addrTo": "0381ce1568a3219b0bf8f4126939322cf7248510",
+                "nonce": 168,
+                "gasPrice": 6000000000,
+                "gas": 200000,
+                "txRaw": {"r": "0x622029910b2949d4011df8d615744c4ce247629162f629ea38410749a10cb3e5", "s": "0x13215fa2b64a15cdc5371cff9baa1995ab8b7220c7117dbfedb520bf119a30a5", "v": "0x1b", "to": "0xae6bfd07c02b1fca7e1cbc160a87729f3fafb794", "gas": "0x30d40", "hash": "0x36845db5d50bd1ac0ea31353a20b8a9616279dcf000b51eca995debca678c94c", "input": "0x6bc371520000000000000000000000000381ce1568a3219b0bf8f4126939322cf7248510e6a24e1e28d3c2573db24fb07aaebe8aad05e08342bf7c8661d0ad7860acf04000000000000000000000000000000000000000000000000000000000007a12000000000000000000000000000000000000000000000000000000000000000000", "nonce": "0xa8", "value": "0x0", "gasPrice": "0x165a0bc00"},
+                "relatedType": "channel",
+                "relatedID": "1e9417f5-dea7-4944-9a8e-4b9a002c0c72",
+            }
+        ],
+        "totalItems":10
+    }
 }
 ```
 </details>
@@ -1498,13 +1522,16 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTransactions", "params": ["qwert", "channel"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTransactions", "params": ["qwert", "channel", "d0dfbbb2-dd07-423a-8ce0-1e74ce50105b, 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": []
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[],
+        "totalItems":0
+    }
 }
 ```
 </details>

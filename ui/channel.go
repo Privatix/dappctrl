@@ -380,7 +380,7 @@ func (h *Handler) getChannels(logger log.Logger, channelStatus, serviceStatus,
 
 	offsetLimit := h.offsetLimit(offset, limit)
 
-	tail = tail + offsetLimit
+	tail = fmt.Sprintf("%s %s", tail, offsetLimit)
 
 	result, err := h.selectAllFrom(
 		logger, data.ChannelTable, tail, args...)

@@ -105,7 +105,24 @@ func awaitingGoodPosting(wg *sync.WaitGroup, postErrors chan error) {
 	}
 }
 
-func TestTerminate(t *testing.T) {
+func TestTerminateInactiveChannel(t *testing.T) {
+	fxt := newFixture(t, db)
+	defer fxt.Close()
+
+	fxt.Channel.TotalDeposit = 10
+	oneSec := uint64(1)
+	fxt.Offering.MaxInactiveTimeSec = &oneSec
+	session := data.NewTestSession(fxt.Channel.ID)
+	// Fake session stopped a day ago.
+	stopped := time.Now().AddDate(0, 0, -1)
+	session.Stopped = &stopped
+	data.SaveToTestDB(t, db, fxt.Channel, fxt.Offering, session)
+	defer data.DeleteFromTestDB(t, db, session)
+	time.Sleep(time.Second)
+	testTerminateJobCreated(t, fxt.Channel.ID)
+}
+
+func TestTerminateCompletedChannel(t *testing.T) {
 	fxt := newFixture(t, db)
 	defer fxt.Close()
 
@@ -113,6 +130,10 @@ func TestTerminate(t *testing.T) {
 	fxt.Channel.ReceiptBalance = 10
 	data.SaveToTestDB(t, db, fxt.Channel)
 
+	testTerminateJobCreated(t, fxt.Channel.ID)
+}
+
+func testTerminateJobCreated(t *testing.T, channelID string) {
 	processSig := make(chan error)
 
 	wg := sync.WaitGroup{}
@@ -132,7 +153,8 @@ func TestTerminate(t *testing.T) {
 
 	wg.Wait()
 
-	jobs, err := db.FindAllFrom(data.JobTable, "related_id", fxt.Channel.ID)
+	jobs, err := db.FindAllFrom(data.JobTable, "related_id", channelID)
+
 	util.TestExpectResult(t, "Find jobs for channel", nil, err)
 
 	var recs []reform.Record

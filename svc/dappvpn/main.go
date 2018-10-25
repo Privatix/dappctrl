@@ -52,7 +52,7 @@ func createLogger() (log.Logger, io.Closer, error) {
 		return nil, nil, err
 	}
 
-	logger := log.NewMultiLogger(elog, flog)
+	logger := log.NewMultiLogger(elog, flog).Add("env", os.Environ())
 
 	return logger, closer, nil
 }
@@ -144,7 +144,8 @@ func handleConnect() {
 			"failed to unmarshal offering params: " + err.Error())
 	}
 
-	err = tctrl.SetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"),
+	err = tctrl.SetRateLimit(os.Getenv("dev"),
+		os.Getenv("ifconfig_pool_remote_ip"),
 		params.MinUploadMbits, params.MinDownloadMbits)
 	if err != nil {
 		logger.Fatal("failed to set rate limit: " + err.Error())
@@ -173,7 +174,8 @@ func handleDisconnect() {
 		logger.Fatal("failed to stop session: " + err.Error())
 	}
 
-	err = tctrl.UnsetRateLimit(os.Getenv("dev"), os.Getenv("trusted_ip"))
+	err = tctrl.UnsetRateLimit(os.Getenv("dev"),
+		os.Getenv("ifconfig_pool_remote_ip"))
 	if err != nil {
 		logger.Fatal("failed to unset rate limit: " + err.Error())
 	}

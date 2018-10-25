@@ -16,7 +16,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/AlekSi/pointer"
 	"github.com/privatix/dappctrl/eth/truffle"
@@ -363,7 +363,7 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 }
 
 // CleanTestTable deletes all records from a given DB table.
-func CleanTestTable(t *testing.T, db *reform.DB, tbl reform.Table) {
+func CleanTestTable(t *testing.T, db *reform.DB, tbl reform.View) {
 	if _, err := db.DeleteFrom(tbl, ""); err != nil {
 		t.Fatalf("failed to clean %T table: %s", tbl, err)
 	}

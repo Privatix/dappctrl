@@ -177,6 +177,7 @@ type Channel struct {
 	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
 	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
 	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
+	PreparedAt         time.Time  `json:"preparedAt" reform:"prepared_at"`
 	TotalDeposit       uint64     `json:"totalDeposit" reform:"total_deposit"`
 	Salt               uint64     `json:"-" reform:"salt"`
 	Username           *string    `json:"-" reform:"username"`
@@ -412,9 +413,9 @@ type EthTx struct {
 // LogEvent is a log event.
 //reform:log_events
 type LogEvent struct {
-	Time    time.Time `reform:"time"`
-	Level   log.Level `reform:"level"`
-	Message string    `reform:"message"`
-	Context []byte    `reform:"context"`
-	Stack   *string   `reform:"stack"`
+	Time    time.Time       `json:"time" reform:"time"`
+	Level   log.Level       `json:"level" reform:"level"`
+	Message string          `json:"message" reform:"message"`
+	Context json.RawMessage `json:"context" reform:"context"`
+	Stack   *string         `json:"stack" reform:"stack"`
 }

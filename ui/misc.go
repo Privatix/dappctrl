@@ -1,9 +1,10 @@
 package ui
 
 import (
-	"database/sql"
+	"fmt"
 	"strconv"
 
+	"database/sql"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -17,8 +18,11 @@ const (
 			AND status = 'msg_channel_published'
 			AND NOT is_local
 			AND current_supply > 0
-			AND agent NOT IN (SELECT eth_addr FROM accounts)
-		      ORDER BY block_number_updated DESC`
+			AND agent NOT IN (SELECT eth_addr FROM accounts)`
+
+	activeOfferingSorting = `
+		      ORDER BY block_number_updated DESC
+`
 )
 
 func (h *Handler) checkPassword(logger log.Logger, password string) error {
@@ -129,4 +133,27 @@ func (h *Handler) uintFromQuery(logger log.Logger, password,
 
 	ret := uint(queryRet.Int64)
 	return &ret, nil
+}
+
+func (h *Handler) numberOfObjects(logger log.Logger, table, conditions string,
+	arguments []interface{}) (count int, err error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table, conditions)
+	err = h.db.QueryRow(query, arguments...).Scan(&count)
+	if err != nil {
+		logger.Error(err.Error())
+		return 0, ErrInternal
+	}
+	return count, err
+}
+
+func (h *Handler) offsetLimit(offset, limit uint) string {
+	var limitCondition string
+
+	if limit != 0 {
+		limitCondition = fmt.Sprintf("LIMIT %d", limit)
+	}
+
+	offsetCondition := fmt.Sprintf("OFFSET %d", offset)
+
+	return fmt.Sprintf("%s %s", offsetCondition, limitCondition)
 }

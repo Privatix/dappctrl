@@ -193,7 +193,7 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 		return nil, err
 	}
 
-	var items []ClientChannelInfo
+	items := make([]ClientChannelInfo, 0)
 	for _, channel := range chs {
 		result, err := h.createClientChannelResult(logger, &channel)
 		if err != nil {
@@ -296,7 +296,11 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 		return nil, err
 	}
 
+	logger = logger.Add("job", job2, "offering",
+		offering, "channel", channel)
+
 	if job2.Status != data.JobDone {
+		logger.Warn("job status is not done")
 		return nil, nil
 	}
 
@@ -380,7 +384,7 @@ func (h *Handler) getChannels(logger log.Logger, channelStatus, serviceStatus,
 
 	offsetLimit := h.offsetLimit(offset, limit)
 
-	tail = tail + offsetLimit
+	tail = fmt.Sprintf("%s %s", tail, offsetLimit)
 
 	result, err := h.selectAllFrom(
 		logger, data.ChannelTable, tail, args...)

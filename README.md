@@ -18,7 +18,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 Install prerequisite software if it's not installed.
 
-* Install [Golang](https://golang.org/doc/install). Make sure that `$HOME/go/bin` (default `GOPATH`) is added to system path `$PATH`.
+* Install [Golang](https://golang.org/doc/install). Make sure that `$GOPATH/bin` is added to system path `$PATH`.
 
 * Install [PostgreSQL](https://www.postgresql.org/download/).
 

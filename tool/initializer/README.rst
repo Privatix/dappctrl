@@ -11,9 +11,9 @@ Description of initializer arguments
 * python initializer.py
     * Start full install, with GUI
 * python initializer.py --build
-    * Create file wiwh cmds for generate dappvpn.config.json
+    * Create file with cmds for generate dappvpn.config.json
 * python initializer.py --vpn [start/stop/restart/status]
-    * Control vpn servise. Example python initializer.py --vpn start
+    * Control vpn service. Example python initializer.py --vpn start
 * python initializer.py --comm [start/stop/restart/status]
     * Control common servise. Example python initializer.py --comm start
 * python initializer.py --mass [start/stop/restart/status]
@@ -27,7 +27,7 @@ Description of initializer arguments
 * python initializer.py --update-gui
     * Update only GUI,delete gui files and reinstall
 * python initializer.py --link
-    * Use another link for download.If not use, default link as will be the same as in the application configuration in main_conf[link_download]
+    * Use another link for download.If not used, default link will be the same as in the application configuration in main_conf[link_download]
 * python initializer.py --branch
     * Use another branch than 'develop' for download.
     * Template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
@@ -45,17 +45,17 @@ Description of initializer arguments
             "serviceName": "my service",
             "description": "my service description",
             "country": "UA",
-            "supply": 3,
+            "supply": 30,
             "unitName": "MB",
             "autoPopUp": True,
             "unitType": "units",
             "billingType": "postpaid",
             "setupPrice": 0,
-            "unitPrice": 10000,
+            "unitPrice": 1000,
             "minUnits": 10000,
             "maxUnit": 30000,
             "billingInterval": 1,
-            "maxBillingUnitLag": 3,
+            "maxBillingUnitLag": 100,
             "maxSuspendTime": 1800,
             "maxInactiveTimeSec": 1800,
             "additionalParams":

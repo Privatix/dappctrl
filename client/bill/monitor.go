@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lib/pq"
+
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
@@ -215,11 +217,12 @@ func (m *Monitor) maxInactiveTimeReached(
 		return false, nil
 	}
 	query := "SELECT COUNT(*), MAX(last_usage_time) from sessions"
-	var lastUsage time.Time
 	var qty uint
-	if err := m.db.QueryRow(query).Scan(&qty, &lastUsage); err != nil {
+	var lastUsageNullable pq.NullTime
+	if err := m.db.QueryRow(query).Scan(&qty, &lastUsageNullable); err != nil {
 		return false, err
 	}
+	lastUsage := lastUsageNullable.Time
 	if qty == 0 {
 		lastUsage = ch.PreparedAt
 	}

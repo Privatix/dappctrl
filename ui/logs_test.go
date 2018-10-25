@@ -15,7 +15,7 @@ type getLogsTestData struct {
 	offset     uint
 	limit      uint
 	searchText string
-	level      string
+	level      []string
 	dateFrom   string
 	dataTo     string
 	totalItems int
@@ -68,40 +68,40 @@ func TestGetLogs(t *testing.T) {
 		Context: []byte("{\"foo\": \"bar\"}"),
 	})
 
-	_, err := handler.GetLogs("wrong-password", 2, 1, "",
-		string(log.Error), "", "")
+	_, err := handler.GetLogs("wrong-password",
+		[]string{string(log.Error)}, "", "", "", 2, 1)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	testData := []*getLogsTestData{
 		// Test pagination.
-		{1, 2, "", string(log.Error), "", "", 2, 1},
-		{1, 1, "", string(log.Error), "", "", 2, 1},
-		{2, 1, "", string(log.Error), "", "", 2, 0},
-		{0, 3, "", string(log.Error), "", "", 2, 2},
-		{0, 0, "", string(log.Error), "", "", 2, 2},
-		{1, 0, "", string(log.Error), "", "", 2, 1},
+		{1, 2, "", []string{string(log.Error)}, "", "", 2, 1},
+		{1, 1, "", []string{string(log.Error)}, "", "", 2, 1},
+		{2, 1, "", []string{string(log.Error)}, "", "", 2, 0},
+		{0, 3, "", []string{string(log.Error)}, "", "", 2, 2},
+		{0, 0, "", []string{string(log.Error)}, "", "", 2, 2},
+		{1, 0, "", []string{string(log.Error)}, "", "", 2, 1},
 		// Test filtering by level.
-		{1, 2, "", string(log.Error), "", "", 2, 1},
-		{1, 2, "", string(log.Fatal), "", "", 0, 0},
+		{1, 2, "", []string{string(log.Error)}, "", "", 2, 1},
+		{1, 2, "", []string{string(log.Fatal)}, "", "", 0, 0},
 		// Test filtering by date range.
-		{1, 2, "", string(log.Error),
+		{1, 2, "", []string{string(log.Error)},
 			dateArg(time.Now().Add(-time.Minute)),
 			dateArg(time.Now().Add(time.Minute)), 2, 1},
-		{1, 2, "", string(log.Fatal),
+		{1, 2, "", []string{string(log.Fatal)},
 			dateArg(time.Now().Add(time.Minute)),
 			dateArg(time.Now().Add(time.Hour)), 0, 0},
 		// Test filtering by msg text.
-		{0, 1, "fo", string(log.Info), "", "", 1, 1},
-		{0, 1, "do", "", "", "", 0, 0},
+		{0, 1, "fo", []string{string(log.Info)}, "", "", 1, 1},
+		{0, 1, "do", nil, "", "", 0, 0},
 		// Test filtering by context.
-		{0, 1, "ba", "", "", "", 1, 1},
-		{0, 1, "foo", "", "", "", 0, 0},
+		{0, 1, "ba", nil, "", "", 1, 1},
+		{0, 1, "foo", nil, "", "", 1, 1},
 	}
 
 	for _, v := range testData {
 		res, err := handler.GetLogs(
-			data.TestPassword, v.offset, v.limit, v.searchText,
-			v.level, v.dateFrom, v.dataTo)
+			data.TestPassword, v.level, v.searchText,
+			v.dateFrom, v.dataTo, v.offset, v.limit)
 		assertResult(t, res, err, v.totalItems, v.exp, assertErrEqual)
 	}
 }

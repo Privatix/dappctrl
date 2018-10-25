@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/privatix/dappctrl/data"
@@ -10,11 +11,17 @@ import (
 // a specific account.
 const AccountAggregatedType = "accountAggregated"
 
+// GetEthTransactionsResult is result of GetEthTransactions method.
+type GetEthTransactionsResult struct {
+	Items      []data.EthTx `json:"items"`
+	TotalItems int          `json:"totalItems"`
+}
+
 // GetEthTransactions returns transactions by related object.
-func (h *Handler) GetEthTransactions(
-	password, relType, relID string) ([]data.EthTx, error) {
-	logger := h.logger.Add("method", "GetEthTransactions",
-		"relatedType", relType, "relatedID", relID)
+func (h *Handler) GetEthTransactions(password, relType, relID string,
+	offset, limit uint) (*GetEthTransactionsResult, error) {
+	logger := h.logger.Add("method", "GetEthTransactions", "relatedType",
+		relType, "relatedID", relID, "limit", limit, "offset", offset)
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return nil, err
@@ -53,6 +60,16 @@ func (h *Handler) GetEthTransactions(
 		tail = "WHERE " + strings.Join(conds, " AND ")
 	}
 
+	count, err := h.numberOfObjects(
+		logger, data.EthTxTable.Name(), tail, args)
+	if err != nil {
+		return nil, err
+	}
+
+	offsetLimit := h.offsetLimit(offset, limit)
+
+	tail = fmt.Sprintf("%s %s", tail, offsetLimit)
+
 	txs, err := h.selectAllFrom(logger, data.EthTxTable, tail, args...)
 	if err != nil {
 		return nil, err
@@ -63,5 +80,5 @@ func (h *Handler) GetEthTransactions(
 	for i, v := range txs {
 		ret[i] = *v.(*data.EthTx)
 	}
-	return ret, nil
+	return &GetEthTransactionsResult{ret, count}, nil
 }

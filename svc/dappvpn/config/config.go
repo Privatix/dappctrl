@@ -26,7 +26,8 @@ type serverConfig struct {
 
 // Config is dappvpn configuration.
 type Config struct {
-	ChannelDir      string        // Directory for common-name -> channel mappings.
+	ChannelDir      string // Directory for common-name -> channel mappings.
+	ClientMode      bool
 	HeartbeatPeriod time.Duration // In milliseconds.
 	FileLog         *log.FileConfig
 	Log             *util.LogConfig
@@ -41,6 +42,7 @@ type Config struct {
 func NewConfig() *Config {
 	return &Config{
 		ChannelDir:      ".",
+		ClientMode:      false,
 		HeartbeatPeriod: 2000,
 		FileLog:         log.NewFileConfig(),
 		Log:             util.NewLogConfig(),

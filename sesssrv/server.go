@@ -70,7 +70,8 @@ func NewServer(conf *Config, logger log.Logger, db *reform.DB,
 	s.HandleFunc(PathUpdate, modifyHandler(s.handleUpdate))
 	s.HandleFunc(PathEndpointMsg, modifyHandler(s.handleEndpointMsg))
 	s.HandleFunc(PathProductConfig, modifyHandler(s.handleProductConfig))
-	s.HandleFunc(PathProductHeartbeat, modifyHandler(s.handleHeartbeat))
+	s.HandleFunc(PathProductHeartbeat,
+		modifyHandler(s.handleProductHeartbeat))
 
 	return s
 }

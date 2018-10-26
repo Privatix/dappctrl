@@ -1,6 +1,8 @@
 {
     "ChannelDir": ".",
 
+    "ClientMode": false,
+
     "HeartbeatPeriod": 2000,
 
     "FileLog": {
@@ -16,8 +18,6 @@
         "Addr": "localhost:7505",
         "ByteCountPeriod": 5
     },
-
-    "MonitorDelay": 1000,
 
     "OpenVPN": {
         "Name": "openvpn",

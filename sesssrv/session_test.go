@@ -172,32 +172,3 @@ func testUpdateStopNormalFlow(fxt *data.TestFixture, sess *data.Session, stop bo
 		data.SaveToTestDB(fxt.T, db, sess)
 	}
 }
-
-func TestHeartbeat(t *testing.T) {
-	fxt := newTestFixtures(t)
-	defer fxt.Close()
-
-	statuses := []string{
-		data.ServicePending, data.ServiceActivating, data.ServiceActive,
-		data.ServiceSuspending, data.ServiceSuspended,
-		data.ServiceTerminating, data.ServiceTerminated,
-	}
-
-	args := AuthArgs{ClientID: fxt.Channel.ID}
-
-	for _, v := range statuses {
-		fxt.Channel.ServiceStatus = v
-		data.SaveToTestDB(t, db, fxt.Channel)
-
-		var result HeartbeatResult
-		err := Post(conf.SessionServer.Config,
-			logger, fxt.Product.ID, data.TestPassword,
-			PathProductHeartbeat, args, &result)
-		util.TestExpectResult(t, "Post", nil, err)
-
-		if result.ServiceStatus != v {
-			t.Fatalf("status mismatch, expected %s, got %s",
-				v, result.ServiceStatus)
-		}
-	}
-}

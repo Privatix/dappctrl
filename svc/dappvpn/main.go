@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/svc/dappvpn/config"
 	vpndata "github.com/privatix/dappctrl/svc/dappvpn/data"
@@ -34,11 +33,10 @@ var (
 )
 
 var (
-	conf    *config.Config
-	channel string
-	logger  log.Logger
-	tctrl   *tc.TrafficControl
-	fatal   = make(chan string)
+	conf   *config.Config
+	logger log.Logger
+	tctrl  *tc.TrafficControl
+	fatal  = make(chan string)
 )
 
 func createLogger() (log.Logger, io.Closer, error) {
@@ -62,8 +60,6 @@ func main() {
 
 	fconfig := flag.String(
 		"config", "dappvpn.config.json", "Configuration file")
-	// Client mode is active when the parameter below is set.
-	fchannel := flag.String("channel", "", "Channel ID for client mode")
 	flag.Parse()
 
 	version.Print(*v, Commit, Version)
@@ -72,8 +68,6 @@ func main() {
 	if err := util.ReadJSONFile(*fconfig, &conf); err != nil {
 		panic(fmt.Sprintf("failed to read configuration: %s\n", err))
 	}
-
-	channel = *fchannel
 
 	var err error
 
@@ -133,7 +127,7 @@ func handleConnect() {
 		logger.Fatal("failed to start session: " + err.Error())
 	}
 
-	if len(channel) != 0 || res.Offering.AdditionalParams == nil {
+	if res.Offering.AdditionalParams == nil {
 		return
 	}
 
@@ -232,10 +226,10 @@ func handleMonByteCount(ch string, up, down uint64) bool {
 }
 
 func handleMonitor(confFile string) {
-	if len(channel) == 0 {
-		handleAgentMonitor(confFile)
-	} else {
+	if conf.ClientMode {
 		handleClientMonitor()
+	} else {
+		handleAgentMonitor(confFile)
 	}
 }
 
@@ -278,7 +272,7 @@ func handleAgentMonitor(confFile string) {
 		}()
 	}
 
-	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, channel)
+	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, "")
 	go func() {
 		fatal <- fmt.Sprintf("failed to monitor vpn traffic: %s",
 			monitor.MonitorTraffic())
@@ -293,19 +287,13 @@ var (
 )
 
 func handleClientMonitor() {
-	if err := prepare.ClientConfig(logger, channel, conf); err != nil {
-		msg := "failed to prepare client configuration: "
-		logger.Fatal(msg + err.Error())
-	}
-
 	for {
 		time.Sleep(conf.HeartbeatPeriod * time.Millisecond)
 
 		var res sesssrv.HeartbeatResult
-		args := sesssrv.HeartbeatArgs{ClientID: channel}
 		err := sesssrv.Post(conf.Server.Config, logger,
 			conf.Server.Username, conf.Server.Password,
-			sesssrv.PathProductHeartbeat, args, &res)
+			sesssrv.PathProductHeartbeat, nil, &res)
 		if err != nil {
 			logger.Error("heartbeat request failed: " + err.Error())
 			break
@@ -313,17 +301,18 @@ func handleClientMonitor() {
 
 		mtx.Lock()
 
-		if ovpnCmd == nil {
-			if res.ServiceStatus == data.ServiceActivating {
-				ovpnCmd = launchOpenVPN()
+		if res.Command == sesssrv.HeartbeatStart {
+			err := prepare.ClientConfig(logger, res.Channel, conf)
+			if err != nil {
+				msg := "failed to prepare client config: "
+				logger.Fatal(msg + err.Error())
 			}
-		} else {
-			if res.ServiceStatus == data.ServiceSuspending ||
-				res.ServiceStatus == data.ServiceTerminating {
-				if err := ovpnCmd.Process.Kill(); err != nil {
-					msg := "failed to kill OpenVPN: "
-					logger.Error(msg + err.Error())
-				}
+
+			ovpnCmd = launchOpenVPN(res.Channel)
+		} else if res.Command == sesssrv.HeartbeatStop {
+			if err := ovpnCmd.Process.Kill(); err != nil {
+				msg := "failed to kill OpenVPN: "
+				logger.Error(msg + err.Error())
 			}
 		}
 
@@ -331,7 +320,7 @@ func handleClientMonitor() {
 	}
 }
 
-func launchOpenVPN() *exec.Cmd {
+func launchOpenVPN(channel string) *exec.Cmd {
 	if len(conf.OpenVPN.Name) == 0 {
 		logger.Fatal("no OpenVPN command provided")
 	}
@@ -376,6 +365,8 @@ func launchOpenVPN() *exec.Cmd {
 		ovpnCmd = nil
 		mtx.Unlock()
 	}()
+
+	time.Sleep(conf.OpenVPN.StartDelay * time.Millisecond)
 
 	monitor := mon.NewMonitor(conf.Monitor, logger, handleSession, channel)
 	go func() {

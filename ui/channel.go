@@ -187,8 +187,19 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 		return nil, err
 	}
 
+	jobFilter := `channels.id IN
+			(SELECT related_id 
+			   FROM jobs
+			  WHERE jobs.type = '%s' AND jobs.status = '%s')`
+
+	jobDoneCondition := fmt.Sprintf(jobFilter,
+		data.JobClientAfterChannelCreate, data.JobDone)
+
+	condition := fmt.Sprintf("%s AND %s", clientChannelsCondition,
+		jobDoneCondition)
+
 	chs, total, err := h.getChannels(logger, channelStatus, serviceStatus,
-		clientChannelsCondition, offset, limit)
+		condition, offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -198,10 +209,6 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 		result, err := h.createClientChannelResult(logger, &channel)
 		if err != nil {
 			return nil, err
-		}
-
-		if result == nil {
-			continue
 		}
 
 		items = append(items, *result)
@@ -232,8 +239,10 @@ func createChanStatusBlock(channel *data.Channel,
 	offering *data.Offering) (result chanStatusBlock) {
 	result.ChannelStatus = channel.ChannelStatus
 	result.ServiceStatus = channel.ServiceStatus
-	result.LastChanged = pointer.ToString(
-		util.SingleTimeFormat(*channel.ServiceChangedTime))
+	if channel.ServiceChangedTime != nil {
+		result.LastChanged = pointer.ToString(
+			util.SingleTimeFormat(*channel.ServiceChangedTime))
+	}
 	if offering.MaxInactiveTimeSec != nil {
 		result.MaxInactiveTime = *offering.MaxInactiveTimeSec
 	}
@@ -282,26 +291,28 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 	result = &ClientChannelInfo{}
 
 	offering := &data.Offering{}
-	job2 := &data.Job{}
-
 	err = h.findByPrimaryKey(logger, ErrOfferingNotFound,
 		offering, channel.Offering)
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.findByColumn(logger, ErrJobNotFound, job2,
-		"related_id", channel.ID)
+	tail := fmt.Sprintf("WHERE type = %s AND related_id = %s",
+		h.db.Placeholder(1), h.db.Placeholder(2))
+
+	item, err := h.selectOneFrom(h.logger, data.JobTable, ErrJobNotFound,
+		tail, data.JobClientAfterChannelCreate, channel.ID)
 	if err != nil {
 		return nil, err
 	}
+
+	job2 := item.(*data.Job)
 
 	logger = logger.Add("job", job2, "offering",
 		offering, "channel", channel)
 
 	if job2.Status != data.JobDone {
-		logger.Warn("job status is not done")
-		return nil, nil
+		return nil, ErrJobNotDone
 	}
 
 	sess, err := h.findAllFrom(logger, data.SessionTable,

@@ -35,6 +35,7 @@ const (
 	ErrBadAction
 	ErrNotAllowedForAgent
 	ErrJobNotFound
+	ErrJobNotDone
 )
 
 var errMsgs = errors.Messages{
@@ -66,6 +67,7 @@ var errMsgs = errors.Messages{
 	ErrBadAction:                "bad action",
 	ErrNotAllowedForAgent:       "operation not allowed for agent",
 	ErrJobNotFound:              "job not found",
+	ErrJobNotDone:               "job not done",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

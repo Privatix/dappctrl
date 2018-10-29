@@ -22,33 +22,38 @@ const (
 	ipc          = ""
 )
 
-// Client client for connection to the Ethereum.
-type Client struct {
+// client client for connection to the Ethereum.
+type client struct {
+	cancel        context.CancelFunc
 	cfg           *Config
-	c             *ethclient.Client
+	logger        log.Logger
+	client        *ethclient.Client
 	httpTransport *http.Transport
 }
 
-// NewClient creates client for connection to the Ethereum.
-func NewClient(ctx context.Context, cfg *Config,
-	logger log.Logger) (*Client, error) {
+// newClient creates client for connection to the Ethereum.
+func newClient(cfg *Config, logger log.Logger) (*client, error) {
+	logger2 := logger.Add("method", "newClient", "config", cfg)
+
 	u, err := url.Parse(cfg.GethURL)
 	if err != nil {
 		return nil, err
 	}
 
-	client := &Client{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := &client{cancel: cancel, cfg: cfg, logger: logger}
 
 	var rpcClient *rpc.Client
 
 	switch u.Scheme {
 	case httpProtocol, https:
-		httpTransport := transport(cfg.HttpClient)
+		httpTransport := transport(cfg.HTTPClient)
 
 		rpcClient, err = rpc.DialHTTPWithClient(cfg.GethURL,
-			httpClient(cfg.HttpClient, httpTransport))
+			httpClient(cfg.HTTPClient, httpTransport))
 
-		client.httpTransport = httpTransport
+		c.httpTransport = httpTransport
 	case ws, wss:
 		rpcClient, err = rpc.DialWebsocket(ctx, cfg.GethURL, "")
 	case stdIO:
@@ -56,34 +61,34 @@ func NewClient(ctx context.Context, cfg *Config,
 	case ipc:
 		rpcClient, err = rpc.DialIPC(ctx, cfg.GethURL)
 	default:
-		logger.Add("scheme", u.Scheme).Error(err.Error())
+		logger2.Add("scheme", u.Scheme).Error(err.Error())
 		return nil, ErrURLScheme
 	}
 	if err != nil {
-		logger.Error(err.Error())
+		logger2.Error(err.Error())
 		return nil, ErrCreateClient
 	}
 
-	client.c = ethclient.NewClient(rpcClient)
-	return client, nil
+	c.client = ethclient.NewClient(rpcClient)
+	return c, nil
 }
 
-// Close closes client.
-func (c *Client) Close() {
-	c.c.Close()
+// close closes client.
+func (c *client) close() {
+	c.client.Close()
 }
 
-// CloseIdleConnections closes any connections which were previously
+// closeIdleConnections closes any connections which were previously
 // connected from previous requests.
-func (c *Client) CloseIdleConnections() {
+func (c *client) closeIdleConnections() {
 	if c.httpTransport != nil {
 		c.httpTransport.CloseIdleConnections()
 	}
 }
 
-// EthClient returns client needed to work with contracts on a read-write basis.
-func (c *Client) EthClient() *ethclient.Client {
-	return c.c
+// ethClient returns client needed to work with contracts on a read-write basis.
+func (c *client) ethClient() *ethclient.Client {
+	return c.client
 }
 
 func httpClient(cfg *httpClientConf, transport *http.Transport) *http.Client {

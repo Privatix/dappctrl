@@ -15,7 +15,6 @@ import (
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -30,7 +29,7 @@ var (
 	logger             log.Logger
 	db                 *reform.DB
 	serviceContractABI abi.ABI
-	ethBackend         *adapter.TestEthBackend
+	ethBackend         *eth.TestEthBackend
 )
 
 func createJob() *data.Job {
@@ -123,7 +122,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	ethBackend = adapter.NewTestEthBackend(common.HexToAddress("0x1"))
+	ethBackend = eth.NewTestEthBackend(common.HexToAddress("0x1"))
 
 	os.Exit(m.Run())
 }

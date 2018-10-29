@@ -225,7 +225,7 @@ func createClientTestData(t *testing.T, fxt *fixture) (close func()) {
 		fxt.Account.EthAddr, offering.ID, 0, 10000, data.ChannelActive)
 	channel.ServiceChangedTime = pointer.ToTime(time.Now())
 
-	job2 := data.NewTestJob(data.JobClientPreChannelCreate,
+	job2 := data.NewTestJob(data.JobClientAfterChannelCreate,
 		data.JobUser, data.JobOffering)
 	job2.RelatedID = channel.ID
 	job2.Status = data.JobDone

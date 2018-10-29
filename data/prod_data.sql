@@ -304,7 +304,7 @@ VALUES ('eth.event.lastProcessedBlock',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.13.0',
+        '0.14.0',
         1,
         'Version of database.',
         'db version');

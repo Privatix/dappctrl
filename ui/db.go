@@ -41,6 +41,16 @@ func (h *Handler) findByColumn(logger log.Logger, notFoundError error,
 	return nil
 }
 
+func (h *Handler) findAllFrom(logger log.Logger, view reform.View,
+	column string, args ...interface{}) ([]reform.Struct, error) {
+	rows, err := h.db.FindAllFrom(view, column, args...)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+	return rows, nil
+}
+
 func (h *Handler) selectAllFrom(logger log.Logger, view reform.View,
 	tail string, args ...interface{}) ([]reform.Struct, error) {
 	rows, err := h.db.SelectAllFrom(view, tail, args...)
@@ -48,7 +58,21 @@ func (h *Handler) selectAllFrom(logger log.Logger, view reform.View,
 		logger.Error(err.Error())
 		return nil, ErrInternal
 	}
-	return rows, err
+	return rows, nil
+}
+
+func (h *Handler) selectOneFrom(logger log.Logger, view reform.View,
+	notFoundError error, tail string,
+	args ...interface{}) (reform.Struct, error) {
+	items, err := h.db.SelectOneFrom(view, tail, args...)
+	if err != nil {
+		logger.Error(err.Error())
+		if err == reform.ErrNoRows {
+			return nil, notFoundError
+		}
+		return nil, ErrInternal
+	}
+	return items, nil
 }
 
 func beginTX(logger log.Logger, db *reform.DB) (*reform.TX, error) {

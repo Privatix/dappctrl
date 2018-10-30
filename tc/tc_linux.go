@@ -62,7 +62,7 @@ func (tc *TrafficControl) SetRateLimit(
 
 		_, err = tc.run(logger, tc.conf.IptablesPath,
 			"-t", "mangle", "-A", "POSTROUTING", "-o", iface, "-d",
-			withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
+			ip.String(), "-j", "CLASSIFY", "--set-class", cid)
 	}
 
 	if upMbps > 0 {
@@ -86,7 +86,7 @@ func (tc *TrafficControl) UnsetRateLimit(iface, clientIP string) error {
 	cid := classID(ip)
 	_, err := tc.run(logger, tc.conf.IptablesPath,
 		"-t", "mangle", "-D", "POSTROUTING", "-o", iface,
-		"-d", withMask(ip), "-j", "CLASSIFY", "--set-class", cid)
+		"-d", ip.String(), "-j", "CLASSIFY", "--set-class", cid)
 	if err != nil {
 		return err
 	}
@@ -102,8 +102,4 @@ func (tc *TrafficControl) UnsetRateLimit(iface, clientIP string) error {
 
 func classID(ip net.IP) string {
 	return fmt.Sprintf("1:%x", uint16(crc32.ChecksumIEEE(ip)))
-}
-
-func withMask(ip net.IP) string {
-	return fmt.Sprintf("%s/%d", ip, len(ip))
 }

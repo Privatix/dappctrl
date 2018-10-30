@@ -13,8 +13,8 @@ import (
 
 func expectedResult(t *testing.T, exp int,
 	timeNowFunc func() time.Time) []*data.Job {
-	jobs := AutoOfferingPopUp(
-		logger, serviceContractABI, db, ethBackend, timeNowFunc)
+	jobs := AutoOfferingPopUp(logger, serviceContractABI, db, ethBackend,
+		timeNowFunc, conf.Eth.Contract.Periods.PopUp)
 
 	if len(jobs) != exp {
 		t.Fatalf("the right amount of jobs: %d,"+
@@ -47,7 +47,6 @@ func TestAutoOfferingPopUp(t *testing.T) {
 
 	ethBackend.GasPrice = big.NewInt(1)
 	ethBackend.EstimatedGas = 2
-	ethBackend.ChallengePeriod = 5
 	ethBackend.OfferUpdateBlockNumber = 3
 	ethBackend.BlockNumber = big.NewInt(6)
 

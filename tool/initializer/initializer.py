@@ -82,6 +82,7 @@ Exit code:
     31 - found installed containers 
     32 - Problem with operation R/W LXC contaiter config or run sh or interfaces conf
     33 - Problem with check or validate offer conf file
+    34 - Try run app with update mode in first time
 
     not save port 8000 from SessionServer and 9000 from PayServer if role is client
 """
@@ -842,14 +843,15 @@ class CommonCMD(Init):
                 exit(13)
 
     def _finalizer(self, rw=None, pass_check=False):
-        logging.debug('Finalizer')
+        logging.debug('Finalizer. rw: {}, pass_check: {}'.format(rw,pass_check))
         if pass_check:
+            logging.debug('Pass check PID file')
             return True
 
         if not isfile(self.fin_file):
             self.file_rw(p=self.fin_file, w=True, log='First start')
             return True
-
+        logging.debug('No wait args: {}'.format(self.in_args['no_wait']))
         if rw:
             if not self.in_args['no_wait']:
                 self.__wait_up()
@@ -865,8 +867,14 @@ class CommonCMD(Init):
 
         logging.info('Second start.'
                      'This is protection against restarting the program.'
-                     'If you need to re-run the script, '
-                     'you need to delete the file {}'.format(self.fin_file))
+                     'If you need to re-install, you need to perform first\n'
+                     'initializer.py --clean and then initializer.py.\n'
+                     'Or you can perform initializer.py with one of three \n'
+                     'update modes:\n'
+                     '--update-mass  and update back and gui\n'
+                     '--update_back  and update only back\n'
+                     '--update_gui   and update only gui\n'
+                     )
         return False
 
     def _byteify(self, data, ignore_dicts=False):
@@ -2326,14 +2334,14 @@ class AutoOffer:
             ],
             'id': self.id,
         }
-        timeWait = 15*60
+        timeWait = 25*60
         timeStar = time()
-        while time()-timeStar < timeWait:
+        while time() - timeStar < timeWait:
             res = self.__urlOpen(data=data,key='result')
             if res[0]:
                 status = res[1][0].get('status')
                 offerStatus = res[1][0].get('offerStatus')
-                if status == 'bchain_published' and offerStatus == 'registered':
+                if status == 'msg_channel_published' and offerStatus == 'registered':
                     return True, 'All done'
             logging.debug('Wait')
             sleep(60)
@@ -2341,7 +2349,7 @@ class AutoOffer:
         if not mark:
             logging.info('Try again.')
             return self._statusOffer(mark=True)
-        return False,res[1]
+        return False, res[1]
 
     def __getProductId(self):
         logging.info('Get Product Id')
@@ -2362,28 +2370,32 @@ class AutoOffer:
 
     def __checkOfferData(self):
         logging.debug('Check offer data')
-        params= {
+        params = {
                     "product": self.product_id,
                     "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523",
                     "agent": self.agent_id,
                     "serviceName": "my service",
                     "description": "my service description",
                     "country": self.__getCountryName(),
-                    "supply": 3,
+                    "supply": 30,
+                    "unitName": "MB",
                     "autoPopUp": True,
                     "unitType": "units",
                     "billingType": "postpaid",
                     "setupPrice": 0,
-                    "unitPrice": 100000,
-                    "minUnits": 100,
-                    "billingInterval": 1800,
-                    "maxBillingUnitLag": 1800,
+                    "unitPrice": 1000,
+                    "minUnits": 10000,
+                    "maxUnit": 30000,
+                    "billingInterval": 1,
+                    "maxBillingUnitLag": 100,
                     "maxSuspendTime": 1800,
+                    "maxInactiveTimeSec": 1800,
                     "freeUnits": 0,
-                    "additionalParams": {}
+                    "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80},
                 }
 
         if self.offerData:
+            logging.debug('From file: {}'.format(self.offerData))
             res = self.offerData.get('country')
             if res:
                 if not params['country'].lower() == res.lower():
@@ -2438,8 +2450,8 @@ class AutoOffer:
             return res
         res = self._setPswd()
         if res[0]:
-            logging.debug( 'Eth addr: {}'.format(self.ethAddr))
-            logging.debug( 'Generate acc id: {}'.format(self.agent_id))
+            logging.debug('Eth addr: {}'.format(self.ethAddr))
+            logging.debug('Generate acc id: {}'.format(self.agent_id))
 
             res = self._askBot()
             if not res[0]:
@@ -2450,8 +2462,7 @@ class AutoOffer:
             if not res[0]:
                 return res
             self._wait_blockchain(target='psc')
-            self._createOffer()
-            res = self._statusOffer()
+            res = self._createOffer()
             logging.debug('product_id: {}'.format(self.product_id))
             logging.debug('offer_id: {}'.format(self.offer_id))
             logging.debug('ethBalance: {}'.format(self.ethBalance))
@@ -2462,8 +2473,9 @@ class AutoOffer:
             logging.debug('prixHash: {}'.format(self.prixHash))
             logging.debug('ethAddr: {}'.format(self.ethAddr))
             logging.debug('gasPrice: {}'.format(self.gasPrice))
-
-            return res
+            if not res[0]:
+                return res
+            return self._statusOffer()
 
         else:
             return res
@@ -2501,9 +2513,8 @@ class AutoOffer:
         else:
             return False, res[1]
 
-
     def _createOffer(self):
-        logging.info( 'Offering create')
+        logging.info('Offering create')
         data = {
             'method': 'ui_createOffering',
             'params': [
@@ -2521,7 +2532,7 @@ class AutoOffer:
             return False, res[1]
 
     def _wait_blockchain(self, target):
-        logging.info( 'Wait blockchain.Target is: {}.'.format(target))
+        logging.info('Wait blockchain.Target is: {}.'.format(target))
         waitCounter = 0
         while True:
             res = self._getEth()
@@ -2532,8 +2543,8 @@ class AutoOffer:
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break
-                elif target == 'psc' and int(res[1].get('psc_balance', '0')):
-                    self.pscBalance = res[1]['psc_balance']
+                elif target == 'psc' and int(res[1].get('pscBalance', '0')):
+                    self.pscBalance = res[1]['pscBalance']
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break
@@ -2541,7 +2552,7 @@ class AutoOffer:
 
     def _transfer(self):
         # Transfer some PRIX from PTC balance to PSC balance
-        logging.info( 'Transfer PRIX')
+        logging.info('Transfer PRIX')
         data = {
             'method': 'ui_transferTokens',
             'params': [
@@ -2691,6 +2702,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             self.old_vers = old_vers
             self.ver = ver
             self.dist_name = dist_name
+            self.firstinst = None
 
         def __ubuntu(self):
             logging.debug('Ubuntu: {}'.format(self.ver))
@@ -2727,9 +2739,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             self.sysctl = self._sysctl() if not self.old_vers else True
 
-        def init_os(self, pass_check=False):
+        def init_os(self):
 
-            if self._finalizer(pass_check=pass_check):
+            if self._finalizer():
                 if not isfile(self._reletive_path(self.build_cmd_path)):
                     logging.info(
                         'There is no .dapp_cmd file for further work.\n'
@@ -2770,6 +2782,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             else:
                                 self.install_gui()
                         elif self.in_args['cli']:
+                            logging.debug('Cli mode')
                             res = self.offerRun()
                             if not res[0]:
                                 logging.error('Auto offer: {}'.format(res[1]))
@@ -2857,6 +2870,18 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 else:
                     sys.exit(24)
             logging.debug('Path exist: {}'.format(self.gui_icon_path))
+
+        def del_pid(self):
+            if isfile(self.fin_file):
+                logging.debug('Delete PID file')
+                remove(self.fin_file)
+
+        def check_inst(self):
+            if self.firstinst:
+                logging.info('You selected update mode,\n'
+                             'but no trace of complete installation was detected.\n'
+                             'You should first go through the full installation process.')
+                exit(34)
 
         def __select_sources(self):
 
@@ -3038,7 +3063,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 logging.info('Build mode.')
                 self.build_file()
 
-            if self.in_args['cli']:
+            elif self.in_args['cli']:
                 logging.info('Auto offering.')
                 self.in_args['no_gui']=True
                 if self.in_args['file']:
@@ -3057,10 +3082,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             elif self.in_args['clean']:
                 logging.info('Clean mode.')
                 self.clear_contr()
+                self.del_pid()
                 self._clear_dir(self.gui_path)
-
-                if isfile(self.fin_file):
-                    remove(self.fin_file)
 
             elif not self.old_vers and self.in_args['vpn']:
                 logging.debug('Vpn mode.')
@@ -3084,34 +3107,39 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             elif self.in_args['update_back']:
                 logging.info('Update containers mode.')
+                self.check_inst()
                 self.check_sudo()
                 self.check_role()
                 self.target = 'back'
                 if self.clear_contr():
+                    self.del_pid()
                     self.use_ports = dict(vpn=[], common=[],
                                            mangmt=dict(vpn=None,
                                                        common=None))
                     self.in_args['no_gui'] = True
-                    self.init_os(True)
+                    self.init_os()
                 else:
                     logging.info('Problem with clear all old file.')
 
             elif self.in_args['update_gui']:
+                self.check_inst()
                 logging.info('Update GUI mode.')
                 self.target = 'gui'
                 self.check_sudo()
                 self.update_gui()
 
             elif self.in_args['update_mass']:
+                self.check_inst()
                 self.target = 'both'
                 logging.info('Update All mode.')
                 self.check_sudo()
                 self.check_role()
                 if self.clear_contr():
+                    self.del_pid()
                     self.use_ports = dict(vpn=[], common=[],
                                            mangmt=dict(vpn=None,
                                                        common=None))
-                    self.init_os(True)
+                    self.init_os()
                 else:
                     logging.info('Problem with clear all old file.')
 
@@ -3140,11 +3168,15 @@ if __name__ == '__main__':
     check.in_args = check.input_args()
 
     if isfile(check.fin_file):
+        logging.debug('Pid file exist.')
         raw = check.file_rw(p=check.fin_file,
                             json_r=True,
                             log='Search port in finalizer.pid')
         if raw:
             check.use_ports.update(raw)
+    else:
+        logging.debug('Pid file not exist.This is first run initializer')
+        check.firstinst = True
 
     logging.debug('Input args: {}'.format(check.in_args))
     logging.debug('Inside finalizer.pid: {}'.format(check.use_ports))

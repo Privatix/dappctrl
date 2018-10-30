@@ -1,10 +1,12 @@
 package bill
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/lib/pq"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -136,7 +138,17 @@ func (m *Monitor) Close() {
 }
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
-	if ch.ReceiptBalance == ch.TotalDeposit {
+	var offer data.Offering
+	if err := m.db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
+		m.logger.Add("offering", ch.Offering).Error(err.Error())
+		return ErrGetOffering
+	}
+
+	terminate, err := m.isToBeTerminated(ch, &offer)
+	if err != nil {
+		return err
+	}
+	if terminate {
 		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, false)
 		if err != nil {
 			if err != proc.ErrSameJobExists {
@@ -163,12 +175,6 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return ErrGetConsumedUnits
 	}
 
-	var offer data.Offering
-	if err := m.db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
-		m.logger.Add("offering", ch.Offering).Error(err.Error())
-		return ErrGetOffering
-	}
-
 	lag := int64(consumed)/int64(offer.BillingInterval) -
 		(int64(ch.ReceiptBalance)-int64(offer.SetupPrice))/
 			int64(offer.UnitPrice)
@@ -184,6 +190,46 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 	go m.postCheque(ch.ID, amount)
 
 	return nil
+}
+
+func (m *Monitor) isToBeTerminated(
+	ch *data.Channel, offer *data.Offering) (bool, error) {
+
+	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
+		ch.ReceiptBalance == ch.TotalDeposit {
+		m.logger.Debug("channel is complete")
+		return true, nil
+	}
+
+	m.logger.Debug("channel not complete")
+
+	reached, err := m.maxInactiveTimeReached(ch, offer)
+	if err != nil {
+		m.logger.Error(err.Error())
+		// TODO: add error
+		return false, ErrGetConsumedUnits
+	}
+	return reached, nil
+}
+
+func (m *Monitor) maxInactiveTimeReached(
+	ch *data.Channel, offer *data.Offering) (bool, error) {
+	if offer.MaxInactiveTimeSec == nil {
+		return false, nil
+	}
+	query := fmt.Sprintf("SELECT COUNT(*), MAX(last_usage_time) FROM sessions WHERE sessions.channel = %s", m.db.Placeholder(1))
+	var qty uint
+	var lastUsageNullable pq.NullTime
+	if err := m.db.QueryRow(
+		query, ch.ID).Scan(&qty, &lastUsageNullable); err != nil {
+		return false, err
+	}
+	lastUsage := lastUsageNullable.Time
+	if qty == 0 {
+		lastUsage = ch.PreparedAt
+	}
+	inactiveSeconds := uint64(time.Since(lastUsage).Seconds())
+	return qty > 0 && inactiveSeconds > *offer.MaxInactiveTimeSec, nil
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {

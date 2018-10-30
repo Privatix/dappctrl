@@ -12,6 +12,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc/adapter"
@@ -22,6 +23,7 @@ import (
 var (
 	conf struct {
 		DB        *data.DBConfig
+		Eth       *eth.Config
 		Job       *job.Config
 		StderrLog *log.WriterConfig
 	}
@@ -102,6 +104,7 @@ func TestLoop(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
+	conf.Eth = eth.NewConfig()
 	conf.Job = job.NewConfig()
 	conf.StderrLog = log.NewWriterConfig()
 	util.ReadTestConfig(&conf)

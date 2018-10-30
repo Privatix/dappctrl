@@ -68,7 +68,7 @@
             "PTCAddrHex": "",
             "PSCAddrHex": "",
             "Periods": {
-                "PopUp": 0,
+                "PopUp": 5,
                 "Challenge": 0,
                 "Remove": 0
             }

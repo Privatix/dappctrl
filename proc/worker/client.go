@@ -449,6 +449,8 @@ func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
 		ch.ServiceStatus = data.ServiceSuspended
 		changedTime := time.Now()
 		ch.ServiceChangedTime = &changedTime
+		// TODO: Review flow with service_changed_time.
+		ch.PreparedAt = changedTime
 		err = w.saveRecord(logger, w.db.Querier, ch)
 		if err != nil {
 			logger.Error(err.Error())

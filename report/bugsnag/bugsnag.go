@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/bugsnag/bugsnag-go/errors"
@@ -18,8 +19,7 @@ import (
 )
 
 const (
-	account             = "Account"
-	ethAddress          = "EthAddr"
+	accounts            = "Accounts"
 	defaultReleaseStage = "development"
 	production          = "production"
 	staging             = "staging"
@@ -116,23 +116,33 @@ func emptyUUID() string {
 	return new(uuid.UUID).String()
 }
 
-func metadata(ethAddr string) bugsnag.MetaData {
-	return bugsnag.MetaData{
-		account: {
-			ethAddress: ethAddr,
-		},
+func metadata(addresses []string) bugsnag.MetaData {
+	md := bugsnag.MetaData{accounts: {}}
+
+	for k, v := range addresses {
+		addr := v
+
+		if !strings.HasPrefix(addr, "Ox") {
+			addr = "0x" + addr
+		}
+
+		md[accounts][strconv.Itoa(k)] = addr
 	}
+
+	return md
 }
 
-func accEthAddr(db *reform.DB) (addr string) {
-	if err := db.QueryRow(`
-		           SELECT eth_addr
-                             FROM accounts
-                            ORDER BY is_default
-                            LIMIT 1;`).Scan(&addr); err != nil {
-		return defaultAccEth
+func accEthAddresses(db *reform.DB) (addr []string) {
+	accounts, err := db.SelectAllFrom(data.AccountTable, "")
+	if err != nil || len(accounts) == 0 {
+		return append(addr, defaultAccEth)
 	}
-	return
+
+	for k := range accounts {
+		addr = append(addr, accounts[k].(*data.Account).EthAddr)
+	}
+
+	return addr
 }
 
 func user(appID string) bugsnag.User {
@@ -157,15 +167,15 @@ func (c *Client) Notify(err error, sync bool, skip int) {
 }
 
 func (c *Client) notify(err error, sync bool, skip int) {
-	ethAdd := accEthAddr(c.db)
+	addresses := accEthAddresses(c.db)
 
 	var e error
 	if sync {
 		e = c.notifier.NotifySync(errors.New(err, skip),
-			true, metadata(ethAdd))
+			true, metadata(addresses))
 	} else {
 		e = c.notifier.Notify(errors.New(err, skip),
-			metadata(ethAdd))
+			metadata(addresses))
 	}
 	if e != nil {
 		c.logger.Add("error", e).Debug("failed to send notify")
@@ -214,7 +224,7 @@ func PanicHunter() {
 		if enable && notifier != nil {
 			notifier.NotifySync(
 				errors.New(err, 3), true,
-				metadata(defaultAccEth))
+				metadata([]string{defaultAccEth}))
 		}
 		panic(err)
 	}

@@ -142,7 +142,7 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 		return nil, nil, err
 	}
 
-	logger := log.NewMultiLogger(elog, flog, dlog, blog)
+	logger := log.NewMultiLogger(flog, elog, dlog, blog)
 
 	blog2 := blog.(bugsnag.Log)
 	reporter, err := bugsnag.NewClient(conf.Report, db, blog2,
@@ -157,14 +157,15 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 }
 
 func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
-	queue job.Queue, pwdStorage data.PWDGetSetter) (*rpcsrv.Server, error) {
+	queue job.Queue, pwdStorage data.PWDGetSetter, agent bool,
+	processor *proc.Processor) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf.Config)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := ui.NewHandler(conf, logger, db, queue, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey)
+		data.EncryptedKey, data.ToPrivateKey, agent, processor)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}
@@ -200,6 +201,12 @@ func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
 	return err
 }
 
+func panicHunter(logger log.Logger) {
+	if err := recover(); err != nil {
+		logger.Fatal(fmt.Sprintf("panic raised: %+v", err))
+	}
+}
+
 func main() {
 	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
 		panic(fmt.Sprintf("failed to execute command: %s", err))
@@ -223,6 +230,7 @@ func main() {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 	defer closer.Close()
+	defer panicHunter(logger)
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger)
@@ -293,8 +301,8 @@ func main() {
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
-
-	uiSrv2, err := createUIServer(conf.UI, logger, db, queue, pwdStorage)
+	uiSrv2, err := createUIServer(conf.UI, logger, db, queue, pwdStorage,
+		conf.Role == data.RoleAgent, pr)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

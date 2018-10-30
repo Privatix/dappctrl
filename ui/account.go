@@ -79,10 +79,10 @@ func (h *Handler) GetAccounts(password string) ([]data.Account, error) {
 		return nil, err
 	}
 
-	var result []data.Account
+	result := make([]data.Account, len(accounts))
 
-	for _, v := range accounts {
-		result = append(result, *v.(*data.Account))
+	for k, v := range accounts {
+		result[k] = *v.(*data.Account)
 	}
 
 	return result, nil

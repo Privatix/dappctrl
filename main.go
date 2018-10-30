@@ -139,7 +139,7 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 		return nil, nil, err
 	}
 
-	logger := log.NewMultiLogger(elog, flog, dlog, blog)
+	logger := log.NewMultiLogger(flog, elog, dlog, blog)
 
 	blog2 := blog.(bugsnag.Log)
 	reporter, err := bugsnag.NewClient(conf.Report, db, blog2,
@@ -198,6 +198,12 @@ func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
 	return err
 }
 
+func panicHunter(logger log.Logger) {
+	if err := recover(); err != nil {
+		logger.Fatal(fmt.Sprintf("panic raised: %+v", err))
+	}
+}
+
 func main() {
 	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
 		panic(fmt.Sprintf("failed to execute command: %s", err))
@@ -221,6 +227,7 @@ func main() {
 		panic(fmt.Sprintf("failed to create logger: %s", err))
 	}
 	defer closer.Close()
+	defer panicHunter(logger)
 
 	ethClient, err := eth.NewClient(context.Background(),
 		conf.Eth, logger)

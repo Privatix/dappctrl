@@ -1,12 +1,12 @@
 package bill
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
-	"github.com/lib/pq"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/lib/pq"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -195,7 +195,8 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 func (m *Monitor) isToBeTerminated(
 	ch *data.Channel, offer *data.Offering) (bool, error) {
 
-	if ch.ReceiptBalance == ch.TotalDeposit {
+	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
+		ch.ReceiptBalance == ch.TotalDeposit {
 		m.logger.Debug("channel is complete")
 		return true, nil
 	}
@@ -216,10 +217,11 @@ func (m *Monitor) maxInactiveTimeReached(
 	if offer.MaxInactiveTimeSec == nil {
 		return false, nil
 	}
-	query := "SELECT COUNT(*), MAX(last_usage_time) from sessions"
+	query := fmt.Sprintf("SELECT COUNT(*), MAX(last_usage_time) FROM sessions WHERE sessions.channel = %s", m.db.Placeholder(1))
 	var qty uint
 	var lastUsageNullable pq.NullTime
-	if err := m.db.QueryRow(query).Scan(&qty, &lastUsageNullable); err != nil {
+	if err := m.db.QueryRow(
+		query, ch.ID).Scan(&qty, &lastUsageNullable); err != nil {
 		return false, err
 	}
 	lastUsage := lastUsageNullable.Time

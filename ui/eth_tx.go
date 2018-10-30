@@ -68,7 +68,9 @@ func (h *Handler) GetEthTransactions(password, relType, relID string,
 
 	offsetLimit := h.offsetLimit(offset, limit)
 
-	tail = fmt.Sprintf("%s %s", tail, offsetLimit)
+	sorting := `ORDER BY issued DESC`
+
+	tail = fmt.Sprintf("%s %s %s", tail, sorting, offsetLimit)
 
 	txs, err := h.selectAllFrom(logger, data.EthTxTable, tail, args...)
 	if err != nil {

@@ -3,6 +3,7 @@ DAPPCTRL=github.com/privatix/dappctrl
 DAPPCTRL_DIR=$HOME/go/src/${DAPPCTRL}
 
 psql -U postgres -f "${DAPPCTRL_DIR}/data/settings.sql"
-psql -U postgres -d dappctrl -f "${DAPPCTRL_DIR}/data/schema.sql"
-psql -U postgres -d dappctrl -f "${DAPPCTRL_DIR}/data/prod_data.sql"
+
+dappctrl db-migrate -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port=5433'
+dappctrl db-init-data -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port=5433'
 

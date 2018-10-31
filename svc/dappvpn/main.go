@@ -301,7 +301,7 @@ func handleClientMonitor() {
 
 		mtx.Lock()
 
-		if res.Command == sesssrv.HeartbeatStart {
+		if res.Command == sesssrv.HeartbeatStart && ovpnCmd == nil {
 			err := prepare.ClientConfig(logger, res.Channel, conf)
 			if err != nil {
 				msg := "failed to prepare client config: "
@@ -309,7 +309,8 @@ func handleClientMonitor() {
 			}
 
 			ovpnCmd = launchOpenVPN(res.Channel)
-		} else if res.Command == sesssrv.HeartbeatStop {
+		} else if res.Command == sesssrv.HeartbeatStop &&
+			ovpnCmd != nil {
 			if err := ovpnCmd.Process.Kill(); err != nil {
 				msg := "failed to kill OpenVPN: "
 				logger.Error(msg + err.Error())
@@ -361,6 +362,7 @@ func launchOpenVPN(channel string) *exec.Cmd {
 
 	go func() {
 		logger.Warn(fmt.Sprintf("OpenVPN exited: %v", cmd.Wait()))
+		handleMonStopped(channel, 0, 0)
 		mtx.Lock()
 		ovpnCmd = nil
 		mtx.Unlock()

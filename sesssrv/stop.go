@@ -9,8 +9,8 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/job"
+	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
@@ -74,19 +74,16 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		}
 
 		var status string
-		switch ch.ServiceStatus {
-			case data.ServiceSuspending:
-			status = data.ServiceSuspended
-		case data.ServiceTerminating:
+		if ch.ServiceStatus == data.ServiceTerminating {
 			status = data.ServiceTerminated
-		default:
-			return nil
+		} else {
+			status = data.ServiceSuspended
 		}
 
 		return job.AddWithData(s.queue, tx,
-				data.JobClientCompleteServiceTransition,
-				data.JobChannel, ch.ID, data.JobSessionServer,
-				status)
+			data.JobClientCompleteServiceTransition,
+			data.JobChannel, ch.ID, data.JobSessionServer,
+			status)
 	})
 	if err != nil {
 		logger.Error(err.Error())

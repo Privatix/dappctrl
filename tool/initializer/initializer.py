@@ -193,8 +193,16 @@ main_conf = dict(
     ),
 
     build={
-        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={1} -connstr=\"{3}\" -template={4} -agent=true\n'
-               '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={2} -connstr=\"{3}\" -template={4} -agent=false',
+        # 'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={1} -connstr=\"{3}\" -template={4} -agent=true\n'
+        #        '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={2} -connstr=\"{3}\" -template={4} -agent=false',
+
+
+        'cmd': '/opt/privatix/initializer/installer -rootdir=\"{3}\" -agent=true -connstr=\"{2}\" -setauth\n'
+               'cp {3}/{4} {0}\n'
+               '/opt/privatix/initializer/installer -rootdir=\"{3}\" -connstr=\"{2}\" -setauth\n'
+               'cp {3}/{4} {1}\n',
+
+
         'cmd_path': '.dapp_cmd',
 
         'db_conf': {
@@ -912,37 +920,39 @@ class CommonCMD(Init):
         if db_conf:
             self.db_conf.update(db_conf['Conn'])
 
-        # Get dappctrl_id from prod_data.sql
-        if not self.dappctrl_id:
-            raw_id = self._get_url(link=self.dupp_raw_id,
-                                   to_json=False).split('\n')
-
-            for i in raw_id:
-                if self.field_name_id in i:
-                    self.dappctrl_id = i.split(self.field_name_id)[1]
-                    logging.debug('dapp_id: {}'.format(self.dappctrl_id))
-                    break
-            else:
-                logging.error(
-                    'dappctrl_id not exist: {}'.format(self.dappctrl_id))
-                sys.exit(20)
+        # # Get dappctrl_id from prod_data.sql
+        # if not self.dappctrl_id:
+        #     raw_id = self._get_url(link=self.dupp_raw_id,
+        #                            to_json=False).split('\n')
+        #
+        #     for i in raw_id:
+        #         if self.field_name_id in i:
+        #             self.dappctrl_id = i.split(self.field_name_id)[1]
+        #             logging.debug('dapp_id: {}'.format(self.dappctrl_id))
+        #             break
+        #     else:
+        #         logging.error(
+        #             'dappctrl_id not exist: {}'.format(self.dappctrl_id))
+        #         sys.exit(20)
 
         # Get dappvpn.config.json
-        templ = self._get_url(link=self.dupp_vpn_templ,
-                              to_json=False).replace(
-            '\n', '')
+        # templ = self._get_url(link=self.dupp_vpn_templ,
+        #                       to_json=False).replace(
+        #     '\n', '')
 
         self.db_conf = (sub("'|{|}", "", str(self.db_conf))).replace(
             ': ', '=').replace(',', '')
         p_vpn = self.p_contr + self.path_vpn + self.p_dapvpn_conf
         p_com = self.p_contr + self.path_com + self.p_dapvpn_conf
+        root_dir = '/opt/privatix/initializer/files/example'
+        conf_name = 'dappvpn.config.json'
         logging.debug(
             'Path dappvpn.config.json: \n\t{}\n\t{}'.format(p_com, p_vpn))
-        self.build_cmd = self.build_cmd.format(templ,
-                                               p_vpn,
+        self.build_cmd = self.build_cmd.format(p_vpn,
                                                p_com,
                                                self.db_conf,
-                                               self.dappctrl_id
+                                               root_dir,
+                                               conf_name
                                                )
 
         logging.debug('Build cmd: {}'.format(self.build_cmd))
@@ -961,7 +971,6 @@ class CommonCMD(Init):
             json_conf['DB'] = db_conn
             return json_conf
         return False
-
 
     def conf_dappctrl_json(self, old_vers=False):
         """Check ip addr, free ports and replace it in
@@ -2739,9 +2748,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             self.sysctl = self._sysctl() if not self.old_vers else True
 
-        def init_os(self):
+        def init_os(self, pass_check=False):
 
-            if self._finalizer():
+            if self._finalizer(pass_check=pass_check):
                 if not isfile(self._reletive_path(self.build_cmd_path)):
                     logging.info(
                         'There is no .dapp_cmd file for further work.\n'
@@ -3073,7 +3082,6 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         logging.error(res[1])
                         exit(33)
 
-
                 self.target = 'back'
                 self.check_sudo()
                 self.dappctrl_role = 'agent'
@@ -3113,11 +3121,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.target = 'back'
                 if self.clear_contr():
                     self.del_pid()
-                    self.use_ports = dict(vpn=[], common=[],
-                                           mangmt=dict(vpn=None,
-                                                       common=None))
+                    self.use_ports = dict(vpn=[],
+                                          common=[],
+                                          mangmt=dict(
+                                              vpn=None,
+                                              common=None)
+                                          )
                     self.in_args['no_gui'] = True
-                    self.init_os()
+                    self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
 
@@ -3139,7 +3150,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     self.use_ports = dict(vpn=[], common=[],
                                            mangmt=dict(vpn=None,
                                                        common=None))
-                    self.init_os()
+                    self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
 
@@ -3152,7 +3163,6 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 logging.info('All done.')
 
     return Checker(old_vers,ver,dist_name)
-
 
 
 if __name__ == '__main__':

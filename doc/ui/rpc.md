@@ -449,6 +449,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                 "agent":"0x8D31cA7eBc9582874f15eac1caCa39A4782b3E06",
                 "client":"0xC1bAE9F48e5cF5f16839F4BC1e312069003d7519",
                 "offering":"a34bbecc-b294-4960-9a1c-bef468bd0617",
+                "offeringHash":"tHC6By1U-m11YHwcCXTB3TdChp0SrJ28JuiYdBkEHMs=",
                 "deposit":10000,
                 "channelStatus":{
                     "serviceStatus":"pending",

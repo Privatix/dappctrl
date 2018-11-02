@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
@@ -46,11 +46,10 @@ type Queue interface {
 
 // Monitor is a blockchain monitor.
 type Monitor struct {
-	db                   *reform.DB
-	closeIdleConnections func()
-	eth                  Client
-	logger               log.Logger
-	queue                Queue
+	db     *reform.DB
+	eth    Client
+	logger log.Logger
+	queue  Queue
 
 	ethCallTimeout      time.Duration
 	pscABI              abi.ABI
@@ -62,9 +61,8 @@ type Monitor struct {
 }
 
 // NewMonitor creates new blockchain monitor.
-func NewMonitor(conf *Config, c Client, closeIdleConnections func(),
-	db *reform.DB, l log.Logger, psc, ptc common.Address, role string,
-	q Queue) (*Monitor, error) {
+func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
+	ptc common.Address, role string, q Queue) (*Monitor, error) {
 	abiJSON := contract.PrivatixServiceContractABI
 	pscABI, err := abi.JSON(strings.NewReader(abiJSON))
 	if err != nil {
@@ -74,15 +72,14 @@ func NewMonitor(conf *Config, c Client, closeIdleConnections func(),
 	ethCallTimeout := time.Duration(conf.EthCallTimeout) * time.Second
 	queryPause := time.Duration(conf.QueryPause) * time.Second
 	m := &Monitor{
-		db:                   db,
-		closeIdleConnections: closeIdleConnections,
-		eth:                  c,
-		logger:               l.Add("type", "monitor.Monitor"),
-		queue:                q,
-		ethCallTimeout:       ethCallTimeout,
-		pscABI:               pscABI,
-		pscAddr:              psc,
-		queryPause:           queryPause,
+		db:             db,
+		eth:            c,
+		logger:         l.Add("type", "monitor.Monitor"),
+		queue:          q,
+		ethCallTimeout: ethCallTimeout,
+		pscABI:         pscABI,
+		pscAddr:        psc,
+		queryPause:     queryPause,
 	}
 
 	f := m.clientQueries
@@ -117,11 +114,6 @@ func (m *Monitor) Start() {
 					m.getFilterLogQueries, m.jobsProducers)
 				if err != nil {
 					logger.Error(err.Error())
-				}
-				if (err == ErrFailedToGetHeaderByNumber ||
-					err == ErrFailedToFetchLogs) &&
-					m.closeIdleConnections != nil {
-					m.closeIdleConnections()
 				}
 			}
 		}

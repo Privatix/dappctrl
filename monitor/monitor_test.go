@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth/contract"
@@ -113,9 +113,8 @@ func TestMain(m *testing.M) {
 	ethClient = &testEthereumClient{}
 	queue := job.NewQueue(conf.Job, logger, db, nil)
 	pscAddr = common.HexToAddress("0x1")
-	mon, err = monitor.NewMonitor(&monitor.Config{}, ethClient, nil, db,
-		logger, pscAddr, common.HexToAddress("0x2"), data.RoleAgent,
-		queue)
+	mon, err = monitor.NewMonitor(&monitor.Config{}, ethClient, db, logger,
+		pscAddr, common.HexToAddress("0x2"), data.RoleAgent, queue)
 	if err != nil {
 		panic(err)
 	}

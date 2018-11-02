@@ -24,28 +24,28 @@
 """
 
 import sys
-import random
-import string
 import logging
-import socket
-from signal import SIGINT, signal, pause
-from contextlib import closing
-from re import search, sub, findall, compile, match, IGNORECASE
 from codecs import open
-from threading import Thread
-from shutil import copyfile, rmtree
-from json import load, dump, loads, dumps
-from time import time, sleep
+from shutil import copyfile
 from urllib import URLopener
-from urllib2 import urlopen,Request
-from os.path import isfile, isdir, exists
+from time import time, sleep
+from threading import Thread
+from contextlib import closing
+from urllib2 import urlopen, Request
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
 from platform import linux_distribution
+from random import randint, SystemRandom
+from signal import SIGINT, signal, pause
+from os.path import isfile, isdir, exists
+from json import load, dump, loads, dumps
+from stat import S_IXUSR, S_IXGRP, S_IXOTH
 from subprocess import Popen, PIPE, STDOUT
 from distutils.version import StrictVersion
-from stat import S_IEXEC, S_IXUSR, S_IXGRP, S_IXOTH
-from os import remove, mkdir, path, environ, stat, chmod, listdir, getcwd
+from socket import socket, AF_INET, SOCK_STREAM
+from string import ascii_uppercase, ascii_lowercase, digits
+from re import search, sub, findall, compile, match, IGNORECASE
+from os import remove, mkdir, path, environ, stat, chmod, listdir
 
 """
 Exit code:
@@ -193,15 +193,10 @@ main_conf = dict(
     ),
 
     build={
-        # 'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={1} -connstr=\"{3}\" -template={4} -agent=true\n'
-        #        '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={2} -connstr=\"{3}\" -template={4} -agent=false',
 
-
-        'cmd': '/opt/privatix/initializer/installer -rootdir=\"{3}\" -agent=true -connstr=\"{2}\" -setauth\n'
-               'cp {3}/{4} {0}\n'
-               '/opt/privatix/initializer/installer -rootdir=\"{3}\" -connstr=\"{2}\" -setauth\n'
-               'cp {3}/{4} {1}\n',
-
+        'cmd': '/opt/privatix/initializer/installer -rootdir=\"{0}\" -connstr=\"{1}\" -setauth\n'
+               'cp {2}/{3} {4}\n'
+               'cp {2}/{5} {6}\n',
 
         'cmd_path': '.dapp_cmd',
 
@@ -479,7 +474,6 @@ class CommonCMD(Init):
 
     def _reletive_path(self, name):
         dirname = path.dirname(path.abspath(__file__))
-        # dirname = getcwd()
         logging.debug('Reletive path: {}'.format(dirname))
         return path.join(dirname, name)
 
@@ -726,10 +720,9 @@ class CommonCMD(Init):
         else:
             logging.debug('dnsmasq conf not exist')
 
-    def _ping_port(self, port,  host='0.0.0.0',verb=False):
+    def _ping_port(self, port,  host='0.0.0.0', verb=False):
 
-        with closing(
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        with closing(socket(AF_INET, SOCK_STREAM)) as sock:
             if sock.connect_ex((host, int(port))) == 0:
                 if verb:
                     logging.info("Port {} is open".format(port))
@@ -945,15 +938,20 @@ class CommonCMD(Init):
         p_vpn = self.p_contr + self.path_vpn + self.p_dapvpn_conf
         p_com = self.p_contr + self.path_com + self.p_dapvpn_conf
         root_dir = '/opt/privatix/initializer/files/example'
-        conf_name = 'dappvpn.config.json'
-        logging.debug(
-            'Path dappvpn.config.json: \n\t{}\n\t{}'.format(p_com, p_vpn))
-        self.build_cmd = self.build_cmd.format(p_vpn,
-                                               p_com,
-                                               self.db_conf,
-                                               root_dir,
-                                               conf_name
-                                               )
+        conf_agent = 'dappvpn.agent.config.json'    # vpn config
+        conf_client = 'dappvpn.client.config.json'  # common config
+
+        logging.debug('Path configs: \n\t{}\n\t{}'.format(p_com, p_vpn))
+
+        self.build_cmd = self.build_cmd.format(
+            root_dir,
+            self.db_conf,
+            root_dir,
+            conf_agent,
+            p_vpn,
+            conf_client,
+            p_com
+        )
 
         logging.debug('Build cmd: {}'.format(self.build_cmd))
         self.file_rw(
@@ -1842,7 +1840,7 @@ class LXC(DB):
         # If not, increment 4-th octet and check again
         def increment_octet(octet, all_ip):
             if octet in all_ip:
-                octet = random.randint(5, 254)
+                octet = randint(5, 254)
                 increment_octet(octet, all_ip)
             return octet
 
@@ -1913,9 +1911,9 @@ class LXC(DB):
 
     def __change_mac(self, macs):
         mac = "00:16:3e:%02x:%02x:%02x" % (
-            random.randint(0, 255),
-            random.randint(0, 255),
-            random.randint(0, 255)
+            randint(0, 255),
+            randint(0, 255),
+            randint(0, 255)
         )
 
         if mac in macs:
@@ -2324,13 +2322,11 @@ class AutoOffer:
         self.vpnConf = '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json'
 
     def __random_pswd(self):
-        return ''.join(random.SystemRandom().choice(
-            string.ascii_uppercase +
-            string.ascii_lowercase +
-            string.digits
-        ) for _ in range(self.pswdSymbol))
+        return ''.join(SystemRandom().choice(
+            ascii_uppercase + ascii_lowercase + digits
+                                ) for _ in range(self.pswdSymbol))
 
-    def _getAgentOffer(self,mark):
+    def _getAgentOffer(self, mark):
         logging.info('Get Offerings. Mark: {}'.format(mark))
         # Get Offerings For Agent
         data = {
@@ -2346,7 +2342,7 @@ class AutoOffer:
         timeWait = 25*60
         timeStar = time()
         while time() - timeStar < timeWait:
-            res = self.__urlOpen(data=data,key='result')
+            res = self.__urlOpen(data=data, key='result')
             if res[0]:
                 status = res[1][0].get('status')
                 offerStatus = res[1][0].get('offerStatus')
@@ -2748,9 +2744,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             self.sysctl = self._sysctl() if not self.old_vers else True
 
-        def init_os(self, pass_check=False):
+        def init_os(self, update=False):
 
-            if self._finalizer(pass_check=pass_check):
+            if self._finalizer(pass_check=update):
                 if not isfile(self._reletive_path(self.build_cmd_path)):
                     logging.info(
                         'There is no .dapp_cmd file for further work.\n'
@@ -2786,7 +2782,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
-                            if pass_check:
+                            if update:
                                 self.update_gui()
                             else:
                                 self.install_gui()
@@ -2833,7 +2829,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
-                            if pass_check:
+                            if update:
                                 self.update_gui()
                             else:
                                 self.install_gui()
@@ -3162,7 +3158,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.init_os()
                 logging.info('All done.')
 
-    return Checker(old_vers,ver,dist_name)
+    return Checker(old_vers, ver, dist_name)
 
 
 if __name__ == '__main__':

@@ -593,7 +593,7 @@ func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
 		"job", job)
 
 	ch, err := w.relatedChannel(
-		logger, job, data.JobClientPreServiceUnsuspend)
+		logger, job, data.JobClientCompleteServiceTransition)
 	if err != nil {
 		return err
 	}

@@ -195,8 +195,9 @@ main_conf = dict(
     build={
 
         'cmd': '/opt/privatix/initializer/installer -rootdir=\"{0}\" -connstr=\"{1}\" -setauth\n'
-               'cp {2}/{3} {4}\n'
-               'cp {2}/{5} {6}\n',
+               'ls {0} | grep .config.json | wc -l\n'
+               'sudo cp {0}/{2} {3}\n'
+               'sudo cp {0}/{4} {5}\n',
 
         'cmd_path': '.dapp_cmd',
 
@@ -946,7 +947,6 @@ class CommonCMD(Init):
         self.build_cmd = self.build_cmd.format(
             root_dir,
             self.db_conf,
-            root_dir,
             conf_agent,
             p_vpn,
             conf_client,
@@ -1262,11 +1262,11 @@ class Params(DB):
 
             if hasattr(self, 'sessServPort'):
                 delim = ':'
-                raw_tmp = raw_data['Server']['Addr'].split(delim)
+                raw_tmp = raw_data['Connector']['Addr'].split(delim)
                 raw_tmp[-1] = str(self.sessServPort)
-                raw_data['Server']['Addr'] = delim.join(raw_tmp)
+                raw_data['Connector']['Addr'] = delim.join(raw_tmp)
                 logging.debug(
-                    'Server Addr: {}.'.format(raw_data['Server']['Addr']))
+                    'Connector Addr: {}.'.format(raw_data['Connector']['Addr']))
 
             self.file_rw(p=p,
                          log='Rewrite {} conf'.format(servs),
@@ -1286,8 +1286,17 @@ class Params(DB):
 
         if cmds:
             for cmd in cmds:
-                self._sys_call(cmd=cmd)
-                sleep(1)
+                res = self._sys_call(cmd=cmd)
+                if cmd.startswith('ls '):
+                    # must be two configs files
+                    logging.debug('Check quantity configs: {}'.format(res))
+                    if not int(res) == 2:
+                        logging.error('After generation, '
+                                      'the necessary configuration files '
+                                      'are missing.')
+                        self._rolback(10)
+
+                sleep(0.2)
         else:
             logging.error('Have not {} file for further execution. '
                           'It is necessary to run the initializer '
@@ -1804,7 +1813,7 @@ class LXC(DB):
     def conf_dappvpn_json(self):
         """Check addr in vpn dappvpn.config.json"""
         logging.debug('Check addr in vpn dappvpn.config.json')
-        search_keys = ['Monitor', 'Server']
+        search_keys = ['Monitor', 'Connector']
         delim = ":"
         for cont_path in (self.path_com, self.path_vpn):
 
@@ -1815,13 +1824,13 @@ class LXC(DB):
             if not data:
                 self._rolback(22)
 
-            serv_addr = data.get('Server').get('Addr')
+            serv_addr = data.get('Connector').get('Addr')
             if serv_addr:
                 raw = serv_addr.split(delim)
                 raw[0] = self.p_unpck['common'][1]
-                data['Server']['Addr'] = delim.join(raw)
+                data['Connector']['Addr'] = delim.join(raw)
             else:
-                logging.error('Field Server not exist')
+                logging.error('Field Connector not exist')
 
             monit_addr = data.get('Monitor').get('Addr')
             if monit_addr:
@@ -2363,7 +2372,7 @@ class AutoOffer:
                 f = open(self.vpnConf)
                 raw_data = loads(f.read())
                 logging.debug('Read vpn conf: {}'.format(raw_data))
-                self.product_id = raw_data['Server']['Username']
+                self.product_id = raw_data['Connector']['Username']
                 logging.debug( 'Product id: {}'.format(self.product_id))
                 return True, 'Product id was found'
 

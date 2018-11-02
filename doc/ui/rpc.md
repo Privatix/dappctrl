@@ -898,6 +898,59 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 </details>
 
+#### Get Offerings Filter Parameters For Client
+
+*Method*:	`getClientOfferingsFilterParams`
+
+*Description*: Get offerings filter parameters for client.
+
+*Parameters*:
+1. Password (string)
+
+*Result (object)*:
+- `countries` (array of strings) - Country codes ISO 3166-1 alpha-2.
+- `minPrice` (number) - minimum value of minimal deposit required to accept the offering.
+- `maxPrice` (number) - maximum value of minimal deposit required to accept the offering.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferingsFilterParams", "params": ["qwerty"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "countries":["SU","US"],
+        "minPrice":121,
+        "maxPrice":165
+    }
+}
+```
+</details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferingsFilterParams", "params": ["qwerty"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "countries":[],
+        "minPrice":0,
+        "maxPrice":0
+    }
+}
+```
+
+</details>
+
 #### Get Offering Income
 
 *Method*: `getOfferingIncome`

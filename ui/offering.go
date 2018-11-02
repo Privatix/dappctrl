@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
@@ -30,6 +31,9 @@ var OfferingChangeActions = map[string]string{
 	DeactivateOffering: data.JobAgentPreOfferingDelete,
 }
 
+var offeringCountriesCondition = fmt.Sprintf("%s AND country != ''",
+	activeOfferingCondition)
+
 // GetAgentOfferingsResult is result of GetAgentOfferings method.
 type GetAgentOfferingsResult struct {
 	Items      []data.Offering `json:"items"`
@@ -40,6 +44,14 @@ type GetAgentOfferingsResult struct {
 type GetClientOfferingsResult struct {
 	Items      []data.Offering `json:"items"`
 	TotalItems int             `json:"totalItems"`
+}
+
+// GetClientOfferingsFilterParamsResult is result of
+// GetClientOfferingsFilterParams method.
+type GetClientOfferingsFilterParamsResult struct {
+	Countries []string `json:"countries"`
+	MinPrice  uint64   `json:"minPrice"`
+	MaxPrice  uint64   `json:"maxPrice"`
 }
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
@@ -427,4 +439,76 @@ func (h *Handler) CreateOffering(password string,
 	}
 
 	return &offering.ID, nil
+}
+
+func (h *Handler) offeringCountries(logger log.Logger) ([]string, error) {
+	query := `SELECT country, COUNT(country) 
+		    FROM offerings WHERE %s
+		   GROUP BY country
+		   ORDER BY count DESC`
+
+	tail := fmt.Sprintf(query, offeringCountriesCondition)
+
+	rows, err := h.db.Query(tail)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+	defer rows.Close()
+
+	countries := make([]string, 0)
+
+	for rows.Next() {
+		var country string
+		var count int64
+
+		if err := rows.Scan(&country, &count); err != nil {
+			logger.Error(err.Error())
+			return nil, ErrInternal
+		}
+		countries = append(countries, country)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	return countries, nil
+}
+
+func (h *Handler) offeringsMinMaxPrice(
+	logger log.Logger) (min uint64, max uint64, err error) {
+	query := `SELECT MIN(setup_price + unit_price * min_units),
+			 MAX(setup_price + unit_price * min_units)
+		    FROM offerings WHERE %s`
+
+	tail := fmt.Sprintf(query, offeringCountriesCondition)
+
+	if err := h.db.QueryRow(tail).Scan(&min, &max); err != nil {
+		logger.Error(err.Error())
+		return 0, 0, ErrInternal
+	}
+	return min, max, nil
+}
+
+// GetClientOfferingsFilterParams returns offerings filter parameters for client.
+func (h *Handler) GetClientOfferingsFilterParams(
+	password string) (*GetClientOfferingsFilterParamsResult, error) {
+	logger := h.logger.Add("method", "GetClientOfferingsFilterParams")
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	countries, err := h.offeringCountries(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	min, max, err := h.offeringsMinMaxPrice(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetClientOfferingsFilterParamsResult{countries, min, max}, nil
 }

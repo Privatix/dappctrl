@@ -15,11 +15,11 @@ import (
 	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -89,9 +89,9 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Account.EthAddr ||
 		tx.AddrTo != fxt.Offering.Agent ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
@@ -297,7 +297,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 	defer fxt.close()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(adapter.TestTXGasPrice),
+		GasPrice: uint64(eth.TestTXGasPrice),
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
@@ -322,9 +322,9 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -361,7 +361,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	issued := time.Now()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(adapter.TestTXGasPrice),
+		GasPrice: uint64(eth.TestTXGasPrice),
 	})
 
 	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
@@ -380,9 +380,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -486,9 +486,9 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")

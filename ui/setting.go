@@ -8,9 +8,21 @@ import (
 
 const settingsCondition = "WHERE permissions > 0"
 
+// PermissionsToString associates a setting permissions with a title.
+var PermissionsToString = map[int]string{
+	data.ReadOnly:  "readOnly",
+	data.ReadWrite: "readWrite",
+}
+
+// SettingUI is setting information.
+type SettingUI struct {
+	Value       string `json:"value"`
+	Permissions string `json:"permissions"`
+}
+
 // GetSettings returns settings.
 func (h *Handler) GetSettings(
-	password string) (map[string]string, error) {
+	password string) (map[string]SettingUI, error) {
 	logger := h.logger.Add("method", "GetSettings")
 
 	err := h.checkPassword(logger, password)
@@ -18,7 +30,7 @@ func (h *Handler) GetSettings(
 		return nil, err
 	}
 
-	result := make(map[string]string)
+	result := make(map[string]SettingUI)
 
 	settings, err := h.selectAllFrom(
 		logger, data.SettingTable, settingsCondition)
@@ -28,7 +40,8 @@ func (h *Handler) GetSettings(
 
 	for _, v := range settings {
 		setting := *v.(*data.Setting)
-		result[setting.Key] = setting.Value
+		result[setting.Key] = SettingUI{setting.Value,
+			PermissionsToString[setting.Permissions]}
 	}
 
 	return result, err

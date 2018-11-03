@@ -1316,9 +1316,11 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 *Parameters*:
 1. Password (string)
 
-*Result (object)*: object with keys as setting keys and values as setting values.
+*Result (object)*: object with keys as setting keys and values as setting information.
+- `value` (string) - setting value.
+- `permissions` (string, can be `readWrite` or `readOnly`) - setting permissions.
 
-<details><summary>Example</summary>
+<details><summary>Example 1</summary>
     
 ```js
 // Request
@@ -1326,22 +1328,65 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSetti
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": {
-        "eth.min.confirmations": "1",
-        "eth.event.maxretry": "7",
-        "eth.event.freshblocks": "11520",
-        "eth.event.blocklimit": "80",
-        "error.sendremote": "true",
-        "eth.default.gasprice": "20000000000",
-        "eth.max.deposit": "30000000000",
-        "system.version.db": "0.12.0",
-        "offering.autopopup": "true"
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "error.sendremote":{
+            "value":"true",
+            "permissions":"readWrite"
+        },
+        "eth.default.gasprice":{
+            "value":"20000000000",
+            "permissions":"readWrite"
+        },
+        "eth.event.blocklimit":{
+            "value":"80",
+            "permissions":"readWrite"
+        },
+        "eth.event.freshblocks":{
+            "value":"11520",
+            "permissions":"readWrite"
+        },
+        "eth.event.lastProcessedBlock":{
+            "value":"3263580",
+            "permissions":"readWrite"
+        },
+        "eth.max.deposit":{
+            "value":"30000000000",
+            "permissions":"readWrite"
+        },
+        "eth.min.confirmations":{
+            "value":"1",
+            "permissions":"readWrite"
+        },
+        "offering.autopopup":{
+            "value":"true",
+            "permissions":"readWrite"
+        },
+        "system.version.db":{
+            "value":"0.14.0",
+            "permissions":"readOnly"
+        }
     }
 }
+
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSettings", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{}
+}
+
+```
 </details>
 
 #### Update Settings

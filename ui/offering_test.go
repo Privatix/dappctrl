@@ -13,7 +13,7 @@ import (
 )
 
 type testOfferingData struct {
-	agent              string
+	agent              data.HexString
 	offerStatus        string
 	status             string
 	country            string
@@ -33,7 +33,7 @@ type testGetAgentOfferingsArgs struct {
 
 type testGetClientOfferingsArgs struct {
 	exp          int
-	agent        string
+	agent        data.HexString
 	minUnitPrice uint64
 	maxUnitPrice uint64
 	country      []string
@@ -93,9 +93,9 @@ func TestAcceptOffering(t *testing.T) {
 	}
 }
 
-func createTestOffering(fxt *fixture, agent, offerStatus, status,
-	country string, isLocal bool, blockNumberUpdated uint64,
-	currentSupply uint16) *data.Offering {
+func createTestOffering(fxt *fixture, agent data.HexString,
+	offerStatus, status, country string, isLocal bool,
+	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
 	offering := data.NewTestOffering(
 		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
 	if offerStatus != "" {
@@ -122,7 +122,7 @@ func createTestOffering(fxt *fixture, agent, offerStatus, status,
 }
 
 func testGetClientOfferings(t *testing.T,
-	fxt *fixture, assertErrEqual func(error, error), agent string) {
+	fxt *fixture, assertErrEqual func(error, error), agent data.HexString) {
 
 	assertResult := func(res *ui.GetClientOfferingsResult,
 		err error, exp, total int) {
@@ -167,7 +167,7 @@ func testGetClientOfferings(t *testing.T,
 		{1, "", 0, 0, []string{"US"}, 0, 0, 1},
 		{1, "", 0, 0, []string{"SU"}, 0, 0, 1},
 		{2, "", 0, 0, []string{"SU", "US"}, 0, 0, 2},
-		{0, other, 0, 0, nil, 0, 0, 0},
+		{0, data.HexString(other), 0, 0, nil, 0, 0, 0},
 		{1, agent, 0, 0, nil, 0, 0, 1},
 	}
 
@@ -385,15 +385,15 @@ func TestCreateOffering(t *testing.T) {
 
 	invalidOfferings := invalidOfferingsArray(t, fxt)
 
-	for _, v := range invalidOfferings {
+	for i, v := range invalidOfferings {
 		_, err := handler.CreateOffering(data.TestPassword, v)
 		if err == nil {
-			t.Fatal("offering should not be saved")
+			t.Fatalf("offering %d should not be saved", i)
 		}
 	}
 
-	offering := data.NewTestOffering(
-		fxt.Account.ID, fxt.Product.ID, fxt.TemplateOffer.ID)
+	offering := data.NewTestOffering(data.HexString(fxt.Account.ID),
+		fxt.Product.ID, fxt.TemplateOffer.ID)
 
 	_, err := handler.CreateOffering("wrong-password", offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
@@ -415,8 +415,8 @@ func TestUpdateOffering(t *testing.T) {
 	err := handler.UpdateOffering("wrong-password", fxt.Offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	newOffering := data.NewTestOffering(
-		fxt.Account.ID, fxt.Product.ID, fxt.TemplateOffer.ID)
+	newOffering := data.NewTestOffering(data.HexString(fxt.Account.ID),
+		fxt.Product.ID, fxt.TemplateOffer.ID)
 
 	err = handler.UpdateOffering(data.TestPassword, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)

@@ -12,8 +12,9 @@ func TestGetSessions(t *testing.T) {
 	fxt, assertErrEquals := newTest(t, "GetSessions")
 	defer fxt.close()
 
-	channel := data.NewTestChannel(util.NewUUID(), fxt.Account.ID,
-		fxt.Offering.ID, 0, 0, data.ChannelActive)
+	channel := data.NewTestChannel(data.HexString(util.NewUUID()),
+		data.HexString(fxt.Account.ID), fxt.Offering.ID,
+		0, 0, data.ChannelActive)
 	session1 := data.NewTestSession(channel.ID)
 	session2 := data.NewTestSession(fxt.Channel.ID)
 

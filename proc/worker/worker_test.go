@@ -244,7 +244,7 @@ func (e *workerTest) setOfferingHash(t *testing.T, fixture *workerTestFixture) {
 	packed, _ := messages.PackWithSignature(msgBytes, agentKey)
 
 	fixture.Offering.RawMsg = data.FromBytes(packed)
-	fixture.Offering.Hash = data.FromBytes(ethcrypto.Keccak256(packed))
+	fixture.Offering.Hash = data.HexFromBytes(ethcrypto.Keccak256(packed))
 	e.updateInTestDB(t, fixture.Offering)
 }
 

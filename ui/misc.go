@@ -38,7 +38,7 @@ func (h *Handler) checkPassword(logger log.Logger, password string) error {
 		return ErrInternal
 	}
 
-	err = data.ValidatePassword(hash, password, salt)
+	err = data.ValidatePassword(data.Base64String(hash), password, salt)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrAccessDenied

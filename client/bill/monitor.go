@@ -31,8 +31,9 @@ func NewConfig() *Config {
 	}
 }
 
-type postChequeFunc func(db *reform.DB, channel, pscAddr, pass string,
-	amount uint64, tls bool, timeout uint, pr *proc.Processor) error
+type postChequeFunc func(db *reform.DB, channel string,
+	pscAddr data.HexString, pass string, amount uint64,
+	tls bool, timeout uint, pr *proc.Processor) error
 
 // Monitor is a client billing monitor.
 type Monitor struct {

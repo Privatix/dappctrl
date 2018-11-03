@@ -228,7 +228,8 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 
 	params, _ := json.Marshal(msg.AdditionalParams)
 	if endp.Template != fxt.Offering.Template ||
-		strings.Trim(endp.Hash, " ") != msg.TemplateHash ||
+		strings.Trim(string(endp.Hash), " ") !=
+			string(msg.TemplateHash) ||
 		endp.RawMsg != data.FromBytes(sealed) ||
 		endp.Status != data.MsgUnpublished ||
 		endp.PaymentReceiverAddress == nil ||
@@ -753,7 +754,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
-	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+	expectedOffering.Hash = data.HexFromBytes(offeringHash.Bytes())
 
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
@@ -788,7 +789,8 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 		env.fakeSOMC.WriteFindOfferings(t,
-			[]string{expectedOffering.Hash}, [][]byte{packed})
+			[]data.HexString{expectedOffering.Hash},
+			[][]byte{packed})
 	}()
 
 	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
@@ -915,7 +917,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
-	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+	expectedOffering.Hash = data.HexFromBytes(offeringHash.Bytes())
 
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
@@ -942,7 +944,8 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 		env.fakeSOMC.WriteFindOfferings(t,
-			[]string{expectedOffering.Hash}, [][]byte{packed})
+			[]data.HexString{expectedOffering.Hash},
+			[][]byte{packed})
 	}()
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)

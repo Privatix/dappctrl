@@ -10,22 +10,22 @@ import (
 const findOfferingsMethod = "getOfferings"
 
 type findOfferingsParams struct {
-	Hashes []string `json:"hashes"`
+	Hashes []data.HexString `json:"hashes"`
 }
 
 type findOfferingsResult []struct {
-	Hash string `json:"hash"`
-	Data string `json:"data"`
+	Hash data.HexString    `json:"hash"`
+	Data data.Base64String `json:"data"`
 }
 
 // OfferingData is a simple container for offering JSON.
 type OfferingData struct {
-	Hash     string
+	Hash     data.HexString
 	Offering []byte
 }
 
 // FindOfferings requests SOMC to find offerings by their hashes.
-func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
+func (c *Conn) FindOfferings(hashes []data.HexString) ([]OfferingData, error) {
 	logger := c.logger.Add("method", "FindOfferings")
 
 	params := findOfferingsParams{hashes}
@@ -53,7 +53,7 @@ func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
 		}
 
 		hash := crypto.Keccak256Hash(bytes)
-		hstr := data.FromBytes(hash.Bytes())
+		hstr := data.HexFromBytes(hash.Bytes())
 		if hstr != v.Hash {
 			logger.Add("hashes", hashes,
 				"res", res).Error("hash mismatch")

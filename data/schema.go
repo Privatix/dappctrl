@@ -12,26 +12,26 @@ import (
 // Account is an ethereum account.
 //reform:accounts
 type Account struct {
-	ID               string     `json:"id" reform:"id,pk"`
-	EthAddr          string     `json:"ethAddr" reform:"eth_addr"`
-	PublicKey        string     `json:"-" reform:"public_key"`
-	PrivateKey       string     `json:"-" reform:"private_key"`
-	IsDefault        bool       `json:"isDefault" reform:"is_default"`
-	InUse            bool       `json:"inUse" reform:"in_use"`
-	Name             string     `json:"name" reform:"name"`
-	PTCBalance       uint64     `json:"ptcBalance" reform:"ptc_balance"`
-	PSCBalance       uint64     `json:"pscBalance" reform:"psc_balance"`
-	EthBalance       B64BigInt  `json:"ethBalance" reform:"eth_balance"`
-	LastBalanceCheck *time.Time `json:"lastBalanceCheck" reform:"last_balance_check"`
+	ID               string       `json:"id" reform:"id,pk"`
+	EthAddr          HexString    `json:"ethAddr" reform:"eth_addr"`
+	PublicKey        Base64String `json:"-" reform:"public_key"`
+	PrivateKey       Base64String `json:"-" reform:"private_key"`
+	IsDefault        bool         `json:"isDefault" reform:"is_default"`
+	InUse            bool         `json:"inUse" reform:"in_use"`
+	Name             string       `json:"name" reform:"name"`
+	PTCBalance       uint64       `json:"ptcBalance" reform:"ptc_balance"`
+	PSCBalance       uint64       `json:"pscBalance" reform:"psc_balance"`
+	EthBalance       Base64BigInt `json:"ethBalance" reform:"eth_balance"`
+	LastBalanceCheck *time.Time   `json:"lastBalanceCheck" reform:"last_balance_check"`
 }
 
 // User is party in distributed trade.
 // It can play an agent role, a client role, or both of them.
 //reform:users
 type User struct {
-	ID        string `json:"id" reform:"id,pk"`
-	EthAddr   string `json:"ethAddr" reform:"eth_addr"`
-	PublicKey string `json:"publicKey" reform:"public_key"`
+	ID        string       `json:"id" reform:"id,pk"`
+	EthAddr   HexString    `json:"ethAddr" reform:"eth_addr"`
+	PublicKey Base64String `json:"publicKey" reform:"public_key"`
 }
 
 // Templates kinds.
@@ -45,7 +45,7 @@ const (
 //reform:templates
 type Template struct {
 	ID   string          `json:"id" reform:"id,pk"`
-	Hash string          `json:"hash" reform:"hash"`
+	Hash HexString       `json:"hash" reform:"hash"`
 	Raw  json.RawMessage `json:"raw" reform:"raw"`
 	Kind string          `json:"kind" reform:"kind"`
 }
@@ -71,7 +71,7 @@ type Product struct {
 	UsageRepType           string          `json:"usageRepType" reform:"usage_rep_type"`
 	IsServer               bool            `json:"isServer" reform:"is_server"`
 	Salt                   uint64          `json:"-" reform:"salt"`
-	Password               string          `json:"-" reform:"password"`
+	Password               Base64String    `json:"-" reform:"password"`
 	ClientIdent            string          `json:"clientIdent" reform:"client_ident"`
 	Config                 json.RawMessage `json:"config" reform:"config"`
 	ServiceEndpointAddress *string         `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
@@ -116,12 +116,12 @@ type Offering struct {
 	IsLocal            bool            `json:"isLocal" reform:"is_local"`
 	Template           string          `json:"template" reform:"tpl" validate:"required"`    // Offering's.
 	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
-	Hash               string          `json:"hash" reform:"hash"`                           // Offering's hash.
+	Hash               HexString       `json:"hash" reform:"hash"`                           // Offering's hash.
 	Status             string          `json:"status" reform:"status"`
 	OfferStatus        string          `json:"offerStatus" reform:"offer_status"`
 	BlockNumberUpdated uint64          `json:"blockNumberUpdated" reform:"block_number_updated"`
-	Agent              string          `json:"agent" reform:"agent" validate:"required"`
-	RawMsg             string          `json:"rawMsg" reform:"raw_msg"`
+	Agent              HexString       `json:"agent" reform:"agent" validate:"required"`
+	RawMsg             Base64String    `json:"rawMsg" reform:"raw_msg"`
 	ServiceName        string          `json:"serviceName" reform:"service_name" validate:"required"`
 	Description        *string         `json:"description" reform:"description"`
 	Country            string          `json:"country" reform:"country" validate:"required"` // ISO 3166-1 alpha-2.
@@ -166,21 +166,21 @@ const (
 // Channel is a state channel.
 //reform:channels
 type Channel struct {
-	ID                 string     `json:"id" reform:"id,pk"`
-	Agent              string     `json:"agent" reform:"agent"`
-	Client             string     `json:"client" reform:"client"`
-	Offering           string     `json:"offering" reform:"offering"`
-	Block              uint32     `json:"block" reform:"block"`                  // When state channel created.
-	ChannelStatus      string     `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
-	ServiceStatus      string     `json:"serviceStatus" reform:"service_status"`
-	ServiceChangedTime *time.Time `json:"serviceChangedTime" reform:"service_changed_time"`
-	PreparedAt         time.Time  `json:"preparedAt" reform:"prepared_at"`
-	TotalDeposit       uint64     `json:"totalDeposit" reform:"total_deposit"`
-	Salt               uint64     `json:"-" reform:"salt"`
-	Username           *string    `json:"-" reform:"username"`
-	Password           string     `json:"-" reform:"password"`
-	ReceiptBalance     uint64     `json:"receiptBalance" reform:"receipt_balance"` // Last payment.
-	ReceiptSignature   *string    `json:"-" reform:"receipt_signature"`            // Last payment's signature.
+	ID                 string        `json:"id" reform:"id,pk"`
+	Agent              HexString     `json:"agent" reform:"agent"`
+	Client             HexString     `json:"client" reform:"client"`
+	Offering           string        `json:"offering" reform:"offering"`
+	Block              uint32        `json:"block" reform:"block"`                  // When state channel created.
+	ChannelStatus      string        `json:"channelStatus" reform:"channel_status"` // Status related to blockchain.
+	ServiceStatus      string        `json:"serviceStatus" reform:"service_status"`
+	ServiceChangedTime *time.Time    `json:"serviceChangedTime" reform:"service_changed_time"`
+	PreparedAt         time.Time     `json:"preparedAt" reform:"prepared_at"`
+	TotalDeposit       uint64        `json:"totalDeposit" reform:"total_deposit"`
+	Salt               uint64        `json:"-" reform:"salt"`
+	Username           *string       `json:"-" reform:"username"`
+	Password           Base64String  `json:"-" reform:"password"`
+	ReceiptBalance     uint64        `json:"receiptBalance" reform:"receipt_balance"` // Last payment.
+	ReceiptSignature   *Base64String `json:"-" reform:"receipt_signature"`            // Last payment's signature.
 }
 
 // Session is a client session.
@@ -206,11 +206,11 @@ const (
 // Contract is a smart contract.
 //reform:contracts
 type Contract struct {
-	ID      string `json:"id" reform:"id,pk"`
-	Address string `json:"address" reform:"address"` // Ethereum address
-	Type    string `json:"type" reform:"type"`
-	Version *uint8 `json:"version" reform:"version"`
-	Enabled bool   `json:"enabled" reform:"enabled"`
+	ID      string    `json:"id" reform:"id,pk"`
+	Address HexString `json:"address" reform:"address"` // Ethereum address
+	Type    string    `json:"type" reform:"type"`
+	Version *uint8    `json:"version" reform:"version"`
+	Enabled bool      `json:"enabled" reform:"enabled"`
 }
 
 // Permissions for settings.
@@ -240,18 +240,18 @@ const (
 // Endpoint messages is info about service access.
 //reform:endpoints
 type Endpoint struct {
-	ID                     string  `json:"id" reform:"id,pk"`
-	Template               string  `json:"template" reform:"template"`
-	Channel                string  `json:"channel" reform:"channel"`
-	Hash                   string  `json:"hash" reform:"hash"`
-	RawMsg                 string  `reform:"raw_msg"`
-	Status                 string  `json:"status" reform:"status"`
-	PaymentReceiverAddress *string `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
-	ServiceEndpointAddress *string `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
-	Username               *string `json:"username" reform:"username"`
-	Password               *string `json:"password" reform:"password"`
-	AdditionalParams       []byte  `json:"additionalParams" reform:"additional_params"`
-	CountryStatus          *string `json:"countryStatus" reform:"country_status"`
+	ID                     string       `json:"id" reform:"id,pk"`
+	Template               string       `json:"template" reform:"template"`
+	Channel                string       `json:"channel" reform:"channel"`
+	Hash                   HexString    `json:"hash" reform:"hash"`
+	RawMsg                 Base64String `reform:"raw_msg"`
+	Status                 string       `json:"status" reform:"status"`
+	PaymentReceiverAddress *string      `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
+	ServiceEndpointAddress *string      `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
+	Username               *string      `json:"username" reform:"username"`
+	Password               *string      `json:"password" reform:"password"`
+	AdditionalParams       []byte       `json:"additionalParams" reform:"additional_params"`
+	CountryStatus          *string      `json:"countryStatus" reform:"country_status"`
 }
 
 // EndpointUI contains only certain fields of endpoints table.
@@ -347,7 +347,7 @@ type JobEthLog struct {
 	Block  uint64    `json:"block"`
 	Data   []byte    `json:"data"`
 	Topics LogTopics `json:"topics"`
-	TxHash string    `json:"transactionHash"`
+	TxHash HexString `json:"transactionHash"`
 }
 
 type JobData struct {
@@ -390,13 +390,13 @@ type Job struct {
 //reform:eth_txs
 type EthTx struct {
 	ID          string    `reform:"id,pk" json:"id"`
-	Hash        string    `reform:"hash" json:"hash"`
+	Hash        HexString `reform:"hash" json:"hash"`
 	Method      string    `reform:"method" json:"method"`
 	Status      string    `reform:"status" json:"status"`
 	JobID       *string   `reform:"job" json:"jobID"`
 	Issued      time.Time `reform:"issued" json:"issued"`
-	AddrFrom    string    `reform:"addr_from" json:"addrFrom"`
-	AddrTo      string    `reform:"addr_to" json:"addrTo"`
+	AddrFrom    HexString `reform:"addr_from" json:"addrFrom"`
+	AddrTo      HexString `reform:"addr_to" json:"addrTo"`
 	Nonce       *string   `reform:"nonce" json:"nonce"`
 	GasPrice    uint64    `reform:"gas_price" json:"gasPrice"`
 	Gas         uint64    `reform:"gas" json:"gas"`

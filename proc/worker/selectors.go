@@ -140,12 +140,12 @@ func (w *Worker) productByPK(logger log.Logger, pk string) (*data.Product, error
 
 func (w *Worker) offeringByHash(logger log.Logger,
 	hash common.Hash) (*data.Offering, error) {
-	hashStr := data.FromBytes(hash.Bytes())
+	hashStr := data.HexFromBytes(hash.Bytes())
 	return w.offeringByHashString(logger, hashStr)
 }
 
 func (w *Worker) offeringByHashString(logger log.Logger,
-	hash string) (*data.Offering, error) {
+	hash data.HexString) (*data.Offering, error) {
 	offering := &data.Offering{}
 	err := w.db.FindOneTo(offering, "hash", hash)
 	if err == sql.ErrNoRows {
@@ -158,7 +158,7 @@ func (w *Worker) offeringByHashString(logger log.Logger,
 	return offering, nil
 }
 
-func (w *Worker) account(logger log.Logger, ethAddr string) (*data.Account, error) {
+func (w *Worker) account(logger log.Logger, ethAddr data.HexString) (*data.Account, error) {
 	account := &data.Account{}
 	err := data.FindOneTo(w.db.Querier, account, "eth_addr", ethAddr)
 	if err != nil {
@@ -178,7 +178,7 @@ func (w *Worker) accountByPK(logger log.Logger, pk string) (*data.Account, error
 	return account, nil
 }
 
-func (w *Worker) user(logger log.Logger, ethAddr string) (*data.User, error) {
+func (w *Worker) user(logger log.Logger, ethAddr data.HexString) (*data.User, error) {
 	user := &data.User{}
 	err := data.FindOneTo(w.db.Querier, user, "eth_addr", ethAddr)
 	if err != nil {
@@ -198,7 +198,7 @@ func (w *Worker) template(logger log.Logger, pk string) (*data.Template, error) 
 	return template, nil
 }
 
-func (w *Worker) templateByHash(logger log.Logger, hash string) (*data.Template, error) {
+func (w *Worker) templateByHash(logger log.Logger, hash data.HexString) (*data.Template, error) {
 	template := &data.Template{}
 	err := data.FindOneTo(w.db.Querier, template, "hash", hash)
 	if err != nil {

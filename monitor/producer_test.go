@@ -38,13 +38,13 @@ func TestJobsProducers(t *testing.T) {
 	defer data.DeleteFromTestDB(t, db, etx)
 	defer fxt.Close()
 
-	agentHash := common.HexToHash(fxt.Channel.Agent)
-	clientHash := common.HexToHash(fxt.Channel.Client)
-	offeringHash := common.BytesToHash(data.TestToBytes(t, fxt.Offering.Hash))
+	agentHash := common.HexToHash(string(fxt.Channel.Agent))
+	clientHash := common.HexToHash(string(fxt.Channel.Client))
+	offeringHash := common.HexToHash(string(fxt.Offering.Hash))
 	agentProducersMap := mon.AgentJobsProducers()
 	clientProducersMap := mon.ClientJobsProducers()
 
-	for _, tc := range []struct {
+	for i, tc := range []struct {
 		l              *data.JobEthLog
 		agentProduced  []data.Job
 		clientProduced []data.Job
@@ -328,7 +328,9 @@ func TestJobsProducers(t *testing.T) {
 			},
 		},
 	} {
+		t.Log("before", i)
 		testProducedJobs(t, agentProducersMap, tc.l, tc.agentProduced)
+		t.Log("after", i)
 		testProducedJobs(t, clientProducersMap, tc.l, tc.clientProduced)
 	}
 }

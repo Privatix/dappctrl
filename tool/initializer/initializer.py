@@ -3125,7 +3125,6 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.check_role()
                 self.target = 'back'
                 if self.clear_contr():
-                    self.del_pid()
                     self.use_ports = dict(vpn=[],
                                           common=[],
                                           mangmt=dict(
@@ -3151,7 +3150,6 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.check_sudo()
                 self.check_role()
                 if self.clear_contr():
-                    self.del_pid()
                     self.use_ports = dict(vpn=[], common=[],
                                            mangmt=dict(vpn=None,
                                                        common=None))

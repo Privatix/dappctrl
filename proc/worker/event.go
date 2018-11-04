@@ -35,10 +35,12 @@ type logOfferingCreatedInput struct {
 }
 
 type logOfferingPopUpInput struct {
-	agentAddr    common.Address
-	offeringHash common.Hash
-	sourceType   uint8
-	source       []byte
+	agentAddr     common.Address
+	offeringHash  common.Hash
+	minDeposit    *big.Int
+	currentSupply uint16
+	sourceType    uint8
+	source        []byte
 }
 
 var (
@@ -230,7 +232,7 @@ func extractLogOfferingCreated(logger log.Logger,
 
 func extractLogOfferingPopUp(logger log.Logger,
 	log *data.JobEthLog) (*logOfferingPopUpInput, error) {
-	if len(log.Topics) != 3 {
+	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 
@@ -240,27 +242,35 @@ func extractLogOfferingPopUp(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	if len(dataUnpacked) != 2 {
+	if len(dataUnpacked) != 3 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
-	sourceType, ok := dataUnpacked[0].(uint8)
+	currentSupply, ok := dataUnpacked[0].(uint16)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
-	source, ok := dataUnpacked[1].([]byte)
+	sourceType, ok := dataUnpacked[1].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	source, ok := dataUnpacked[2].([]byte)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
 	offeringHash := log.Topics[2]
+	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingPopUpInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
-		sourceType:   sourceType,
-		source:       source,
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
+		minDeposit:    minDeposit,
+		currentSupply: currentSupply,
+		sourceType:    sourceType,
+		source:        source,
 	}, nil
 }

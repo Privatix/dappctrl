@@ -65,11 +65,13 @@ func calcDelayToOfferingPopUp(offeringHash common.Hash,
 	return delay, err
 }
 
-func calcPriceToOfferingPopUp(abi abi.ABI, ethBack eth.Backend,
-	gasPrice *big.Int) *big.Int {
-	input, err := abi.Pack("popupServiceOffering", common.Hash{})
+func calcPriceToOfferingPopUp(logger log.Logger, abi abi.ABI,
+	ethBack eth.Backend, gasPrice *big.Int) (*big.Int, error) {
+	input, err := abi.Pack(
+		"popupServiceOffering", common.Hash{}, uint8(0), []byte{})
 	if err != nil {
-		return nil
+		logger.Error(err.Error())
+		return nil, err
 	}
 
 	msg := ethereum.CallMsg{From: common.Address{},
@@ -77,11 +79,12 @@ func calcPriceToOfferingPopUp(abi abi.ABI, ethBack eth.Backend,
 
 	gas, err := ethBack.EstimateGas(context.Background(), msg)
 	if err != nil {
-		return nil
+		logger.Error(err.Error())
+		return nil, err
 	}
 
 	// popupPrice = gas * gasPrice
-	return new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice)
+	return new(big.Int).Mul(new(big.Int).SetUint64(gas), gasPrice), nil
 }
 
 func agentHaveEnoughMoney(logger log.Logger, agent common.Address,
@@ -136,7 +139,11 @@ func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 		return nil
 	}
 
-	popupPrice := calcPriceToOfferingPopUp(abi, ethBack, gasPrice)
+	popupPrice, err := calcPriceToOfferingPopUp(
+		logger, abi, ethBack, gasPrice)
+	if err != nil {
+		return nil
+	}
 
 	// price = popupPrice * len(offerings)
 	price := new(big.Int).Mul(popupPrice, big.NewInt(int64(len(offerings))))

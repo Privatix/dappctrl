@@ -80,14 +80,14 @@ func (w *Worker) clientValidateChannelForClose(
 
 func (w *Worker) clientPreChannelCreateCheckSupply(logger log.Logger,
 	offer *data.Offering, offerHash common.Hash) error {
-	_, _, _, supply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+	_, _, _, supplyFromContract, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, offerHash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCOfferingSupply
 	}
 
-	if supply == 0 {
+	if supplyFromContract == 0 || offer.CurrentSupply == 0 {
 		return ErrOfferingNoSupply
 	}
 
@@ -388,7 +388,8 @@ func (w *Worker) ClientEndpointCreate(job *data.Job) error {
 	}
 
 	var jdata data.JobEndpointCreateData
-	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
+	if err := w.unmarshalDataTo(
+		logger, job.Data, &jdata.EndpointSealed); err != nil {
 		return err
 	}
 
@@ -935,7 +936,7 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 	return w.clientRetrieveAndSaveOffering(logger, job,
 		ethLog.Block, logOfferingCreated.sourceType,
 		logOfferingCreated.source, logOfferingCreated.agentAddr,
-		logOfferingCreated.offeringHash)
+		logOfferingCreated.offeringHash, logOfferingCreated.currentSupply)
 }
 
 // ClientAfterOfferingPopUp updates offering in db or retrieves from somc
@@ -963,7 +964,8 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 		return w.clientRetrieveAndSaveOffering(logger, job,
 			ethLog.Block, logOfferingPopUp.sourceType,
 			logOfferingPopUp.source, logOfferingPopUp.agentAddr,
-			logOfferingPopUp.offeringHash)
+			logOfferingPopUp.offeringHash,
+			logOfferingPopUp.currentSupply)
 	}
 	if err != nil {
 		logger.Error(err.Error())
@@ -979,7 +981,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, sourceType uint8, source []byte,
-	agentAddr common.Address, hash common.Hash) error {
+	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
 
 	var offering *data.Offering
 	switch sourceType {
@@ -1012,7 +1014,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		}
 	}
 
-	_, minDeposit, mSupply, cSupply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hash)
 	if err != nil {
 		logger.Error(err.Error())
@@ -1024,7 +1026,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 
 	offering.Supply = mSupply
-	offering.CurrentSupply = cSupply
+	offering.CurrentSupply = currentSupply
 
 	if err := data.Insert(w.db.Querier, offering); err != nil {
 		logger.Add("offering", offering).Error(err.Error())

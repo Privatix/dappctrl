@@ -230,7 +230,7 @@ func testClientEndpointCreate(t *testing.T,
 		strings.Trim(string(endp.Hash), " ") !=
 			string(msg.TemplateHash) ||
 		endp.RawMsg != data.FromBytes(sealed) ||
-		endp.Status != data.MsgUnpublished ||
+		endp.Status != data.MsgChPublished ||
 		endp.PaymentReceiverAddress == nil ||
 		*endp.PaymentReceiverAddress != msg.PaymentReceiverAddress ||
 		endp.ServiceEndpointAddress == nil ||
@@ -855,9 +855,17 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 		common.BytesToHash([]byte{}),
 		common.BytesToHash([]byte{}),
 		offeringHash,
+		common.BigToHash(big.NewInt(100)),
+	}
+
+	logData, err := logOfferingCreatedDataArguments.Pack(
+		uint16(10), data.OfferingSourceSOMC, []byte{})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	ethLog := &data.JobEthLog{
+		Data:   logData,
 		Topics: topics,
 		Block:  12345,
 	}
@@ -920,9 +928,18 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
+		common.BigToHash(big.NewInt(100)),
 	}
+
+	logData, err := logOfferingCreatedDataArguments.Pack(
+		uint16(1), data.OfferingSourceSOMC, []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	setJobData(t, db, fxt.job, &data.JobData{
 		EthLog: &data.JobEthLog{
+			Data:   logData,
 			Topics: topics,
 			Block:  123456,
 		},

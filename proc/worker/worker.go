@@ -73,10 +73,15 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	pscPeriods *eth.PSCPeriods,
 	torHostname string, torSocksListener uint) (*Worker, error) {
 
+	l := logger.Add("type", "proc/worker.Worker")
+
 	sourceType := data.OfferingSourceSOMC
 	source := []byte(torHostname)
 	if len(source) > 0 {
+		l.Info("Offering source Tor")
 		sourceType = data.OfferingSourceTor
+	} else {
+		l.Info("Offering source SOMC")
 	}
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
@@ -91,7 +96,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 
 	return &Worker{
 		abi:              abi,
-		logger:           logger.Add("type", "proc/worker.Worker"),
+		logger:           l,
 		db:               db,
 		decryptKeyFunc:   decryptKeyFunc,
 		gasConf:          gasConc,

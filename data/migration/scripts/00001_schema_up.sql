@@ -231,7 +231,7 @@ CREATE TABLE offerings (
 
     source_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
 
-    source text NOT NULL, -- additional data to support defined source_type.
+    source text NOT NULL -- additional data to support defined source_type.
 );
 
 -- State channels.

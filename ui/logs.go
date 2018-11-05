@@ -38,8 +38,6 @@ func (h *Handler) getTotalLogEvents(logger log.Logger, conditions string,
 func (h *Handler) getLogsConditions(
 	args *getLogsArgs) (conditions string, arguments []interface{}) {
 
-	var contextSearchSQL string
-
 	count := 1
 
 	index := func() string {
@@ -53,15 +51,6 @@ func (h *Handler) getLogsConditions(
 			return condition
 		}
 		return fmt.Sprintf("%s %s %s", conditions, operator, condition)
-	}
-
-	if args.searchText != "" {
-		contextSearchSQL = fmt.Sprintf("to_tsvector('english',"+
-			" context) @@ to_tsquery('%s:*')", args.searchText)
-
-		condition := fmt.Sprintf("%s like %s", "message", index())
-		conditions = join(conditions, "AND", condition)
-		arguments = append(arguments, "%"+args.searchText+"%")
 	}
 
 	if len(args.level) != 0 {
@@ -88,8 +77,18 @@ func (h *Handler) getLogsConditions(
 		arguments = append(arguments, args.dateTo)
 	}
 
-	if contextSearchSQL != "" {
-		conditions = join(conditions, "OR", contextSearchSQL)
+	if args.searchText != "" {
+		contextSearchSQL := fmt.Sprintf("to_tsvector('english',"+
+			" context) @@ to_tsquery('%s:*')", args.searchText)
+
+		messageSearchSQL := fmt.Sprintf("%s like %s", "message",
+			index())
+
+		condition := fmt.Sprintf("(%s OR %s)", contextSearchSQL,
+			messageSearchSQL)
+
+		conditions = join(conditions, "AND", condition)
+		arguments = append(arguments, "%"+args.searchText+"%")
 	}
 
 	conditions = "WHERE " + conditions

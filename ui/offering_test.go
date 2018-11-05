@@ -47,6 +47,15 @@ type testField struct {
 	value interface{}
 }
 
+type offeringsFilterParamsData struct {
+	country     string
+	offerStatus string
+	status      string
+	setupPrice  uint64
+	unitPrice   uint64
+	minUnits    uint64
+}
+
 func TestAcceptOffering(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "AcceptOffering")
 	defer fxt.close()
@@ -463,5 +472,72 @@ func TestChangeOfferingStatus(t *testing.T) {
 			j.RelatedID != fxt.Offering.ID {
 			t.Fatal("expected job not created")
 		}
+	}
+}
+
+func TestGetClientOfferingsFilterParams(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "GetClientOfferingsFilterParams")
+	defer fxt.close()
+
+	agent := data.NewTestAccount(data.TestPassword)
+
+	c1 := "AB"
+	c2 := "CD"
+
+	testData := []*offeringsFilterParamsData{
+		{c1, data.OfferRegistered, data.MsgChPublished, 1, 1, 1},
+		{c1, data.OfferRegistered, data.MsgChPublished, 2, 2, 2},
+		{c2, data.OfferRegistered, data.MsgChPublished, 10, 10, 10},
+		// Ignored offerings.
+		{"YY", data.OfferEmpty, data.MsgChPublished, 20, 20, 20},
+		{"", data.OfferRegistered, data.MsgChPublished, 20, 20, 20},
+	}
+
+	var offerings []*data.Offering
+
+	for _, v := range testData {
+		offering := data.NewTestOffering(
+			agent.ID, fxt.Product.ID, fxt.TemplateOffer.ID)
+		offering.Country = v.country
+		offering.OfferStatus = v.offerStatus
+		offering.Status = v.status
+		offering.SetupPrice = v.setupPrice
+		offering.UnitPrice = v.unitPrice
+		offering.MinUnits = v.minUnits
+		offerings = append(offerings, offering)
+	}
+
+	min := data.MinDeposit(offerings[0])
+	max := data.MinDeposit(offerings[2])
+
+	for _, v := range offerings {
+		data.InsertToTestDB(t, db, v)
+		defer data.DeleteFromTestDB(t, db, v)
+	}
+
+	_, err := handler.GetClientOfferingsFilterParams("wrong-password")
+	assertMatchErr(ui.ErrAccessDenied, err)
+
+	res, err := handler.GetClientOfferingsFilterParams(data.TestPassword)
+	assertMatchErr(nil, err)
+
+	if len(res.Countries) != 2 {
+		t.Fatalf("wanted: %v, got: %v", 2, res.Countries)
+	}
+
+	if res.Countries[0] != c1 {
+		t.Fatalf("wanted: %v, got: %v", c1, res.Countries[0])
+	}
+
+	if res.Countries[1] != c2 {
+		t.Fatalf("wanted: %v, got: %v", c2, res.Countries[1])
+	}
+
+	if res.MinPrice != min {
+		t.Fatalf("wanted: %v, got: %v", min, res.MinPrice)
+	}
+
+	if res.MaxPrice != max {
+		t.Fatalf("wanted: %v, got: %v", max, res.MaxPrice)
 	}
 }

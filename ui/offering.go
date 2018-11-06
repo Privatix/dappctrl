@@ -470,7 +470,7 @@ func (h *Handler) offeringCountries(logger log.Logger) ([]string, error) {
 	}
 
 	if err := rows.Err(); err != nil {
-		logger.Fatal(err.Error())
+		logger.Error(err.Error())
 	}
 
 	return countries, nil

@@ -283,15 +283,15 @@ func checkGetClientChannelsResult(
 			sessions = append(sessions, v.(*data.Session))
 		}
 
-		checkClientChannel(t, &item, channel)
+		checkClientChannel(t, &item, channel, offering)
 		checkClientChannelStatus(t, &item, channel, offering)
 		checkClientChannelJob(t, &item, job2)
 		checkClientChannelUsage(t, &item, channel, offering, sessions)
 	}
 }
 
-func checkClientChannel(
-	t *testing.T, resp *ui.ClientChannelInfo, ch data.Channel) {
+func checkClientChannel(t *testing.T, resp *ui.ClientChannelInfo,
+	ch data.Channel, offering data.Offering) {
 	if ch.ID != resp.ID {
 		t.Fatalf("expected %s, got: %s", ch.ID, resp.ID)
 	}
@@ -316,6 +316,11 @@ func checkClientChannel(
 
 	if ch.Offering != resp.Offering {
 		t.Fatalf("expected %s, got: %s", ch.Offering, resp.Offering)
+	}
+
+	if offering.Hash != resp.OfferingHash {
+		t.Fatalf("expected %s, got: %s", offering.Hash,
+			resp.OfferingHash)
 	}
 
 	if ch.TotalDeposit != resp.Deposit {

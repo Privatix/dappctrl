@@ -449,6 +449,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                 "agent":"0x8D31cA7eBc9582874f15eac1caCa39A4782b3E06",
                 "client":"0xC1bAE9F48e5cF5f16839F4BC1e312069003d7519",
                 "offering":"a34bbecc-b294-4960-9a1c-bef468bd0617",
+                "offeringHash":"tHC6By1U-m11YHwcCXTB3TdChp0SrJ28JuiYdBkEHMs=",
                 "deposit":10000,
                 "channelStatus":{
                     "serviceStatus":"pending",
@@ -898,6 +899,59 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 </details>
 
+#### Get Offerings Filter Parameters For Client
+
+*Method*:	`getClientOfferingsFilterParams`
+
+*Description*: Get offerings filter parameters for client.
+
+*Parameters*:
+1. Password (string)
+
+*Result (object)*:
+- `countries` (array of strings) - Country codes ISO 3166-1 alpha-2.
+- `minPrice` (number) - minimum value of minimal deposit required to accept the offering.
+- `maxPrice` (number) - maximum value of minimal deposit required to accept the offering.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferingsFilterParams", "params": ["qwerty"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "countries":["SU","US"],
+        "minPrice":121,
+        "maxPrice":165
+    }
+}
+```
+</details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferingsFilterParams", "params": ["qwerty"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "countries":[],
+        "minPrice":0,
+        "maxPrice":0
+    }
+}
+```
+
+</details>
+
 #### Get Offering Income
 
 *Method*: `getOfferingIncome`
@@ -1316,9 +1370,11 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 *Parameters*:
 1. Password (string)
 
-*Result (object)*: object with keys as setting keys and values as setting values.
+*Result (object)*: object with keys as setting keys and values as setting information.
+- `value` (string) - setting value.
+- `permissions` (string, can be `readWrite` or `readOnly`) - setting permissions.
 
-<details><summary>Example</summary>
+<details><summary>Example 1</summary>
     
 ```js
 // Request
@@ -1326,22 +1382,65 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSetti
 
 // Result
 {
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": {
-        "eth.min.confirmations": "1",
-        "eth.event.maxretry": "7",
-        "eth.event.freshblocks": "11520",
-        "eth.event.blocklimit": "80",
-        "error.sendremote": "true",
-        "eth.default.gasprice": "20000000000",
-        "eth.max.deposit": "30000000000",
-        "system.version.db": "0.12.0",
-        "offering.autopopup": "true"
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "error.sendremote":{
+            "value":"true",
+            "permissions":"readWrite"
+        },
+        "eth.default.gasprice":{
+            "value":"20000000000",
+            "permissions":"readWrite"
+        },
+        "eth.event.blocklimit":{
+            "value":"80",
+            "permissions":"readWrite"
+        },
+        "eth.event.freshblocks":{
+            "value":"11520",
+            "permissions":"readWrite"
+        },
+        "eth.event.lastProcessedBlock":{
+            "value":"3263580",
+            "permissions":"readWrite"
+        },
+        "eth.max.deposit":{
+            "value":"30000000000",
+            "permissions":"readWrite"
+        },
+        "eth.min.confirmations":{
+            "value":"1",
+            "permissions":"readWrite"
+        },
+        "offering.autopopup":{
+            "value":"true",
+            "permissions":"readWrite"
+        },
+        "system.version.db":{
+            "value":"0.14.0",
+            "permissions":"readOnly"
+        }
     }
 }
+
 ```
 </details>
+
+<details><summary>Example 2</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSettings", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{}
+}
+
+```
 </details>
 
 #### Update Settings

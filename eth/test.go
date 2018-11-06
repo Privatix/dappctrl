@@ -1,6 +1,6 @@
 // +build !notest
 
-package adapter
+package eth
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type TestEthBackCall struct {
 	args   []interface{}
 }
 
-// TestEthBackend is mock for EthBackend.
+// TestEthBackend is mock for Backend.
 type TestEthBackend struct {
 	CallStack              []TestEthBackCall
 	BalanceEth             *big.Int
@@ -358,4 +358,26 @@ func (b *TestEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
 		opts.GasPrice, []byte{})
 
 	return tx, nil
+}
+
+// FilterLogs is mock to FilterLogs.
+func (b *TestEthBackend) FilterLogs(ctx context.Context,
+	q ethereum.FilterQuery) ([]types.Log, error) {
+	return nil, nil
+}
+
+// HeaderByNumber is mock to HeaderByNumber.
+func (b *TestEthBackend) HeaderByNumber(ctx context.Context,
+	number *big.Int) (*types.Header, error) {
+	return nil, nil
+}
+
+// PTCAddress is mock to PTCAddress.
+func (b *TestEthBackend) PTCAddress() common.Address {
+	return common.Address{}
+}
+
+// PSCAddress is mock to PSCAddress.
+func (b *TestEthBackend) PSCAddress() common.Address {
+	return b.PscAddr
 }

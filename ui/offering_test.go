@@ -75,7 +75,7 @@ func TestAcceptOffering(t *testing.T) {
 
 	minDeposit := data.MinDeposit(fxt.Offering)
 
-	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.ID,
+	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
@@ -83,15 +83,15 @@ func TestAcceptOffering(t *testing.T) {
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(ui.ErrAccountNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		util.NewUUID(), minDeposit, 12345)
 	assertErrEqual(ui.ErrOfferingNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit-1, 12345)
 	assertErrEqual(ui.ErrDepositTooSmall, err)
 
-	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(nil, err)
 

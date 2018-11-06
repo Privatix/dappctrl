@@ -66,8 +66,8 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 	}
 
 	var acc data.Account
-	if err := h.findByPrimaryKey(
-		logger, ErrAccountNotFound, &acc, account); err != nil {
+	if err := h.findByColumn(logger, ErrAccountNotFound,
+		&acc, "eth_addr", account); err != nil {
 		return nil, err
 	}
 

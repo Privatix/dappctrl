@@ -7,8 +7,9 @@ import (
 
 // Mock is a mock implementation for Connector interface.
 type Mock struct {
-	Error    error
-	Endpoint *data.Endpoint
+	Error           error
+	Endpoint        *data.Endpoint
+	HeartbeatResult *sesssrv.HeartbeatResult
 }
 
 // NewMock returns mock for Connector interface.
@@ -49,4 +50,9 @@ func (m *Mock) SetupProductConfiguration(args *sesssrv.ProductArgs) error {
 func (m *Mock) GetEndpointMessage(
 	args *sesssrv.EndpointMsgArgs) (*data.Endpoint, error) {
 	return m.Endpoint, m.Error
+}
+
+// Heartbeat is a mock implementation for the Heartbeat connector method.
+func (m *Mock) Heartbeat() (*sesssrv.HeartbeatResult, error) {
+	return m.HeartbeatResult, m.Error
 }

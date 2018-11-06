@@ -35,7 +35,7 @@ type obj struct {
 
 // Message structure for Endpoint Message.
 type Message struct {
-	TemplateHash           string            `json:"templateHash"`
+	TemplateHash           data.HexString    `json:"templateHash"`
 	Username               string            `json:"username"`
 	Password               string            `json:"password"`
 	PaymentReceiverAddress string            `json:"paymentReceiverAddress"`

@@ -142,7 +142,8 @@ func (s *Server) correctPassword(logger log.Logger, w http.ResponseWriter, pwd s
 		return false
 	}
 
-	if data.ValidatePassword(password.Value, pwd, salt.Value) != nil {
+	if data.ValidatePassword(
+		data.Base64String(password.Value), pwd, salt.Value) != nil {
 		s.replyErr(logger, w, http.StatusUnauthorized, &serverError{
 			Message: "Wrong password",
 		})

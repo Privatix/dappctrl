@@ -764,7 +764,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
                 "isLocal":false,
                 "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
                 "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
-                "hash":"FX3wZO08K1VcDWcMm83-omyKJIqE-jOD2EFQ5XV2Y38=",
+                "hash":"157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc",
                 "status":"unpublished",
                 "offerStatus":"empty",
                 "blockNumberUpdated":1,
@@ -1527,7 +1527,7 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
     "result": [
         {
             "id":"d0dfbbb2-dd07-423a-8ce0-1e74ce50105b",
-            "hash":"RJM57hqcmEdDcxi-rahi5m5lKs6ISo5Oa0l67cQwmTQ=",
+            "hash":"157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc",
             "raw":{"definitions":{"host":{"pattern":"^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*:[0-9]{2,5}$","type":"string"},
             "simple_url":{"pattern":"^(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?.+","type":"string"},
             "uuid":{"pattern":"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}","type":"string"}},

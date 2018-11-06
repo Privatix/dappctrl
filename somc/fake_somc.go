@@ -139,7 +139,7 @@ func (s *FakeSOMC) ReadPublishOfferings(t *testing.T) TestOfferingParams {
 // WriteGetEndpoint verifies a passed channel ID and sends a given raw
 // endpoint message.
 func (s *FakeSOMC) WriteGetEndpoint(
-	t *testing.T, channel string, rawEndpoint []byte) {
+	t *testing.T, channel data.Base64String, rawEndpoint []byte) {
 	req := s.Read(t, getEndpointMethod)
 	params := EndpointParams{}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
@@ -163,7 +163,7 @@ func (s *FakeSOMC) WriteGetEndpoint(
 
 // WriteFindOfferings verifies passed hashes and returns given results.
 func (s *FakeSOMC) WriteFindOfferings(
-	t *testing.T, hashes []string, rawOfferings [][]byte) {
+	t *testing.T, hashes []data.HexString, rawOfferings [][]byte) {
 	req := s.Read(t, findOfferingsMethod)
 	params := findOfferingsParams{}
 	if err := json.Unmarshal(req.Params, &params); err != nil {
@@ -177,8 +177,8 @@ func (s *FakeSOMC) WriteFindOfferings(
 	}
 
 	type findOfferingResult struct {
-		Hash string `json:"hash"`
-		Data string `json:"data"`
+		Hash data.HexString    `json:"hash"`
+		Data data.Base64String `json:"data"`
 	}
 
 	ret := []findOfferingResult{}

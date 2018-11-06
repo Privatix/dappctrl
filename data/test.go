@@ -24,14 +24,15 @@ import (
 )
 
 // TestEncryptedKey is a key encryption simplified for tests performance.
-func TestEncryptedKey(pkey *ecdsa.PrivateKey, _ string) (string, error) {
+func TestEncryptedKey(pkey *ecdsa.PrivateKey, _ string) (Base64String, error) {
 	return FromBytes(crypto.FromECDSA(pkey)) + "AUTH:" + TestPassword, nil
 }
 
 // TestToPrivateKey is a key decryption simplified for tests performance.
-func TestToPrivateKey(keyB64, _ string) (*ecdsa.PrivateKey, error) {
-	split := strings.Split(keyB64, "AUTH:")
-	keyB64 = split[0]
+func TestToPrivateKey(
+	keyB64 Base64String, _ string) (*ecdsa.PrivateKey, error) {
+	split := strings.Split(string(keyB64), "AUTH:")
+	keyB64 = Base64String(split[0])
 	authStored := split[1]
 	if TestPassword != authStored {
 		return nil, fmt.Errorf("passphrase didn't match")
@@ -44,8 +45,8 @@ func TestToPrivateKey(keyB64, _ string) (*ecdsa.PrivateKey, error) {
 }
 
 // TestToBytes returns binary representation of base64 encoded string or fails.
-func TestToBytes(t *testing.T, s string) []byte {
-	b, err := base64.URLEncoding.DecodeString(strings.TrimSpace(s))
+func TestToBytes(t *testing.T, s Base64String) []byte {
+	b, err := base64.URLEncoding.DecodeString(strings.TrimSpace(string(s)))
 	if err != nil {
 		t.Fatal("failed to decode: ", err)
 	}
@@ -53,8 +54,8 @@ func TestToBytes(t *testing.T, s string) []byte {
 }
 
 // TestToHash decodes to hash or fails.
-func TestToHash(t *testing.T, h string) common.Hash {
-	ret, err := ToHash(h)
+func TestToHash(t *testing.T, h HexString) common.Hash {
+	ret, err := HexToHash(h)
 	if err != nil {
 		t.Fatal("failed to make hash: ", err)
 	}
@@ -62,7 +63,7 @@ func TestToHash(t *testing.T, h string) common.Hash {
 }
 
 // TestToAddress decodes to address or fails.
-func TestToAddress(t *testing.T, addr string) common.Address {
+func TestToAddress(t *testing.T, addr HexString) common.Address {
 	ret, err := HexToAddress(addr)
 	if err != nil {
 		t.Fatal("failed to make addr")
@@ -117,7 +118,7 @@ func NewTestAccount(auth string) *Account {
 		Name:       util.NewUUID()[:30],
 		PTCBalance: 0,
 		PSCBalance: 0,
-		EthBalance: B64BigInt(FromBytes(big.NewInt(1).Bytes())),
+		EthBalance: Base64BigInt(FromBytes(big.NewInt(1).Bytes())),
 	}
 }
 
@@ -136,7 +137,7 @@ func NewEthTestAccount(auth string, acc *truffle.TestAccount) *Account {
 		Name:       util.NewUUID()[:30],
 		PTCBalance: 0,
 		PSCBalance: 0,
-		EthBalance: B64BigInt(FromBytes(big.NewInt(1).Bytes())),
+		EthBalance: Base64BigInt(FromBytes(big.NewInt(1).Bytes())),
 	}
 }
 
@@ -167,12 +168,12 @@ func NewTestTemplate(kind string) *Template {
 		Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
 		Kind: kind,
 	}
-	tmpl.Hash = FromBytes(crypto.Keccak256(tmpl.Raw))
+	tmpl.Hash = HexFromBytes(crypto.Keccak256(tmpl.Raw))
 	return tmpl
 }
 
 // NewTestOffering returns new offering.
-func NewTestOffering(agent, product, tpl string) *Offering {
+func NewTestOffering(agent HexString, product, tpl string) *Offering {
 	fakeMsg := []byte(util.NewUUID())
 	offering := &Offering{
 		ID:                 util.NewUUID(),
@@ -181,7 +182,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 		Template:           tpl,
 		Agent:              agent,
 		ServiceName:        "VPN",
-		Hash:               FromBytes(crypto.Keccak256(fakeMsg)),
+		Hash:               HexFromBytes(crypto.Keccak256(fakeMsg)),
 		Product:            product,
 		Supply:             1,
 		CurrentSupply:      1,
@@ -197,7 +198,7 @@ func NewTestOffering(agent, product, tpl string) *Offering {
 }
 
 // NewTestChannel returns new channel.
-func NewTestChannel(agent, client, offering string,
+func NewTestChannel(agent, client HexString, offering string,
 	balance, deposit uint64, status string) *Channel {
 	receiptSigFake := FromBytes([]byte("fake-sig"))
 	return &Channel{

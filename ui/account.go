@@ -24,7 +24,7 @@ type AccountParams struct {
 // AccountParamsWithHexKey is format of input to create account with given key.
 type AccountParamsWithHexKey struct {
 	AccountParams
-	PrivateKeyHex string `json:"privateKeyHex"`
+	PrivateKeyHex data.HexString `json:"privateKeyHex"`
 }
 
 func (p *AccountParams) prefilledAccount() *data.Account {
@@ -89,7 +89,7 @@ func (h *Handler) GetAccounts(password string) ([]data.Account, error) {
 }
 
 func (h *Handler) hexPrivateKeyToECDSA(
-	privateKey string) func() (*ecdsa.PrivateKey, error) {
+	privateKey data.HexString) func() (*ecdsa.PrivateKey, error) {
 	logger := h.logger.Add("method", "hexPrivateKeyToECDSA")
 
 	return func() (*ecdsa.PrivateKey, error) {
@@ -148,7 +148,7 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 	// Set 0 balances on initial create.
 	account.PTCBalance = 0
 	account.PSCBalance = 0
-	account.EthBalance = data.B64BigInt(data.FromBytes([]byte{0}))
+	account.EthBalance = data.Base64BigInt(data.FromBytes([]byte{0}))
 
 	err = insert(logger, h.db.Querier, account)
 	if err != nil {

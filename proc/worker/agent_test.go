@@ -361,7 +361,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 
 	rawMsgBytes := data.TestToBytes(t, endpoint.RawMsg)
 	expectedHash := ethcrypto.Keccak256(rawMsgBytes)
-	if data.FromBytes(expectedHash) != endpoint.Hash {
+	if data.HexFromBytes(expectedHash) != endpoint.Hash {
 		t.Fatal("wrong hash stored")
 	}
 

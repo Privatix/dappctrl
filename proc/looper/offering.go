@@ -166,7 +166,7 @@ func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 
 	var result []*data.Job
 	for _, v := range offerings {
-		hash, err := data.ToHash(v.(*data.Offering).Hash)
+		hash, err := data.HexToHash(v.(*data.Offering).Hash)
 		if err != nil {
 			logger.Error(err.Error())
 			return nil

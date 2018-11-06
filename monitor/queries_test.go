@@ -48,7 +48,7 @@ func TestQueries(t *testing.T) {
 	accAdds := make([]common.Hash, 5)
 	for i, _ := range accounts {
 		accounts[i] = data.NewTestAccount(data.TestPassword)
-		accAdds[i] = common.HexToHash(accounts[i].EthAddr)
+		accAdds[i] = common.HexToHash(string(accounts[i].EthAddr))
 		data.InsertToTestDB(t, db, accounts[i])
 		defer data.DeleteFromTestDB(t, db, accounts[i])
 	}

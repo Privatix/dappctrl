@@ -23,7 +23,7 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
-func (w *Worker) accountKey(logger log.Logger, ethAddr string) (*ecdsa.PrivateKey, error) {
+func (w *Worker) accountKey(logger log.Logger, ethAddr data.HexString) (*ecdsa.PrivateKey, error) {
 	acc, err := w.account(logger, ethAddr)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,8 @@ func (w *Worker) accountKey(logger log.Logger, ethAddr string) (*ecdsa.PrivateKe
 	return w.key(logger, acc.PrivateKey)
 }
 
-func (w *Worker) key(logger log.Logger, key string) (*ecdsa.PrivateKey, error) {
+func (w *Worker) key(logger log.Logger,
+	key data.Base64String) (*ecdsa.PrivateKey, error) {
 	ret, err := w.decryptKeyFunc(key, w.pwdGetter.Get())
 	if err != nil {
 		logger.Error(err.Error())
@@ -41,9 +42,9 @@ func (w *Worker) key(logger log.Logger, key string) (*ecdsa.PrivateKey, error) {
 	return ret, nil
 }
 
-func (w *Worker) toOfferingHashArr(logger log.Logger, h string) (ret [common.HashLength]byte, err error) {
+func (w *Worker) toOfferingHashArr(logger log.Logger, h data.HexString) (ret [common.HashLength]byte, err error) {
 	var hash common.Hash
-	hash, err = data.ToHash(h)
+	hash, err = data.HexToHash(h)
 	if err != nil {
 		logger.Error(err.Error())
 		err = ErrParseOfferingHash
@@ -182,7 +183,7 @@ func (w *Worker) updateBalances(logger log.Logger,
 		return ErrEthRetrieveBalance
 	}
 
-	acc.EthBalance = data.B64BigInt(data.FromBytes(amount.Bytes()))
+	acc.EthBalance = data.Base64BigInt(data.FromBytes(amount.Bytes()))
 
 	now := time.Now()
 
@@ -202,7 +203,7 @@ func (w *Worker) ethBalance(logger log.Logger, addr common.Address) (*big.Int, e
 }
 
 func (w *Worker) saveEthTX(logger log.Logger, job *data.Job, tx *types.Transaction,
-	method, relatedType, relatedID, from, to string) error {
+	method, relatedType, relatedID string, from, to data.HexString) error {
 	raw, err := tx.MarshalJSON()
 	if err != nil {
 		logger.Error(err.Error())
@@ -237,7 +238,8 @@ func (w *Worker) saveEthTX(logger log.Logger, job *data.Job, tx *types.Transacti
 
 // keyFromChannelData returns the unique channel identifier
 // used in a Privatix Service Contract.
-func (w *Worker) keyFromChannelData(logger log.Logger, channel string) (string, error) {
+func (w *Worker) keyFromChannelData(logger log.Logger,
+	channel string) (data.Base64String, error) {
 	ch, err := w.channel(logger, channel)
 	if err != nil {
 		return "", err

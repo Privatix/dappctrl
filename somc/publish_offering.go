@@ -11,15 +11,15 @@ import (
 const publishOfferingMethod = "newOffering"
 
 type publishOfferingParams struct {
-	Hash string `json:"hash"`
-	Data string `json:"data"`
+	Hash data.HexString    `json:"hash"`
+	Data data.Base64String `json:"data"`
 }
 
 // PublishOffering publishes a given offering JSON in SOMC.
 func (c *Conn) PublishOffering(o []byte) error {
 	hash := crypto.Keccak256(o)
 	params := publishOfferingParams{
-		Hash: data.FromBytes(hash),
+		Hash: data.HexFromBytes(hash),
 		Data: data.FromBytes(o),
 	}
 

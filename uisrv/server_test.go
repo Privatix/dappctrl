@@ -108,7 +108,7 @@ func createTestChannel(t *testing.T) *data.Channel {
 	return ch
 }
 
-func genEthAddr(t *testing.T) string {
+func genEthAddr(t *testing.T) data.HexString {
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatal(err)

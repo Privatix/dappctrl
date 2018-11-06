@@ -55,8 +55,8 @@ type GetClientOfferingsFilterParamsResult struct {
 }
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
-func (h *Handler) AcceptOffering(password, account, offering string,
-	deposit, gasPrice uint64) (*string, error) {
+func (h *Handler) AcceptOffering(password string, account data.HexString,
+	offering string, deposit, gasPrice uint64) (*string, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
 		"account", account, "offering", offering,
 		"deposit", deposit, "gasPrice", gasPrice)
@@ -132,7 +132,7 @@ func (h *Handler) ChangeOfferingStatus(
 }
 
 func (h *Handler) getClientOfferingsConditions(
-	agent string, minUnitPrice, maxUnitPrice uint64,
+	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
 	country []string) (conditions string, arguments []interface{}) {
 
 	count := 1
@@ -194,8 +194,8 @@ func (h *Handler) getClientOfferingsConditions(
 }
 
 // GetClientOfferings returns active offerings available for a client.
-func (h *Handler) GetClientOfferings(password, agent string, minUnitPrice,
-	maxUnitPrice uint64, countries []string,
+func (h *Handler) GetClientOfferings(password string, agent data.HexString,
+	minUnitPrice, maxUnitPrice uint64, countries []string,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
@@ -344,7 +344,7 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(packed))
 
-	offering.Hash = data.FromBytes(hashBytes.Bytes())
+	offering.Hash = data.HexFromBytes(hashBytes.Bytes())
 
 	return nil
 }
@@ -353,8 +353,10 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 func (h *Handler) fillOffering(
 	logger log.Logger, offering *data.Offering) error {
 	agent := &data.Account{}
+	// TODO: This is definitely wrong, should be:
+	// `h.findByColumn(..., "eth_addr", offering.Agent)`
 	if err := h.findByPrimaryKey(logger,
-		ErrAccountNotFound, agent, offering.Agent); err != nil {
+		ErrAccountNotFound, agent, string(offering.Agent)); err != nil {
 		return err
 	}
 
@@ -442,7 +444,7 @@ func (h *Handler) CreateOffering(password string,
 }
 
 func (h *Handler) offeringCountries(logger log.Logger) ([]string, error) {
-	query := `SELECT country, COUNT(country) 
+	query := `SELECT country, COUNT(country)
 		    FROM offerings WHERE %s
 		   GROUP BY country
 		   ORDER BY count DESC`

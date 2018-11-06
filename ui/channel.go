@@ -39,12 +39,12 @@ type GetClientChannelsResult struct {
 
 // ClientChannelInfo is information of client channel.
 type ClientChannelInfo struct {
-	ID           string `json:"id"`
-	Agent        string `json:"agent"`
-	Client       string `json:"client"`
-	Offering     string `json:"offering"`
-	OfferingHash string `json:"offeringHash"`
-	Deposit      uint64 `json:"deposit"`
+	ID           string         `json:"id"`
+	Agent        string         `json:"agent"`
+	Client       string         `json:"client"`
+	Offering     string         `json:"offering"`
+	OfferingHash data.HexString `json:"offeringHash"`
+	Deposit      uint64         `json:"deposit"`
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
@@ -189,7 +189,7 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 	}
 
 	jobFilter := `channels.id IN
-			(SELECT related_id 
+			(SELECT related_id
 			   FROM jobs
 			  WHERE jobs.type = '%s' AND jobs.status = '%s')`
 

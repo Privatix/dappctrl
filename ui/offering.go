@@ -86,7 +86,7 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 	}
 
 	rid := util.NewUUID()
-	jobData := &worker.ClientPreChannelCreateData{Account: account,
+	jobData := &worker.ClientPreChannelCreateData{Account: acc.ID,
 		Offering: offering, GasPrice: gasPrice, Deposit: deposit}
 	if err := job.AddWithData(h.queue, nil, data.JobClientPreChannelCreate,
 		data.JobChannel, rid, data.JobUser, jobData); err != nil {

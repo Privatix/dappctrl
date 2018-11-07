@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/privatix/dappctrl/statik"
 	"io"
 	"os"
 	"strings"
@@ -206,6 +207,15 @@ func panicHunter(logger log.Logger) {
 }
 
 func main() {
+	files, errr := statik.ReadDir("/")
+	if errr != nil {
+		panic(errr)
+	}
+
+	for _, v := range files {
+		fmt.Println(v.Name())
+	}
+
 	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
 		panic(fmt.Sprintf("failed to execute command: %s", err))
 	}

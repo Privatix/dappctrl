@@ -51,7 +51,7 @@ func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	fxt.hash = &data.Setting{
 		Key:   data.SettingPasswordHash,
 		Name:  "hash",
-		Value: hash,
+		Value: string(hash),
 	}
 	fxt.salt = &data.Setting{
 		Key:   data.SettingPasswordSalt,

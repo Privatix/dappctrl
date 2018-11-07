@@ -2,18 +2,20 @@ package somc
 
 import (
 	"encoding/json"
+
+	"github.com/privatix/dappctrl/data"
 )
 
 const publishEndpointMethod = "connectionInfo"
 
 // EndpointParams structure to store a Endpoint message in SOMC server.
 type EndpointParams struct {
-	Channel  string `json:"stateChannel"`
-	Endpoint []byte `json:"endpoint,omitempty"`
+	Channel  data.Base64String `json:"stateChannel"`
+	Endpoint []byte            `json:"endpoint,omitempty"`
 }
 
 // PublishEndpoint publishes an endpoint for a state channel in SOMC.
-func (c *Conn) PublishEndpoint(channel string, endpoint []byte) error {
+func (c *Conn) PublishEndpoint(channel data.Base64String, endpoint []byte) error {
 	params := EndpointParams{
 		Channel:  channel,
 		Endpoint: endpoint,

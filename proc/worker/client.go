@@ -179,7 +179,7 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	offerHash, err := data.ToHash(offering.Hash)
+	offerHash, err := data.HexToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -689,7 +689,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -734,7 +734,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 		return ErrParseOfferingHash
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -835,7 +835,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -959,7 +959,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	offering := data.Offering{}
-	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	hash := data.HexFromBytes(logOfferingPopUp.offeringHash.Bytes())
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
@@ -981,8 +981,8 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
-	offeringsData, err := w.somc.FindOfferings([]string{
-		data.FromBytes(hash.Bytes())})
+	offeringsData, err := w.somc.FindOfferings([]data.HexString{
+		data.HexFromBytes(hash.Bytes())})
 	if err != nil {
 		return ErrFindOfferings
 	}
@@ -1017,7 +1017,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 }
 
 func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
-	relID, agentAddr string, blockNumber uint64,
+	relID string, agentAddr data.HexString, blockNumber uint64,
 	offeringsData []somc.OfferingData) (*data.Offering, error) {
 	if len(offeringsData) == 0 {
 		return nil, ErrSOMCNoOfferings

@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/srv"
 )
 
 // paymentPayload is a balance proof received from a client.
 type paymentPayload struct {
-	AgentAddress    string `json:"agentAddress"`
-	OpenBlockNumber uint32 `json:"openBlockNum"`
-	OfferingHash    string `json:"offeringHash"`
-	Balance         uint64 `json:"balance"`
-	BalanceMsgSig   string `json:"balanceMsgSig"`
-	ContractAddress string `json:"contractAddress"`
+	AgentAddress    data.HexString    `json:"agentAddress"`
+	OpenBlockNumber uint32            `json:"openBlockNum"`
+	OfferingHash    data.HexString    `json:"offeringHash"`
+	Balance         uint64            `json:"balance"`
+	BalanceMsgSig   data.Base64String `json:"balanceMsgSig"`
+	ContractAddress data.HexString    `json:"contractAddress"`
 }
 
 // handlePay handles clients balance proof informations.

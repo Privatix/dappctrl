@@ -31,7 +31,9 @@ func TestSetPassword(t *testing.T) {
 		data.SettingPasswordHash)
 	defer data.DeleteFromTestDB(t, db, salt, passwordHash)
 
-	if data.ValidatePassword(passwordHash.Value, password, salt.Value) != nil {
+	if data.ValidatePassword(
+		data.Base64String(passwordHash.Value),
+		password, salt.Value) != nil {
 		t.Fatal("password not set")
 	}
 }
@@ -114,7 +116,8 @@ func TestUpdatePassword(t *testing.T) {
 	db.Reload(fxt.salt)
 
 	if data.ValidatePassword(
-		fxt.hash.Value, newPassword, fxt.salt.Value) != nil {
+		data.Base64String(fxt.hash.Value),
+		newPassword, fxt.salt.Value) != nil {
 		t.Fatal("password not updated")
 	}
 

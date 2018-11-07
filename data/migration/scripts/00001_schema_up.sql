@@ -22,11 +22,8 @@ CREATE TYPE client_ident_type AS ENUM ('by_channel_id');
 -- Country status types.
 CREATE TYPE country_status_type AS ENUM ('unknown', 'valid', 'invalid');
 
--- SHA3-256 in base64 (RFC-4648).
-CREATE DOMAIN sha3_256 AS char(44);
-
--- tx hash in hex
-CREATE DOMAIN tx_hash_hex as char(64);
+-- Hash in hex.
+CREATE DOMAIN hash_hex as char(64);
 
 -- bcrypt hash in base64 (RFC-4648).
 CREATE DOMAIN bcrypt_hash AS char(80);
@@ -156,7 +153,7 @@ CREATE TABLE users (
 -- Templates.
 CREATE TABLE templates (
     id uuid PRIMARY KEY,
-    hash sha3_256 NOT NULL
+    hash hash_hex NOT NULL
         CONSTRAINT unique_template_hash UNIQUE,
 
     raw json NOT NULL,
@@ -185,7 +182,7 @@ CREATE TABLE offerings (
     is_local boolean NOT NULL, -- created locally (by this Agent) or retreived (by this Client)
     tpl uuid NOT NULL REFERENCES templates(id), -- corresponding template
     product uuid NOT NULL REFERENCES products(id), -- enables product specific billing and actions support for Agent
-    hash sha3_256 NOT NULL -- offering hash
+    hash hash_hex NOT NULL -- offering hash
         CONSTRAINT unique_offering_hash UNIQUE,
 
     status msg_status NOT NULL, -- message status
@@ -279,7 +276,7 @@ CREATE TABLE sessions (
 -- Smart contracts.
 CREATE TABLE contracts (
     id uuid PRIMARY KEY,
-    address sha3_256 NOT NULL, -- ethereum address of contract
+    address hash_hex NOT NULL, -- ethereum address of contract
     type contract_type NOT NULL,
     version smallint, --version of contract. Greater means newer
     enabled boolean NOT NULL -- contract is in use
@@ -290,7 +287,7 @@ CREATE TABLE endpoints (
     id uuid PRIMARY KEY,
     template uuid NOT NULL REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
-    hash sha3_256 NOT NULL, -- message hash
+    hash hash_hex NOT NULL, -- message hash
     status msg_status NOT NULL, -- message status
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
@@ -318,7 +315,7 @@ CREATE TABLE jobs (
 -- Ethereum transactions.
 CREATE TABLE eth_txs (
     id uuid PRIMARY KEY,
-    hash tx_hash_hex NOT NULL, -- transaction hash
+    hash hash_hex NOT NULL, -- transaction hash
     method text NOT NULL, -- contract method
     status tx_status NOT NULL, -- tx status (custom)
     job uuid REFERENCES jobs(id), -- corresponding job id

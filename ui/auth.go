@@ -133,7 +133,8 @@ func (h *Handler) validatePasswordNotSet(logger log.Logger) error {
 	return nil
 }
 
-func hashedPassword(logger log.Logger, password, salt string) (string, error) {
+func hashedPassword(logger log.Logger,
+	password, salt string) (data.Base64String, error) {
 	hashed, err := data.HashPassword(password, salt)
 	if err != nil {
 		logger.Error(err.Error())
@@ -151,10 +152,10 @@ func saltSetting(salt string) *data.Setting {
 	}
 }
 
-func passwordHashSetting(hash string) *data.Setting {
+func passwordHashSetting(hash data.Base64String) *data.Setting {
 	return &data.Setting{
 		Key:         data.SettingPasswordHash,
-		Value:       hash,
+		Value:       string(hash),
 		Permissions: data.AccessDenied,
 		Name:        "Password",
 	}

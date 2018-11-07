@@ -96,19 +96,19 @@ func TestGetTemplate(t *testing.T) {
 			ID:   util.NewUUID(),
 			Kind: data.TemplateOffer,
 			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
-			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
+			Hash: data.HexFromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 		{
 			ID:   util.NewUUID(),
 			Kind: data.TemplateOffer,
 			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
-			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
+			Hash: data.HexFromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 		{
 			ID:   util.NewUUID(),
 			Kind: data.TemplateAccess,
 			Raw:  []byte("{\"fake\" : \"" + util.NewUUID() + "\"}"),
-			Hash: data.FromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
+			Hash: data.HexFromBytes(crypto.Keccak256([]byte("{\"fake\" : \"" + util.NewUUID() + "\"}"))),
 		},
 	}
 	insertItems(t, records[0], records[1], records[2])

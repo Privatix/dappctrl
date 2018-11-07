@@ -33,8 +33,8 @@ var errUnexpected = &srv.Error{
 }
 
 func (s *Server) findChannel(logger log.Logger,
-	w http.ResponseWriter, offeringHash string,
-	agentAddr string, block uint32) (*data.Channel, bool) {
+	w http.ResponseWriter, offeringHash, agentAddr data.HexString,
+	block uint32) (*data.Channel, bool) {
 
 	channel := &data.Channel{}
 	tail := `INNER JOIN offerings
@@ -118,7 +118,7 @@ func (s *Server) verifySignature(logger log.Logger,
 		return false
 	}
 
-	offeringHash, err := data.ToHash(pld.OfferingHash)
+	offeringHash, err := data.HexToHash(pld.OfferingHash)
 	if err != nil {
 		logger.Error("could not parse offering hash: " + err.Error())
 		s.RespondError(logger, w, errUnexpected)

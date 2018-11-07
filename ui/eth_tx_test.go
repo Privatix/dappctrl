@@ -14,7 +14,7 @@ func TestGetEthTransactions(t *testing.T) {
 	defer fxt.close()
 
 	type testObject struct {
-		addrFrom    string
+		addrFrom    data.HexString
 		relatedType string
 		relatedID   string
 	}

@@ -439,7 +439,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		ID:                     util.NewUUID(),
 		Template:               template.ID,
 		Channel:                channel.ID,
-		Hash:                   data.FromBytes(hash),
+		Hash:                   data.HexFromBytes(hash),
 		RawMsg:                 data.FromBytes(msgSealed),
 		Status:                 data.MsgUnpublished,
 		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
@@ -607,7 +607,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	offeringHash, err := data.ToBytes(offering.Hash)
+	offeringHash, err := data.HexToBytes(offering.Hash)
 	if err != nil {
 		return err
 	}
@@ -751,7 +751,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	offeringHash, err := data.ToHash(offering.Hash)
+	offeringHash, err := data.HexToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return err
@@ -887,7 +887,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
-	offeringHash, err := data.ToHash(offering.Hash)
+	offeringHash, err := data.HexToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -947,7 +947,7 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	offering := data.Offering{}
-	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	hash := data.HexFromBytes(logOfferingPopUp.offeringHash.Bytes())
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err != nil {
 		logger.Error(err.Error())

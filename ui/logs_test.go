@@ -58,7 +58,7 @@ func TestGetLogs(t *testing.T) {
 	insertTestLogEvents(t, 2, log.Error)
 
 	data.InsertToTestDB(t, db, &data.LogEvent{
-		Message: "foo",
+		Message: "foo foo",
 		Level:   log.Info,
 		Context: []byte("{}"),
 	})
@@ -96,6 +96,7 @@ func TestGetLogs(t *testing.T) {
 		// Test filtering by context.
 		{0, 1, "ba", nil, "", "", 1, 1},
 		{0, 1, "foo", nil, "", "", 1, 1},
+		{0, 1, "foo foo", nil, "", "", 1, 1},
 	}
 
 	for _, v := range testData {

@@ -78,17 +78,24 @@ func (h *Handler) getLogsConditions(
 	}
 
 	if args.searchText != "" {
-		contextSearchSQL := fmt.Sprintf("to_tsvector('english',"+
-			" context) @@ to_tsquery('%s:*')", args.searchText)
+		var condition string
 
-		messageSearchSQL := fmt.Sprintf("%s like %s", "message",
-			index())
-
-		condition := fmt.Sprintf("(%s OR %s)", contextSearchSQL,
-			messageSearchSQL)
-
+		words := strings.Split(args.searchText, " ")
+		if len(words) == 1 {
+			contextSearchSQL := fmt.Sprintf(
+				"to_tsvector('english', context) @@"+
+					" to_tsquery('%s:*')", args.searchText)
+			messageSearchSQL := fmt.Sprintf("%s like %s",
+				"message", index())
+			condition = fmt.Sprintf("(%s OR %s)", contextSearchSQL,
+				messageSearchSQL)
+		} else {
+			condition = fmt.Sprintf("%s like %s", "message",
+				index())
+		}
 		conditions = join(conditions, "AND", condition)
 		arguments = append(arguments, "%"+args.searchText+"%")
+
 	}
 
 	conditions = "WHERE " + conditions

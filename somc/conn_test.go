@@ -100,16 +100,17 @@ func TestFindOffering(t *testing.T) {
 
 	off := []byte("{}")
 	hash := crypto.Keccak256Hash(off)
-	hstr := data.HexFromBytes(hash.Bytes())
+	hex := data.HexFromBytes(hash.Bytes())
+	base64 := data.FromBytes(hash.Bytes())
 
 	ch := make(chan findOfferingsReturn)
 	go func() {
-		data, err := conn.FindOfferings([]data.HexString{hstr})
+		data, err := conn.FindOfferings([]data.HexString{hex})
 		ch <- findOfferingsReturn{data, err}
 	}()
 
 	ostr := data.FromBytes(off)
-	res := findOfferingsResult{{Hash: hstr, Data: ostr}}
+	res := findOfferingsResult{{Hash: base64, Data: ostr}}
 	data2, _ := json.Marshal(res)
 
 	req := srv.Read(t, findOfferingsMethod)
@@ -127,7 +128,7 @@ func TestFindOffering(t *testing.T) {
 	}
 
 	go func() {
-		data, err := conn.FindOfferings([]data.HexString{hstr})
+		data, err := conn.FindOfferings([]data.HexString{hex})
 		ch <- findOfferingsReturn{data, err}
 	}()
 

@@ -11,7 +11,7 @@ import (
 const publishOfferingMethod = "newOffering"
 
 type publishOfferingParams struct {
-	Hash data.HexString    `json:"hash"`
+	Hash data.Base64String `json:"hash"`
 	Data data.Base64String `json:"data"`
 }
 
@@ -19,7 +19,7 @@ type publishOfferingParams struct {
 func (c *Conn) PublishOffering(o []byte) error {
 	hash := crypto.Keccak256(o)
 	params := publishOfferingParams{
-		Hash: data.HexFromBytes(hash),
+		Hash: data.FromBytes(hash),
 		Data: data.FromBytes(o),
 	}
 

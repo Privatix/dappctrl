@@ -161,6 +161,14 @@ func (s *FakeSOMC) WriteGetEndpoint(
 	s.Write(t, &repl)
 }
 
+func hexHashToBase64(t *testing.T, hash data.HexString) data.Base64String {
+	bytes, err := data.HexToBytes(hash)
+	if err != nil {
+		t.Fatal("FakeSOMC: failed to decode hash " + hash)
+	}
+	return data.FromBytes(bytes)
+}
+
 // WriteFindOfferings verifies passed hashes and returns given results.
 func (s *FakeSOMC) WriteFindOfferings(
 	t *testing.T, hashes []data.HexString, rawOfferings [][]byte) {
@@ -171,20 +179,20 @@ func (s *FakeSOMC) WriteFindOfferings(
 	}
 
 	for i, hash := range params.Hashes {
-		if hash != hashes[i] {
+		if hash != hexHashToBase64(t, hashes[i]) {
 			t.Fatal("FakeSOMC: unexpected hash being searched")
 		}
 	}
 
 	type findOfferingResult struct {
-		Hash data.HexString    `json:"hash"`
+		Hash data.Base64String `json:"hash"`
 		Data data.Base64String `json:"data"`
 	}
 
 	ret := []findOfferingResult{}
 	for i, hash := range hashes {
 		ret = append(ret, findOfferingResult{
-			Hash: hash,
+			Hash: hexHashToBase64(t, hash),
 			Data: data.FromBytes(rawOfferings[i]),
 		})
 	}

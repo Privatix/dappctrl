@@ -181,16 +181,6 @@
 
     "Role": "agent",
 
-    "ServiceRunner": {
-        "Services": {
-            "VPN": {
-                "Name": "sleep",
-                "Args": [".1"],
-                "Single": true
-            }
-        }
-    },
-
     "SessionServer": {
         "Addr": "localhost:8000",
         "TLS": null

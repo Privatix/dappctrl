@@ -22,11 +22,22 @@ func (s *Server) findProduct(logger log.Logger,
 	w http.ResponseWriter, productID string) (*data.Product, bool) {
 	var prod data.Product
 	if err := s.db.FindByPrimaryKeyTo(&prod, productID); err != nil {
-		logger.Add("productID", productID).Error(err.Error())
+		logger.Add("productId", productID).Error(err.Error())
 		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return nil, false
 	}
 	return &prod, true
+}
+
+func (s *Server) findChannel(logger log.Logger,
+	w http.ResponseWriter, channelID string) (*data.Channel, bool) {
+	var ch data.Channel
+	if err := s.db.FindByPrimaryKeyTo(&ch, channelID); err != nil {
+		logger.Add("channelId", channelID).Error(err.Error())
+		s.RespondError(logger, w, ErrChannelNotFound)
+		return nil, false
+	}
+	return &ch, true
 }
 
 func (s *Server) findEndpoint(logger log.Logger,
@@ -58,23 +69,23 @@ func (s *Server) identClient(logger log.Logger,
 		return nil, false
 	}
 
-	var ch data.Channel
+	var ch *data.Channel
 	if prod.ClientIdent == data.ClientIdentByChannelID {
-		if err := s.db.FindByPrimaryKeyTo(&ch, clientID); err != nil {
-			logger.Add("clientID", clientID).Error(err.Error())
-			s.RespondError(logger, w, ErrChannelNotFound)
+		ch, ok = s.findChannel(logger, w, clientID)
+		if !ok {
 			return nil, false
 		}
 	} else {
 		logger.Fatal("unsupported client identification type")
 	}
 
-	if ch.ServiceStatus != data.ChannelActive {
+	if ch.ServiceStatus != data.ServiceActivating &&
+		ch.ServiceStatus != data.ServiceActive {
 		logger.Warn("non-active channel")
 		s.RespondError(logger, w, ErrNonActiveChannel)
 		return nil, false
 	}
-	return &ch, true
+	return ch, true
 }
 
 func (s *Server) findCurrentSession(logger log.Logger,

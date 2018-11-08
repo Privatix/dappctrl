@@ -32,6 +32,9 @@ type Connector interface {
 	// GetEndpointMessage returns endpoint message by channel identificator.
 	GetEndpointMessage(
 		args *sesssrv.EndpointMsgArgs) (*data.Endpoint, error)
+	// Heartbeat sends periodical heartbeat signals and receives commands
+	// to execute.
+	Heartbeat() (*sesssrv.HeartbeatResult, error)
 }
 
 type cntr struct {
@@ -93,4 +96,13 @@ func (c *cntr) GetEndpointMessage(
 	err := sesssrv.Post(c.config.Config, c.logger, c.config.Username,
 		c.config.Password, sesssrv.PathEndpointMsg, args, &endpoint)
 	return endpoint, err
+}
+
+// Heartbeat sends periodical heartbeat signals and receives commands to
+// execute.
+func (c *cntr) Heartbeat() (*sesssrv.HeartbeatResult, error) {
+	var res sesssrv.HeartbeatResult
+	err := sesssrv.Post(c.config.Config, c.logger, c.config.Username,
+		c.config.Password, sesssrv.PathProductHeartbeat, nil, &res)
+	return &res, err
 }

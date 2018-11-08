@@ -157,10 +157,13 @@ const (
 
 // Service operational statuses.
 const (
-	ServicePending    = "pending"
-	ServiceActive     = "active"
-	ServiceSuspended  = "suspended"
-	ServiceTerminated = "terminated"
+	ServicePending     = "pending"
+	ServiceActivating  = "activating"
+	ServiceActive      = "active"
+	ServiceSuspending  = "suspending"
+	ServiceSuspended   = "suspended"
+	ServiceTerminating = "terminating"
+	ServiceTerminated  = "terminated"
 )
 
 // Channel is a state channel.
@@ -270,6 +273,7 @@ const (
 	JobBCMonitor      = "bc_monitor"
 	JobTask           = "task"
 	JobServiceAdapter = "service_adapter"
+	JobSessionServer  = "session_server"
 )
 
 // Job statuses.
@@ -315,6 +319,7 @@ const (
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
+	JobClientCompleteServiceTransition      = "completeServiceTransition"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"

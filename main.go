@@ -14,7 +14,6 @@ import (
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
@@ -64,7 +63,6 @@ type config struct {
 	Proc          *proc.Config
 	Report        *bugsnag.Config
 	Role          string
-	ServiceRunner *svcrun.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
@@ -88,7 +86,6 @@ func newConfig() *config {
 		Job:           job.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
-		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
@@ -254,10 +251,6 @@ func main() {
 	pr := proc.NewProcessor(conf.Proc, db, queue)
 	worker.SetProcessor(pr)
 
-	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
-	defer runner.StopAll()
-	worker.SetRunner(runner)
-
 	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethBack, db, logger,
 		ethBack.PSCAddress(), ethBack.PTCAddress(), conf.Role, queue)
 	if err != nil {
@@ -293,7 +286,8 @@ func main() {
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country)
+	sess := sesssrv.NewServer(
+		conf.SessionServer, logger, db, conf.Country, queue)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

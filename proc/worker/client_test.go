@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -560,23 +559,6 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
-func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
-	workerF func(*data.Job) error, job *data.Job, runnerMethod int) {
-	calledMethod := -1
-	var calledChannel string
-	env.worker.runner = svcrun.Mock(
-		func(method int, channel string) (bool, error) {
-			calledMethod, calledChannel = method, channel
-			return false, nil
-		})
-
-	runJob(t, workerF, job)
-
-	if calledMethod != runnerMethod || calledChannel != job.RelatedID {
-		t.Fatalf("unexpected service runner call arguments")
-	}
-}
-
 func TestClientPreServiceTerminate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
@@ -604,15 +586,14 @@ func TestClientPreServiceTerminate(t *testing.T) {
 	var job data.Job
 	env.findTo(t, &job, jobID)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceTerminate, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceTerminate, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceTerminated {
+	if ch.ServiceStatus != data.ServiceTerminating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+			data.ServiceTerminating, ch.ServiceStatus)
 	}
 }
 
@@ -658,15 +639,14 @@ func TestClientPreServiceSuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceSuspend, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceSuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceSuspended {
+	if ch.ServiceStatus != data.ServiceSuspending {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceSuspended, fxt.Channel.ServiceStatus)
+			data.ServiceSuspending, ch.ServiceStatus)
 	}
 }
 
@@ -711,15 +691,47 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceUnsuspend, &job, svcrun.MockStart)
+	runJob(t, env.worker.ClientPreServiceUnsuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceActive {
+	if ch.ServiceStatus != data.ServiceActivating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceActive, fxt.Channel.ServiceStatus)
+			data.ServiceActivating, ch.ServiceStatus)
+	}
+}
+
+func TestClientCompleteServiceTransition(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceUnsuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.job.Type = data.JobClientCompleteServiceTransition
+
+	transitions := map[string]string{
+		data.ServiceActivating:  data.ServiceActive,
+		data.ServiceSuspending:  data.ServiceSuspended,
+		data.ServiceTerminating: data.ServiceTerminated,
+	}
+
+	for k, v := range transitions {
+		fxt.Channel.ServiceStatus = k
+		env.updateInTestDB(t, fxt.Channel)
+
+		setJobData(t, db, fxt.job, v)
+		runJob(t, env.worker.ClientCompleteServiceTransition, fxt.job)
+
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
+
+		if ch.ServiceStatus != v {
+			t.Fatalf("expected %s service status, but got %s",
+				v, ch.ServiceStatus)
+		}
 	}
 }
 

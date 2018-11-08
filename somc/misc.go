@@ -88,7 +88,8 @@ func (c *Conn) handleMessage(m *JSONRPCMessage) {
 		if ch, ok := c.pending[m.ID]; ok {
 			var err error
 			if len(m.ErrorData) != 0 {
-				logger.Error(fmt.Sprintf("%+v", m.ErrorData))
+				logger.Error(
+					"SOMC error: " + string(m.ErrorData))
 				err = ErrInternal
 			}
 			ch <- reply{m.Result, err}

@@ -1052,6 +1052,8 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		return nil, ErrInternal
 	}
 
+	logger = logger.Add("msg", msg)
+
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
 		logger.Error(err.Error())

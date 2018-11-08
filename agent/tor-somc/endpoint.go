@@ -6,7 +6,7 @@ import (
 )
 
 // Endpoint returns endpoint msg for a channel with given key.
-func (h *Handler) Endpoint(key string) (*string, error) {
+func (h *Handler) Endpoint(key data.Base64String) (*data.Base64String, error) {
 	logger := h.logger.Add("type", "agent/tor-somc.Handler")
 
 	channelsStructs, err := h.db.SelectAllFrom(data.ChannelTable, "")
@@ -23,7 +23,8 @@ func (h *Handler) Endpoint(key string) (*string, error) {
 			return nil, ErrInternal
 		}
 		if channelKey == key {
-			endpoint, err := h.endpointByChannelID(logger, channel.ID)
+			endpoint, err := h.endpointByChannelID(
+				logger, channel.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -35,7 +36,7 @@ func (h *Handler) Endpoint(key string) (*string, error) {
 }
 
 func (h *Handler) channelKey(
-	logger log.Logger, channel *data.Channel) (string, error) {
+	logger log.Logger, channel *data.Channel) (data.Base64String, error) {
 	offering, err := h.offeringByID(logger, channel.Offering)
 	if err != nil {
 		return "", err

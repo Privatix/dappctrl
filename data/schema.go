@@ -148,7 +148,7 @@ type Offering struct {
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
 	SourceType         uint8           `json:"sourceType" reform:"source_type"`
-	Source             string          `json:"source" reform:"source"`
+	Source             Base64String    `json:"source" reform:"source"`
 }
 
 // State channel statuses.

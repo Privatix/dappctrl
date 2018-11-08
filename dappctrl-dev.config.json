@@ -41,7 +41,7 @@
         "CheckTimeout": 10,
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x218d767e906d14e84683804f0a1f35a8ffdcb800",
+            "PSCAddrHex": "0x3efbb281fc51c8da1f76b96acf536f777ec3c3cf",
             "Periods": {
                 "PopUp": 10,
                 "Challenge": 20,
@@ -205,7 +205,7 @@
     },
     "SOMC": {
         "ReconnPeriod": 5000,
-        "URL": "ws://89.38.96.53:8080"
+        "URL": "ws://89.38.96.53:8081"
     },
     "SOMCServer": {
         "Addr": "localhost:5555",

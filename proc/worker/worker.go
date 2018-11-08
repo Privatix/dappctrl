@@ -44,18 +44,18 @@ type GasConf struct {
 
 // Worker has all worker routines.
 type Worker struct {
-	abi              abi.ABI
-	logger           log.Logger
-	db               *reform.DB
-	decryptKeyFunc   data.ToPrivateKeyFunc
-	ept              *ept.Service
-	ethBack          eth.Backend
-	gasConf          *GasConf
-	pscAddr          common.Address
-	pwdGetter        data.PWDGetter
-	somc             *somc.Conn
-	queue            job.Queue
-	processor        *proc.Processor
+	abi            abi.ABI
+	logger         log.Logger
+	db             *reform.DB
+	decryptKeyFunc data.ToPrivateKeyFunc
+	ept            *ept.Service
+	ethBack        eth.Backend
+	gasConf        *GasConf
+	pscAddr        common.Address
+	pwdGetter      data.PWDGetter
+	somc           *somc.Conn
+	queue          job.Queue
+	processor      *proc.Processor
 
 	ethConfig        *eth.Config
 	countryConfig    *country.Config

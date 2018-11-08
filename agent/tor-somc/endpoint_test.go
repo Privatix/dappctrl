@@ -3,7 +3,7 @@ package somc_test
 import (
 	"testing"
 
-	somc "github.com/privatix/dappctrl/agent/tor-somc"
+	"github.com/privatix/dappctrl/agent/tor-somc"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
@@ -18,8 +18,8 @@ func TestGetEndpointMessage(t *testing.T) {
 	defer fxt.Close()
 
 	ch := fxt.Channel
-	keyBytes, err := (data.ChannelKey(
-		ch.Client, ch.Agent, ch.Block, fxt.Offering.Hash))
+	keyBytes, err := data.ChannelKey(
+		ch.Client, ch.Agent, ch.Block, fxt.Offering.Hash)
 	util.TestExpectResult(t, "ChannelKey", nil, err)
 	channelKey := data.FromBytes(keyBytes)
 

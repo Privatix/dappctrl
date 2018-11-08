@@ -8,23 +8,28 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/privatix/dappctrl/data"
 )
 
 // GetOffering gets offering message through tor net.
-func GetOffering(hostname, hash string, sock uint) (string, error) {
+func GetOffering(hostname string, hash data.Base64String,
+	sock uint) (data.Base64String, error) {
 	payload := fmt.Sprintf(`{"method": "api_offering",
 		"params": ["%s"], "id": 67}`, hash)
 	return requestWithPayload(hostname, payload, sock)
 }
 
 // GetEndpoint gets endpoint message through tor net.
-func GetEndpoint(hostname, channelKey string, sock uint) (string, error) {
+func GetEndpoint(hostname string, channelKey data.Base64String,
+	sock uint) (data.Base64String, error) {
 	payload := fmt.Sprintf(`{"method": "api_endpoint",
 		"params": ["%s"], "id": 67}`, channelKey)
 	return requestWithPayload(hostname, payload, sock)
 }
 
-func requestWithPayload(hostname, payload string, sock uint) (string, error) {
+func requestWithPayload(hostname, payload string,
+	sock uint) (data.Base64String, error) {
 	resp, err := request(hostname, payload, sock)
 	if err != nil {
 		return "", err
@@ -43,14 +48,14 @@ func request(hostname, payload string, sock uint) (*http.Response, error) {
 	return client.Post(url, "application/json", strings.NewReader(payload))
 }
 
-func extractResult(resp *http.Response) (string, error) {
+func extractResult(resp *http.Response) (data.Base64String, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
 	var ret struct {
-		Result *string `json:"result"`
+		Result *data.Base64String `json:"result"`
 	}
 
 	if err := json.Unmarshal(body, &ret); err != nil {

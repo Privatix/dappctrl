@@ -47,25 +47,25 @@ var (
 )
 
 type config struct {
-	AgentMonitor     *abill.Config
-	AgentServer      *uisrv.Config
-	BlockMonitor     *monitor.Config
-	ClientMonitor    *cbill.Config
-	Country          *country.Config
-	DB               *data.DBConfig
-	DBLog            *dblog.Config
-	ReportLog        *rlog.Config
-	Looper           *looper.Config
-	EptMsg           *ept.Config
-	Eth              *eth.Config
-	FileLog          *log.FileConfig
-	Gas              *worker.GasConf
-	Job              *job.Config
-	PayServer        *pay.Config
-	PayAddress       string
-	Proc             *proc.Config
-	Report           *bugsnag.Config
-	Role             string
+	AgentMonitor  *abill.Config
+	AgentServer   *uisrv.Config
+	BlockMonitor  *monitor.Config
+	ClientMonitor *cbill.Config
+	Country       *country.Config
+	DB            *data.DBConfig
+	DBLog         *dblog.Config
+	ReportLog     *rlog.Config
+	Looper        *looper.Config
+	EptMsg        *ept.Config
+	Eth           *eth.Config
+	FileLog       *log.FileConfig
+	Gas           *worker.GasConf
+	Job           *job.Config
+	PayServer     *pay.Config
+	PayAddress    string
+	Proc          *proc.Config
+	Report        *bugsnag.Config
+	Role          string
 
 	SessionServer    *sesssrv.Config
 	SOMC             *somc.Config

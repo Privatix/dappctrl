@@ -216,7 +216,7 @@ func testClientEndpointCreate(t *testing.T,
 	}
 	sealed := sealMessage(t, env, fxt, &msg)
 
-	setJobData(t, fxt.DB, fxt.job, sealed)
+	setJobData(t, fxt.DB, fxt.job, &data.JobEndpointCreateData{sealed})
 	runJob(t, env.worker.ClientEndpointCreate, fxt.job)
 
 	var endp data.Endpoint

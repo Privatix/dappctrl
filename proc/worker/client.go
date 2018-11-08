@@ -16,7 +16,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	torSOMC "github.com/privatix/dappctrl/agent/tor-somc"
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -295,7 +294,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		endpointMsgSealed = ep.Endpoint
 
 	case data.OfferingSourceTor:
-		source, err := data.ToBytes(offering.Source)
+		source, err := data.ToBytes(data.Base64String(offering.Source))
 		if err == nil {
 			rawMsg, err := torSOMC.GetEndpoint(
 				string(source), key, w.torSocksListener)
@@ -387,9 +386,8 @@ func (w *Worker) ClientEndpointCreate(job *data.Job) error {
 		return err
 	}
 
-	var jdata data.JobEndpointCreateData
-	if err := w.unmarshalDataTo(
-		logger, job.Data, &jdata.EndpointSealed); err != nil {
+	var jdata *data.JobEndpointCreateData
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
 		return err
 	}
 
@@ -995,6 +993,9 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		offering, err = w.fillOfferingFromSOMCReply(logger,
 			job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
 			block, offeringsData, sourceType, source)
+		if err != nil {
+			return err
+		}
 	case data.OfferingSourceTor:
 		offeringRawMsg, err := torSOMC.GetOffering(string(source),
 			data.FromBytes(hash.Bytes()), w.torSocksListener)
@@ -1007,7 +1008,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		}
 		offering, err = w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
 			block, data.HexFromBytes(agentAddr.Bytes()),
-			job.RelatedID, data.FromBytes(hash.Bytes()),
+			job.RelatedID, data.HexFromBytes(hash.Bytes()),
 			sourceType, source)
 		if err != nil {
 			return err
@@ -1051,7 +1052,7 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 }
 
 func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
-	blockNumber uint64, agent, relID, hash string,
+	blockNumber uint64, agent data.HexString, relID string, hash data.HexString,
 	sourceType uint8, source []byte) (*data.Offering, error) {
 	logger = logger.Add("offering", offering)
 	_, err := w.offeringByHashString(logger, hash)

@@ -3,16 +3,16 @@ package somc
 import (
 	"database/sql"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
 )
 
 func (h *Handler) offeringByHash(
-	logger log.Logger, hash string) (*data.Offering, error) {
+	logger log.Logger, hash data.HexString) (*data.Offering, error) {
 	offering := new(data.Offering)
-	err := h.findOneTo(logger, offering, ErrOfferingNotFound, "hash", hash)
+	err := h.findOneTo(logger, offering, ErrOfferingNotFound, "hash", string(hash))
 	return offering, err
 }
 

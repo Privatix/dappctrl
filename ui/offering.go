@@ -480,8 +480,7 @@ func (h *Handler) offeringCountries(logger log.Logger) ([]string, error) {
 
 func (h *Handler) offeringsMinMaxPrice(
 	logger log.Logger) (min uint64, max uint64, err error) {
-	query := `SELECT MIN(setup_price + unit_price * min_units),
-			 MAX(setup_price + unit_price * min_units)
+	query := `SELECT MIN(unit_price), MAX(unit_price)
 		    FROM offerings WHERE %s`
 
 	tail := fmt.Sprintf(query, offeringCountriesCondition)

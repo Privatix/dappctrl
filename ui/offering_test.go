@@ -508,8 +508,8 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		offerings = append(offerings, offering)
 	}
 
-	min := data.MinDeposit(offerings[0])
-	max := data.MinDeposit(offerings[2])
+	min := offerings[0].UnitPrice
+	max := offerings[2].UnitPrice
 
 	for _, v := range offerings {
 		data.InsertToTestDB(t, db, v)

@@ -37,6 +37,13 @@ var objectTypes = map[string]reform.Table{
 	TypeEthTx:    data.EthTxTable,
 }
 
+var objectWithHashTypes = map[string]reform.Table{
+	TypeTemplate: data.TemplateTable,
+	TypeOffering: data.OfferingTable,
+	TypeEndpoint: data.EndpointTable,
+	TypeEthTx:    data.EthTxTable,
+}
+
 // GetObject finds object in a database by id,
 // then returns an object on raw JSON format.
 func (h *Handler) GetObject(
@@ -78,4 +85,37 @@ func (h *Handler) insertObject(object reform.Struct) error {
 		return ErrInternal
 	}
 	return nil
+}
+
+// GetObjectByHash finds object in a database by hash,
+// then returns an object on raw JSON format.
+func (h *Handler) GetObjectByHash(
+	password, objectType, hash string) (json.RawMessage, error) {
+	logger := h.logger.Add("method", "GetObjectByHash",
+		"type", objectType, "hash", hash)
+
+	err := h.checkPassword(logger, password)
+	if err != nil {
+		return nil, err
+	}
+
+	table, ok := objectWithHashTypes[objectType]
+	if !ok {
+		logger.Warn(ErrBadObjectType.Error())
+		return nil, ErrBadObjectType
+	}
+
+	obj, err := h.db.FindOneFrom(table, "hash", hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrObjectNotFound
+	}
+
+	raw, err := json.Marshal(obj)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
+	return raw, nil
 }

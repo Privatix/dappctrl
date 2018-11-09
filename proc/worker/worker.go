@@ -61,7 +61,7 @@ type Worker struct {
 	countryConfig    *country.Config
 	pscPeriods       *eth.PSCPeriods
 	sourceType       uint8
-	source           []byte
+	source           string
 	torSocksListener uint
 }
 
@@ -76,7 +76,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	l := logger.Add("type", "proc/worker.Worker")
 
 	sourceType := data.OfferingSourceSOMC
-	source := []byte(torHostname)
+	source := torHostname
 	if len(source) > 0 {
 		l.Info("Offering source Tor")
 		sourceType = data.OfferingSourceTor

@@ -31,7 +31,7 @@ type logOfferingCreatedInput struct {
 	minDeposit    *big.Int
 	currentSupply uint16
 	sourceType    uint8
-	source        []byte
+	source        string
 }
 
 type logOfferingPopUpInput struct {
@@ -40,7 +40,7 @@ type logOfferingPopUpInput struct {
 	minDeposit    *big.Int
 	currentSupply uint16
 	sourceType    uint8
-	source        []byte
+	source        string
 }
 
 var (
@@ -71,7 +71,7 @@ func init() {
 		panic(err)
 	}
 
-	abiBytes, err := abi.NewType("bytes")
+	abiString, err := abi.NewType("string")
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +99,7 @@ func init() {
 			Type: abiUint8,
 		},
 		{
-			Type: abiBytes,
+			Type: abiString,
 		},
 	}
 
@@ -108,7 +108,7 @@ func init() {
 			Type: abiUint8,
 		},
 		{
-			Type: abiBytes,
+			Type: abiString,
 		},
 	}
 }
@@ -211,7 +211,7 @@ func extractLogOfferingCreated(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	source, ok := dataUnpacked[2].([]byte)
+	source, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}
@@ -256,7 +256,7 @@ func extractLogOfferingPopUp(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	source, ok := dataUnpacked[2].([]byte)
+	source, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}

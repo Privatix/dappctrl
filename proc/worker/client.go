@@ -294,19 +294,16 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		endpointMsgSealed = ep.Endpoint
 
 	case data.OfferingSourceTor:
-		source, err := data.ToBytes(data.Base64String(offering.Source))
-		if err == nil {
-			rawMsg, err := torSOMC.GetEndpoint(
-				string(source), key, w.torSocksListener)
-			if err != nil {
-				logger.Error(err.Error())
-				return ErrGetEndpoint
-			}
-			endpointMsgSealed, err = data.ToBytes(rawMsg)
-			if err != nil {
-				logger.Error(err.Error())
-				return ErrGetEndpoint
-			}
+		rawMsg, err := torSOMC.GetEndpoint(
+			offering.Source, key, w.torSocksListener)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrGetEndpoint
+		}
+		endpointMsgSealed, err = data.ToBytes(rawMsg)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrGetEndpoint
 		}
 	}
 
@@ -978,7 +975,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
-	job *data.Job, block uint64, sourceType uint8, source []byte,
+	job *data.Job, block uint64, sourceType uint8, source string,
 	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
 
 	var offering *data.Offering
@@ -1040,7 +1037,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 	relID string, agentAddr data.HexString, blockNumber uint64,
 	offeringsData []somc.OfferingData,
-	sourceType uint8, source []byte) (*data.Offering, error) {
+	sourceType uint8, source string) (*data.Offering, error) {
 	if len(offeringsData) == 0 {
 		return nil, ErrSOMCNoOfferings
 	}
@@ -1053,7 +1050,7 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 
 func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	blockNumber uint64, agent data.HexString, relID string, hash data.HexString,
-	sourceType uint8, source []byte) (*data.Offering, error) {
+	sourceType uint8, source string) (*data.Offering, error) {
 	logger = logger.Add("offering", offering)
 	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {
@@ -1140,7 +1137,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 		FreeUnits:          msg.FreeUnits,
 		AdditionalParams:   msg.ServiceSpecificParameters,
 		SourceType:         sourceType,
-		Source:             data.FromBytes(source),
+		Source:             source,
 	}, nil
 }
 

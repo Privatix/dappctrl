@@ -33,7 +33,7 @@ type Backend interface {
 	GetTransactionByHash(context.Context, common.Hash) (*types.Transaction, bool, error)
 
 	RegisterServiceOffering(*bind.TransactOpts, [common.HashLength]byte,
-		*big.Int, uint16, uint8, []byte) (*types.Transaction, error)
+		*big.Int, uint16, uint8, string) (*types.Transaction, error)
 
 	PTCBalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
 
@@ -78,7 +78,7 @@ type Backend interface {
 		offeringHash [32]byte) (*types.Transaction, error)
 
 	PSCPopupServiceOffering(opts *bind.TransactOpts, offeringHash [32]byte,
-		sourceType uint8, source []byte) (*types.Transaction, error)
+		sourceType uint8, source string) (*types.Transaction, error)
 
 	FilterLogs(ctx context.Context,
 		q ethereum.FilterQuery) ([]types.Log, error)
@@ -275,7 +275,7 @@ func (b *backendInstance) GetTransactionByHash(ctx context.Context,
 func (b *backendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [common.HashLength]byte,
 	minDeposit *big.Int, maxSupply uint16,
-	sourceType uint8, source []byte) (*types.Transaction, error) {
+	sourceType uint8, source string) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -496,7 +496,7 @@ func (b *backendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 // PSCPopupServiceOffering calls popupServiceOffering method of  Privatix
 // service contract.
 func (b *backendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte, sourceType uint8, source []byte) (*types.Transaction, error) {
+	offeringHash [32]byte, sourceType uint8, source string) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 

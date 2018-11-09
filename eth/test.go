@@ -90,7 +90,7 @@ func (b *TestEthBackend) CooperativeClose(opts *bind.TransactOpts,
 // RegisterServiceOffering is mock to RegisterServiceOffering.
 func (b *TestEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [32]byte, minDeposit *big.Int, maxSupply uint16,
-	source uint8, sourceType []byte) (*types.Transaction, error) {
+	source uint8, sourceType string) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		method: "RegisterServiceOffering",
 		caller: opts.From,
@@ -344,7 +344,7 @@ func (b *TestEthBackend) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 
 // PSCPopupServiceOffering is mock to PSCPopupServiceOffering.
 func (b *TestEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte, sourceType uint8, source []byte) (*types.Transaction, error) {
+	offeringHash [32]byte, sourceType uint8, source string) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		txOpts: opts,
 		method: "PopupServiceOffering",

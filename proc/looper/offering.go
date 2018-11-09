@@ -68,7 +68,7 @@ func calcDelayToOfferingPopUp(offeringHash common.Hash,
 func calcPriceToOfferingPopUp(logger log.Logger, abi abi.ABI,
 	ethBack eth.Backend, gasPrice *big.Int) (*big.Int, error) {
 	input, err := abi.Pack(
-		"popupServiceOffering", common.Hash{}, uint8(0), []byte{})
+		"popupServiceOffering", common.Hash{}, uint8(0), "")
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, err

@@ -62,14 +62,6 @@ For developing purposes, you have to use `dappctrl-dev.config.json`.
 
 More information about `dappctrl.config.json`: [config fields description](/doc/config.md).
 
-## Building and configuring service adapters
-
-* **OpenVPN** - please read `svc/dappvpn/README.md`.
-
-## Using docker
-
-You can use docker to simplify work with `dappctrl`: [using docker](https://github.com/Privatix/dappctrl/wiki/Using-docker)
-
 # Tests
 
 To run the tests execute following script:

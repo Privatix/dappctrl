@@ -60,7 +60,7 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 
 For developing purposes, you have to use `dappctrl-dev.config.json`.
 
-More information about `dappctrl.config.json`: [config fields description](https://github.com/Privatix/dappctrl/wiki/dappctrl.config.json-description).
+More information about `dappctrl.config.json`: [config fields description](/doc/config.md).
 
 ## Building and configuring service adapters
 

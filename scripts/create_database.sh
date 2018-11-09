@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 DAPPCTRL=github.com/privatix/dappctrl
-DAPPCTRL_DIR=$HOME/go/src/${DAPPCTRL}
 
 if [ -z "${POSTGRES_PORT}" ]
 then
     POSTGRES_PORT=5432
+fi
+if [ -z "${DAPPCTRL_DIR}" ]
+then
+    DAPPCTRL_DIR=${GOPATH}/src/${DAPPCTRL}
 fi
 
 psql -U postgres -f "${DAPPCTRL_DIR}/data/settings.sql"

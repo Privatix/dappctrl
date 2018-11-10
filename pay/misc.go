@@ -21,9 +21,10 @@ const (
 
 // Codes for bad request replies.
 const (
-	errCodeNonParsablePayload = 1
-	errCodeInvalidBalance     = iota
-	errCodeInvalidSignature   = iota
+	errCodeNonParsablePayload = iota + 1
+	errCodeInvalidBalance
+	errCodeInvalidSignature
+	ErrCodeEqualBalance
 )
 
 var errUnexpected = &srv.Error{
@@ -147,6 +148,16 @@ func (s *Server) validateChannelForPayment(logger log.Logger,
 
 func (s *Server) updateChannelWithPayment(logger log.Logger,
 	w http.ResponseWriter, ch *data.Channel, pld *paymentPayload) bool {
+	// Check receipt balance.
+	if ch.ReceiptBalance == pld.Balance {
+		s.RespondError(logger, w, &srv.Error{
+			Status:  http.StatusBadRequest,
+			Code:    ErrCodeEqualBalance,
+			Message: "Balance amount is equal to current balance",
+		})
+		return false
+	}
+
 	ch.ReceiptBalance = pld.Balance
 	ch.ReceiptSignature = &pld.BalanceMsgSig
 	ret, err := s.db.Exec(`

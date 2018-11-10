@@ -108,7 +108,7 @@ func postPayload(db *reform.DB, channel string, pld *paymentPayload,
 				return err
 			}
 		}
-		return fmt.Errorf("%s (%d)", resp.Error.Message, resp.Error.Code)
+		return resp.Error
 	}
 
 	return nil

@@ -588,7 +588,18 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		if ret.Data != offering.RawMsg {
 			t.Fatal("wrong offering published")
 		}
-		if ret.Hash != offering.Hash {
+
+		inHash, err := data.ToBytes(ret.Hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		hash, err := data.HexToBytes(offering.Hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(inHash, hash) {
 			t.Fatal("wrong hash stored")
 		}
 	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):

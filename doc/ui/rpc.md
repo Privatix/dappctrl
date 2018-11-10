@@ -600,7 +600,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 
 ### Objects
 
-#### Get object
+#### Get Object
 
 *Method*:	`getObject`
 
@@ -640,6 +640,63 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
 </details>
 </details>
 
+#### Get Object By Hash
+
+*Method*:	`getObjectByHash`
+
+*Description*: Get an object of a specified type by hash.
+
+*Parameters*:
+1. Password (string)
+2. Object type (string, can be `template`, `offering`, `endpoint`or `ethTx`)
+3. Object hash (string)
+
+*Result (object)*: object of a given type.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjectByHash", "params": ["qwert", "offering", "157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {
+           "id":"687f26ab-5c62-4b05-8225-12e102a99450",
+           "isLocal":false,
+           "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
+           "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
+           "hash":"157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc",
+           "status":"unpublished",
+           "offerStatus":"empty",
+           "blockNumberUpdated":1,
+           "agent":"4638140465c0ee8fc796323971431c30250433b2",
+           "rawMsg":"",
+           "serviceName":"my service",
+           "description":"my service description",
+           "country":"KG",
+           "supply":3,
+           "currentSupply":3,
+           "unitName":"",
+           "unitType":"units",
+           "billingType":"postpaid",
+           "setupPrice":0,
+           "unitPrice":100000,
+           "minUnits":100,
+           "maxUnit":null,
+           "billingInterval":1800,
+           "maxBillingUnitLag":1800,
+           "maxSuspendTime":1800,
+           "maxInactiveTimeSec":null,
+           "freeUnits":0,
+           "additionalParams":{},
+           "autoPopUp":false
+    }
+}
+```
+</details>
 
 ### Offerings
 

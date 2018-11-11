@@ -215,9 +215,6 @@ func (m *Monitor) isToBeTerminated(
 
 func (m *Monitor) maxInactiveTimeReached(
 	ch *data.Channel, offer *data.Offering) (bool, error) {
-	if offer.MaxInactiveTimeSec == nil {
-		return false, nil
-	}
 	query := fmt.Sprintf("SELECT COUNT(*), MAX(last_usage_time) FROM sessions WHERE sessions.channel = %s", m.db.Placeholder(1))
 	var qty uint
 	var lastUsageNullable pq.NullTime
@@ -230,7 +227,7 @@ func (m *Monitor) maxInactiveTimeReached(
 		lastUsage = ch.PreparedAt
 	}
 	inactiveSeconds := uint64(time.Since(lastUsage).Seconds())
-	return qty > 0 && inactiveSeconds > *offer.MaxInactiveTimeSec, nil
+	return qty > 0 && inactiveSeconds > offer.MaxInactiveTimeSec, nil
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {

@@ -219,7 +219,7 @@ func createClientTestData(t *testing.T, fxt *fixture) (close func()) {
 	offering := data.NewTestOffering(fxt.User.EthAddr,
 		fxt.Product.ID, fxt.TemplateOffer.ID)
 	offering.UnitType = data.UnitScalar
-	offering.MaxInactiveTimeSec = pointer.ToUint64(1800)
+	offering.MaxInactiveTimeSec = 1800
 
 	channel := data.NewTestChannel(data.NewTestAccount("").EthAddr,
 		fxt.Account.EthAddr, offering.ID, 0, 10000, data.ChannelActive)
@@ -350,9 +350,9 @@ func checkClientChannelStatus(t *testing.T, resp *ui.ClientChannelInfo,
 			*resp.ChStat.LastChanged)
 	}
 
-	if offer.MaxInactiveTimeSec == nil ||
-		*offer.MaxInactiveTimeSec != resp.ChStat.MaxInactiveTime {
-		t.Fatal("invalid maxInactiveTime field")
+	if offer.MaxInactiveTimeSec != resp.ChStat.MaxInactiveTime {
+		t.Fatalf("expected %d, got: %d", offer.MaxInactiveTimeSec,
+			resp.ChStat.MaxInactiveTime)
 	}
 }
 

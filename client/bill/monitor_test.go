@@ -111,7 +111,7 @@ func TestTerminateInactiveChannel(t *testing.T) {
 
 	fxt.Channel.TotalDeposit = 10
 	oneSec := uint64(1)
-	fxt.Offering.MaxInactiveTimeSec = &oneSec
+	fxt.Offering.MaxInactiveTimeSec = oneSec
 	session := data.NewTestSession(fxt.Channel.ID)
 	// Fake session stopped a day ago.
 	stopped := time.Now().AddDate(0, 0, -1)
@@ -183,12 +183,14 @@ func TestPayment(t *testing.T) {
 	fxt.Offering.UnitPrice = 1
 	fxt.Offering.SetupPrice = 2
 	fxt.Offering.BillingInterval = 2
+	fxt.Offering.MaxInactiveTimeSec = 1000
 
 	fxt.Channel.TotalDeposit = 10
 	fxt.Channel.ReceiptBalance = 4
 
 	sess := data.NewTestSession(fxt.Channel.ID)
 	sess.UnitsUsed = 4
+	sess.LastUsageTime = time.Now()
 
 	data.SaveToTestDB(t, db, fxt.Offering, fxt.Channel, sess)
 	defer data.DeleteFromTestDB(t, db, sess)

@@ -244,9 +244,7 @@ func createChanStatusBlock(channel *data.Channel,
 		result.LastChanged = pointer.ToString(
 			util.SingleTimeFormat(*channel.ServiceChangedTime))
 	}
-	if offering.MaxInactiveTimeSec != nil {
-		result.MaxInactiveTime = *offering.MaxInactiveTimeSec
-	}
+	result.MaxInactiveTime = offering.MaxInactiveTimeSec
 
 	return result
 }

@@ -193,6 +193,7 @@ func NewTestOffering(agent HexString, product, tpl string) *Offering {
 		AdditionalParams:   []byte("{}"),
 		SetupPrice:         11,
 		UnitPrice:          22,
+		MaxInactiveTimeSec: 1,
 	}
 	return offering
 }

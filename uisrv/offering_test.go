@@ -38,7 +38,7 @@ func validOfferingPayload() data.Offering {
 		Description:        nil,
 		FreeUnits:          0,
 		MaxBillingUnitLag:  100,
-		MaxInactiveTimeSec: nil,
+		MaxInactiveTimeSec: 1800,
 		MaxSuspendTime:     1000,
 		MaxUnit:            nil,
 		MinUnits:           uint64(50),

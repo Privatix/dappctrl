@@ -219,7 +219,7 @@ CREATE TABLE offerings (
     max_suspended_time int NOT NULL -- maximum time in suspend state, after which service will be terminated (in seconds)
         CONSTRAINT positive_max_suspended_time CHECK (offerings.max_suspended_time >= 0),
 
-    max_inactive_time_sec bigint -- maximum inactive time before channel will be closed
+    max_inactive_time_sec bigint NOT NULL -- maximum inactive time before channel will be closed
         CONSTRAINT positive_max_inactive_time_sec CHECK (offerings.max_inactive_time_sec > 0),
 
     free_units smallint NOT NULL DEFAULT 0 -- free units (test, bonus)

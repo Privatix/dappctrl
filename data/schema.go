@@ -137,7 +137,7 @@ type Offering struct {
 	BillingInterval    uint            `json:"billingInterval" reform:"billing_interval" validate:"required"` // Every unit number to be paid.
 	MaxBillingUnitLag  uint            `json:"maxBillingUnitLag" reform:"max_billing_unit_lag"`               // Max maximum tolerance for payment lag.
 	MaxSuspendTime     uint            `json:"maxSuspendTime" reform:"max_suspended_time"`                    // In seconds.
-	MaxInactiveTimeSec *uint64         `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
+	MaxInactiveTimeSec uint64          `json:"maxInactiveTimeSec" reform:"max_inactive_time_sec"`
 	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`

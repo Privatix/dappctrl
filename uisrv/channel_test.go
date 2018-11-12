@@ -133,9 +133,9 @@ func checkCliChanStatus(t *testing.T, resp chanStatusBlock,
 			expectedTime, *resp.LastChanged)
 	}
 
-	if offer.MaxInactiveTimeSec == nil ||
-		*offer.MaxInactiveTimeSec != resp.MaxInactiveTime {
-		t.Fatal(errFieldVal)
+	if offer.MaxInactiveTimeSec != resp.MaxInactiveTime {
+		t.Fatalf("expected %d, got: %d",
+			offer.MaxInactiveTimeSec, resp.MaxInactiveTime)
 	}
 }
 

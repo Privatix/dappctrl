@@ -85,7 +85,7 @@ func createTestChannel(t *testing.T) *data.Channel {
 	product := data.NewTestProduct()
 	tplOffer := data.NewTestTemplate(data.TemplateOffer)
 	offering := data.NewTestOffering(agent.EthAddr, product.ID, tplOffer.ID)
-	offering.MaxInactiveTimeSec = pointer.ToUint64(10)
+	offering.MaxInactiveTimeSec = 10
 	offering.UnitName = "megabytes"
 	offering.UnitType = data.UnitScalar
 	offering.SetupPrice = 22

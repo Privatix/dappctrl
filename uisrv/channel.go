@@ -447,12 +447,6 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 
 	resp := new(chanStatusBlock)
 
-	if offer.MaxInactiveTimeSec == nil {
-		offer.MaxInactiveTimeSec = new(uint64)
-	} else {
-		resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
-	}
-
 	if channel.ServiceChangedTime == nil {
 		resp.LastChanged = new(string)
 	} else {
@@ -461,7 +455,7 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	}
 	resp.ChannelStatus = channel.ChannelStatus
 	resp.ServiceStatus = channel.ServiceStatus
-	resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
+	resp.MaxInactiveTime = offer.MaxInactiveTimeSec
 
 	s.reply(logger, w, &resp)
 }

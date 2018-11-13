@@ -24,6 +24,12 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("failed when copy file %v", err))
 	}
+
+	// copy database creating script
+	err = copyFile("../data/create_db.sql", "./scripts/create_db.sql")
+	if err != nil {
+		panic(fmt.Errorf("failed when copy file %v", err))
+	}
 }
 
 func copyFile(src, dst string) error {

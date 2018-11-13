@@ -8,6 +8,7 @@
 .docker_data/*
 
 dappctrl
+dappctrl.exe
 dappctrl.config.local.json
 dappctrl-test.config.local.json
 

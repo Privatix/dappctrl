@@ -132,6 +132,8 @@ func (s *Server) handleProductHeartbeat(
 	logger := s.logger.Add(
 		"method", "handleHeartbeat", "sender", r.RemoteAddr)
 
+	logger.Info("adapter heartbeat")
+
 	var ch data.Channel
 	err := s.db.SelectOneTo(&ch, `
 		 JOIN offerings ON offering = offerings.id

@@ -18,7 +18,7 @@ VALUES ('eth.min.confirmations',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
-        '11520',
+        '1000',
         2,
         'defines number of latest ethereum blocks to retrieve.' ||
         ' If eth.event.freshblocks is null or zero then all events' ||
@@ -27,7 +27,7 @@ VALUES ('eth.event.freshblocks',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.blocklimit',
-        '80',
+        '500',
         2,
         'maximum number of ethereum blocks that is used to scan' ||
         ' for new events. It is used as pagination mechanism while' ||

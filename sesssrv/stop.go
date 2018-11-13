@@ -80,10 +80,15 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 			status = data.ServiceSuspended
 		}
 
-		return job.AddWithData(s.queue, tx,
+		err := job.AddWithData(s.queue, tx,
 			data.JobClientCompleteServiceTransition,
 			data.JobChannel, ch.ID, data.JobSessionServer,
 			status)
+		if err != nil && err != job.ErrDuplicatedJob {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		logger.Error(err.Error())

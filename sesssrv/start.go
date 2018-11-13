@@ -78,10 +78,13 @@ func (s *Server) handleStart(
 		}
 
 		if ch.ServiceStatus == data.ServiceActivating {
-			return job.AddWithData(s.queue, tx,
+			err := job.AddWithData(s.queue, tx,
 				data.JobClientCompleteServiceTransition,
 				data.JobChannel, ch.ID, data.JobSessionServer,
 				data.ServiceActive)
+			if err != nil && err != job.ErrDuplicatedJob {
+				return err
+			}
 		}
 
 		return nil

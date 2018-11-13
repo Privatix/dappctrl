@@ -114,8 +114,8 @@ func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
 			j.RelatedID, j.Type, jdata.EthLog.TxHash)
 	} else {
 		_, err = q.db.SelectOneFrom(data.JobTable,
-			"WHERE related_id = $1 AND type = $2",
-			j.RelatedID, j.Type)
+			`WHERE related_id = $1 AND type = $2
+			    AND status = 'active'`, j.RelatedID, j.Type)
 	}
 	if err == nil {
 		logger.Debug(ErrDuplicatedJob.Error())

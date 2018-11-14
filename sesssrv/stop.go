@@ -37,13 +37,12 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		return
 	}
 
-	var prod *data.Product
-	if args.Units != 0 {
-		prod, ok = s.findProduct(logger, w, ctx.Username)
-		if !ok {
-			return
-		}
+	prod, ok := s.findProduct(logger, w, ctx.Username)
+	if !ok {
+		return
+	}
 
+	if args.Units != 0 {
 		// TODO: Use unit size instead of this hardcode.
 		args.Units /= 1024 * 1024
 

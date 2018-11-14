@@ -132,7 +132,7 @@ func (s *Server) handleProductHeartbeat(
 	logger := s.logger.Add(
 		"method", "handleHeartbeat", "sender", r.RemoteAddr)
 
-	logger.Info("adapter heartbeat")
+	logger.Debug("adapter heartbeat")
 
 	var ch data.Channel
 	err := s.db.SelectOneTo(&ch, `

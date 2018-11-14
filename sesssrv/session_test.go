@@ -23,14 +23,6 @@ func TestBadClientIdent(t *testing.T) {
 		err := Post(conf.SessionServer.Config, logger,
 			fxt.Product.ID, data.TestPassword, v, args, nil)
 		util.TestExpectResult(t, "Post", ErrChannelNotFound, err)
-
-		args.ClientID = fxt.Channel.ID
-		fxt.Channel.ServiceStatus = data.ServicePending
-		data.SaveToTestDB(t, db, fxt.Channel)
-
-		err = Post(conf.SessionServer.Config, logger,
-			fxt.Product.ID, data.TestPassword, PathAuth, args, nil)
-		util.TestExpectResult(t, "Post", ErrNonActiveChannel, err)
 	}
 }
 

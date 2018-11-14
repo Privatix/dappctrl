@@ -37,8 +37,9 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		return
 	}
 
+	var prod *data.Product
 	if args.Units != 0 {
-		prod, ok := s.findProduct(logger, w, ctx.Username)
+		prod, ok = s.findProduct(logger, w, ctx.Username)
 		if !ok {
 			return
 		}
@@ -69,7 +70,7 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 			return err
 		}
 
-		if stop {
+		if !prod.IsServer && stop {
 			var status string
 			if ch.ServiceStatus == data.ServiceTerminating {
 				status = data.ServiceTerminated

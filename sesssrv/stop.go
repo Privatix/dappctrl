@@ -1,7 +1,6 @@
 package sesssrv
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 

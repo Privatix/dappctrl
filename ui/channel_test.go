@@ -414,7 +414,7 @@ func checkClientChannelUsage(
 }
 
 func TestGetClientChannels(t *testing.T) {
-	fxt, assertErrEqual := newTest(t, "GetAgentChannels")
+	fxt, assertErrEqual := newTest(t, "GetClientChannels")
 	defer fxt.close()
 
 	// Set client channels.

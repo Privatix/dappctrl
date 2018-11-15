@@ -62,14 +62,28 @@ func deleteSettings(t *testing.T) {
 }
 
 func testGetSettings(t *testing.T, exp int, err error,
-	checkFunc func(error, error)) map[string]string {
+	checkFunc func(error, error)) {
 	res, err2 := handler.GetSettings(data.TestPassword)
 	checkFunc(err, err2)
-	if res != nil && len(res) != exp {
+	if res == nil {
+		t.Fatal("a result is nil")
+	}
+
+	if len(res) != exp {
 		t.Fatalf("expected %d items, got: %d (%s)",
 			exp, len(res), util.Caller())
 	}
-	return res
+
+	for _, v := range res {
+		if v.Permissions != ui.PermissionsToString[data.ReadOnly] &&
+			v.Permissions != ui.PermissionsToString[data.ReadWrite] {
+			t.Fatalf("permitions %s not valid permitions",
+				v.Permissions)
+		}
+		if v.Value == "" {
+			t.Fatal("setting value is empty")
+		}
+	}
 }
 
 func allSettings(t *testing.T) (result map[string]data.Setting) {

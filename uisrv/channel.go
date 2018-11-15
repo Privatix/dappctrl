@@ -62,11 +62,11 @@ type usage struct {
 }
 
 type respGetClientChan struct {
-	ID       string `json:"id"`
-	Agent    string `json:"agent"`
-	Client   string `json:"client"`
-	Offering string `json:"offering"`
-	Deposit  uint64 `json:"deposit"`
+	ID       string         `json:"id"`
+	Agent    data.HexString `json:"agent"`
+	Client   data.HexString `json:"client"`
+	Offering string         `json:"offering"`
+	Deposit  uint64         `json:"deposit"`
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
@@ -141,12 +141,12 @@ func (s *Server) filter(conds []string) (constraints string) {
 
 // ethAddrFromHex returns ethereum's address on string format from hex encoded string
 // if the address is not valid, it returns an empty string
-func ethAddrFromHex(addr string) string {
+func ethAddrFromHex(addr data.HexString) data.HexString {
 	ethAddr, err := data.HexToAddress(addr)
 	if err != nil {
 		ethAddr = common.Address{}
 	}
-	return ethAddr.String()
+	return data.HexString(ethAddr.String())
 }
 
 func formatTimeStr(tm *string) *string {
@@ -447,12 +447,6 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 
 	resp := new(chanStatusBlock)
 
-	if offer.MaxInactiveTimeSec == nil {
-		offer.MaxInactiveTimeSec = new(uint64)
-	} else {
-		resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
-	}
-
 	if channel.ServiceChangedTime == nil {
 		resp.LastChanged = new(string)
 	} else {
@@ -461,7 +455,7 @@ func (s *Server) handleGetClientChannelStatus(w http.ResponseWriter,
 	}
 	resp.ChannelStatus = channel.ChannelStatus
 	resp.ServiceStatus = channel.ServiceStatus
-	resp.MaxInactiveTime = *offer.MaxInactiveTimeSec
+	resp.MaxInactiveTime = offer.MaxInactiveTimeSec
 
 	s.reply(logger, w, &resp)
 }

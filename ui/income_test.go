@@ -29,7 +29,8 @@ func TestIncome(t *testing.T) {
 
 	offering := *fxt.Offering
 	offering.Product = product.ID
-	offering.Hash = data.FromBytes(crypto.Keccak256([]byte(util.NewUUID())))
+	offering.Hash = data.HexFromBytes(
+		crypto.Keccak256([]byte(util.NewUUID())))
 	offering.ID = util.NewUUID()
 
 	ch2 := *fxt.Channel

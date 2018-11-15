@@ -39,11 +39,12 @@ type GetClientChannelsResult struct {
 
 // ClientChannelInfo is information of client channel.
 type ClientChannelInfo struct {
-	ID       string `json:"id"`
-	Agent    string `json:"agent"`
-	Client   string `json:"client"`
-	Offering string `json:"offering"`
-	Deposit  uint64 `json:"deposit"`
+	ID           string         `json:"id"`
+	Agent        string         `json:"agent"`
+	Client       string         `json:"client"`
+	Offering     string         `json:"offering"`
+	OfferingHash data.HexString `json:"offeringHash"`
+	Deposit      uint64         `json:"deposit"`
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
@@ -187,19 +188,8 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 		return nil, err
 	}
 
-	jobFilter := `channels.id IN
-			(SELECT related_id 
-			   FROM jobs
-			  WHERE jobs.type = '%s' AND jobs.status = '%s')`
-
-	jobDoneCondition := fmt.Sprintf(jobFilter,
-		data.JobClientAfterChannelCreate, data.JobDone)
-
-	condition := fmt.Sprintf("%s AND %s", clientChannelsCondition,
-		jobDoneCondition)
-
 	chs, total, err := h.getChannels(logger, channelStatus, serviceStatus,
-		condition, offset, limit)
+		clientChannelsCondition, offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +233,7 @@ func createChanStatusBlock(channel *data.Channel,
 		result.LastChanged = pointer.ToString(
 			util.SingleTimeFormat(*channel.ServiceChangedTime))
 	}
-	if offering.MaxInactiveTimeSec != nil {
-		result.MaxInactiveTime = *offering.MaxInactiveTimeSec
-	}
+	result.MaxInactiveTime = offering.MaxInactiveTimeSec
 
 	return result
 }
@@ -297,11 +285,17 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 		return nil, err
 	}
 
-	tail := fmt.Sprintf("WHERE type = %s AND related_id = %s",
-		h.db.Placeholder(1), h.db.Placeholder(2))
+	jobCondition := fmt.Sprintf(`WHERE related_id = %s
+					AND status IN ('%s', '%s')`,
+		h.db.Placeholder(1),
+		data.JobFailed, data.JobDone)
+
+	tail := fmt.Sprintf(
+		`%s AND created_at = (SELECT MAX(created_at) FROM jobs %s)`,
+		jobCondition, jobCondition)
 
 	item, err := h.selectOneFrom(h.logger, data.JobTable, ErrJobNotFound,
-		tail, data.JobClientAfterChannelCreate, channel.ID)
+		tail, channel.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -310,10 +304,6 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 
 	logger = logger.Add("job", job2, "offering",
 		offering, "channel", channel)
-
-	if job2.Status != data.JobDone {
-		return nil, ErrJobNotDone
-	}
 
 	sess, err := h.findAllFrom(logger, data.SessionTable,
 		"channel", channel.ID)
@@ -342,6 +332,7 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 	result.Client = client.String()
 
 	result.Offering = channel.Offering
+	result.OfferingHash = offering.Hash
 	result.Deposit = channel.TotalDeposit
 	result.ChStat = createChanStatusBlock(channel, offering)
 	result.Job = createJobBlock(job2)

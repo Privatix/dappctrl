@@ -183,7 +183,7 @@ func (s *Server) setOfferingHash(offering *data.Offering,
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(packed))
 
-	offering.Hash = data.FromBytes(hashBytes.Bytes())
+	offering.Hash = data.HexFromBytes(hashBytes.Bytes())
 
 	return nil
 }

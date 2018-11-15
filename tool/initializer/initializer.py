@@ -24,28 +24,28 @@
 """
 
 import sys
-import random
-import string
 import logging
-import socket
-from signal import SIGINT, signal, pause
-from contextlib import closing
-from re import search, sub, findall, compile, match, IGNORECASE
 from codecs import open
-from threading import Thread
-from shutil import copyfile, rmtree
-from json import load, dump, loads, dumps
-from time import time, sleep
+from shutil import copyfile
 from urllib import URLopener
-from urllib2 import urlopen,Request
-from os.path import isfile, isdir, exists
+from time import time, sleep
+from threading import Thread
+from contextlib import closing
+from urllib2 import urlopen, Request
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
 from platform import linux_distribution
+from random import randint, SystemRandom
+from signal import SIGINT, signal, pause
+from os.path import isfile, isdir, exists
+from json import load, dump, loads, dumps
+from stat import S_IXUSR, S_IXGRP, S_IXOTH
 from subprocess import Popen, PIPE, STDOUT
 from distutils.version import StrictVersion
-from stat import S_IEXEC, S_IXUSR, S_IXGRP, S_IXOTH
-from os import remove, mkdir, path, environ, stat, chmod, listdir, getcwd
+from socket import socket, AF_INET, SOCK_STREAM
+from string import ascii_uppercase, ascii_lowercase, digits
+from re import search, sub, findall, compile, match, IGNORECASE
+from os import remove, mkdir, path, environ, stat, chmod, listdir
 
 """
 Exit code:
@@ -193,8 +193,12 @@ main_conf = dict(
     ),
 
     build={
-        'cmd': '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={1} -connstr=\"{3}\" -template={4} -agent=true\n'
-               '/opt/privatix/initializer/dappinst -dappvpnconftpl=\'{0}\' -dappvpnconf={2} -connstr=\"{3}\" -template={4} -agent=false',
+
+        'cmd': '/opt/privatix/initializer/installer -rootdir=\"{0}\" -connstr=\"{1}\" -setauth\n'
+               'ls {0} | grep .config.json | wc -l\n'
+               'sudo cp {0}/{2} {3}\n'
+               'sudo cp {0}/{4} {5}\n',
+
         'cmd_path': '.dapp_cmd',
 
         'db_conf': {
@@ -471,7 +475,6 @@ class CommonCMD(Init):
 
     def _reletive_path(self, name):
         dirname = path.dirname(path.abspath(__file__))
-        # dirname = getcwd()
         logging.debug('Reletive path: {}'.format(dirname))
         return path.join(dirname, name)
 
@@ -718,10 +721,9 @@ class CommonCMD(Init):
         else:
             logging.debug('dnsmasq conf not exist')
 
-    def _ping_port(self, port,  host='0.0.0.0',verb=False):
+    def _ping_port(self, port,  host='0.0.0.0', verb=False):
 
-        with closing(
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        with closing(socket(AF_INET, SOCK_STREAM)) as sock:
             if sock.connect_ex((host, int(port))) == 0:
                 if verb:
                     logging.info("Port {} is open".format(port))
@@ -912,38 +914,44 @@ class CommonCMD(Init):
         if db_conf:
             self.db_conf.update(db_conf['Conn'])
 
-        # Get dappctrl_id from prod_data.sql
-        if not self.dappctrl_id:
-            raw_id = self._get_url(link=self.dupp_raw_id,
-                                   to_json=False).split('\n')
-
-            for i in raw_id:
-                if self.field_name_id in i:
-                    self.dappctrl_id = i.split(self.field_name_id)[1]
-                    logging.debug('dapp_id: {}'.format(self.dappctrl_id))
-                    break
-            else:
-                logging.error(
-                    'dappctrl_id not exist: {}'.format(self.dappctrl_id))
-                sys.exit(20)
+        # # Get dappctrl_id from prod_data.sql
+        # if not self.dappctrl_id:
+        #     raw_id = self._get_url(link=self.dupp_raw_id,
+        #                            to_json=False).split('\n')
+        #
+        #     for i in raw_id:
+        #         if self.field_name_id in i:
+        #             self.dappctrl_id = i.split(self.field_name_id)[1]
+        #             logging.debug('dapp_id: {}'.format(self.dappctrl_id))
+        #             break
+        #     else:
+        #         logging.error(
+        #             'dappctrl_id not exist: {}'.format(self.dappctrl_id))
+        #         sys.exit(20)
 
         # Get dappvpn.config.json
-        templ = self._get_url(link=self.dupp_vpn_templ,
-                              to_json=False).replace(
-            '\n', '')
+        # templ = self._get_url(link=self.dupp_vpn_templ,
+        #                       to_json=False).replace(
+        #     '\n', '')
 
         self.db_conf = (sub("'|{|}", "", str(self.db_conf))).replace(
             ': ', '=').replace(',', '')
         p_vpn = self.p_contr + self.path_vpn + self.p_dapvpn_conf
         p_com = self.p_contr + self.path_com + self.p_dapvpn_conf
-        logging.debug(
-            'Path dappvpn.config.json: \n\t{}\n\t{}'.format(p_com, p_vpn))
-        self.build_cmd = self.build_cmd.format(templ,
-                                               p_vpn,
-                                               p_com,
-                                               self.db_conf,
-                                               self.dappctrl_id
-                                               )
+        root_dir = '/opt/privatix/initializer/files/example'
+        conf_agent = 'dappvpn.agent.config.json'    # vpn config
+        conf_client = 'dappvpn.client.config.json'  # common config
+
+        logging.debug('Path configs: \n\t{}\n\t{}'.format(p_com, p_vpn))
+
+        self.build_cmd = self.build_cmd.format(
+            root_dir,
+            self.db_conf,
+            conf_agent,
+            p_vpn,
+            conf_client,
+            p_com
+        )
 
         logging.debug('Build cmd: {}'.format(self.build_cmd))
         self.file_rw(
@@ -961,7 +969,6 @@ class CommonCMD(Init):
             json_conf['DB'] = db_conn
             return json_conf
         return False
-
 
     def conf_dappctrl_json(self, old_vers=False):
         """Check ip addr, free ports and replace it in
@@ -1255,11 +1262,11 @@ class Params(DB):
 
             if hasattr(self, 'sessServPort'):
                 delim = ':'
-                raw_tmp = raw_data['Server']['Addr'].split(delim)
+                raw_tmp = raw_data['Connector']['Addr'].split(delim)
                 raw_tmp[-1] = str(self.sessServPort)
-                raw_data['Server']['Addr'] = delim.join(raw_tmp)
+                raw_data['Connector']['Addr'] = delim.join(raw_tmp)
                 logging.debug(
-                    'Server Addr: {}.'.format(raw_data['Server']['Addr']))
+                    'Connector Addr: {}.'.format(raw_data['Connector']['Addr']))
 
             self.file_rw(p=p,
                          log='Rewrite {} conf'.format(servs),
@@ -1279,8 +1286,17 @@ class Params(DB):
 
         if cmds:
             for cmd in cmds:
-                self._sys_call(cmd=cmd)
-                sleep(1)
+                res = self._sys_call(cmd=cmd)
+                if cmd.startswith('ls '):
+                    # must be two configs files
+                    logging.debug('Check quantity configs: {}'.format(res))
+                    if not int(res) == 2:
+                        logging.error('After generation, '
+                                      'the necessary configuration files '
+                                      'are missing.')
+                        self._rolback(10)
+
+                sleep(0.2)
         else:
             logging.error('Have not {} file for further execution. '
                           'It is necessary to run the initializer '
@@ -1797,7 +1813,7 @@ class LXC(DB):
     def conf_dappvpn_json(self):
         """Check addr in vpn dappvpn.config.json"""
         logging.debug('Check addr in vpn dappvpn.config.json')
-        search_keys = ['Monitor', 'Server']
+        search_keys = ['Monitor', 'Connector']
         delim = ":"
         for cont_path in (self.path_com, self.path_vpn):
 
@@ -1808,13 +1824,13 @@ class LXC(DB):
             if not data:
                 self._rolback(22)
 
-            serv_addr = data.get('Server').get('Addr')
+            serv_addr = data.get('Connector').get('Addr')
             if serv_addr:
                 raw = serv_addr.split(delim)
                 raw[0] = self.p_unpck['common'][1]
-                data['Server']['Addr'] = delim.join(raw)
+                data['Connector']['Addr'] = delim.join(raw)
             else:
-                logging.error('Field Server not exist')
+                logging.error('Field Connector not exist')
 
             monit_addr = data.get('Monitor').get('Addr')
             if monit_addr:
@@ -1833,7 +1849,7 @@ class LXC(DB):
         # If not, increment 4-th octet and check again
         def increment_octet(octet, all_ip):
             if octet in all_ip:
-                octet = random.randint(5, 254)
+                octet = randint(5, 254)
                 increment_octet(octet, all_ip)
             return octet
 
@@ -1904,9 +1920,9 @@ class LXC(DB):
 
     def __change_mac(self, macs):
         mac = "00:16:3e:%02x:%02x:%02x" % (
-            random.randint(0, 255),
-            random.randint(0, 255),
-            random.randint(0, 255)
+            randint(0, 255),
+            randint(0, 255),
+            randint(0, 255)
         )
 
         if mac in macs:
@@ -2315,13 +2331,11 @@ class AutoOffer:
         self.vpnConf = '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json'
 
     def __random_pswd(self):
-        return ''.join(random.SystemRandom().choice(
-            string.ascii_uppercase +
-            string.ascii_lowercase +
-            string.digits
-        ) for _ in range(self.pswdSymbol))
+        return ''.join(SystemRandom().choice(
+            ascii_uppercase + ascii_lowercase + digits
+                                ) for _ in range(self.pswdSymbol))
 
-    def _getAgentOffer(self,mark):
+    def _getAgentOffer(self, mark):
         logging.info('Get Offerings. Mark: {}'.format(mark))
         # Get Offerings For Agent
         data = {
@@ -2337,7 +2351,7 @@ class AutoOffer:
         timeWait = 25*60
         timeStar = time()
         while time() - timeStar < timeWait:
-            res = self.__urlOpen(data=data,key='result')
+            res = self.__urlOpen(data=data, key='result')
             if res[0]:
                 status = res[1][0].get('status')
                 offerStatus = res[1][0].get('offerStatus')
@@ -2358,7 +2372,7 @@ class AutoOffer:
                 f = open(self.vpnConf)
                 raw_data = loads(f.read())
                 logging.debug('Read vpn conf: {}'.format(raw_data))
-                self.product_id = raw_data['Server']['Username']
+                self.product_id = raw_data['Connector']['Username']
                 logging.debug( 'Product id: {}'.format(self.product_id))
                 return True, 'Product id was found'
 
@@ -2739,9 +2753,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             self.sysctl = self._sysctl() if not self.old_vers else True
 
-        def init_os(self):
+        def init_os(self, update=False):
 
-            if self._finalizer():
+            if self._finalizer(pass_check=update):
                 if not isfile(self._reletive_path(self.build_cmd_path)):
                     logging.info(
                         'There is no .dapp_cmd file for further work.\n'
@@ -2771,13 +2785,13 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             logging.info('Full mode.')
                             self._run_dapp_cmd()
                             self._check_dapp_conf()
-
+                        self.run_service(comm=True, restart=True)
                         self.run_service()
                         if not self.in_args['no_gui']:
                             self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
-                            if pass_check:
+                            if update:
                                 self.update_gui()
                             else:
                                 self.install_gui()
@@ -2824,7 +2838,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             self.target = 'both'
                             logging.info('GUI mode.')
                             check.target = 'both'
-                            if pass_check:
+                            if update:
                                 self.update_gui()
                             else:
                                 self.install_gui()
@@ -3073,7 +3087,6 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         logging.error(res[1])
                         exit(33)
 
-
                 self.target = 'back'
                 self.check_sudo()
                 self.dappctrl_role = 'agent'
@@ -3112,12 +3125,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.check_role()
                 self.target = 'back'
                 if self.clear_contr():
-                    self.del_pid()
-                    self.use_ports = dict(vpn=[], common=[],
-                                           mangmt=dict(vpn=None,
-                                                       common=None))
+                    self.use_ports = dict(vpn=[],
+                                          common=[],
+                                          mangmt=dict(
+                                              vpn=None,
+                                              common=None)
+                                          )
                     self.in_args['no_gui'] = True
-                    self.init_os()
+                    self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
 
@@ -3135,11 +3150,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.check_sudo()
                 self.check_role()
                 if self.clear_contr():
-                    self.del_pid()
                     self.use_ports = dict(vpn=[], common=[],
                                            mangmt=dict(vpn=None,
                                                        common=None))
-                    self.init_os()
+                    self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
 
@@ -3151,8 +3165,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.init_os()
                 logging.info('All done.')
 
-    return Checker(old_vers,ver,dist_name)
-
+    return Checker(old_vers, ver, dist_name)
 
 
 if __name__ == '__main__':

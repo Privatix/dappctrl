@@ -361,7 +361,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 
 	rawMsgBytes := data.TestToBytes(t, endpoint.RawMsg)
 	expectedHash := ethcrypto.Keccak256(rawMsgBytes)
-	if data.FromBytes(expectedHash) != endpoint.Hash {
+	if data.HexFromBytes(expectedHash) != endpoint.Hash {
 		t.Fatal("wrong hash stored")
 	}
 
@@ -588,7 +588,18 @@ func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
 		if ret.Data != offering.RawMsg {
 			t.Fatal("wrong offering published")
 		}
-		if ret.Hash != offering.Hash {
+
+		inHash, err := data.ToBytes(ret.Hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		hash, err := data.HexToBytes(offering.Hash)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(inHash, hash) {
 			t.Fatal("wrong hash stored")
 		}
 	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):

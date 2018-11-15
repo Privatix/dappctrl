@@ -13,6 +13,7 @@ import (
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/srv"
@@ -130,7 +131,8 @@ func testMain(m *testing.M) int {
 
 	countryConf := newTestCountryConfig(countryField, cs.Server.URL)
 
-	server = NewServer(conf.SessionServer, logger, db, countryConf)
+	server = NewServer(conf.SessionServer,
+		logger, db, countryConf, job.NewDummyQueueMock())
 	defer server.Close()
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {

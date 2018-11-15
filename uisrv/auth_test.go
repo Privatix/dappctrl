@@ -122,7 +122,8 @@ func testPasswordMatchesWithStored(t *testing.T, expected string) {
 	salt := findSetting(t, saltKey)
 	hashed := findSetting(t, passwordKey).Value
 
-	err := data.ValidatePassword(hashed, expected, salt.Value)
+	err := data.ValidatePassword(
+		data.Base64String(hashed), expected, salt.Value)
 	if err != nil {
 		t.Fatal("wrong password stored")
 	}

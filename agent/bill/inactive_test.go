@@ -22,14 +22,12 @@ func genChannelsForInactivity(t *testing.T) *testFixture {
 	offering1 := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
 
-	offering1.MaxInactiveTimeSec =
-		&conf.BillingTest.Offer.MaxInactiveTimeSec
+	offering1.MaxInactiveTimeSec = conf.BillingTest.Offer.MaxInactiveTimeSec
 
 	offering2 := data.NewTestOffering(fixture.agent.EthAddr,
 		fixture.product.ID, fixture.template.ID)
 
-	offering2.MaxInactiveTimeSec =
-		&conf.BillingTest.Offer.MaxInactiveTimeSec
+	offering2.MaxInactiveTimeSec = conf.BillingTest.Offer.MaxInactiveTimeSec
 
 	channel1 := data.NewTestChannel(fixture.agent.EthAddr,
 		fixture.client.EthAddr, offering1.ID, 0,

@@ -77,7 +77,7 @@ func (h *Handler) CreateTemplate(
 	}
 
 	template.ID = util.NewUUID()
-	template.Hash = data.FromBytes(crypto.Keccak256(template.Raw))
+	template.Hash = data.HexFromBytes(crypto.Keccak256(template.Raw))
 
 	err = h.insertObject(template)
 	if err != nil {

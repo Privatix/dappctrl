@@ -66,7 +66,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 	})
 	defer env.deleteFromTestDB(t, approveJob)
 
-	txHash := "d238f7"
+	txHash := data.HexString("d238f7")
 
 	setJobData(t, db, fixture.job, &data.JobData{
 		EthLog: &data.JobEthLog{
@@ -183,7 +183,7 @@ func checkBalances(t *testing.T, env *workerTest, accID string, psc, ptc, eth ui
 			account.PSCBalance)
 	}
 	if strings.TrimSpace(string(account.EthBalance)) !=
-		data.FromBytes(env.ethBack.BalanceEth.Bytes()) {
+		string(data.FromBytes(env.ethBack.BalanceEth.Bytes())) {
 		t.Logf("%v!=%v", string(account.EthBalance),
 			data.FromBytes(env.ethBack.BalanceEth.Bytes()))
 		t.Fatal("wrong eth balance")

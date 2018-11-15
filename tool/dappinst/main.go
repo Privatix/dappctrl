@@ -17,7 +17,7 @@ import (
 
 const (
 	jsonIdent  = "    "
-	appVersion = "0.14.0"
+	appVersion = "0.15.0"
 )
 
 func main() {

@@ -13,7 +13,7 @@ import (
 )
 
 type testOfferingData struct {
-	agent              string
+	agent              data.HexString
 	offerStatus        string
 	status             string
 	country            string
@@ -33,7 +33,7 @@ type testGetAgentOfferingsArgs struct {
 
 type testGetClientOfferingsArgs struct {
 	exp          int
-	agent        string
+	agent        data.HexString
 	minUnitPrice uint64
 	maxUnitPrice uint64
 	country      []string
@@ -45,6 +45,15 @@ type testGetClientOfferingsArgs struct {
 type testField struct {
 	field string
 	value interface{}
+}
+
+type offeringsFilterParamsData struct {
+	country     string
+	offerStatus string
+	status      string
+	setupPrice  uint64
+	unitPrice   uint64
+	minUnits    uint64
 }
 
 func TestAcceptOffering(t *testing.T) {
@@ -66,23 +75,24 @@ func TestAcceptOffering(t *testing.T) {
 
 	minDeposit := data.MinDeposit(fxt.Offering)
 
-	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.ID,
+	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, util.NewUUID(),
-		fxt.Offering.ID, minDeposit, 12345)
+	_, err = handler.AcceptOffering(data.TestPassword,
+		data.HexString(util.NewUUID()), fxt.Offering.ID,
+		minDeposit, 12345)
 	assertErrEqual(ui.ErrAccountNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		util.NewUUID(), minDeposit, 12345)
 	assertErrEqual(ui.ErrOfferingNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit-1, 12345)
 	assertErrEqual(ui.ErrDepositTooSmall, err)
 
-	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.ID,
+	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(nil, err)
 
@@ -93,9 +103,9 @@ func TestAcceptOffering(t *testing.T) {
 	}
 }
 
-func createTestOffering(fxt *fixture, agent, offerStatus, status,
-	country string, isLocal bool, blockNumberUpdated uint64,
-	currentSupply uint16) *data.Offering {
+func createTestOffering(fxt *fixture, agent data.HexString,
+	offerStatus, status, country string, isLocal bool,
+	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
 	offering := data.NewTestOffering(
 		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
 	if offerStatus != "" {
@@ -122,7 +132,7 @@ func createTestOffering(fxt *fixture, agent, offerStatus, status,
 }
 
 func testGetClientOfferings(t *testing.T,
-	fxt *fixture, assertErrEqual func(error, error), agent string) {
+	fxt *fixture, assertErrEqual func(error, error), agent data.HexString) {
 
 	assertResult := func(res *ui.GetClientOfferingsResult,
 		err error, exp, total int) {
@@ -167,7 +177,7 @@ func testGetClientOfferings(t *testing.T,
 		{1, "", 0, 0, []string{"US"}, 0, 0, 1},
 		{1, "", 0, 0, []string{"SU"}, 0, 0, 1},
 		{2, "", 0, 0, []string{"SU", "US"}, 0, 0, 2},
-		{0, other, 0, 0, nil, 0, 0, 0},
+		{0, data.HexString(other), 0, 0, nil, 0, 0, 0},
 		{1, agent, 0, 0, nil, 0, 0, 1},
 	}
 
@@ -385,15 +395,15 @@ func TestCreateOffering(t *testing.T) {
 
 	invalidOfferings := invalidOfferingsArray(t, fxt)
 
-	for _, v := range invalidOfferings {
+	for i, v := range invalidOfferings {
 		_, err := handler.CreateOffering(data.TestPassword, v)
 		if err == nil {
-			t.Fatal("offering should not be saved")
+			t.Fatalf("offering %d should not be saved", i)
 		}
 	}
 
-	offering := data.NewTestOffering(
-		fxt.Account.ID, fxt.Product.ID, fxt.TemplateOffer.ID)
+	offering := data.NewTestOffering(data.HexString(fxt.Account.ID),
+		fxt.Product.ID, fxt.TemplateOffer.ID)
 
 	_, err := handler.CreateOffering("wrong-password", offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
@@ -415,8 +425,8 @@ func TestUpdateOffering(t *testing.T) {
 	err := handler.UpdateOffering("wrong-password", fxt.Offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	newOffering := data.NewTestOffering(
-		fxt.Account.ID, fxt.Product.ID, fxt.TemplateOffer.ID)
+	newOffering := data.NewTestOffering(data.HexString(fxt.Account.ID),
+		fxt.Product.ID, fxt.TemplateOffer.ID)
 
 	err = handler.UpdateOffering(data.TestPassword, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)
@@ -463,5 +473,72 @@ func TestChangeOfferingStatus(t *testing.T) {
 			j.RelatedID != fxt.Offering.ID {
 			t.Fatal("expected job not created")
 		}
+	}
+}
+
+func TestGetClientOfferingsFilterParams(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "GetClientOfferingsFilterParams")
+	defer fxt.close()
+
+	agent := data.NewTestAccount(data.TestPassword)
+
+	c1 := "AB"
+	c2 := "CD"
+
+	testData := []*offeringsFilterParamsData{
+		{c1, data.OfferRegistered, data.MsgChPublished, 1, 1, 1},
+		{c1, data.OfferRegistered, data.MsgChPublished, 2, 2, 2},
+		{c2, data.OfferRegistered, data.MsgChPublished, 10, 10, 10},
+		// Ignored offerings.
+		{"YY", data.OfferEmpty, data.MsgChPublished, 20, 20, 20},
+		{"", data.OfferRegistered, data.MsgChPublished, 20, 20, 20},
+	}
+
+	var offerings []*data.Offering
+
+	for _, v := range testData {
+		offering := data.NewTestOffering(data.HexString(agent.ID),
+			fxt.Product.ID, fxt.TemplateOffer.ID)
+		offering.Country = v.country
+		offering.OfferStatus = v.offerStatus
+		offering.Status = v.status
+		offering.SetupPrice = v.setupPrice
+		offering.UnitPrice = v.unitPrice
+		offering.MinUnits = v.minUnits
+		offerings = append(offerings, offering)
+	}
+
+	min := offerings[0].UnitPrice
+	max := offerings[2].UnitPrice
+
+	for _, v := range offerings {
+		data.InsertToTestDB(t, db, v)
+		defer data.DeleteFromTestDB(t, db, v)
+	}
+
+	_, err := handler.GetClientOfferingsFilterParams("wrong-password")
+	assertMatchErr(ui.ErrAccessDenied, err)
+
+	res, err := handler.GetClientOfferingsFilterParams(data.TestPassword)
+	assertMatchErr(nil, err)
+
+	if len(res.Countries) != 2 {
+		t.Fatalf("wanted: %v, got: %v", 2, res.Countries)
+	}
+
+	if res.Countries[0] != c1 {
+		t.Fatalf("wanted: %v, got: %v", c1, res.Countries[0])
+	}
+
+	if res.Countries[1] != c2 {
+		t.Fatalf("wanted: %v, got: %v", c2, res.Countries[1])
+	}
+
+	if res.MinPrice != min {
+		t.Fatalf("wanted: %v, got: %v", min, res.MinPrice)
+	}
+
+	if res.MaxPrice != max {
+		t.Fatalf("wanted: %v, got: %v", max, res.MaxPrice)
 	}
 }

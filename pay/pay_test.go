@@ -150,6 +150,9 @@ func TestInvalidPayments(t *testing.T) {
 	lessBalance := newTestPayload(
 		t, 9, validCh, fxt.Offering, fxt.UserAcc)
 
+	equalBalance := newTestPayload(
+		t, 10, validCh, fxt.Offering, fxt.UserAcc)
+
 	overcharging := newTestPayload(
 		t, 100+1, validCh, fxt.Offering, fxt.UserAcc)
 
@@ -164,6 +167,8 @@ func TestInvalidPayments(t *testing.T) {
 		closedState,
 		// balance is less then last given
 		lessBalance,
+		// balance is equal last given
+		equalBalance,
 		// balance is greater then total_deposit
 		overcharging,
 		// signature doesn't correspond to channels user
@@ -206,7 +211,6 @@ func TestServiceTerminate(t *testing.T) {
 		j.RelatedID != fxt.Channel.ID {
 		t.Fatal("wrong job")
 	}
-
 }
 
 func TestMain(m *testing.M) {

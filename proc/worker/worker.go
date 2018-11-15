@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -15,7 +14,6 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -51,14 +49,13 @@ type Worker struct {
 	db             *reform.DB
 	decryptKeyFunc data.ToPrivateKeyFunc
 	ept            *ept.Service
-	ethBack        adapter.EthBackend
+	ethBack        eth.Backend
 	gasConf        *GasConf
 	pscAddr        common.Address
 	pwdGetter      data.PWDGetter
 	somc           *somc.Conn
 	queue          job.Queue
 	processor      *proc.Processor
-	runner         svcrun.ServiceRunner
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
 	pscPeriods     *eth.PSCPeriods
@@ -66,10 +63,10 @@ type Worker struct {
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack adapter.EthBackend, gasConc *GasConf, pscAddr common.Address,
-	payAddr string, pwdGetter data.PWDGetter,
-	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
-	eptConf *ept.Config, pscPeriods *eth.PSCPeriods) (*Worker, error) {
+	ethBack eth.Backend, gasConc *GasConf, payAddr string,
+	pwdGetter data.PWDGetter, countryConf *country.Config,
+	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
+	pscPeriods *eth.PSCPeriods) (*Worker, error) {
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -89,7 +86,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		gasConf:        gasConc,
 		ept:            eptService,
 		ethBack:        ethBack,
-		pscAddr:        pscAddr,
+		pscAddr:        ethBack.PSCAddress(),
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
@@ -105,9 +102,4 @@ func (w *Worker) SetQueue(queue job.Queue) {
 // SetProcessor sets a processor.
 func (w *Worker) SetProcessor(processor *proc.Processor) {
 	w.processor = processor
-}
-
-// SetRunner sets a service runner.
-func (w *Worker) SetRunner(runner svcrun.ServiceRunner) {
-	w.runner = runner
 }

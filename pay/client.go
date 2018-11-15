@@ -15,8 +15,8 @@ import (
 	"github.com/privatix/dappctrl/util/srv"
 )
 
-func newPayload(db *reform.DB, channel,
-	pscAddr, pass string, amount uint64) (*paymentPayload, error) {
+func newPayload(db *reform.DB, channel string, pscAddr data.HexString,
+	pass string, amount uint64) (*paymentPayload, error) {
 	var ch data.Channel
 	if err := db.FindByPrimaryKeyTo(&ch, channel); err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func newPayload(db *reform.DB, channel,
 		return nil, err
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		return nil, err
 	}
@@ -108,15 +108,16 @@ func postPayload(db *reform.DB, channel string, pld *paymentPayload,
 				return err
 			}
 		}
-		return fmt.Errorf("%s (%d)", resp.Error.Message, resp.Error.Code)
+		return resp.Error
 	}
 
 	return nil
 }
 
 // PostCheque sends a payment cheque to a payment server.
-func PostCheque(db *reform.DB, channel, pscAddr, pass string,
-	amount uint64, tls bool, timeout uint, pr *proc.Processor) error {
+func PostCheque(db *reform.DB, channel string,
+	pscAddr data.HexString, pass string, amount uint64,
+	tls bool, timeout uint, pr *proc.Processor) error {
 	pld, err := newPayload(db, channel, pscAddr, pass, amount)
 	if err != nil {
 		return err

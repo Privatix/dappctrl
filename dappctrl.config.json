@@ -38,6 +38,7 @@
         "Timeout": 1
     },
     "Eth": {
+        "CheckTimeout": 20,
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "PSCAddrHex": "0x182e0724f997ca79f9eb7318fce1752f8d88c736",
@@ -49,7 +50,7 @@
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
         "Timeout": 120,
-        "HttpClient": {
+        "HTTPClient": {
             "DialTimeout": 10,
             "TLSHandshakeTimeout": 5,
             "ResponseHeaderTimeout": 60,

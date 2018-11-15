@@ -13,6 +13,7 @@ import (
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/srv"
 )
 
 // Config is a billing monitor configuration.
@@ -31,8 +32,9 @@ func NewConfig() *Config {
 	}
 }
 
-type postChequeFunc func(db *reform.DB, channel, pscAddr, pass string,
-	amount uint64, tls bool, timeout uint, pr *proc.Processor) error
+type postChequeFunc func(db *reform.DB, channel string,
+	pscAddr data.HexString, pass string, amount uint64,
+	tls bool, timeout uint, pr *proc.Processor) error
 
 // Monitor is a client billing monitor.
 type Monitor struct {
@@ -214,9 +216,6 @@ func (m *Monitor) isToBeTerminated(
 
 func (m *Monitor) maxInactiveTimeReached(
 	ch *data.Channel, offer *data.Offering) (bool, error) {
-	if offer.MaxInactiveTimeSec == nil {
-		return false, nil
-	}
 	query := fmt.Sprintf("SELECT COUNT(*), MAX(last_usage_time) FROM sessions WHERE sessions.channel = %s", m.db.Placeholder(1))
 	var qty uint
 	var lastUsageNullable pq.NullTime
@@ -229,11 +228,13 @@ func (m *Monitor) maxInactiveTimeReached(
 		lastUsage = ch.PreparedAt
 	}
 	inactiveSeconds := uint64(time.Since(lastUsage).Seconds())
-	return qty > 0 && inactiveSeconds > *offer.MaxInactiveTimeSec, nil
+	return qty > 0 && inactiveSeconds > offer.MaxInactiveTimeSec, nil
 }
 
 func (m *Monitor) postCheque(ch string, amount uint64) {
-	m.logger.Add("amount", amount).Info("posting cheque")
+	logger := m.logger.Add("method", "posting cheque", "channel", ch,
+		"amount", amount)
+
 	handleErr := func(err error) {
 		select {
 		case m.postChequeErrors <- err:
@@ -245,8 +246,17 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 	err := m.post(m.db, ch, pscHex, m.pw.Get(), amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout, m.pr)
 	if err != nil {
-		m.logger.Add("channel", ch, "amount",
-			amount).Error(err.Error())
+		if err2, ok := err.(*srv.Error); ok {
+			msg := fmt.Sprintf("%s (%d)", err2.Message, err2.Code)
+			if err2.Code == pay.ErrCodeEqualBalance {
+				logger.Debug(msg)
+			} else {
+				logger.Error(msg)
+				go handleErr(err)
+			}
+			return
+		}
+		logger.Error(err.Error())
 		go handleErr(err)
 		return
 	}
@@ -256,8 +266,7 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 		   SET receipt_balance = $1
 		 WHERE id = $2 AND receipt_balance < $1`, amount, ch)
 	if err != nil {
-		m.logger.Add("channel", ch, "amount",
-			amount).Error(ErrUpdateReceiptBalance.Error())
+		logger.Error(err.Error())
 		go handleErr(err)
 		return
 	}
@@ -265,11 +274,9 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 	n, err := res.RowsAffected()
 	if err != nil {
 		if n != 0 {
-			m.logger.Add("channel", ch, "amount",
-				amount).Info("updated receipt balance")
+			logger.Info("updated receipt balance")
 		} else {
-			m.logger.Add("channel", ch).Warn(
-				"receipt balance isn't updated")
+			logger.Warn("receipt balance isn't updated")
 		}
 	}
 	go handleErr(err)

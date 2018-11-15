@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/srv"
 )
@@ -20,7 +22,7 @@ type StartArgs struct {
 
 // StartResult is a result of session starting.
 type StartResult struct {
-	Offering *data.Offering
+	Offering *data.Offering `json:"offering"`
 }
 
 func (s *Server) handleStart(
@@ -62,15 +64,32 @@ func (s *Server) handleStart(
 		port = pointer.ToUint16(args.ClientPort)
 	}
 
-	sess := data.Session{
-		ID:            util.NewUUID(),
-		Channel:       ch.ID,
-		Started:       now,
-		LastUsageTime: now,
-		ClientIP:      ip,
-		ClientPort:    port,
-	}
-	if err := s.db.Insert(&sess); err != nil {
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		sess := data.Session{
+			ID:            util.NewUUID(),
+			Channel:       ch.ID,
+			Started:       now,
+			LastUsageTime: now,
+			ClientIP:      ip,
+			ClientPort:    port,
+		}
+		if err := tx.Insert(&sess); err != nil {
+			return err
+		}
+
+		if ch.ServiceStatus == data.ServiceActivating {
+			err := job.AddWithData(s.queue, tx,
+				data.JobClientCompleteServiceTransition,
+				data.JobChannel, ch.ID, data.JobSessionServer,
+				data.ServiceActive)
+			if err != nil && err != job.ErrDuplicatedJob {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		s.logger.Error(err.Error())
 		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return

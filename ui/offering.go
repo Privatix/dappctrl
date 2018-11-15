@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages"
@@ -30,6 +31,9 @@ var OfferingChangeActions = map[string]string{
 	DeactivateOffering: data.JobAgentPreOfferingDelete,
 }
 
+var offeringCountriesCondition = fmt.Sprintf("%s AND country != ''",
+	activeOfferingCondition)
+
 // GetAgentOfferingsResult is result of GetAgentOfferings method.
 type GetAgentOfferingsResult struct {
 	Items      []data.Offering `json:"items"`
@@ -42,9 +46,17 @@ type GetClientOfferingsResult struct {
 	TotalItems int             `json:"totalItems"`
 }
 
+// GetClientOfferingsFilterParamsResult is result of
+// GetClientOfferingsFilterParams method.
+type GetClientOfferingsFilterParamsResult struct {
+	Countries []string `json:"countries"`
+	MinPrice  uint64   `json:"minPrice"`
+	MaxPrice  uint64   `json:"maxPrice"`
+}
+
 // AcceptOffering initiates JobClientPreChannelCreate job.
-func (h *Handler) AcceptOffering(password, account, offering string,
-	deposit, gasPrice uint64) (*string, error) {
+func (h *Handler) AcceptOffering(password string, account data.HexString,
+	offering string, deposit, gasPrice uint64) (*string, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
 		"account", account, "offering", offering,
 		"deposit", deposit, "gasPrice", gasPrice)
@@ -54,8 +66,8 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 	}
 
 	var acc data.Account
-	if err := h.findByPrimaryKey(
-		logger, ErrAccountNotFound, &acc, account); err != nil {
+	if err := h.findByColumn(logger, ErrAccountNotFound,
+		&acc, "eth_addr", account); err != nil {
 		return nil, err
 	}
 
@@ -74,7 +86,7 @@ func (h *Handler) AcceptOffering(password, account, offering string,
 	}
 
 	rid := util.NewUUID()
-	jobData := &worker.ClientPreChannelCreateData{Account: account,
+	jobData := &worker.ClientPreChannelCreateData{Account: acc.ID,
 		Offering: offering, GasPrice: gasPrice, Deposit: deposit}
 	if err := job.AddWithData(h.queue, nil, data.JobClientPreChannelCreate,
 		data.JobChannel, rid, data.JobUser, jobData); err != nil {
@@ -120,7 +132,7 @@ func (h *Handler) ChangeOfferingStatus(
 }
 
 func (h *Handler) getClientOfferingsConditions(
-	agent string, minUnitPrice, maxUnitPrice uint64,
+	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
 	country []string) (conditions string, arguments []interface{}) {
 
 	count := 1
@@ -182,8 +194,8 @@ func (h *Handler) getClientOfferingsConditions(
 }
 
 // GetClientOfferings returns active offerings available for a client.
-func (h *Handler) GetClientOfferings(password, agent string, minUnitPrice,
-	maxUnitPrice uint64, countries []string,
+func (h *Handler) GetClientOfferings(password string, agent data.HexString,
+	minUnitPrice, maxUnitPrice uint64, countries []string,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
@@ -332,7 +344,7 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(packed))
 
-	offering.Hash = data.FromBytes(hashBytes.Bytes())
+	offering.Hash = data.HexFromBytes(hashBytes.Bytes())
 
 	return nil
 }
@@ -341,8 +353,10 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 func (h *Handler) fillOffering(
 	logger log.Logger, offering *data.Offering) error {
 	agent := &data.Account{}
+	// TODO: This is definitely wrong, should be:
+	// `h.findByColumn(..., "eth_addr", offering.Agent)`
 	if err := h.findByPrimaryKey(logger,
-		ErrAccountNotFound, agent, offering.Agent); err != nil {
+		ErrAccountNotFound, agent, string(offering.Agent)); err != nil {
 		return err
 	}
 
@@ -427,4 +441,75 @@ func (h *Handler) CreateOffering(password string,
 	}
 
 	return &offering.ID, nil
+}
+
+func (h *Handler) offeringCountries(logger log.Logger) ([]string, error) {
+	query := `SELECT country, COUNT(country)
+		    FROM offerings WHERE %s
+		   GROUP BY country
+		   ORDER BY count DESC`
+
+	tail := fmt.Sprintf(query, offeringCountriesCondition)
+
+	rows, err := h.db.Query(tail)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+	defer rows.Close()
+
+	countries := make([]string, 0)
+
+	for rows.Next() {
+		var country string
+		var count int64
+
+		if err := rows.Scan(&country, &count); err != nil {
+			logger.Error(err.Error())
+			return nil, ErrInternal
+		}
+		countries = append(countries, country)
+	}
+
+	if err := rows.Err(); err != nil {
+		logger.Error(err.Error())
+	}
+
+	return countries, nil
+}
+
+func (h *Handler) offeringsMinMaxPrice(
+	logger log.Logger) (min uint64, max uint64, err error) {
+	query := `SELECT COALESCE(MIN(unit_price),0), COALESCE(MAX(unit_price),0)
+		    FROM offerings WHERE %s`
+
+	tail := fmt.Sprintf(query, offeringCountriesCondition)
+
+	if err := h.db.QueryRow(tail).Scan(&min, &max); err != nil {
+		logger.Error(err.Error())
+		return 0, 0, ErrInternal
+	}
+	return min, max, nil
+}
+
+// GetClientOfferingsFilterParams returns offerings filter parameters for client.
+func (h *Handler) GetClientOfferingsFilterParams(
+	password string) (*GetClientOfferingsFilterParamsResult, error) {
+	logger := h.logger.Add("method", "GetClientOfferingsFilterParams")
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	countries, err := h.offeringCountries(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	min, max, err := h.offeringsMinMaxPrice(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetClientOfferingsFilterParamsResult{countries, min, max}, nil
 }

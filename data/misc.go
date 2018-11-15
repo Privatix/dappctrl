@@ -17,7 +17,7 @@ import (
 )
 
 // FromBase64ToHex return hex of base 64 encoded.
-func FromBase64ToHex(s string) (string, error) {
+func FromBase64ToHex(s Base64String) (string, error) {
 	b, err := ToBytes(s)
 	if err != nil {
 		return "", err
@@ -26,27 +26,31 @@ func FromBase64ToHex(s string) (string, error) {
 }
 
 // HexToBytes reutrns the bytes represented by the hex of string s.
-func HexToBytes(s string) ([]byte, error) {
-	return hex.DecodeString(s)
+func HexToBytes(s HexString) ([]byte, error) {
+	s2 := string(s)
+	if strings.HasPrefix(s2, "0x") || strings.HasPrefix(s2, "0X") {
+		s2 = s2[2:]
+	}
+	return hex.DecodeString(s2)
 }
 
 // HexFromBytes returns the hex encoding of src.
-func HexFromBytes(src []byte) string {
-	return hex.EncodeToString(src)
+func HexFromBytes(src []byte) HexString {
+	return HexString(hex.EncodeToString(src))
 }
 
 // ToBytes returns the bytes represented by the base64 string s.
-func ToBytes(s string) ([]byte, error) {
-	return base64.URLEncoding.DecodeString(strings.TrimSpace(s))
+func ToBytes(s Base64String) ([]byte, error) {
+	return base64.URLEncoding.DecodeString(strings.TrimSpace(string(s)))
 }
 
 // FromBytes returns the base64 encoding of src.
-func FromBytes(src []byte) string {
-	return base64.URLEncoding.EncodeToString(src)
+func FromBytes(src []byte) Base64String {
+	return Base64String(base64.URLEncoding.EncodeToString(src))
 }
 
 // ToHash returns the ethereum's hash represented by the base64 string s.
-func ToHash(h string) (common.Hash, error) {
+func ToHash(h Base64String) (common.Hash, error) {
 	hashBytes, err := ToBytes(h)
 	if err != nil {
 		err = fmt.Errorf("unable to parse ethereum hash: %s", err)
@@ -55,7 +59,7 @@ func ToHash(h string) (common.Hash, error) {
 }
 
 // HexToHash returns the ethereum's hash represented by the hex of string s.
-func HexToHash(h string) (common.Hash, error) {
+func HexToHash(h HexString) (common.Hash, error) {
 	hashBytes, err := HexToBytes(h)
 	if err != nil {
 		err = fmt.Errorf("unable to parse ethereum hash: %s", err)
@@ -64,7 +68,7 @@ func HexToHash(h string) (common.Hash, error) {
 }
 
 // HexToAddress returns ethereum's address from base 64 encoded string.
-func HexToAddress(addr string) (common.Address, error) {
+func HexToAddress(addr HexString) (common.Address, error) {
 	addrBytes, err := HexToBytes(addr)
 	if err != nil {
 		err = fmt.Errorf("unable to parse ethereum addr: %s", err)
@@ -98,7 +102,7 @@ func Uint192ToBytes(x *big.Int) [24]byte {
 }
 
 // HashPassword computes encoded hash of the password.
-func HashPassword(password, salt string) (string, error) {
+func HashPassword(password, salt string) (Base64String, error) {
 	salted := []byte(password + salt)
 	passwordHash, err := bcrypt.GenerateFromPassword(salted, bcrypt.DefaultCost)
 	if err != nil {
@@ -108,7 +112,7 @@ func HashPassword(password, salt string) (string, error) {
 }
 
 // ValidatePassword checks if a given password, hash and salt are matching.
-func ValidatePassword(hash, password, salt string) error {
+func ValidatePassword(hash Base64String, password, salt string) error {
 	salted := []byte(fmt.Sprint(password, salt))
 	hashB, err := ToBytes(hash)
 	if err != nil {
@@ -179,8 +183,8 @@ func FindOneTo(db *reform.Querier,
 
 // ChannelKey returns the unique channel identifier
 // used in a Privatix Service Contract.
-func ChannelKey(client, agent string, block uint32,
-	offeringHash string) ([]byte, error) {
+func ChannelKey(client, agent HexString, block uint32,
+	offeringHash HexString) ([]byte, error) {
 	clientAddr, err := HexToAddress(client)
 	if err != nil {
 		return nil, err
@@ -192,7 +196,7 @@ func ChannelKey(client, agent string, block uint32,
 	}
 
 	hash, err := base64.URLEncoding.DecodeString(
-		strings.TrimSpace(offeringHash))
+		strings.TrimSpace(string(offeringHash)))
 	if err != nil {
 		return nil, err
 	}

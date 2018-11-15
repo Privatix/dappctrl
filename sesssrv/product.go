@@ -1,6 +1,7 @@
 package sesssrv
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -112,4 +113,48 @@ func serviceEndpointAddress(config map[string]string,
 	}
 
 	return product.ServiceEndpointAddress
+}
+
+// Heartbeat commands.
+const (
+	HeartbeatStart = "start"
+	HeartbeatStop  = "stop"
+)
+
+// HeartbeatResult is a result of heartbeat request.
+type HeartbeatResult struct {
+	Channel string `json:"channel,omitempty"`
+	Command string `json:"command,omitempty"`
+}
+
+func (s *Server) handleProductHeartbeat(
+	w http.ResponseWriter, r *http.Request, ctx *srv.Context) {
+	logger := s.logger.Add(
+		"method", "handleHeartbeat", "sender", r.RemoteAddr)
+
+	logger.Debug("adapter heartbeat")
+
+	var ch data.Channel
+	err := s.db.SelectOneTo(&ch, `
+		 JOIN offerings ON offering = offerings.id
+		WHERE product = $1 AND service_status IN
+		        ('activating', 'suspending', 'terminating')
+		ORDER BY service_changed_time DESC`, ctx.Username)
+	if err != nil && err != sql.ErrNoRows {
+		logger.Error(err.Error())
+		s.RespondError(logger, w, srv.ErrInternalServerError)
+		return
+	}
+
+	var result HeartbeatResult
+	if err == nil {
+		result.Channel = ch.ID
+		if ch.ServiceStatus == data.ServiceActivating {
+			result.Command = HeartbeatStart
+		} else {
+			result.Command = HeartbeatStop
+		}
+	}
+
+	s.RespondResult(logger, w, result)
 }

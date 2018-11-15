@@ -31,14 +31,14 @@ func createOfferingFixtures(t *testing.T) {
 func validOfferingPayload() data.Offering {
 	return data.Offering{
 		AdditionalParams:   []byte("{}"),
-		Agent:              testAgent.ID,
+		Agent:              data.HexString(testAgent.ID),
 		BillingInterval:    100,
 		BillingType:        data.BillingPrepaid,
 		Country:            "KG",
 		Description:        nil,
 		FreeUnits:          0,
 		MaxBillingUnitLag:  100,
-		MaxInactiveTimeSec: nil,
+		MaxInactiveTimeSec: 1800,
 		MaxSuspendTime:     1000,
 		MaxUnit:            nil,
 		MinUnits:           uint64(50),
@@ -345,9 +345,9 @@ func TestGetClientOffering(t *testing.T) {
 
 	// Filter by agent
 	testGetClientOfferingsOrdered(t,
-		map[string]string{"agent": genEthAddr(t)}, 0)
+		map[string]string{"agent": string(genEthAddr(t))}, 0)
 	testGetClientOfferingsOrdered(t,
-		map[string]string{"agent": off1.Agent}, 1)
+		map[string]string{"agent": string(off1.Agent)}, 1)
 
 	// Get offering by id
 	testGetClientOfferingsOrdered(t,

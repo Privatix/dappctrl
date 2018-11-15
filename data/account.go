@@ -5,15 +5,14 @@ import (
 	"crypto/rand"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // EncryptedKeyFunc is a func that returns encrypted keystore.Key in base64.
-type EncryptedKeyFunc func(*ecdsa.PrivateKey, string) (string, error)
+type EncryptedKeyFunc func(*ecdsa.PrivateKey, string) (Base64String, error)
 
 // EncryptedKey returns encrypted keystore.Key in base64.
-func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
+func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (Base64String, error) {
 	key := keystore.NewKeyForDirectICAP(rand.Reader)
 	key.Address = crypto.PubkeyToAddress(pkey.PublicKey)
 	key.PrivateKey = pkey
@@ -27,10 +26,10 @@ func EncryptedKey(pkey *ecdsa.PrivateKey, auth string) (string, error) {
 }
 
 // ToPrivateKeyFunc is a func that returns decrypted *ecdsa.PrivateKey from base64 of encrypted keystore.Key.
-type ToPrivateKeyFunc func(string, string) (*ecdsa.PrivateKey, error)
+type ToPrivateKeyFunc func(Base64String, string) (*ecdsa.PrivateKey, error)
 
 // ToPrivateKey returns decrypted *ecdsa.PrivateKey from base64 of encrypted keystore.Key.
-func ToPrivateKey(keyB64, auth string) (*ecdsa.PrivateKey, error) {
+func ToPrivateKey(keyB64 Base64String, auth string) (*ecdsa.PrivateKey, error) {
 	keyjson, err := ToBytes(keyB64)
 	if err != nil {
 		return nil, err

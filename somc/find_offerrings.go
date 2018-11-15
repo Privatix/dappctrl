@@ -10,25 +10,34 @@ import (
 const findOfferingsMethod = "getOfferings"
 
 type findOfferingsParams struct {
-	Hashes []string `json:"hashes"`
+	Hashes []data.Base64String `json:"hashes"`
 }
 
 type findOfferingsResult []struct {
-	Hash string `json:"hash"`
-	Data string `json:"data"`
+	Hash data.Base64String `json:"hash"`
+	Data data.Base64String `json:"data"`
 }
 
 // OfferingData is a simple container for offering JSON.
 type OfferingData struct {
-	Hash     string
+	Hash     data.HexString
 	Offering []byte
 }
 
 // FindOfferings requests SOMC to find offerings by their hashes.
-func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
+func (c *Conn) FindOfferings(hashes []data.HexString) ([]OfferingData, error) {
 	logger := c.logger.Add("method", "FindOfferings")
 
-	params := findOfferingsParams{hashes}
+	var hashes2 []data.Base64String
+	for _, hash := range hashes {
+		bytes, err := data.HexToBytes(hash)
+		if err != nil {
+			return nil, err
+		}
+		hashes2 = append(hashes2, data.FromBytes(bytes))
+	}
+
+	params := findOfferingsParams{hashes2}
 
 	bytes, err := json.Marshal(&params)
 	if err != nil {
@@ -60,7 +69,8 @@ func (c *Conn) FindOfferings(hashes []string) ([]OfferingData, error) {
 			return nil, ErrInternal
 		}
 
-		ret = append(ret, OfferingData{hstr, bytes})
+		ret = append(ret, OfferingData{
+			data.HexFromBytes(hash.Bytes()), bytes})
 	}
 
 	return ret, nil

@@ -1,4 +1,4 @@
-package adapter
+package eth
 
 import (
 	"context"
@@ -10,17 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/privatix/dappctrl/eth/contract"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const (
 	second = time.Second
 )
 
-// EthBackend adapter to communicate with contract.
-type EthBackend interface {
+// Backend adapter to communicate with contract.
+type Backend interface {
 	LatestBlockNumber(ctx context.Context) (*big.Int, error)
 
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
@@ -79,44 +79,131 @@ type EthBackend interface {
 
 	PSCPopupServiceOffering(opts *bind.TransactOpts,
 		offeringHash [32]byte) (*types.Transaction, error)
+
+	FilterLogs(ctx context.Context,
+		q ethereum.FilterQuery) ([]types.Log, error)
+
+	HeaderByNumber(ctx context.Context,
+		number *big.Int) (*types.Header, error)
+
+	PTCAddress() common.Address
+
+	PSCAddress() common.Address
 }
 
-type ethBackendInstance struct {
-	psc     *contract.PrivatixServiceContract
-	ptc     *contract.PrivatixTokenContract
-	conn    *ethclient.Client
-	timeout uint64
+type backendInstance struct {
+	cfg    *Config
+	psc    *contract.PrivatixServiceContract
+	ptc    *contract.PrivatixTokenContract
+	conn   *client
+	logger log.Logger
 }
 
-// NewEthBackend returns eth back implementation.
-func NewEthBackend(psc *contract.PrivatixServiceContract,
-	ptc *contract.PrivatixTokenContract, conn *ethclient.Client,
-	timeout uint64) EthBackend {
-	return &ethBackendInstance{
-		psc:     psc,
-		ptc:     ptc,
-		conn:    conn,
-		timeout: timeout,
+// NewBackend returns eth back implementation.
+func NewBackend(cfg *Config, logger log.Logger) Backend {
+	conn, ptc, psc, err := newInstance(cfg, logger)
+	if err != nil {
+		logger.Fatal(err.Error())
 	}
+
+	b := &backendInstance{cfg: cfg, ptc: ptc, psc: psc,
+		conn: conn, logger: logger,
+	}
+
+	go b.connectionControl()
+
+	return b
 }
 
-// AddTimeout adds timeout to context.
-func (b *ethBackendInstance) AddTimeout(
+func newInstance(cfg *Config,
+	logger log.Logger) (*client, *contract.PrivatixTokenContract,
+	*contract.PrivatixServiceContract, error) {
+	conn, err := newClient(cfg, logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	ptcAddr := common.HexToAddress(cfg.Contract.PTCAddrHex)
+	ptc, err := contract.NewPrivatixTokenContract(
+		ptcAddr, conn.ethClient())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	pscAddr := common.HexToAddress(cfg.Contract.PSCAddrHex)
+	psc, err := contract.NewPrivatixServiceContract(
+		pscAddr, conn.ethClient())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return conn, ptc, psc, nil
+}
+
+func (b *backendInstance) dropConnection() {
+	// Close connections except currently in use.
+	b.conn.closeIdleConnections()
+	// Close connection currently in use.
+	b.conn.close()
+}
+
+// addTimeout adds timeout to context.
+func (b *backendInstance) addTimeout(
 	ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	return context.WithTimeout(ctx,
-		time.Duration(b.timeout)*second)
+		time.Duration(b.cfg.Timeout)*second)
+}
+
+func (b *backendInstance) connectionControl() {
+	timeout := time.Duration(b.cfg.CheckTimeout) * time.Second
+
+	logger := b.logger.Add("method", "connectionControl",
+		"timeout", timeout.String())
+
+	connected := true
+
+	for {
+		<-time.After(timeout)
+
+		ctx, _ := context.WithTimeout(context.Background(), timeout)
+		_, err := b.conn.ethClient().HeaderByNumber(ctx, nil)
+		if err != nil {
+			connected = false
+			logger.Warn("reconnecting to Ethereum")
+			b.dropConnection()
+			conn, ptc, psc, err := newInstance(b.cfg, b.logger)
+			if err != nil {
+				logger.Warn(fmt.Sprintf("failed to"+
+					" reconnect to Ethereum: %s", err))
+				continue
+			}
+
+			b.conn = conn
+			b.psc = psc
+			b.ptc = ptc
+			continue
+		}
+
+		if !connected {
+			connected = true
+			logger.Warn("Ethereum communication restored")
+			continue
+		}
+
+		logger.Debug("Ethereum communication checked")
+	}
 }
 
 // LatestBlockNumber returns a block number from the current canonical chain.
-func (b *ethBackendInstance) LatestBlockNumber(ctx context.Context) (*big.Int,
+func (b *backendInstance) LatestBlockNumber(ctx context.Context) (*big.Int,
 	error) {
-	ctx2, cancel := b.AddTimeout(ctx)
+	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	header, err := b.conn.HeaderByNumber(ctx2, nil)
+	header, err := b.conn.ethClient().HeaderByNumber(ctx2, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get"+
 			" latest block: %s", err)
@@ -126,12 +213,12 @@ func (b *ethBackendInstance) LatestBlockNumber(ctx context.Context) (*big.Int,
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
-func (b *ethBackendInstance) SuggestGasPrice(
+func (b *backendInstance) SuggestGasPrice(
 	ctx context.Context) (*big.Int, error) {
-	ctx2, cancel := b.AddTimeout(ctx)
+	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	gasPrice, err := b.conn.SuggestGasPrice(ctx2)
+	gasPrice, err := b.conn.ethClient().SuggestGasPrice(ctx2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get"+
 			" suggested gas price: %s", err)
@@ -141,12 +228,12 @@ func (b *ethBackendInstance) SuggestGasPrice(
 
 // EstimateGas tries to estimate the gas needed to execute a specific
 // transaction based on the current pending state of the backend blockchain.
-func (b *ethBackendInstance) EstimateGas(
+func (b *backendInstance) EstimateGas(
 	ctx context.Context, call ethereum.CallMsg) (gas uint64, err error) {
-	ctx2, cancel := b.AddTimeout(ctx)
+	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	gas, err = b.conn.EstimateGas(ctx2, call)
+	gas, err = b.conn.ethClient().EstimateGas(ctx2, call)
 	if err != nil {
 		return 0, fmt.Errorf("failed to estimated gas: %s", err)
 	}
@@ -154,10 +241,10 @@ func (b *ethBackendInstance) EstimateGas(
 }
 
 // CooperativeClose calls cooperativeClose method of Privatix service contract.
-func (b *ethBackendInstance) CooperativeClose(opts *bind.TransactOpts,
+func (b *backendInstance) CooperativeClose(opts *bind.TransactOpts,
 	agent common.Address, block uint32, offeringHash [common.HashLength]byte,
 	balance *big.Int, balanceSig, closingSig []byte) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -171,12 +258,12 @@ func (b *ethBackendInstance) CooperativeClose(opts *bind.TransactOpts,
 }
 
 // TransactionByHash returns the transaction with the given hash.
-func (b *ethBackendInstance) GetTransactionByHash(ctx context.Context,
+func (b *backendInstance) GetTransactionByHash(ctx context.Context,
 	hash common.Hash) (*types.Transaction, bool, error) {
-	ctx2, cancel := b.AddTimeout(ctx)
+	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	tx, pending, err := b.conn.TransactionByHash(ctx2, hash)
+	tx, pending, err := b.conn.ethClient().TransactionByHash(ctx2, hash)
 	if err != nil {
 		err = fmt.Errorf("failed to get transaction by hash: %s", err)
 	}
@@ -185,10 +272,10 @@ func (b *ethBackendInstance) GetTransactionByHash(ctx context.Context,
 
 // RegisterServiceOffering calls registerServiceOffering method of Privatix
 // service contract.
-func (b *ethBackendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
+func (b *backendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [common.HashLength]byte,
 	minDeposit *big.Int, maxSupply uint16) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -203,9 +290,9 @@ func (b *ethBackendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
 }
 
 // PTCBalanceOf calls balanceOf method of Privatix token contract.
-func (b *ethBackendInstance) PTCBalanceOf(opts *bind.CallOpts,
+func (b *backendInstance) PTCBalanceOf(opts *bind.CallOpts,
 	owner common.Address) (*big.Int, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -218,9 +305,9 @@ func (b *ethBackendInstance) PTCBalanceOf(opts *bind.CallOpts,
 }
 
 // PTCIncreaseApproval calls increaseApproval method of Privatix token contract.
-func (b *ethBackendInstance) PTCIncreaseApproval(opts *bind.TransactOpts,
+func (b *backendInstance) PTCIncreaseApproval(opts *bind.TransactOpts,
 	spender common.Address, addedVal *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -233,9 +320,9 @@ func (b *ethBackendInstance) PTCIncreaseApproval(opts *bind.TransactOpts,
 }
 
 // PSCBalanceOf calls balanceOf method of Privatix service contract.
-func (b *ethBackendInstance) PSCBalanceOf(opts *bind.CallOpts,
+func (b *backendInstance) PSCBalanceOf(opts *bind.CallOpts,
 	owner common.Address) (*big.Int, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -248,9 +335,9 @@ func (b *ethBackendInstance) PSCBalanceOf(opts *bind.CallOpts,
 }
 
 // PSCAddBalanceERC20 calls addBalanceERC20 of Privatix service contract.
-func (b *ethBackendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
+func (b *backendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
 	amount *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -263,11 +350,11 @@ func (b *ethBackendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
 }
 
 // PSCGetOfferingInfo calls getOfferingInfo of Privatix service contract.
-func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
+func (b *backendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 	hash [common.HashLength]byte) (agentAddr common.Address,
 	minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
 	updateBlockNumber uint32, active bool, err error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -283,24 +370,23 @@ func (b *ethBackendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 }
 
 // PSCGetChannelInfo calls getChannelInfo method of Privatix service contract.
-func (b *ethBackendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
+func (b *backendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 	client common.Address, agent common.Address,
 	blockNumber uint32,
 	hash [common.HashLength]byte) ([common.HashLength]byte,
 	*big.Int, uint32, *big.Int, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
-
 	return b.psc.GetChannelInfo(opts, client, agent, blockNumber, hash)
 }
 
 // PSCCreateChannel calls createChannel method of Privatix service contract.
-func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
+func (b *backendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -313,10 +399,10 @@ func (b *ethBackendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 }
 
 // PSCTopUpChannel calls topUpChannel method of Privatix service contract.
-func (b *ethBackendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
+func (b *backendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
 	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
 	deposit *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -330,10 +416,10 @@ func (b *ethBackendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
 
 // PSCUncooperativeClose calls uncooperativeClose method of Privatix service
 // contract.
-func (b *ethBackendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
+func (b *backendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
 	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
 	balance *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -349,9 +435,9 @@ func (b *ethBackendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
 
 // PSCReturnBalanceERC20 calls returnBalanceERC20 method of Privatix service
 // contract.
-func (b *ethBackendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
+func (b *backendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 	amount *big.Int) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -364,19 +450,19 @@ func (b *ethBackendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 }
 
 // EthBalanceAt returns the wei balance of the given account.
-func (b *ethBackendInstance) EthBalanceAt(ctx context.Context,
+func (b *backendInstance) EthBalanceAt(ctx context.Context,
 	owner common.Address) (*big.Int, error) {
-	ctx2, cancel := b.AddTimeout(ctx)
+	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	return b.conn.BalanceAt(ctx2, owner, nil)
+	return b.conn.ethClient().BalanceAt(ctx2, owner, nil)
 }
 
 // PSCSettle calls settle method of Privatix service contract.
-func (b *ethBackendInstance) PSCSettle(opts *bind.TransactOpts,
+func (b *backendInstance) PSCSettle(opts *bind.TransactOpts,
 	agent common.Address, blockNumber uint32,
 	hash [common.HashLength]byte) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -391,9 +477,9 @@ func (b *ethBackendInstance) PSCSettle(opts *bind.TransactOpts,
 
 // PSCRemoveServiceOffering calls removeServiceOffering method of Privatix
 // service contract.
-func (b *ethBackendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
+func (b *backendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 	offeringHash [32]byte) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -408,9 +494,9 @@ func (b *ethBackendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 
 // PSCPopupServiceOffering calls popupServiceOffering method of  Privatix
 // service contract.
-func (b *ethBackendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
+func (b *backendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
 	offeringHash [32]byte) (*types.Transaction, error) {
-	ctx2, cancel := b.AddTimeout(opts.Context)
+	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
@@ -421,4 +507,27 @@ func (b *ethBackendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
 			" service offering: %v", err)
 	}
 	return tx, err
+}
+
+// FilterLogs executes a Ethereum filter query.
+func (b *backendInstance) FilterLogs(ctx context.Context,
+	q ethereum.FilterQuery) ([]types.Log, error) {
+	return b.conn.ethClient().FilterLogs(ctx, q)
+}
+
+// HeaderByNumber returns a Ethereum block header from the current canonical
+// chain. If number is nil, the latest known header is returned.
+func (b *backendInstance) HeaderByNumber(ctx context.Context,
+	number *big.Int) (*types.Header, error) {
+	return b.conn.ethClient().HeaderByNumber(ctx, number)
+}
+
+// PTCAddress returns Privatix token contract address.
+func (b *backendInstance) PTCAddress() common.Address {
+	return common.HexToAddress(b.cfg.Contract.PTCAddrHex)
+}
+
+// PSCAddress returns Privatix service contract address.
+func (b *backendInstance) PSCAddress() common.Address {
+	return common.HexToAddress(b.cfg.Contract.PSCAddrHex)
 }

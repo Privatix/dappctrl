@@ -24,7 +24,6 @@ import (
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -66,7 +65,7 @@ func newTestConfig() *testConfig {
 
 type workerTest struct {
 	db       *reform.DB
-	ethBack  *adapter.TestEthBackend
+	ethBack  *eth.TestEthBackend
 	fakeSOMC *somc.FakeSOMC
 	somcConn *somc.Conn
 	worker   *Worker
@@ -91,15 +90,14 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
-	ethBack := adapter.NewTestEthBackend(conf.pscAddr)
+	ethBack := eth.NewTestEthBackend(conf.pscAddr)
 
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		conf.Country, data.TestToPrivateKey, conf.EptMsg,
-		conf.Eth.Contract.Periods)
+		conf.Gas, conf.PayServer.Addr, pwdStorage, conf.Country,
+		data.TestToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()
@@ -228,7 +226,7 @@ func (e *workerTest) newTestFixture(t *testing.T,
 	e.insertToTestDB(t, job)
 
 	// Clear call stack.
-	e.ethBack.CallStack = []adapter.TestEthBackCall{}
+	e.ethBack.CallStack = []eth.TestEthBackCall{}
 
 	return &workerTestFixture{f, job}
 }
@@ -244,7 +242,7 @@ func (e *workerTest) setOfferingHash(t *testing.T, fixture *workerTestFixture) {
 	packed, _ := messages.PackWithSignature(msgBytes, agentKey)
 
 	fixture.Offering.RawMsg = data.FromBytes(packed)
-	fixture.Offering.Hash = data.FromBytes(ethcrypto.Keccak256(packed))
+	fixture.Offering.Hash = data.HexFromBytes(ethcrypto.Keccak256(packed))
 	e.updateInTestDB(t, fixture.Offering)
 }
 

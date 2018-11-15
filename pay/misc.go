@@ -21,9 +21,10 @@ const (
 
 // Codes for bad request replies.
 const (
-	errCodeNonParsablePayload = 1
-	errCodeInvalidBalance     = iota
-	errCodeInvalidSignature   = iota
+	errCodeNonParsablePayload = iota + 1
+	errCodeInvalidBalance
+	errCodeInvalidSignature
+	ErrCodeEqualBalance
 )
 
 var errUnexpected = &srv.Error{
@@ -33,8 +34,8 @@ var errUnexpected = &srv.Error{
 }
 
 func (s *Server) findChannel(logger log.Logger,
-	w http.ResponseWriter, offeringHash string,
-	agentAddr string, block uint32) (*data.Channel, bool) {
+	w http.ResponseWriter, offeringHash, agentAddr data.HexString,
+	block uint32) (*data.Channel, bool) {
 
 	channel := &data.Channel{}
 	tail := `INNER JOIN offerings
@@ -118,7 +119,7 @@ func (s *Server) verifySignature(logger log.Logger,
 		return false
 	}
 
-	offeringHash, err := data.ToHash(pld.OfferingHash)
+	offeringHash, err := data.HexToHash(pld.OfferingHash)
 	if err != nil {
 		logger.Error("could not parse offering hash: " + err.Error())
 		s.RespondError(logger, w, errUnexpected)
@@ -147,6 +148,16 @@ func (s *Server) validateChannelForPayment(logger log.Logger,
 
 func (s *Server) updateChannelWithPayment(logger log.Logger,
 	w http.ResponseWriter, ch *data.Channel, pld *paymentPayload) bool {
+	// Check receipt balance.
+	if ch.ReceiptBalance == pld.Balance {
+		s.RespondError(logger, w, &srv.Error{
+			Status:  http.StatusBadRequest,
+			Code:    ErrCodeEqualBalance,
+			Message: "Balance amount is equal to current balance",
+		})
+		return false
+	}
+
 	ch.ReceiptBalance = pld.Balance
 	ch.ReceiptSignature = &pld.BalanceMsgSig
 	ret, err := s.db.Exec(`

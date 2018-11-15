@@ -12,14 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -89,9 +88,9 @@ func TestClientPreChannelCreate(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Account.EthAddr ||
 		tx.AddrTo != fxt.Offering.Agent ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel {
 		t.Fatalf("wrong transaction content")
 	}
@@ -228,7 +227,8 @@ func testClientPreEndpointMsgSOMCGet(t *testing.T,
 
 	params, _ := json.Marshal(msg.AdditionalParams)
 	if endp.Template != fxt.Offering.Template ||
-		strings.Trim(endp.Hash, " ") != msg.TemplateHash ||
+		strings.Trim(string(endp.Hash), " ") !=
+			string(msg.TemplateHash) ||
 		endp.RawMsg != data.FromBytes(sealed) ||
 		endp.Status != data.MsgUnpublished ||
 		endp.PaymentReceiverAddress == nil ||
@@ -297,7 +297,7 @@ func TestClientPreChannelTopUp(t *testing.T) {
 	defer fxt.close()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(adapter.TestTXGasPrice),
+		GasPrice: uint64(eth.TestTXGasPrice),
 	})
 
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
@@ -322,9 +322,9 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -361,7 +361,7 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 	issued := time.Now()
 
 	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(adapter.TestTXGasPrice),
+		GasPrice: uint64(eth.TestTXGasPrice),
 	})
 
 	runJob(t, env.worker.ClientPreUncooperativeCloseRequest, fxt.job)
@@ -380,9 +380,9 @@ func TestClientPreUncooperativeCloseRequest(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.Channel.Client ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -486,9 +486,9 @@ func TestClientPreUncooperativeClose(t *testing.T) {
 		tx.Issued.Before(issued) || tx.Issued.After(time.Now()) ||
 		tx.AddrFrom != fxt.UserAcc.EthAddr ||
 		tx.AddrTo != data.HexFromBytes(env.worker.pscAddr.Bytes()) ||
-		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(adapter.TestTXNonce) ||
-		tx.GasPrice != uint64(adapter.TestTXGasPrice) ||
-		tx.Gas != uint64(adapter.TestTXGasLimit) ||
+		tx.Nonce == nil || *tx.Nonce != fmt.Sprint(eth.TestTXNonce) ||
+		tx.GasPrice != uint64(eth.TestTXGasPrice) ||
+		tx.Gas != uint64(eth.TestTXGasLimit) ||
 		tx.RelatedType != data.JobChannel ||
 		tx.RelatedID != fxt.Channel.ID {
 		t.Fatalf("wrong transaction content")
@@ -559,23 +559,6 @@ func TestClientAfterCooperativeClose(t *testing.T) {
 	env.jobNotCreated(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
-func runJobCheckingRunnerCall(t *testing.T, env *workerTest,
-	workerF func(*data.Job) error, job *data.Job, runnerMethod int) {
-	calledMethod := -1
-	var calledChannel string
-	env.worker.runner = svcrun.Mock(
-		func(method int, channel string) (bool, error) {
-			calledMethod, calledChannel = method, channel
-			return false, nil
-		})
-
-	runJob(t, workerF, job)
-
-	if calledMethod != runnerMethod || calledChannel != job.RelatedID {
-		t.Fatalf("unexpected service runner call arguments")
-	}
-}
-
 func TestClientPreServiceTerminate(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
@@ -603,15 +586,14 @@ func TestClientPreServiceTerminate(t *testing.T) {
 	var job data.Job
 	env.findTo(t, &job, jobID)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceTerminate, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceTerminate, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceTerminated {
+	if ch.ServiceStatus != data.ServiceTerminating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceTerminated, fxt.Channel.ServiceStatus)
+			data.ServiceTerminating, ch.ServiceStatus)
 	}
 }
 
@@ -657,15 +639,14 @@ func TestClientPreServiceSuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceSuspend, &job, svcrun.MockStop)
+	runJob(t, env.worker.ClientPreServiceSuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceSuspended {
+	if ch.ServiceStatus != data.ServiceSuspending {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceSuspended, fxt.Channel.ServiceStatus)
+			data.ServiceSuspending, ch.ServiceStatus)
 	}
 }
 
@@ -710,15 +691,47 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	env.findTo(t, &job, jobID)
 	defer env.deleteFromTestDB(t, &job)
 
-	runJobCheckingRunnerCall(t, env,
-		env.worker.ClientPreServiceUnsuspend, &job, svcrun.MockStart)
+	runJob(t, env.worker.ClientPreServiceUnsuspend, &job)
 
 	var ch data.Channel
 	env.findTo(t, &ch, fxt.Channel.ID)
 
-	if ch.ServiceStatus != data.ServiceActive {
+	if ch.ServiceStatus != data.ServiceActivating {
 		t.Fatalf("expected %s service status, but got %s",
-			data.ServiceActive, fxt.Channel.ServiceStatus)
+			data.ServiceActivating, ch.ServiceStatus)
+	}
+}
+
+func TestClientCompleteServiceTransition(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t,
+		data.JobClientPreServiceUnsuspend, data.JobChannel)
+	defer fxt.Close()
+
+	fxt.job.Type = data.JobClientCompleteServiceTransition
+
+	transitions := map[string]string{
+		data.ServiceActivating:  data.ServiceActive,
+		data.ServiceSuspending:  data.ServiceSuspended,
+		data.ServiceTerminating: data.ServiceTerminated,
+	}
+
+	for k, v := range transitions {
+		fxt.Channel.ServiceStatus = k
+		env.updateInTestDB(t, fxt.Channel)
+
+		setJobData(t, db, fxt.job, v)
+		runJob(t, env.worker.ClientCompleteServiceTransition, fxt.job)
+
+		var ch data.Channel
+		env.findTo(t, &ch, fxt.Channel.ID)
+
+		if ch.ServiceStatus != v {
+			t.Fatalf("expected %s service status, but got %s",
+				v, ch.ServiceStatus)
+		}
 	}
 }
 
@@ -753,7 +766,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
-	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+	expectedOffering.Hash = data.HexFromBytes(offeringHash.Bytes())
 
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
@@ -788,7 +801,8 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 		env.fakeSOMC.WriteFindOfferings(t,
-			[]string{expectedOffering.Hash}, [][]byte{packed})
+			[]data.HexString{expectedOffering.Hash},
+			[][]byte{packed})
 	}()
 
 	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
@@ -915,7 +929,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
 	expectedOffering.RawMsg = data.FromBytes(packed)
 	offeringHash = common.BytesToHash(crypto.Keccak256(packed))
-	expectedOffering.Hash = data.FromBytes(offeringHash.Bytes())
+	expectedOffering.Hash = data.HexFromBytes(offeringHash.Bytes())
 
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
@@ -942,7 +956,8 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		// Mock reply from SOMC.
 		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
 		env.fakeSOMC.WriteFindOfferings(t,
-			[]string{expectedOffering.Hash}, [][]byte{packed})
+			[]data.HexString{expectedOffering.Hash},
+			[][]byte{packed})
 	}()
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)

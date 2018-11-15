@@ -67,7 +67,8 @@ func privateKeyToJSON(pk *ecdsa.PrivateKey) (key json.RawMessage, pass string) {
 	return jsonBytes, pass
 }
 
-func fromPrivateKeyToECDSA(t *testing.T, privateKey string) *ecdsa.PrivateKey {
+func fromPrivateKeyToECDSA(t *testing.T,
+	privateKey data.Base64String) *ecdsa.PrivateKey {
 	pkBytes, err := data.ToBytes(privateKey)
 	if err != nil {
 		t.Fatal(err)

@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -180,7 +179,7 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	offerHash, err := data.ToHash(offering.Hash)
+	offerHash, err := data.HexToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -523,18 +522,6 @@ func (w *Worker) ClientAfterCooperativeClose(job *data.Job) error {
 		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
-func (w *Worker) stopService(logger log.Logger, ch string) error {
-	if err := w.runner.Stop(ch); err != nil {
-		if err != svcrun.ErrNotRunning {
-			logger.Error(err.Error())
-			return ErrFailedStopService
-		}
-		logger.Warn(err.Error())
-	}
-
-	return nil
-}
-
 // ClientPreServiceTerminate terminates service.
 func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 	logger := w.logger.Add("method", "ClientPreServiceTerminate", "job", job)
@@ -547,11 +534,12 @@ func (w *Worker) ClientPreServiceTerminate(job *data.Job) error {
 
 	logger = logger.Add("channel", ch)
 
-	if err := w.stopService(logger, ch.ID); err != nil {
-		return err
+	if ch.ServiceStatus == data.ServiceActive {
+		ch.ServiceStatus = data.ServiceTerminating
+	} else {
+		ch.ServiceStatus = data.ServiceTerminated
 	}
 
-	ch.ServiceStatus = data.ServiceTerminated
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
 	err = w.saveRecord(logger, w.db.Querier, ch)
@@ -572,11 +560,7 @@ func (w *Worker) ClientPreServiceSuspend(job *data.Job) error {
 
 	logger = logger.Add("channel", ch)
 
-	if err := w.stopService(logger, ch.ID); err != nil {
-		return err
-	}
-
-	ch.ServiceStatus = data.ServiceSuspended
+	ch.ServiceStatus = data.ServiceSuspending
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
 	err = w.saveRecord(logger, w.db.Querier, ch)
@@ -598,14 +582,29 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 
 	logger = logger.Add("channel", ch)
 
-	if err := w.runner.Start(ch.ID); err != nil {
-		logger.Error(err.Error())
-		return ErrFailedStartService
-	}
-
-	ch.ServiceStatus = data.ServiceActive
+	ch.ServiceStatus = data.ServiceActivating
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
+	return w.saveRecord(logger, w.db.Querier, ch)
+}
+
+func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientCompleteServiceTransition",
+		"job", job)
+
+	ch, err := w.relatedChannel(
+		logger, job, data.JobClientCompleteServiceTransition)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("channel", ch)
+
+	err = w.unmarshalDataTo(logger, job.Data, &ch.ServiceStatus)
+	if err != nil {
+		return err
+	}
+
 	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
@@ -690,7 +689,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -735,7 +734,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 		return ErrParseOfferingHash
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -836,7 +835,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
 	}
 
-	offerHash, err := data.ToHash(offer.Hash)
+	offerHash, err := data.HexToHash(offer.Hash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrParseOfferingHash
@@ -960,7 +959,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	offering := data.Offering{}
-	hash := data.FromBytes(logOfferingPopUp.offeringHash.Bytes())
+	hash := data.HexFromBytes(logOfferingPopUp.offeringHash.Bytes())
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
@@ -982,8 +981,8 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
-	offeringsData, err := w.somc.FindOfferings([]string{
-		data.FromBytes(hash.Bytes())})
+	offeringsData, err := w.somc.FindOfferings([]data.HexString{
+		data.HexFromBytes(hash.Bytes())})
 	if err != nil {
 		return ErrFindOfferings
 	}
@@ -1018,7 +1017,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 }
 
 func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
-	relID, agentAddr string, blockNumber uint64,
+	relID string, agentAddr data.HexString, blockNumber uint64,
 	offeringsData []somc.OfferingData) (*data.Offering, error) {
 	if len(offeringsData) == 0 {
 		return nil, ErrSOMCNoOfferings
@@ -1053,6 +1052,8 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		return nil, ErrInternal
 	}
 
+	logger = logger.Add("msg", msg)
+
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
 		logger.Error(err.Error())
@@ -1074,7 +1075,9 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 	}
 
 	product := &data.Product{}
-	if err := w.db.FindOneTo(product, "offer_tpl_id", template.ID); err != nil {
+	if err := w.db.SelectOneTo(
+		product, "WHERE offer_tpl_id = $1 AND NOT is_server",
+		template.ID); err != nil {
 		logger.Error(err.Error())
 		return nil, ErrProductNotFound
 	}

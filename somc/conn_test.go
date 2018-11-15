@@ -9,12 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util/log"
-
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 var conf struct {
@@ -101,20 +100,21 @@ func TestFindOffering(t *testing.T) {
 
 	off := []byte("{}")
 	hash := crypto.Keccak256Hash(off)
-	hstr := data.FromBytes(hash.Bytes())
+	hex := data.HexFromBytes(hash.Bytes())
+	base64 := data.FromBytes(hash.Bytes())
 
 	ch := make(chan findOfferingsReturn)
 	go func() {
-		data, err := conn.FindOfferings([]string{hstr})
+		data, err := conn.FindOfferings([]data.HexString{hex})
 		ch <- findOfferingsReturn{data, err}
 	}()
 
 	ostr := data.FromBytes(off)
-	res := findOfferingsResult{{Hash: hstr, Data: ostr}}
-	data, _ := json.Marshal(res)
+	res := findOfferingsResult{{Hash: base64, Data: ostr}}
+	data2, _ := json.Marshal(res)
 
 	req := srv.Read(t, findOfferingsMethod)
-	repl := JSONRPCMessage{ID: req.ID, Result: data}
+	repl := JSONRPCMessage{ID: req.ID, Result: data2}
 	srv.Write(t, &repl)
 
 	ret := <-ch
@@ -128,16 +128,16 @@ func TestFindOffering(t *testing.T) {
 	}
 
 	go func() {
-		data, err := conn.FindOfferings([]string{hstr})
+		data, err := conn.FindOfferings([]data.HexString{hex})
 		ch <- findOfferingsReturn{data, err}
 	}()
 
 	// Try the same but with a wrong hash.
 	res[0].Hash = "x" + res[0].Hash[1:]
-	data, _ = json.Marshal(res)
+	data2, _ = json.Marshal(res)
 
 	req = srv.Read(t, findOfferingsMethod)
-	repl = JSONRPCMessage{ID: req.ID, Result: data}
+	repl = JSONRPCMessage{ID: req.ID, Result: data2}
 	srv.Write(t, &repl)
 
 	if ret := <-ch; ret.err == nil {

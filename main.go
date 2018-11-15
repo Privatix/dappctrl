@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	cbill "github.com/privatix/dappctrl/client/bill"
-	"github.com/privatix/dappctrl/client/svcrun"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
@@ -26,7 +24,6 @@ import (
 	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/proc/adapter"
 	"github.com/privatix/dappctrl/proc/handlers"
 	"github.com/privatix/dappctrl/proc/looper"
 	"github.com/privatix/dappctrl/proc/worker"
@@ -66,7 +63,6 @@ type config struct {
 	Proc          *proc.Config
 	Report        *bugsnag.Config
 	Role          string
-	ServiceRunner *svcrun.Config
 	SessionServer *sesssrv.Config
 	SOMC          *somc.Config
 	StaticPasword string
@@ -90,7 +86,6 @@ func newConfig() *config {
 		Job:           job.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
-		ServiceRunner: svcrun.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
 		SOMC:          somc.NewConfig(),
 		UI:            ui.NewConfig(),
@@ -175,7 +170,7 @@ func createUIServer(conf *ui.Config, logger log.Logger, db *reform.DB,
 
 func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
 	logger log.Logger, db *reform.DB, queue job.Queue,
-	ethBack adapter.EthBackend) error {
+	ethBack eth.Backend) error {
 	var timeout time.Duration
 	if cfg.AutoOfferingPopUpTimeout != 0 {
 		timeout = time.Second *
@@ -232,27 +227,6 @@ func main() {
 	defer closer.Close()
 	defer panicHunter(logger)
 
-	ethClient, err := eth.NewClient(context.Background(),
-		conf.Eth, logger)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-	defer ethClient.Close()
-
-	ptcAddr := common.HexToAddress(conf.Eth.Contract.PTCAddrHex)
-	ptc, err := contract.NewPrivatixTokenContract(
-		ptcAddr, ethClient.EthClient())
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-
-	pscAddr := common.HexToAddress(conf.Eth.Contract.PSCAddrHex)
-	psc, err := contract.NewPrivatixServiceContract(
-		pscAddr, ethClient.EthClient())
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
@@ -261,13 +235,11 @@ func main() {
 
 	pwdStorage := getPWDStorage(conf)
 
-	ethBack := adapter.NewEthBackend(
-		psc, ptc, ethClient.EthClient(), conf.Eth.Timeout)
+	ethBack := eth.NewBackend(conf.Eth, logger)
 
-	worker, err := worker.NewWorker(logger, db, somcConn,
-		ethBack, conf.Gas, pscAddr, conf.PayAddress,
-		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
-		conf.Eth.Contract.Periods)
+	worker, err := worker.NewWorker(logger, db, somcConn, ethBack,
+		conf.Gas, conf.PayAddress, pwdStorage, conf.Country,
+		data.ToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -279,13 +251,8 @@ func main() {
 	pr := proc.NewProcessor(conf.Proc, db, queue)
 	worker.SetProcessor(pr)
 
-	runner := svcrun.NewServiceRunner(conf.ServiceRunner, logger, db, pr)
-	defer runner.StopAll()
-	worker.SetRunner(runner)
-
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethClient.EthClient(),
-		ethClient.CloseIdleConnections, db, logger, pscAddr, ptcAddr,
-		conf.Role, queue)
+	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethBack, db, logger,
+		ethBack.PSCAddress(), ethBack.PTCAddress(), conf.Role, queue)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -319,7 +286,8 @@ func main() {
 		defer cmon.Close()
 	}
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country)
+	sess := sesssrv.NewServer(
+		conf.SessionServer, logger, db, conf.Country, queue)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

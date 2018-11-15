@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/ui"
@@ -13,7 +14,7 @@ func TestGetEthTransactions(t *testing.T) {
 	defer fxt.close()
 
 	type testObject struct {
-		addrFrom    string
+		addrFrom    data.HexString
 		relatedType string
 		relatedID   string
 	}
@@ -67,6 +68,7 @@ func TestGetEthTransactions(t *testing.T) {
 			TxRaw:       []byte("{}"),
 			RelatedType: testData[k].relatedType,
 			RelatedID:   testData[k].relatedID,
+			Issued:      time.Now(),
 		}
 
 		data.InsertToTestDB(t, db, tx)
@@ -99,6 +101,20 @@ func TestGetEthTransactions(t *testing.T) {
 		if v.AddrFrom != fxt.Account.EthAddr {
 			t.Fatalf("wanted Ethereum address: %s, got: %s",
 				fxt.Account.EthAddr, v.AddrFrom)
+		}
+	}
+
+	// Test ordering.
+	res, err = handler.GetEthTransactions(data.TestPassword,
+		"", "", 0, 0)
+	assertResult(res, err, 3, 3)
+
+	first := res.Items[0].Issued
+
+	for _, v := range res.Items {
+		if v.Issued.After(first) {
+			t.Fatalf("time %s after %s",
+				v.Issued.String(), first.String())
 		}
 	}
 }

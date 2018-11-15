@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	defaultAccEth = new(common.Address).String()
+	defaultAccEth = data.HexString(new(common.Address).String())
 	defaultAppID  = emptyUUID()
 
 	enable      bool
@@ -116,13 +116,13 @@ func emptyUUID() string {
 	return new(uuid.UUID).String()
 }
 
-func metadata(addresses []string) bugsnag.MetaData {
+func metadata(addresses []data.HexString) bugsnag.MetaData {
 	md := bugsnag.MetaData{accounts: {}}
 
 	for k, v := range addresses {
 		addr := v
 
-		if !strings.HasPrefix(addr, "Ox") {
+		if !strings.HasPrefix(string(addr), "Ox") {
 			addr = "0x" + addr
 		}
 
@@ -132,7 +132,7 @@ func metadata(addresses []string) bugsnag.MetaData {
 	return md
 }
 
-func accEthAddresses(db *reform.DB) (addr []string) {
+func accEthAddresses(db *reform.DB) (addr []data.HexString) {
 	accounts, err := db.SelectAllFrom(data.AccountTable, "")
 	if err != nil || len(accounts) == 0 {
 		return append(addr, defaultAccEth)
@@ -224,7 +224,7 @@ func PanicHunter() {
 		if enable && notifier != nil {
 			notifier.NotifySync(
 				errors.New(err, 3), true,
-				metadata([]string{defaultAccEth}))
+				metadata([]data.HexString{defaultAccEth}))
 		}
 		panic(err)
 	}

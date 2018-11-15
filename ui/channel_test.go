@@ -219,7 +219,7 @@ func createClientTestData(t *testing.T, fxt *fixture) (close func()) {
 	offering := data.NewTestOffering(fxt.User.EthAddr,
 		fxt.Product.ID, fxt.TemplateOffer.ID)
 	offering.UnitType = data.UnitScalar
-	offering.MaxInactiveTimeSec = pointer.ToUint64(1800)
+	offering.MaxInactiveTimeSec = 1800
 
 	channel := data.NewTestChannel(data.NewTestAccount("").EthAddr,
 		fxt.Account.EthAddr, offering.ID, 0, 10000, data.ChannelActive)
@@ -283,15 +283,15 @@ func checkGetClientChannelsResult(
 			sessions = append(sessions, v.(*data.Session))
 		}
 
-		checkClientChannel(t, &item, channel)
+		checkClientChannel(t, &item, channel, offering)
 		checkClientChannelStatus(t, &item, channel, offering)
 		checkClientChannelJob(t, &item, job2)
 		checkClientChannelUsage(t, &item, channel, offering, sessions)
 	}
 }
 
-func checkClientChannel(
-	t *testing.T, resp *ui.ClientChannelInfo, ch data.Channel) {
+func checkClientChannel(t *testing.T, resp *ui.ClientChannelInfo,
+	ch data.Channel, offering data.Offering) {
 	if ch.ID != resp.ID {
 		t.Fatalf("expected %s, got: %s", ch.ID, resp.ID)
 	}
@@ -316,6 +316,11 @@ func checkClientChannel(
 
 	if ch.Offering != resp.Offering {
 		t.Fatalf("expected %s, got: %s", ch.Offering, resp.Offering)
+	}
+
+	if offering.Hash != resp.OfferingHash {
+		t.Fatalf("expected %s, got: %s", offering.Hash,
+			resp.OfferingHash)
 	}
 
 	if ch.TotalDeposit != resp.Deposit {
@@ -345,9 +350,9 @@ func checkClientChannelStatus(t *testing.T, resp *ui.ClientChannelInfo,
 			*resp.ChStat.LastChanged)
 	}
 
-	if offer.MaxInactiveTimeSec == nil ||
-		*offer.MaxInactiveTimeSec != resp.ChStat.MaxInactiveTime {
-		t.Fatal("invalid maxInactiveTime field")
+	if offer.MaxInactiveTimeSec != resp.ChStat.MaxInactiveTime {
+		t.Fatalf("expected %d, got: %d", offer.MaxInactiveTimeSec,
+			resp.ChStat.MaxInactiveTime)
 	}
 }
 
@@ -409,7 +414,7 @@ func checkClientChannelUsage(
 }
 
 func TestGetClientChannels(t *testing.T) {
-	fxt, assertErrEqual := newTest(t, "GetAgentChannels")
+	fxt, assertErrEqual := newTest(t, "GetClientChannels")
 	defer fxt.close()
 
 	// Set client channels.

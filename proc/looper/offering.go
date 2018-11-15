@@ -14,7 +14,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/proc/adapter"
+	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -23,7 +23,7 @@ import (
 // pop up all offerings, then no one of them is popped up. Function calculates
 // the pop up time.
 func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
-	ethBack adapter.EthBackend, timeNowFunc func() time.Time,
+	ethBack eth.Backend, timeNowFunc func() time.Time,
 	period uint32) []*data.Job {
 	logger = logger.Add("method", "AutoOfferingPopUp")
 
@@ -47,7 +47,7 @@ func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 }
 
 func calcDelayToOfferingPopUp(offeringHash common.Hash,
-	ethBack adapter.EthBackend, popUpPeriod uint32,
+	ethBack eth.Backend, popUpPeriod uint32,
 	lastBlock *big.Int) (delay time.Duration, err error) {
 	_, _, _, _, lastUpdateBlock, _, err :=
 		ethBack.PSCGetOfferingInfo(&bind.CallOpts{}, offeringHash)
@@ -65,7 +65,7 @@ func calcDelayToOfferingPopUp(offeringHash common.Hash,
 	return delay, err
 }
 
-func calcPriceToOfferingPopUp(abi abi.ABI, ethBack adapter.EthBackend,
+func calcPriceToOfferingPopUp(abi abi.ABI, ethBack eth.Backend,
 	gasPrice *big.Int) *big.Int {
 	input, err := abi.Pack("popupServiceOffering", common.Hash{})
 	if err != nil {
@@ -85,7 +85,7 @@ func calcPriceToOfferingPopUp(abi abi.ABI, ethBack adapter.EthBackend,
 }
 
 func agentHaveEnoughMoney(logger log.Logger, agent common.Address,
-	price *big.Int, ethBack adapter.EthBackend) bool {
+	price *big.Int, ethBack eth.Backend) bool {
 	balance, err := ethBack.EthBalanceAt(context.Background(), agent)
 	if err != nil {
 		logger.Error(err.Error())
@@ -122,7 +122,7 @@ func findOfferingsToPopUp(logger log.Logger, db *reform.DB) []reform.Struct {
 }
 
 func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
-	ethBack adapter.EthBackend, timeNowFunc func() time.Time,
+	ethBack eth.Backend, timeNowFunc func() time.Time,
 	period uint32) []*data.Job {
 	offerings := findOfferingsToPopUp(logger, db)
 	if len(offerings) == 0 {
@@ -166,7 +166,7 @@ func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 
 	var result []*data.Job
 	for _, v := range offerings {
-		hash, err := data.ToHash(v.(*data.Offering).Hash)
+		hash, err := data.HexToHash(v.(*data.Offering).Hash)
 		if err != nil {
 			logger.Error(err.Error())
 			return nil

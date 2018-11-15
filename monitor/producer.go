@@ -233,7 +233,7 @@ func (m *Monitor) findChannelID(el *data.JobEthLog) string {
 
 	var query string
 	args := []interface{}{
-		data.FromBytes(offeringHash.Bytes()),
+		data.HexFromBytes(offeringHash.Bytes()),
 		data.HexFromBytes(agentAddress.Bytes()),
 		data.HexFromBytes(clientAddress.Bytes()),
 	}
@@ -268,9 +268,9 @@ func (m *Monitor) findChannelID(el *data.JobEthLog) string {
 }
 
 func (m *Monitor) findOfferingID(topic common.Hash) string {
-	hashB64 := data.FromBytes(topic.Bytes())
+	hashHex := data.HexFromBytes(topic.Bytes())
 	offering := &data.Offering{}
-	err := m.db.FindOneTo(offering, "hash", hashB64)
+	err := m.db.FindOneTo(offering, "hash", hashHex)
 	if err != nil {
 		l := m.logger.Add("hash", topic.String())
 		if err == sql.ErrNoRows {

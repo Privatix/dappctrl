@@ -18,7 +18,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 Install prerequisite software if it's not installed.
 
-* Install [Golang](https://golang.org/doc/install). Make sure that `$GOPATH/bin` is added to system path `$PATH`.
+* Install [Golang](https://golang.org/doc/install) 1.10+ . Make sure that `$GOPATH/bin` is added to system path `$PATH`.
 
 * Install [PostgreSQL](https://www.postgresql.org/download/).
 
@@ -60,15 +60,7 @@ Modify `dappctrl.config.local.json` if you need non-default configuration and ru
 
 For developing purposes, you have to use `dappctrl-dev.config.json`.
 
-More information about `dappctrl.config.json`: [config fields description](https://github.com/Privatix/dappctrl/wiki/dappctrl.config.json-description).
-
-## Building and configuring service adapters
-
-* **OpenVPN** - please read `svc/dappvpn/README.md`.
-
-## Using docker
-
-You can use docker to simplify work with `dappctrl`: [using docker](https://github.com/Privatix/dappctrl/wiki/Using-docker)
+More information about `dappctrl.config.json`: [config fields description](/doc/config.md).
 
 # Tests
 

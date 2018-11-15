@@ -11,8 +11,8 @@ import (
 const publishOfferingMethod = "newOffering"
 
 type publishOfferingParams struct {
-	Hash string `json:"hash"`
-	Data string `json:"data"`
+	Hash data.Base64String `json:"hash"`
+	Data data.Base64String `json:"data"`
 }
 
 // PublishOffering publishes a given offering JSON in SOMC.

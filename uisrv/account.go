@@ -83,12 +83,12 @@ func (s *Server) handleGetAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 type accountCreatePayload struct {
-	PrivateKey           string `json:"privateKey"`
-	JSONKeyStoreRaw      string `json:"jsonKeyStoreRaw"`
-	JSONKeyStorePassword string `json:"jsonKeyStorePassword"`
-	IsDefault            bool   `json:"isDefault"`
-	InUse                bool   `json:"inUse"`
-	Name                 string `json:"name"`
+	PrivateKey           data.Base64String `json:"privateKey"`
+	JSONKeyStoreRaw      string            `json:"jsonKeyStoreRaw"`
+	JSONKeyStorePassword string            `json:"jsonKeyStorePassword"`
+	IsDefault            bool              `json:"isDefault"`
+	InUse                bool              `json:"inUse"`
+	Name                 string            `json:"name"`
 }
 
 func (p *accountCreatePayload) fromPrivateKeyToECDSA() (*ecdsa.PrivateKey, error) {
@@ -157,7 +157,7 @@ func (s *Server) handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	// Set 0 balances on initial create.
 	acc.PTCBalance = 0
 	acc.PSCBalance = 0
-	acc.EthBalance = data.B64BigInt(data.FromBytes([]byte{0}))
+	acc.EthBalance = data.Base64BigInt(data.FromBytes([]byte{0}))
 
 	if err := s.db.Insert(acc); err != nil {
 		logger.Warn(fmt.Sprintf("could not insert account: %v", err))

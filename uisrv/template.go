@@ -33,7 +33,7 @@ func (s *Server) handleTemplateCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tpl.ID = util.NewUUID()
-	tpl.Hash = data.FromBytes(crypto.Keccak256(tpl.Raw))
+	tpl.Hash = data.HexFromBytes(crypto.Keccak256(tpl.Raw))
 	if !s.insert(logger, w, tpl) {
 		return
 	}

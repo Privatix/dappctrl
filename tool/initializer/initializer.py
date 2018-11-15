@@ -2785,7 +2785,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             logging.info('Full mode.')
                             self._run_dapp_cmd()
                             self._check_dapp_conf()
-
+                        self.run_service(comm=True, restart=True)
                         self.run_service()
                         if not self.in_args['no_gui']:
                             self.target = 'both'

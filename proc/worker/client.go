@@ -1075,7 +1075,9 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 	}
 
 	product := &data.Product{}
-	if err := w.db.FindOneTo(product, "offer_tpl_id", template.ID); err != nil {
+	if err := w.db.SelectOneTo(
+		product, "WHERE offer_tpl_id = $1 AND NOT is_server",
+		template.ID); err != nil {
 		logger.Error(err.Error())
 		return nil, ErrProductNotFound
 	}

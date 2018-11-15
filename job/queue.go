@@ -401,7 +401,7 @@ func (q *queue) processJob(job *data.Job,
 
 	if job.TryCount >= tconf.TryLimit && tconf.TryLimit != 0 {
 		job.Status = data.JobFailed
-		logger.Error("job is failed")
+		logger.Error(fmt.Sprintf("job %s is failed", job.Type))
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)

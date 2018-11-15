@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -226,6 +227,17 @@ func main() {
 	}
 	defer closer.Close()
 	defer panicHunter(logger)
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, os.Kill)
+
+	go func() {
+		<-interrupt
+		// Delay to execute deferred operations.
+		time.Sleep(time.Second * 3)
+		logger.Debug("dappctrl is stopped")
+		os.Exit(1)
+	}()
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {

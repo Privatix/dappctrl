@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -34,37 +33,6 @@ func newConn(t *testing.T) *Conn {
 		t.Fatalf("failed to create connection: %s", err)
 	}
 	return conn
-}
-
-func TestReconnect(t *testing.T) {
-	srv := newServer(t)
-	defer srv.Close()
-	conn := newConn(t)
-	defer conn.Close()
-
-	ch := make(chan error)
-	go func() {
-		ch <- conn.PublishOffering([]byte("{}"))
-	}()
-
-	srv.conn.Close()
-
-	if err := <-ch; err == nil {
-		t.Fatalf("disconnect error expected, but not occurred")
-	}
-
-	srv.conn = nil
-
-	for i := 0; i < int(time.Second/time.Millisecond); i++ {
-		if srv.conn != nil {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
-
-	if srv.conn == nil {
-		t.Fatalf("failed to reconnect")
-	}
 }
 
 func TestPublishOffering(t *testing.T) {

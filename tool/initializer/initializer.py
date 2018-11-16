@@ -843,7 +843,7 @@ class CommonCMD(Init):
                 logging.error('VPN is not ready')
                 exit(13)
 
-        if not self.old_vers:
+        if not self.old_vers and self.in_args['cli']:
             self._sym_lynk()
 
     def _sym_lynk(self):
@@ -3223,12 +3223,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.clear_contr()
                 self.del_pid()
                 self._clear_dir(self.gui_path)
-
-                if not self.old_vers:
-                    for unit in (self.unit_f_com, self.unit_f_vpn):
-                        p = self.unit_symlink + unit
-                        remove(p)
-                        logging.debug('Remove {} done'.format(p))
+                try:
+                    if not self.old_vers:
+                        for unit in (self.unit_f_com, self.unit_f_vpn):
+                            p = self.unit_symlink + unit
+                            remove(p)
+                            logging.debug('Remove {} done'.format(p))
+                except BaseException as symlinkExpt:
+                    logging.debug('Symlink expt: {}'.format(symlinkExpt))
 
 
             elif not self.old_vers and self.in_args['vpn']:

@@ -493,23 +493,22 @@ class CommonCMD(Init):
         # Rolback net.ipv4.ip_forward and clear store by target
         logging.debug('Rolback target: {}, sysctl: {}'.format(self.target,
                                                               self.sysctl))
-        logging.info('UNcomment on this !!!!!!!!!!')
-        # if not self.old_vers and not self.sysctl:
-        #     logging.debug('Rolback ip_forward')
-        #     cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
-        #     self._sys_call(cmd)
-        #
-        # if self.target == 'back':
-        #     self.clear_contr(True)
-        #
-        # elif self.target == 'gui':
-        #     self._clear_dir(self.gui_path)
-        #
-        # elif self.target == 'both':
-        #     self.clear_contr(True)
-        #     self._clear_dir(self.gui_path)
-        # else:
-        #     logging.debug('Absent `target` for cleaning!')
+        if not self.old_vers and not self.sysctl:
+            logging.debug('Rolback ip_forward')
+            cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
+            self._sys_call(cmd)
+
+        if self.target == 'back':
+            self.clear_contr(True)
+
+        elif self.target == 'gui':
+            self._clear_dir(self.gui_path)
+
+        elif self.target == 'both':
+            self.clear_contr(True)
+            self._clear_dir(self.gui_path)
+        else:
+            logging.debug('Absent `target` for cleaning!')
 
         sys.exit(code)
 

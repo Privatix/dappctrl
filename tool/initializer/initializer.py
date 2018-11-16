@@ -83,6 +83,7 @@ Exit code:
     32 - Problem with operation R/W LXC contaiter config or run sh or interfaces conf
     33 - Problem with check or validate offer conf file
     34 - Try run app with update mode in first time
+    35 - Not start service on 8000 port
 
     not save port 8000 from SessionServer and 9000 from PayServer if role is client
 """
@@ -296,8 +297,8 @@ class Init:
     target = None  # may will be back,gui,both
     sysctl = False
     waiting = True
-    in_args = None # arguments with which the script was launched.
-    dappctrl_role = None # the role: agent|client.
+    in_args = None  # arguments with which the script was launched.
+    dappctrl_role = None  # the role: agent|client.
 
     def __init__(self):
         self.tmp_var = main_conf['tmp_var']
@@ -492,23 +493,23 @@ class CommonCMD(Init):
         # Rolback net.ipv4.ip_forward and clear store by target
         logging.debug('Rolback target: {}, sysctl: {}'.format(self.target,
                                                               self.sysctl))
-
-        if not self.old_vers and not self.sysctl:
-            logging.debug('Rolback ip_forward')
-            cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
-            self._sys_call(cmd)
-
-        if self.target == 'back':
-            self.clear_contr(True)
-
-        elif self.target == 'gui':
-            self._clear_dir(self.gui_path)
-
-        elif self.target == 'both':
-            self.clear_contr(True)
-            self._clear_dir(self.gui_path)
-        else:
-            logging.debug('Absent `target` for cleaning!')
+        logging.info('UNcomment on this !!!!!!!!!!')
+        # if not self.old_vers and not self.sysctl:
+        #     logging.debug('Rolback ip_forward')
+        #     cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
+        #     self._sys_call(cmd)
+        #
+        # if self.target == 'back':
+        #     self.clear_contr(True)
+        #
+        # elif self.target == 'gui':
+        #     self._clear_dir(self.gui_path)
+        #
+        # elif self.target == 'both':
+        #     self.clear_contr(True)
+        #     self._clear_dir(self.gui_path)
+        # else:
+        #     logging.debug('Absent `target` for cleaning!')
 
         sys.exit(code)
 
@@ -1786,6 +1787,7 @@ class Nspawn(Params):
         self._sys_call('apt-get update')
         logging.debug('Install systemd-container')
         self._sys_call('apt-get install systemd-container -y')
+        self._sys_call('apt-get install lshw -y')
         self._disable_dns()
 
     def _nsp_deb_pack(self):
@@ -1794,10 +1796,9 @@ class Nspawn(Params):
               '> /etc/apt/sources.list.d/jessie-backports.list'
         logging.debug('Add jessie-backports.list')
         self._sys_call(cmd)
-        self._sys_call(cmd='apt-get install lshw -y')
-
         logging.debug('Update')
         self._sys_call('apt-get update')
+        self._sys_call('apt-get install lshw -y')
         self.__upgr_sysd(
             cmd='apt-get -t jessie-backports install systemd -y')
 
@@ -2344,6 +2345,8 @@ class AutoOffer:
                 self.pswd,
                 self.product_id,
                 'registered',
+                0,
+                1
 
             ],
             'id': self.id,
@@ -2353,10 +2356,15 @@ class AutoOffer:
         while time() - timeStar < timeWait:
             res = self.__urlOpen(data=data, key='result')
             if res[0]:
-                status = res[1][0].get('status')
-                offerStatus = res[1][0].get('offerStatus')
-                if status == 'msg_channel_published' and offerStatus == 'registered':
-                    return True, 'All done'
+                items = res[1].get('items')
+                logging.debug("items: {}".format(items))
+                if items and isinstance(items,(list,set,tuple)):
+                    status = items[0].get('status')
+                    offerStatus = items[0].get('offerStatus')
+                    logging.debug('status: {}, offerStatus: {}'.format(status, offerStatus))
+                    if status == 'msg_channel_published' and offerStatus == 'registered':
+                        logging.debug('Offerings for agent exist.')
+                        return True, 'All done'
             logging.debug('Wait')
             sleep(60)
         logging.info('Does not exist offerings for agent.')
@@ -2595,21 +2603,29 @@ class AutoOffer:
                 request.add_header('Authorization', "Basic {}".format(auth))
             response = urlopen(request, dumps(data))
             response = response.read()
-            logging.debug('Response: {}'.format(response))
-
-            response = loads(response)
+            logging.debug('Response: {0}'.format(response))
+            try:
+                response = loads(response)
+            except BaseException as jsonExpt:
+                logging.error(jsonExpt)
+                return False, jsonExpt
 
             if response.get('error', False):
+                logging.error("Error on response: {}".format(response['error']))
+
                 return False, response['error']
             if key:
+                logging.debug('Get key: {}'.format(key))
                 response = response.get(key, False)
                 if not response:
+                    logging.error('Key {} not exist in response'.format(key))
                     return False, 'Key {} not exist in response'.format(key)
 
+            logging.debug('Response OK. {}'.format(response))
             return True, response
 
         except BaseException as urlexpt:
-            logging.error( 'Url Exept: {}'.format(urlexpt))
+            logging.error('Url Exept: {}'.format(urlexpt))
             return False, urlexpt
 
     def _setPswd(self):
@@ -2796,7 +2812,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             else:
                                 self.install_gui()
                         elif self.in_args['cli']:
-                            logging.debug('Cli mode')
+                            logging.debug('Cli mode.Wait when up 8000 port')
+                            if not self._checker_port(
+                                    port='8000',
+                                    verb=True):
+                                logging.info('Sorry, but for unknown reasons,\n'
+                                             'the required service to continue work is not responding.\n'
+                                             'Try again.')
+                                self._rolback(35)
                             res = self.offerRun()
                             if not res[0]:
                                 logging.error('Auto offer: {}'.format(res[1]))
@@ -2843,6 +2866,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             else:
                                 self.install_gui()
                         elif self.in_args['cli']:
+                            logging.debug('Cli mode.Wait when up 8000 port')
+                            if not self._checker_port(
+                                    port='8000',
+                                    verb=True):
+                                logging.info('Sorry, but for unknown reasons,\n'
+                                             'the required service to continue work is not responding.\n'
+                                             'Try again.')
+                                self._rolback(35)
                             res = self.offerRun()
                             if not res[0]:
                                 logging.error('Auto offer: {}'.format(res[1]))
@@ -3195,5 +3226,8 @@ if __name__ == '__main__':
     logging.debug('Inside finalizer.pid: {}'.format(check.use_ports))
 
     signal(SIGINT, check.signal_handler)
-
-    check.main_cycle()
+    try:
+        check.main_cycle()
+    except BaseException as mainexpt:
+        logging.error('Main trouble: {}'.format(mainexpt))
+        check._rolback(17)

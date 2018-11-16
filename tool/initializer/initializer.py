@@ -45,7 +45,7 @@ from distutils.version import StrictVersion
 from socket import socket, AF_INET, SOCK_STREAM
 from string import ascii_uppercase, ascii_lowercase, digits
 from re import search, sub, findall, compile, match, IGNORECASE
-from os import remove, mkdir, path, environ, stat, chmod, listdir
+from os import remove, mkdir, path, environ, stat, chmod, listdir, symlink
 
 """
 Exit code:
@@ -120,6 +120,7 @@ main_conf = dict(
         path_vpn='vpn/',
         path_com='common/',
         path_unit='/lib/systemd/system/',
+        path_symlink_unit='/lib/systemd/system/multi-user.target.wants/',
         openvpn_fields=[
             'server {} {}',
             'push "route {} {}"'
@@ -377,6 +378,7 @@ class Init:
         self.ovpn_tun = back['openvpn_tun']
         self.ovpn_fields = back['openvpn_fields']
         self.unit_dest = back['path_unit']
+        self.unit_symlink = back['path_symlink_unit']
         self.unit_f_com = back['unit_com']
         self.unit_f_vpn = back['unit_vpn']
         self.unit_params = back['unit_field']
@@ -421,10 +423,6 @@ class Init:
                 if not Init.waiting:
                     break
 
-        # if Init.waiting:
-        #     Init.long_waiting()
-
-        # else:
         sys.stdout.write("\r")
         sys.stdout.write("")
         sys.stdout.flush()
@@ -641,7 +639,8 @@ class CommonCMD(Init):
             logging.error('R/W File: {}'.format(rwexpt))
             return False
 
-    def run_service(self, comm=False, restart=False, nspwn=True):
+    def run_service(self, comm=False, restart=False, nspwn=None):
+        nspwn = False if self.old_vers else True
 
         if comm:
             if nspwn:
@@ -843,6 +842,17 @@ class CommonCMD(Init):
                     verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
+
+        if not self.old_vers and self.in_args['cli']:
+            self._sym_lynk()
+
+    def _sym_lynk(self):
+        logging.debug('Symlink')
+        for unit in (self.unit_f_com, self.unit_f_vpn):
+            p = self.unit_symlink + unit
+            logging.debug('Symlink: {}'.format(p))
+            symlink(self.unit_dest + unit, p)
+        logging.debug('Symlink done')
 
     def _finalizer(self, rw=None, pass_check=False):
         logging.debug('Finalizer. rw: {}, pass_check: {}'.format(rw,pass_check))
@@ -1316,12 +1326,64 @@ class Params(DB):
         self.file_rw(p=p, w=True,
                      data=raw_tmpl, log='Create file with test sql data.')
 
-
-class Rdata(CommonCMD):
-    ''' Class for download, unpack, clear data '''
-
+class UpdateBynary(CommonCMD):
     def __init__(self):
         CommonCMD.__init__(self)
+
+    @Init.wait_decor
+    def update_binary(self):
+        logging.debug('Stop containers')
+        self.service('vpn', 'stop', self.use_ports['vpn'])
+        self.service('comm', 'stop', self.use_ports['common'])
+        self.__download_binary()
+        self.__move_binary()
+        logging.debug('Run containers')
+        self.run_service(comm=True)
+        self.run_service(comm=False)
+
+    @Init.wait_decor
+    def __download_binary(self):
+        logging.info('Begin download files.')
+        obj = URLopener()
+        try:
+            for f in (self.dappvpnBin,self.dappctrlBin):
+                logging.info(
+                    self.wait_mess.format('Start download {}'.format(f)))
+
+                logging.debug(
+                    'url_dwnld:{}, f: {}'.format(self.url_dwnld, f))
+                dwnld_url = self.url_dwnld + '/binary/' + f
+                dwnld_url = dwnld_url.replace('///', '/')
+                logging.debug(' - dwnld url: "{}"'.format(dwnld_url))
+                obj.retrieve(dwnld_url, f)
+                sleep(0.1)
+                logging.info('Download {} done.'.format(f))
+
+        except BaseException as down:
+            logging.error('Download: {}.'.format(down))
+            self._rolback(code)
+
+    @Init.wait_decor
+    def __move_binary(self):
+        logging.info('Start copy binary to destination')
+        conts = dict(vpn=self.dappvpnBin,common=self.dappctrlBin)
+        try:
+            for cont in conts.items():
+                dest = self.p_contr + cont + '/root/go/bin/' + f
+                logging.info('Destination {}'.format(dest))
+                cmd = 'mv -f {} {}'.format(f,dest)
+                logging.debug('mv cmd: {}'.format(cmd))
+                self._sys_call(cmd=cmd)
+
+        except BaseException as down:
+            logging.error('Download: {}.'.format(down))
+            self._rolback(code)
+
+
+class Rdata(UpdateBynary):
+    ''' Class for download, unpack, clear data '''
+    def __init__(self):
+        UpdateBynary.__init__(self)
 
     @Init.wait_decor
     def download(self, code):
@@ -2850,10 +2912,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         self.conf_dappctrl_json(old_vers=True)
                         self.conf_dappvpn_json()
 
-                        self.run_service(comm=True, nspwn=False)
+                        self.run_service(comm=True)
                         self._check_db_run(9)
 
-                        self.run_service(comm=False, nspwn=False)
+                        self.run_service(comm=False)
                         logging.debug('Containers: {}'.format(self.p_unpck))
                         logging.debug('Ports: {}'.format(self.use_ports))
                         if not self.in_args['no_gui']:
@@ -2981,7 +3043,34 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 #             logging.info('Wrong choice. Make a choice between: '
                 #                          '{}'.format(choise_task.keys()))
 
-        def validate_url(self, url):
+        def __select_binary_sources(self):
+
+            def dappvpn():
+                logging.info('Enter the dappvpn build number for downloading')
+                vpnBin = raw_input('>')
+                mess = "You enter '{}'\n" \
+                       "Please enter N and try again or " \
+                       "Y if everything is correct".format(vpnBin)
+
+                if not self.prompt(mess):
+                    vpnBin = dappvpn()
+                return vpnBin
+
+            def dappctrl():
+                logging.info('Enter the dappctrl build number for downloading')
+                ctrlBin = raw_input('>')
+                mess = "You enter '{}'\n" \
+                       "Please enter N and try again or " \
+                       "Y if everything is correct".format(ctrlBin)
+
+                if not self.prompt(mess):
+                    ctrlBin = dappctrl()
+                return ctrlBin
+
+            self.dappvpnBin = dappvpn()
+            self.dappctrlBin = dappctrl()
+
+        def validate_url(self, url, binary=False):
             regex_url = compile(
                 r'^(?:http|https)s?://'  # http:// or https://
                 r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
@@ -2994,7 +3083,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 if match(regex_url, url):
                     logging.info('The address: {} is correct.'.format(url))
                     check.url_dwnld = url + '/'
-                    self.__select_sources()
+                    if binary:
+                        self.__select_binary_sources()
+                    else:
+                        self.__select_sources()
                     break
                 else:
                     logging.info(
@@ -3044,6 +3136,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             parser.add_argument("--update-back", action='store_true',
                                 default=False,
                                 help='Update containers and rerun initializer.')
+
+            parser.add_argument("--update-bin", action='store_true',
+                                default=False,
+                                help='Download and update binary files in containers.')
 
             parser.add_argument("--update-gui", action='store_true',
                                 default=False,
@@ -3127,6 +3223,15 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.clear_contr()
                 self.del_pid()
                 self._clear_dir(self.gui_path)
+                try:
+                    if not self.old_vers:
+                        for unit in (self.unit_f_com, self.unit_f_vpn):
+                            p = self.unit_symlink + unit
+                            remove(p)
+                            logging.debug('Remove {} done'.format(p))
+                except BaseException as symlinkExpt:
+                    logging.debug('Symlink expt: {}'.format(symlinkExpt))
+
 
             elif not self.old_vers and self.in_args['vpn']:
                 logging.debug('Vpn mode.')
@@ -3186,6 +3291,15 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
+
+            elif self.in_args['update_bin']:
+                logging.info('Update binary mode.')
+                logging.info(
+                    'You chose was to update-bin.\n'
+                    'Please enter the address of the resource from which you want to update')
+                self.in_args['link'] = raw_input()
+                self.validate_url(self.in_args['link'], binary=True)
+                self.update_binary()
 
             else:
                 logging.info('Begin init.')

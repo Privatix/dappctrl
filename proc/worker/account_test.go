@@ -252,6 +252,11 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 		t.Fatal("total deposit not updated")
 	}
 
+	if !agent {
+		env.deleteJob(t, data.JobAccountUpdateBalances,
+			data.JobAccount, fixture.UserAcc.ID)
+	}
+
 	testCommonErrors(t, job, *fixture.job)
 }
 

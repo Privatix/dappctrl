@@ -26,12 +26,12 @@ func NewConfig() *Config {
 
 // Conn is a websocket connection to SOMC.
 type Conn struct {
-	conf         *Config
-	logger       log.Logger
-	id           uint32
-	stateChannel chan interface{}
-	timeout      time.Duration
-	write        chan *write
+	conf        *Config
+	logger      log.Logger
+	id          uint32
+	pongChannel chan interface{}
+	timeout     time.Duration
+	write       chan *write
 
 	mtx     sync.Mutex
 	pending map[uint32]chan reply
@@ -45,12 +45,12 @@ func NewConn(conf *Config, logger log.Logger) (*Conn, error) {
 	timeout := time.Duration(conf.CheckTimeout) * time.Second
 
 	conn := &Conn{
-		conf:         conf,
-		logger:       logger.Add("type", "somc.Conn"),
-		pending:      make(map[uint32]chan reply),
-		stateChannel: make(chan interface{}),
-		timeout:      timeout,
-		write:        make(chan *write),
+		conf:        conf,
+		logger:      logger.Add("type", "somc.Conn"),
+		pending:     make(map[uint32]chan reply),
+		pongChannel: make(chan interface{}),
+		timeout:     timeout,
+		write:       make(chan *write),
 	}
 
 	if err := conn.connect(); err != nil {
@@ -81,7 +81,7 @@ func (c *Conn) connection() *websocket.Conn {
 // pongHandler is function to receives PONG messages from websocket server.
 // Sends pong message to state channel for further processing.
 func (c *Conn) pongHandler(pong string) error {
-	c.stateChannel <- pong
+	c.pongChannel <- pong
 	return nil
 }
 
@@ -96,7 +96,7 @@ func (c *Conn) connectionControl() {
 
 	for {
 		select {
-		case msg := <-c.stateChannel:
+		case msg := <-c.pongChannel:
 			if !connected {
 				connected = true
 				logger.Warn("SOMC communication restored")

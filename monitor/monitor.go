@@ -53,6 +53,7 @@ type Monitor struct {
 
 	ethCallTimeout      time.Duration
 	pscABI              abi.ABI
+	ptcABI              abi.ABI
 	pscAddr             common.Address
 	stopMonitor         func()
 	queryPause          time.Duration
@@ -69,6 +70,12 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 		l.Error(err.Error())
 		return nil, ErrFailedToParseABI
 	}
+	abiJSON2 := contract.PrivatixTokenContractABI
+	ptcABI, err := abi.JSON(strings.NewReader(abiJSON2))
+	if err != nil {
+		l.Error(err.Error())
+		return nil, ErrFailedToParseABI
+	}
 	ethCallTimeout := time.Duration(conf.EthCallTimeout) * time.Second
 	queryPause := time.Duration(conf.QueryPause) * time.Second
 	m := &Monitor{
@@ -78,6 +85,7 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 		queue:          q,
 		ethCallTimeout: ethCallTimeout,
 		pscABI:         pscABI,
+		ptcABI:         ptcABI,
 		pscAddr:        psc,
 		queryPause:     queryPause,
 	}
@@ -113,7 +121,7 @@ func (m *Monitor) Start() {
 				err := m.queryLogsAndCreateJobs(
 					m.getFilterLogQueries, m.jobsProducers)
 				if err != nil {
-					logger.Error(err.Error())
+					logger.Warn(err.Error())
 				}
 			}
 		}

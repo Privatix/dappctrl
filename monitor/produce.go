@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	reform "gopkg.in/reform.v1"
+	"github.com/ethereum/go-ethereum"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 )
@@ -23,6 +23,9 @@ func (m *Monitor) queryLogsAndCreateJobs(
 	if err != nil || from >= to {
 		return err
 	}
+
+	logger = logger.Add("from", from, "to", to)
+
 	queries, err := builder(from, to)
 	if err != nil {
 		return err
@@ -44,6 +47,14 @@ func (m *Monitor) queryLogsAndCreateJobs(
 				Topics: log.Topics,
 				TxHash: data.HexFromBytes(log.TxHash.Bytes()),
 			}
+
+			topicName := m.eventNameFromHash(log.Topics[0])
+
+			logger.Add("topicName", topicName,
+				"topicHash", log.Topics[0].String(),
+				"blockNumber", log.BlockNumber,
+				"transactionHash", log.TxHash.String()).Debug(
+				"received Ethereum log")
 
 			producerF, ok := producers[log.Topics[0]]
 			if !ok {

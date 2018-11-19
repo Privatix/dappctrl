@@ -47,29 +47,29 @@ var (
 )
 
 type config struct {
-	AgentMonitor  *abill.Config
-	AgentServer   *uisrv.Config
-	BlockMonitor  *monitor.Config
-	ClientMonitor *cbill.Config
-	DB            *data.DBConfig
-	DBLog         *dblog.Config
-	ReportLog     *rlog.Config
-	EptMsg        *ept.Config
-	Eth           *eth.Config
-	FileLog       *log.FileConfig
-	Gas           *worker.GasConf
-	Job           *job.Config
-	PayServer     *pay.Config
-	PayAddress    string
-	Proc          *proc.Config
-	Report        *bugsnag.Config
-	Role          string
-	SessionServer *sesssrv.Config
-	SOMC          *somc.Config
-	StaticPasword string
-	UI            *ui.Config
-	Country       *country.Config
-	Looper        *looper.Config
+	AgentMonitor   *abill.Config
+	AgentServer    *uisrv.Config
+	BlockMonitor   *monitor.Config
+	ClientMonitor  *cbill.Config
+	DB             *data.DBConfig
+	DBLog          *dblog.Config
+	ReportLog      *rlog.Config
+	EptMsg         *ept.Config
+	Eth            *eth.Config
+	FileLog        *log.FileConfig
+	Gas            *worker.GasConf
+	Job            *job.Config
+	PayServer      *pay.Config
+	PayAddress     string
+	Proc           *proc.Config
+	Report         *bugsnag.Config
+	Role           string
+	SessionServer  *sesssrv.Config
+	SOMC           *somc.Config
+	StaticPassword string
+	UI             *ui.Config
+	Country        *country.Config
+	Looper         *looper.Config
 }
 
 func newConfig() *config {
@@ -110,10 +110,10 @@ func readFlags(conf *config) {
 }
 
 func getPWDStorage(conf *config) data.PWDGetSetter {
-	if conf.StaticPasword == "" {
+	if conf.StaticPassword == "" {
 		return new(data.PWDStorage)
 	}
-	storage := data.StaticPWDStorage(conf.StaticPasword)
+	storage := data.StaticPWDStorage(conf.StaticPassword)
 	return &storage
 }
 

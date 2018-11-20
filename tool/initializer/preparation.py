@@ -1,145 +1,225 @@
 #!/usr/bin/python
 
+"""
+    Preparation before Initializer on pure Python 2.7
+    mode:
+    python initializer.py  -h                              get help information
+    python preparation.py                                  start preparation
+    python preparation.py --link                           use another link for download.If not use, def link in variable dwnld_url
+"""
+
 import logging
-from sys import exit as sys_exit
-from os import remove,path
-from os import environ,system
-from os.path import isfile
 from urllib import URLopener
+from os.path import isfile
+from sys import exit as sys_exit
+from argparse import ArgumentParser
+from os import remove, environ, system
 from platform import linux_distribution
 from subprocess import Popen, PIPE, STDOUT
-
-log_path = './preparation.log'
-pack_name = 'dapp-privatix.deb'
-dwnld_url = 'http://art.privatix.net/{}'.format(pack_name)
-dst_path = '{}'.format(pack_name)
-inst_pack = 'sudo dpkg -i {} || sudo apt-get install -f -y'.format(dst_path)
-create_sudoers = 'su - root -c\'touch {0} && echo "{1}" >> {0}\''
-user_file = '/etc/sudoers.d/{}'
-
-check_sudo = 'dpkg -l | grep sudo'
-install_sudo = 'su -c \'apt install sudo\''
-
-def logger():
-    logging.getLogger().setLevel('DEBUG')
-    form_console = logging.Formatter(
-        '%(message)s',
-        datefmt='%m/%d %H:%M:%S')
-
-    form_file = logging.Formatter(
-        '%(levelname)7s [%(lineno)3s] %(message)s',
-        datefmt='%m/%d %H:%M:%S')
-
-    fh = logging.FileHandler(log_path)  # file debug
-    fh.setLevel('DEBUG')
-    fh.setFormatter(form_file)
-    logging.getLogger().addHandler(fh)
-
-    ch = logging.StreamHandler()  # console debug
-    ch.setLevel('INFO')
-    ch.setFormatter(form_console)
-    logging.getLogger().addHandler(ch)
-    logging.info(' - Begin - ')
+from re import compile, match, IGNORECASE
 
 
-def sys_call(cmd):
-    resp = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT).communicate()
 
-    logging.debug('Sys call cmd: {}. Stdout: {}'.format(cmd, resp))
-    if resp[1]:
-        logging.error('Trouble when call: {}. Result: {}'.format(cmd, resp[1]))
-        return False
-    return resp[0]
+class Prepare:
 
+    def __init__(self):
+        self.log_path = '/var/log/preparation.log'
+        self.pack_name = 'dapp-privatix'
+        self.link = 'http://art.privatix.net/'
+        self.dwnld_url = '{}{}.deb'.format(self.link, self.pack_name)
+        self.dst_path = '{}.deb'.format(self.pack_name)
+        self.inst_pack_cmd = 'sudo apt update && sudo dpkg -i {} || sudo apt-get install -f -y'.format(
+            self.dst_path)
+        self.search_pack_cmd = 'sudo dpkg -l {} >/dev/null 2>&1'.format(self.pack_name)
+        self.del_pack_cmd = 'sudo apt purge {} -y'.format(self.pack_name)
+        self.create_sudoers = 'su - root -c\'touch {0} && echo "{1}" >> {0}\''
+        self.user_file = '/etc/sudoers.d/{}'
 
-def ubn():
-    user = environ.get('SUDO_USER')
-    logging.debug('SUDO_USER: {}'.format(user))
-    f_path = user_file.format(user)
+        self.check_sudo = 'dpkg -l | grep sudo'
+        self.install_sudo = 'su -c \'apt install sudo\''
+        self.logger()
 
-    if user:
+    def logger(self):
+        logging.getLogger().setLevel('DEBUG')
+        form_console = logging.Formatter(
+            '%(message)s',
+            datefmt='%m/%d %H:%M:%S')
+
+        form_file = logging.Formatter(
+            '%(levelname)7s [%(lineno)3s] %(message)s',
+            datefmt='%m/%d %H:%M:%S')
+
+        fh = logging.FileHandler(self.log_path)  # file debug
+        fh.setLevel('DEBUG')
+        fh.setFormatter(form_file)
+        logging.getLogger().addHandler(fh)
+
+        ch = logging.StreamHandler()  # console debug
+        ch.setLevel('INFO')
+        ch.setFormatter(form_console)
+        logging.getLogger().addHandler(ch)
+        logging.info(' - Begin - ')
+
+    def sys_call(self,cmd):
+        resp = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT).communicate()
+
+        logging.debug('Sys call cmd: {}. Stdout: {}'.format(cmd, resp))
+        if resp[1]:
+            logging.error('Trouble when call: {}. Result: {}'.format(cmd, resp[1]))
+            return False
+        return resp[0]
+
+    def ubn(self):
+        user = environ.get('SUDO_USER')
+        logging.debug('SUDO_USER: {}'.format(user))
+        f_path = self.user_file.format(user)
+
+        if user:
+            if not isfile(f_path):
+
+                line = '{} ALL=(ALL:ALL) NOPASSWD:ALL'.format(user)
+                logging.debug('Add line: {} to file: {}'.format(line, f_path))
+
+                f = open(f_path, "wb")
+                try:
+                    f.writelines(line)
+                    f.close()
+                except BaseException as fexpt:
+                    logging.error('Trouble: {}'.format(fexpt))
+                    if isfile(f_path):
+                        remove(f_path)
+                    sys_exit(1)
+
+                finally:
+                    f.close()
+            else:
+                logging.info('Sudoers file {} exist'.format(user))
+        else:
+            logging.error('Trouble. Run the script from sudo!')
+            sys_exit(3)
+
+    def deb(self):
+
+        sudo = self.sys_call(self.check_sudo)
+        if not sudo:
+            logging.info('Install sudo.\n')
+            system(self.install_sudo)
+
+        user = self.sys_call('whoami').replace('\n', '')
+        f_path = self.user_file.format(user)
+
         if not isfile(f_path):
-
             line = '{} ALL=(ALL:ALL) NOPASSWD:ALL'.format(user)
             logging.debug('Add line: {} to file: {}'.format(line, f_path))
 
-            f = open(f_path, "wb")
-            try:
-                f.writelines(line)
-                f.close()
-            except BaseException as fexpt:
-                logging.error('Trouble: {}'.format(fexpt))
-                if isfile(f_path):
-                    remove(f_path)
-                sys_exit(1)
+            raw = self.create_sudoers.format(f_path, line)
+            logging.debug('CMD: {}'.format(raw))
+            logging.info('Create sudoers file.')
+            if system(raw):
+                sys_exit(5)
 
-            finally:
-                f.close()
+    def check_dist(self):
+        dist_name, ver, name_ver = linux_distribution()
+        task = dict(ubuntu=self.ubn,
+                    debian=self.deb
+                    )
+        dist_task = task.get(dist_name.lower(), False)
+        if dist_task:
+            return dist_task
         else:
-            logging.info('Sudoers file {} exist'.format(user))
-    else:
-        logging.error('Trouble. Run the script from sudo!')
-        sys_exit(3)
+            logging.info('You OS is not support yet.')
+            sys_exit(4)
 
+    def dwnld_pack(self):
 
-def deb():
+        obj = URLopener()
+        logging.info('Download {}.\n'
+                     'Please wait, '
+                     'this may take a few minutes!'.format(self.pack_name))
+        logging.info('Download from: {}'.format(self.dwnld_url))
+        obj.retrieve(self.dwnld_url, self.dst_path)
+        logging.info('Download done. Install pack.')
 
-    sudo = sys_call(check_sudo)
-    if not sudo:
-        logging.info('Install sudo.\n')
-        system(install_sudo)
+        if system(self.inst_pack_cmd):
+            sys_exit(2)
 
-    user = sys_call('whoami').replace('\n', '')
-    f_path = user_file.format(user)
+        logging.info('The installation was successful done.\n'
+                     'Run: sudo /opt/privatix/initializer/initializer.py')
+        sys_exit(0)
 
-    if not isfile(f_path):
-        line = '{} ALL=(ALL:ALL) NOPASSWD:ALL'.format(user)
-        logging.debug('Add line: {} to file: {}'.format(line, f_path))
+    def ask(self):
+        answ = raw_input('>')
+        while True:
+            if answ.lower() not in ['n', 'y']:
+                logging.info('Invalid choice. Select y or n.')
+                answ = raw_input('> ')
+                continue
+            if answ.lower() == 'y':
+                return True
+            return False
 
-        raw = create_sudoers.format(f_path, line)
-        logging.debug('CMD: {}'.format(raw))
-        logging.info('Create sudoers file.')
-        if system(raw):
-            sys_exit(5)
+    def prep_checks(self):
+        if system(self.search_pack_cmd):
+            logging.debug('First run')
+            self.check_dist()()
+        else:
+            logging.info('The package {} is already installed on your computer.\n'
+                         'Do you want to reinstall it?'.format(self.pack_name))
+            if self.ask():
+                logging.debug('Reinstall pack')
+                if system(self.del_pack_cmd):
+                    logging.error('An error occurred during the deletion.\n'
+                                  'The process is interrupted.\n'
+                                  'Try to remove the package manually and repeat the installation.')
+                    sys_exit(7)
+                else:
+                    logging.info('The package {} deleted'.format(self.pack_name))
 
+            else:
+                logging.debug('Quit')
+                sys_exit(6)
 
-def check_dist():
-    dist_name, ver, name_ver = linux_distribution()
-    task = dict(ubuntu=ubn,
-                debian=deb
-                )
-    dist_task = task.get(dist_name.lower(), False)
-    if dist_task:
-        return dist_task
-    else:
-        logging.info('You OS is not support yet.')
-        sys_exit(4)
+    def input_args(self):
+        parser = ArgumentParser(description=' *** Preparation *** ')
+        parser.add_argument("--link", type=str, default=False, nargs='?',
+                            help='Enter link for download. default "http://art.privatix.net/"')
+        return vars(parser.parse_args())
 
+    def validate_url(self, url):
+        regex_url = compile(
+            r'^(?:http|https)s?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', IGNORECASE)
 
-def dwnld_pack():
+        while True:
+            if match(regex_url, url):
+                logging.info('The address: {} is correct.'.format(url))
+                self.link = url
+                self.dwnld_url = '{}{}.deb'.format(self.link, self.pack_name)
+                break
+            else:
+                logging.info(
+                    '\nThe address: {} was entered incorrectly.\n'
+                    'Please enter it according to the example:\n'
+                    'http://www.example.com/'.format(url))
+                url = raw_input('>')
 
-    obj = URLopener()
-    logging.info('Download {}.\n'
-                 'Please wait, '
-                 'this may take a few minutes!'.format(pack_name))
-    obj.retrieve(dwnld_url, dst_path)
-    logging.info('Download done. Install pack.')
+    def run(self):
+        in_args = self.input_args()
+        if in_args['link']:
+            logging.info(
+                'You chose was to change link from: {}   to: {}'.format(
+                    self.link, in_args['link']))
 
-    if system(inst_pack):
-        sys_exit(2)
-
-    logging.info('The installation was successful done.\n'
-                 'Run: sudo /opt/privatix/initializer/initializer.py')
-    sys_exit(0)
-
-
-def main():
-
-        check_dist()()
-        dwnld_pack()
+            self.validate_url(in_args['link'])
+        self.prep_checks()
+        self.dwnld_pack()
 
 
 if __name__ == "__main__":
-    logger()
-    main()
+    pr = Prepare()
+    pr.run()
 

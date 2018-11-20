@@ -6,7 +6,10 @@ then
     DAPPCTRL_DIR=${GOPATH}/src/${DAPPCTRL}
 fi
 
-curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+if [ ! -f "${GOPATH}"/bin/dep ]; then
+    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+fi
+echo running dep ensure
 cd "${DAPPCTRL_DIR}" && dep ensure
 go get -d ${DAPPCTRL}/...
 go get -u gopkg.in/reform.v1/reform

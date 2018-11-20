@@ -752,7 +752,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	// Create eth log records used by job.
 	var curSupply uint16 = expectedOffering.Supply
-	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), []byte{})
+	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,7 +857,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 		offeringHash,
 	}
 
-	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), []byte{})
+	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -927,7 +927,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
 	}
-	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), []byte{})
+	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
 	if err != nil {
 		t.Fatal(err)
 	}

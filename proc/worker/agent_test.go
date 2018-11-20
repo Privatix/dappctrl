@@ -773,7 +773,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 		offeringHash,
 	}
 
-	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), []byte{})
+	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
 	if err != nil {
 		t.Fatal(err)
 	}

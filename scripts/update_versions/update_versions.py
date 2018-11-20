@@ -13,9 +13,6 @@ _release_prefix = 'release/'
 _prod_data_sql_path = 'data/prod_data.sql'
 _prod_data_sql_pattern = r"(system.version.db'[,\n\t\s]+)'(\d+\.\d+\.\d+)"
 
-_dappinst_path = 'tool/dappinst/main.go'
-_dappinst_pattern = r'(appVersion\s+=\s+)"(\d+\.\d+\.\d+)'
-
 
 def take_release_version():
     current_branch_name = subprocess.check_output(_git_branch_name_command).decode("utf-8").strip()
@@ -45,21 +42,14 @@ def actualize_prod_data(dappctrl_folder_path, release_version):
     replace_in_file(file_path, _prod_data_sql_pattern, r"\1'{}".format(release_version))
 
 
-def actualize_dappinst(dappctrl_folder_path, release_version):
-    file_path = os.path.join(dappctrl_folder_path, _dappinst_path)
-
-    replace_in_file(file_path, _dappinst_pattern, r'\1"{}'.format(release_version))
-
-
 def commit_all(release_version):
     commit_message = 'change version to {}'.format(release_version)
 
     subprocess.call(_git_add_all_command)
-    subprocess.call(_git_commit_command+[commit_message])
+    subprocess.call(_git_commit_command + [commit_message])
 
 
 os.chdir(_dappctrl_folder_path)
 _release_version = take_release_version()
 actualize_prod_data(_dappctrl_folder_path, _release_version)
-actualize_dappinst(_dappctrl_folder_path, _release_version)
 commit_all(_release_version)

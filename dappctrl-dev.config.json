@@ -60,7 +60,7 @@
         }
     },
     "FileLog": {
-        "Level": "info",
+        "Level": "debug",
         "StackLevel": "error",
         "Prefix": "",
         "UTC": false,
@@ -204,7 +204,7 @@
         "TLS": null
     },
     "SOMC": {
-        "ReconnPeriod": 5000,
+        "SOMCTimeout": 30,
         "URL": "ws://89.38.96.53:8080"
     },
     "StaticPassword": "",

@@ -222,7 +222,7 @@
         "TLS": null
     },
     "SOMC": {
-        "ReconnPeriod": 5000,
+        "SOMCTimeout": 30,
         "URL": "ws://190.2.137.9:8080"
     },
     "StaticPassword": "",

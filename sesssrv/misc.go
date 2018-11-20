@@ -82,15 +82,20 @@ func (s *Server) identClient(logger log.Logger,
 	return ch, true
 }
 
-func (s *Server) findCurrentSession(logger log.Logger,
-	w http.ResponseWriter, channel string) (*data.Session, bool) {
+func (s *Server) findCurrentSession(
+	logger log.Logger, w http.ResponseWriter,
+	channel string, noErrorIfNotFound bool) (*data.Session, bool) {
 	var sess data.Session
 	if err := s.db.SelectOneTo(&sess, `
 		WHERE channel = $1 AND stopped IS NULL
 		ORDER BY started DESC
 		LIMIT 1`, channel); err != nil {
 		logger.Warn(err.Error())
-		s.RespondError(logger, w, ErrSessionNotFound)
+		if noErrorIfNotFound {
+			s.RespondResult(logger, w, nil)
+		} else {
+			s.RespondError(logger, w, ErrSessionNotFound)
+		}
 		return nil, false
 	}
 

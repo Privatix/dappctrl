@@ -229,9 +229,9 @@ CREATE TABLE offerings (
 
     auto_pop_up bool, -- if is true, then allow the offering to automatically pop up
 
-    source_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
+    somc_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
 
-    source text NOT NULL -- additional data to support defined source_type.
+    somc_data text NOT NULL -- additional data to support defined somc_type.
 );
 
 -- State channels.

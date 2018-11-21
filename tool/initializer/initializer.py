@@ -1006,7 +1006,8 @@ class CommonCMD(Init):
         if self.in_args['link']:
             db_conn = data.get('DB')  # save db params from local
             res = self.conf_dappctrl_dev_json(db_conn)
-            if res: data = res
+            if res:
+                data = res
 
         # Check and change self ip and port for PayAddress
         my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')
@@ -1027,6 +1028,8 @@ class CommonCMD(Init):
 
         # change role: agent, client
         data['Role'] = self.dappctrl_role
+        if self.pswd:
+            data['StaticPassword'] = self.pswd
 
         # Search ports in conf and store it to main_conf['ports']
         for k, v in data.iteritems():
@@ -2373,7 +2376,7 @@ class AutoOffer:
         self.id = 1
         self.url = 'http://localhost:8888/http'
         self.pswdSymbol = 12
-        self.pswd = self.__random_pswd()
+        # self.pswd = self.__random_pswd()
         self.acc_name = 'TestAcc'
         self.botUrl = 'http://89.38.96.53:3000/getprix'
         self.botAuth = 'dXNlcjpoRmZWRWRVMkNva0Y='
@@ -2392,10 +2395,10 @@ class AutoOffer:
         self.waitblockchain = 60
         self.vpnConf = '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json'
 
-    def __random_pswd(self):
-        return ''.join(SystemRandom().choice(
-            ascii_uppercase + ascii_lowercase + digits
-                                ) for _ in range(self.pswdSymbol))
+    # def __random_pswd(self):
+    #     return ''.join(SystemRandom().choice(
+    #         ascii_uppercase + ascii_lowercase + digits
+    #                             ) for _ in range(self.pswdSymbol))
 
     def _getAgentOffer(self, mark):
         logging.info('Get Offerings. Mark: {}'.format(mark))
@@ -2794,6 +2797,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             self.ver = ver
             self.dist_name = dist_name
             self.firstinst = None
+            self.pswd = None
 
         def __ubuntu(self):
             logging.debug('Ubuntu: {}'.format(self.ver))
@@ -3205,7 +3209,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
             elif self.in_args['cli']:
                 logging.info('Auto offering.')
-                self.in_args['no_gui']=True
+                self.in_args['no_gui'] = True
                 if self.in_args['file']:
                     logging.debug('Check existence offer file: {}'.format(self.in_args['file']))
                     res = self.validateJson(self.in_args['file'])
@@ -3214,6 +3218,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         exit(33)
 
                 self.target = 'back'
+                self.pswd = ''.join(SystemRandom().choice(
+                            ascii_uppercase + ascii_lowercase + digits
+                                ) for _ in range(self.pswdSymbol))
                 self.check_sudo()
                 self.dappctrl_role = 'agent'
                 self.init_os()

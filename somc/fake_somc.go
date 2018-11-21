@@ -35,7 +35,7 @@ func NewTestConfig() *TestConfig {
 
 // FakeSOMC is a fake somc server.
 type FakeSOMC struct {
-	sync.Mutex // To make sure conn cannot be implicitly rewritten.
+	mtx sync.Mutex // To make sure conn cannot be implicitly rewritten.
 
 	srv  *http.Server
 	conn *websocket.Conn
@@ -53,10 +53,7 @@ func NewFakeSOMC(t *testing.T, somcURL string, startupDelay uint) *FakeSOMC {
 	srv := &FakeSOMC{srv: &http.Server{Addr: sp[2], Handler: mux}}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		srv.Lock()
-		defer srv.Unlock()
-
-		if srv.conn != nil {
+		if srv.connection() != nil {
 			return
 		}
 
@@ -68,7 +65,7 @@ func NewFakeSOMC(t *testing.T, somcURL string, startupDelay uint) *FakeSOMC {
 			return
 		}
 
-		srv.conn = conn
+		srv.setConnection(conn)
 	})
 
 	go func() {
@@ -83,8 +80,22 @@ func NewFakeSOMC(t *testing.T, somcURL string, startupDelay uint) *FakeSOMC {
 	return srv
 }
 
+func (s *FakeSOMC) connection() *websocket.Conn {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	return s.conn
+}
+
+func (s *FakeSOMC) setConnection(conn *websocket.Conn) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	s.conn = conn
+}
+
 // Close closes connection and stops server.
 func (s *FakeSOMC) Close() {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
 	if s.conn != nil {
 		s.conn.Close()
 	}
@@ -94,7 +105,7 @@ func (s *FakeSOMC) Close() {
 // Read reads from connection.
 func (s *FakeSOMC) Read(t *testing.T, method string) *JSONRPCMessage {
 	var msg JSONRPCMessage
-	if err := s.conn.ReadJSON(&msg); err != nil {
+	if err := s.connection().ReadJSON(&msg); err != nil {
 		t.Fatalf("failed to read message: %s", err)
 	}
 
@@ -107,7 +118,7 @@ func (s *FakeSOMC) Read(t *testing.T, method string) *JSONRPCMessage {
 
 // Write writes reply to connection.
 func (s *FakeSOMC) Write(t *testing.T, msg *JSONRPCMessage) {
-	if err := s.conn.WriteJSON(msg); err != nil {
+	if err := s.connection().WriteJSON(msg); err != nil {
 		t.Fatalf("failed to write message: %s", err)
 	}
 }

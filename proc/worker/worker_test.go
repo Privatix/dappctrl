@@ -96,8 +96,9 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.PayServer.Addr, pwdStorage, conf.Country,
-		data.TestToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods, "", 0)
+		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
+		conf.Country, data.TestToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods, "", 0)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

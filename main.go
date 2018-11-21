@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
-	asomc "github.com/privatix/dappctrl/agent/tor-somc"
+	"github.com/privatix/dappctrl/agent/somcserver"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -47,30 +48,29 @@ var (
 )
 
 type config struct {
-	AgentMonitor  *abill.Config
-	AgentServer   *uisrv.Config
-	BlockMonitor  *monitor.Config
-	ClientMonitor *cbill.Config
-	Country       *country.Config
-	DB            *data.DBConfig
-	DBLog         *dblog.Config
-	ReportLog     *rlog.Config
-	Looper        *looper.Config
-	EptMsg        *ept.Config
-	Eth           *eth.Config
-	FileLog       *log.FileConfig
-	Gas           *worker.GasConf
-	Job           *job.Config
-	PayServer     *pay.Config
-	PayAddress    string
-	Proc          *proc.Config
-	Report        *bugsnag.Config
-	Role          string
-
+	AgentMonitor     *abill.Config
+	AgentServer      *uisrv.Config
+	BlockMonitor     *monitor.Config
+	ClientMonitor    *cbill.Config
+	Country          *country.Config
+	DB               *data.DBConfig
+	DBLog            *dblog.Config
+	ReportLog        *rlog.Config
+	EptMsg           *ept.Config
+	Eth              *eth.Config
+	FileLog          *log.FileConfig
+	Gas              *worker.GasConf
+	Job              *job.Config
+	Looper           *looper.Config
+	PayServer        *pay.Config
+	PayAddress       string
+	Proc             *proc.Config
+	Report           *bugsnag.Config
+	Role             string
 	SessionServer    *sesssrv.Config
 	SOMC             *somc.Config
 	SOMCServer       *rpcsrv.Config
-	StaticPasword    string
+	StaticPassword   string
 	TorHostname      string
 	TorSocksListener uint
 	UI               *rpcsrv.Config
@@ -91,6 +91,7 @@ func newConfig() *config {
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
+		PayServer:     pay.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
@@ -115,10 +116,10 @@ func readFlags(conf *config) {
 }
 
 func getPWDStorage(conf *config) data.PWDGetSetter {
-	if conf.StaticPasword == "" {
+	if conf.StaticPassword == "" {
 		return new(data.PWDStorage)
 	}
-	storage := data.StaticPWDStorage(conf.StaticPasword)
+	storage := data.StaticPWDStorage(conf.StaticPassword)
 	return &storage
 }
 
@@ -215,7 +216,7 @@ func newAgentSOMCServer(conf *rpcsrv.Config, db *reform.DB,
 		return nil, err
 	}
 
-	handler := asomc.NewHandler(db, logger)
+	handler := somcserver.NewHandler(db, logger)
 	if err := server.AddHandler("api", handler); err != nil {
 		return nil, err
 	}
@@ -248,6 +249,17 @@ func main() {
 	defer closer.Close()
 	defer panicHunter(logger)
 
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, os.Kill)
+
+	go func() {
+		<-interrupt
+		// Delay to execute deferred operations.
+		time.Sleep(time.Second * 3)
+		logger.Debug("dappctrl is stopped")
+		os.Exit(1)
+	}()
+
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
@@ -258,9 +270,10 @@ func main() {
 
 	ethBack := eth.NewBackend(conf.Eth, logger)
 
-	worker, err := worker.NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.PayAddress, pwdStorage, conf.Country,
-		data.ToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods, conf.TorHostname, conf.TorSocksListener)
+	worker, err := worker.NewWorker(logger, db, somcConn,
+		ethBack, conf.Gas, ethBack.PSCAddress(), conf.PayAddress,
+		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods, conf.TorHostname, conf.TorSocksListener)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -298,7 +311,8 @@ func main() {
 		fatal <- uiSrv2.ListenAndServe()
 	}()
 
-	sess := sesssrv.NewServer(conf.SessionServer, logger, db, conf.Country, queue)
+	sess := sesssrv.NewServer(
+		conf.SessionServer, logger, db, conf.Country, queue)
 	go func() {
 		fatal <- sess.ListenAndServe()
 	}()

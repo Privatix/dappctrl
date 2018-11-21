@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/privatix/dappctrl/data"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +35,7 @@ type Backend interface {
 	GetTransactionByHash(context.Context, common.Hash) (*types.Transaction, bool, error)
 
 	RegisterServiceOffering(*bind.TransactOpts, [common.HashLength]byte,
-		*big.Int, uint16, uint8, string) (*types.Transaction, error)
+		*big.Int, uint16, uint8, data.Base64String) (*types.Transaction, error)
 
 	PTCBalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
 
@@ -78,7 +80,7 @@ type Backend interface {
 		offeringHash [32]byte) (*types.Transaction, error)
 
 	PSCPopupServiceOffering(opts *bind.TransactOpts, offeringHash [32]byte,
-		sourceType uint8, source string) (*types.Transaction, error)
+		somcType uint8, somcData data.Base64String) (*types.Transaction, error)
 
 	FilterLogs(ctx context.Context,
 		q ethereum.FilterQuery) ([]types.Log, error)
@@ -275,14 +277,14 @@ func (b *backendInstance) GetTransactionByHash(ctx context.Context,
 func (b *backendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [common.HashLength]byte,
 	minDeposit *big.Int, maxSupply uint16,
-	sourceType uint8, source string) (*types.Transaction, error) {
+	somcType uint8, somcData data.Base64String) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
 
 	tx, err := b.psc.RegisterServiceOffering(opts, offeringHash,
-		minDeposit, maxSupply, sourceType, source)
+		minDeposit, maxSupply, somcType, string(somcData))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to register service offering: %s", err)
@@ -496,14 +498,14 @@ func (b *backendInstance) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 // PSCPopupServiceOffering calls popupServiceOffering method of  Privatix
 // service contract.
 func (b *backendInstance) PSCPopupServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte, sourceType uint8, source string) (*types.Transaction, error) {
+	offeringHash [32]byte, somcType uint8, somcData data.Base64String) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
 	opts.Context = ctx2
 
 	tx, err := b.psc.PopupServiceOffering(opts, offeringHash,
-		sourceType, source)
+		somcType, string(somcData))
 	if err != nil {
 		err = fmt.Errorf("failed to pop up service offering: %v", err)
 	}

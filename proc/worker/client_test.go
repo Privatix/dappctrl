@@ -216,7 +216,7 @@ func testClientEndpointCreate(t *testing.T,
 	}
 	sealed := sealMessage(t, env, fxt, &msg)
 
-	setJobData(t, fxt.DB, fxt.job, &data.JobEndpointCreateData{sealed})
+	setJobData(t, fxt.DB, fxt.job, &data.JobEndpointCreateData{EndpointSealed: sealed})
 	runJob(t, env.worker.ClientEndpointCreate, fxt.job)
 
 	var endp data.Endpoint
@@ -240,7 +240,7 @@ func testClientEndpointCreate(t *testing.T,
 		string(endp.AdditionalParams) != string(params) ||
 		endp.CountryStatus == nil ||
 		*endp.CountryStatus != wantedCountryStatus {
-		t.Fatalf("bad endpoint content")
+		t.Fatal("bad endpoint content")
 	}
 }
 
@@ -752,7 +752,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	// Create eth log records used by job.
 	var curSupply uint16 = expectedOffering.Supply
-	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), []byte{})
+	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -864,10 +864,15 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ethLog := &data.JobEthLog{
-		Data:   logData,
 		Topics: topics,
 		Block:  12345,
+		Data:   logData,
 	}
 	setJobData(t, db, fxt.job, &data.JobData{
 		EthLog: ethLog,
@@ -930,18 +935,16 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		offeringHash,
 		common.BigToHash(big.NewInt(100)),
 	}
-
-	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSourceSOMC, []byte{})
+	logData, err := logOfferingPopUpDataArguments.Pack(
+		uint16(1), data.OfferingSourceSOMC, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	setJobData(t, db, fxt.job, &data.JobData{
 		EthLog: &data.JobEthLog{
-			Data:   logData,
 			Topics: topics,
 			Block:  123456,
+			Data:   logData,
 		},
 	})
 

@@ -481,7 +481,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if w.sourceType == data.OfferingSourceSOMC {
+	if w.somcType == data.OfferingSOMCShared {
 		if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgSOMCPublish,
 			data.JobEndpoint, newEndpoint.ID); err != nil {
 			tx.Rollback()
@@ -644,7 +644,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(common.BytesToHash(offeringHash)),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		w.sourceType, w.source)
+		w.somcType, w.somcData)
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())
@@ -681,7 +681,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	if w.sourceType == data.OfferingSourceSOMC {
+	if w.somcType == data.OfferingSOMCShared {
 		return w.addJob(logger, nil, data.JobAgentPreOfferingMsgSOMCPublish,
 			data.JobOffering, offering.ID)
 	}
@@ -919,7 +919,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
 	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash,
-		w.sourceType, w.source)
+		w.somcType, w.somcData)
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())

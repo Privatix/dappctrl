@@ -204,20 +204,25 @@ func TestPayment(t *testing.T) {
 	mon, ch := newTestMonitor(processErrors, postErrors)
 	defer closeTestMonitor(t, mon, ch)
 
+	mtx := sync.Mutex{}
 	called := false
 	err := fmt.Errorf("some error")
 	mon.post = func(db *reform.DB, channel string, pscAddr data.HexString,
 		pass string, amount uint64, tls bool, timeout uint,
 		pr *proc.Processor) error {
+		mtx.Lock()
+		defer mtx.Unlock()
 		called = true
 		return err
 	}
 
 	wg.Wait()
 
+	mtx.Lock()
 	if called {
 		t.Fatalf("unexpected payment triggering")
 	}
+	mtx.Unlock()
 
 	wg = newWaitGroup()
 	go awaitingPosting(wg, postErrors)
@@ -229,15 +234,19 @@ func TestPayment(t *testing.T) {
 
 	wg.Wait()
 
+	mtx.Lock()
 	if !called {
 		t.Fatalf("no payment triggered")
 	}
+	mtx.Unlock()
 	expectBalance(t, fxt, 4)
 
 	wg = newWaitGroup()
 	go awaitingGoodPosting(wg, postErrors)
 
+	mtx.Lock()
 	err = nil
+	mtx.Unlock()
 
 	wg.Wait()
 

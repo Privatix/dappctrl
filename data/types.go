@@ -39,7 +39,7 @@ func (t LogTopics) Value() (driver.Value, error) {
 
 // Scan deserializes the log topics.
 func (t *LogTopics) Scan(src interface{}) error {
-	source, ok := src.([]byte)
+	somcData, ok := src.([]byte)
 	if !ok {
 		return fmt.Errorf(
 			"type assertion .([]byte) failed, actual type is %T",
@@ -47,5 +47,5 @@ func (t *LogTopics) Scan(src interface{}) error {
 		)
 	}
 
-	return json.Unmarshal(source, &t)
+	return json.Unmarshal(somcData, &t)
 }

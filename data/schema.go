@@ -109,10 +109,10 @@ const (
 	OfferRemoved     = "removed"
 )
 
-// Offering source types.
+// Offering somc types.
 const (
-	OfferingSourceSOMC uint8 = iota
-	OfferingSourceTor
+	OfferingSOMCShared uint8 = iota
+	OfferingSOMCTor
 )
 
 // Offering is a service offering.
@@ -147,8 +147,8 @@ type Offering struct {
 	FreeUnits          uint8           `json:"freeUnits" reform:"free_units"`
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
-	SourceType         uint8           `json:"sourceType" reform:"source_type"`
-	Source             string          `json:"source" reform:"source"`
+	SOMCType           uint8           `json:"somcType" reform:"somc_type"`
+	SOMCData           Base64String    `json:"somcData" reform:"somc_data"`
 }
 
 // State channel statuses.

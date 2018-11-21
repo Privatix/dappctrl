@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,11 +19,16 @@ func TestObjectChange(t *testing.T) {
 	defer fxt.close()
 
 	unsubscribed := false
+	mtx := sync.Mutex{}
+
 	j1 := &data.Job{RelatedID: fxt.Channel.ID}
 	j2 := &data.Job{RelatedID: util.NewUUID()}
 	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
 		j3 *data.Job, relatedIDs []string, subID string,
 		subFunc job.SubFunc) error {
+		mtx.Lock()
+		defer mtx.Unlock()
+
 		switch method {
 		case job.MockSubscribe:
 			go func() {
@@ -70,6 +76,8 @@ func TestObjectChange(t *testing.T) {
 	sub.Unsubscribe()
 	time.Sleep(time.Millisecond)
 
+	mtx.Lock()
+	defer mtx.Unlock()
 	if !unsubscribed {
 		t.Fatal("didn't unsubscribe")
 	}

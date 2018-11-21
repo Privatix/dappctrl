@@ -65,7 +65,7 @@ func (m *Monitor) getLastProcessedBlockNumber() (uint64, error) {
 func (m *Monitor) getLatestBlockNumber(ctx context.Context) (uint64, error) {
 	header, err := m.eth.HeaderByNumber(ctx, nil)
 	if err != nil {
-		m.logger.Error(err.Error())
+		m.logger.Warn(err.Error())
 		return 0, ErrFailedToGetHeaderByNumber
 	}
 

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -16,6 +17,7 @@ import (
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/tor"
 )
 
 // GasConf amounts of gas limit to use for contracts calls.
@@ -56,33 +58,33 @@ type Worker struct {
 	somc           *somc.Conn
 	queue          job.Queue
 	processor      *proc.Processor
-
-	ethConfig        *eth.Config
-	countryConfig    *country.Config
-	pscPeriods       *eth.PSCPeriods
-	sourceType       uint8
-	source           string
-	torSocksListener uint
+	ethConfig      *eth.Config
+	countryConfig  *country.Config
+	pscPeriods     *eth.PSCPeriods
+	somcType       uint8
+	somcData       data.Base64String
+	torClient      *http.Client
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack eth.Backend, gasConc *GasConf, payAddr string,
-	pwdGetter data.PWDGetter, countryConf *country.Config,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	pscPeriods *eth.PSCPeriods,
+	ethBack eth.Backend, gasConc *GasConf, pscAddr common.Address,
+	payAddr string, pwdGetter data.PWDGetter,
+	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
+	eptConf *ept.Config, pscPeriods *eth.PSCPeriods,
 	torHostname string, torSocksListener uint) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
 
-	sourceType := data.OfferingSourceSOMC
-	source := torHostname
-	if len(source) > 0 {
+	somcType := data.OfferingSOMCShared
+	somcData := data.FromBytes([]byte(torHostname))
+	if len(somcData) > 0 {
 		l.Info("Offering source Tor")
-		sourceType = data.OfferingSourceTor
+		somcType = data.OfferingSOMCTor
 	} else {
 		l.Info("Offering source SOMC")
 	}
+
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -94,22 +96,27 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		return nil, err
 	}
 
+	torClient, err := tor.NewHTTPClient(torSocksListener)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Worker{
-		abi:              abi,
-		logger:           l,
-		db:               db,
-		decryptKeyFunc:   decryptKeyFunc,
-		gasConf:          gasConc,
-		ept:              eptService,
-		ethBack:          ethBack,
-		pscAddr:          ethBack.PSCAddress(),
-		pwdGetter:        pwdGetter,
-		somc:             somc,
-		countryConfig:    countryConf,
-		pscPeriods:       pscPeriods,
-		sourceType:       sourceType,
-		source:           source,
-		torSocksListener: torSocksListener,
+		abi:            abi,
+		logger:         l,
+		db:             db,
+		decryptKeyFunc: decryptKeyFunc,
+		gasConf:        gasConc,
+		ept:            eptService,
+		ethBack:        ethBack,
+		pscAddr:        pscAddr,
+		pwdGetter:      pwdGetter,
+		somc:           somc,
+		countryConfig:  countryConf,
+		pscPeriods:     pscPeriods,
+		somcType:       somcType,
+		somcData:       somcData,
+		torClient:      torClient,
 	}, nil
 }
 

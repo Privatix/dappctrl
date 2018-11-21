@@ -512,7 +512,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		env.worker.sourceType, env.worker.source)
+		env.worker.somcType, env.worker.somcData)
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -743,7 +743,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		env.worker.sourceType, env.worker.source)
+		env.worker.somcType, env.worker.somcData)
 
 	env.db.Reload(fxt.Offering)
 
@@ -775,7 +775,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSourceSOMC, []byte{})
+		uint16(1), data.OfferingSourceSOMC, "")
 	if err != nil {
 		t.Fatal(err)
 	}

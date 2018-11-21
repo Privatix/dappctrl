@@ -30,8 +30,8 @@ type logOfferingCreatedInput struct {
 	offeringHash  common.Hash
 	minDeposit    *big.Int
 	currentSupply uint16
-	sourceType    uint8
-	source        string
+	somcType      uint8
+	somcData      data.Base64String
 }
 
 type logOfferingPopUpInput struct {
@@ -39,8 +39,8 @@ type logOfferingPopUpInput struct {
 	offeringHash  common.Hash
 	minDeposit    *big.Int
 	currentSupply uint16
-	sourceType    uint8
-	source        string
+	somcType    uint8
+	somcData        string
 }
 
 var (
@@ -206,12 +206,12 @@ func extractLogOfferingCreated(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	sourceType, ok := dataUnpacked[1].(uint8)
+	somcType, ok := dataUnpacked[1].(uint8)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
-	source, ok := dataUnpacked[2].(string)
+	somcData, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}
@@ -225,8 +225,8 @@ func extractLogOfferingCreated(logger log.Logger,
 		offeringHash:  offeringHash,
 		minDeposit:    minDeposit,
 		currentSupply: curSupply,
-		sourceType:    sourceType,
-		source:        source,
+		somcType:      somcType,
+		somcData:      data.Base64String(somcData),
 	}, nil
 }
 
@@ -251,12 +251,12 @@ func extractLogOfferingPopUp(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	sourceType, ok := dataUnpacked[1].(uint8)
+	somcType, ok := dataUnpacked[1].(uint8)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
-	source, ok := dataUnpacked[2].(string)
+	somcData, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}
@@ -266,11 +266,11 @@ func extractLogOfferingPopUp(logger log.Logger,
 	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingPopUpInput{
-		agentAddr:     agentAddr,
-		offeringHash:  offeringHash,
+		agentAddr:    agentAddr,
+		offeringHash: offeringHash,
 		minDeposit:    minDeposit,
 		currentSupply: currentSupply,
-		sourceType:    sourceType,
-		source:        source,
+		somcType:     somcType,
+		somcData:     data.Base64String(somcData),
 	}, nil
 }

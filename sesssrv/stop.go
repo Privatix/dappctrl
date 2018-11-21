@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
@@ -32,12 +31,34 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		return
 	}
 
-	sess, ok := s.findCurrentSession(logger, w, args.ClientID)
+	prod, ok := s.findProduct(logger, w, ctx.Username)
 	if !ok {
 		return
 	}
 
-	prod, ok := s.findProduct(logger, w, ctx.Username)
+	clientStop := !prod.IsServer && stop
+
+	if clientStop {
+		var status string
+		if ch.ServiceStatus == data.ServiceTerminating {
+			status = data.ServiceTerminated
+		} else {
+			status = data.ServiceSuspended
+		}
+
+		err := job.AddWithData(s.queue, nil,
+			data.JobClientCompleteServiceTransition,
+			data.JobChannel, ch.ID, data.JobSessionServer,
+			status)
+		if err != nil && err != job.ErrDuplicatedJob {
+			logger.Error(err.Error())
+			s.RespondError(logger, w, srv.ErrInternalServerError)
+			return
+		}
+	}
+
+	sess, ok := s.findCurrentSession(
+		logger, w, args.ClientID, clientStop)
 	if !ok {
 		return
 	}
@@ -64,31 +85,7 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 	logger = logger.Add("session", sess)
 	logger.Info("updating session")
 
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		if err := tx.Save(sess); err != nil {
-			return err
-		}
-
-		if !prod.IsServer && stop {
-			var status string
-			if ch.ServiceStatus == data.ServiceTerminating {
-				status = data.ServiceTerminated
-			} else {
-				status = data.ServiceSuspended
-			}
-
-			err := job.AddWithData(s.queue, tx,
-				data.JobClientCompleteServiceTransition,
-				data.JobChannel, ch.ID, data.JobSessionServer,
-				status)
-			if err != nil && err != job.ErrDuplicatedJob {
-				return err
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := s.db.Save(sess); err != nil {
 		logger.Error(err.Error())
 		s.RespondError(logger, w, srv.ErrInternalServerError)
 		return

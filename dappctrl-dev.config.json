@@ -27,7 +27,7 @@
             "sslmode": "disable",
             "user": "postgres",
             "host": "localhost",
-            "port": "5433"
+            "port": "5432"
         }
     },
     "DBLog": {
@@ -60,7 +60,7 @@
         }
     },
     "FileLog": {
-        "Level": "info",
+        "Level": "debug",
         "StackLevel": "error",
         "Prefix": "",
         "UTC": false,
@@ -204,7 +204,7 @@
         "TLS": null
     },
     "SOMC": {
-        "ReconnPeriod": 5000,
+        "SOMCTimeout": 30,
         "URL": "ws://89.38.96.53:8081"
     },
     "SOMCServer": {
@@ -212,25 +212,8 @@
         "TLS": null
     },
     "StaticPassword": "",
-    "Report": {
-        "ReleaseStage": "development",
-        "ExcludedPackages": [
-            "github.com/privatix/dappctrl/tool/dappinst",
-            "github.com/privatix/dappctrl/svc/dappvpn",
-            "github.com/privatix/dappctrl/svc/dappvpn/mon",
-            "github.com/privatix/dappctrl/svc/dappvpn/pusher",
-            "github.com/privatix/dappctrl/util/log",
-            "github.com/privatix/dappctrl/report/bugsnag",
-            "github.com/privatix/dappctrl/report/log",
-            "github.com/privatix/dappctrl/data/log"
-        ]
-    },
-    "ReportLog": {
-        "Level": "info",
-        "StackLevel": "error"
-    },
-    "TorHostname": "plyzfy3qicjjvmeg.onion",
-    "TorSocksListener": 9999,
+    "TorHostname": "",
+    "TorSocksListener": 9050,
     "UI": {
         "Addr": "localhost:8888",
         "AllowedOrigins": ["*"],

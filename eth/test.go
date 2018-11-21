@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/privatix/dappctrl/data"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -90,13 +92,13 @@ func (b *TestEthBackend) CooperativeClose(opts *bind.TransactOpts,
 // RegisterServiceOffering is mock to RegisterServiceOffering.
 func (b *TestEthBackend) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [32]byte, minDeposit *big.Int, maxSupply uint16,
-	source uint8, sourceType string) (*types.Transaction, error) {
+	somcData uint8, somcType data.Base64String) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		method: "RegisterServiceOffering",
 		caller: opts.From,
 		txOpts: opts,
 		args: []interface{}{offeringHash, minDeposit, maxSupply,
-			source, sourceType},
+			somcData, somcType},
 	})
 	b.OfferingAgent = opts.From
 	b.OfferMinDeposit = minDeposit
@@ -344,12 +346,12 @@ func (b *TestEthBackend) PSCRemoveServiceOffering(opts *bind.TransactOpts,
 
 // PSCPopupServiceOffering is mock to PSCPopupServiceOffering.
 func (b *TestEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
-	offeringHash [32]byte, sourceType uint8, source string) (*types.Transaction, error) {
+	offeringHash [32]byte, somcType uint8, somcData data.Base64String) (*types.Transaction, error) {
 	b.CallStack = append(b.CallStack, TestEthBackCall{
 		txOpts: opts,
 		method: "PopupServiceOffering",
 		caller: opts.From,
-		args:   []interface{}{offeringHash, sourceType, source},
+		args:   []interface{}{offeringHash, somcType, somcData},
 	})
 
 	nextBlock, _ := b.LatestBlockNumber(context.Background())

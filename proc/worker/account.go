@@ -256,6 +256,16 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 		return ErrInternal
 	}
 
+	if job.Type == data.JobClientAfterChannelTopUp {
+		account, err := w.account(logger, channel.Client)
+		if err != nil {
+			return err
+		}
+
+		return w.addJob(logger, nil, data.JobAccountUpdateBalances,
+			data.JobAccount, account.ID)
+	}
+
 	return nil
 }
 

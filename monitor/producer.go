@@ -12,13 +12,6 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-const (
-	logChannelToppedUp           = "LogChannelToppedUp"
-	logChannelCloseRequested     = "LogChannelCloseRequested"
-	logCooperativeChannelClose   = "LogCooperativeChannelClose"
-	logUnCooperativeChannelClose = "LogUnCooperativeChannelClose"
-)
-
 // JobsProducers used to bind methods as jobs builder for specific event.
 type JobsProducers map[common.Hash]func(*data.JobEthLog) ([]data.Job, error)
 
@@ -229,7 +222,7 @@ func (m *Monitor) findChannelID(el *data.JobEthLog) string {
 	}
 
 	m.logger.Add("blockNumber", openBlockNumber, "hasBlockNumber",
-		hasOpenBlockNumber).Debug("find block number")
+		hasOpenBlockNumber).Debug("find block number in Ethereum log")
 
 	var query string
 	args := []interface{}{

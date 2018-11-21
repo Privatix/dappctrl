@@ -775,7 +775,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSourceSOMC, "")
+		uint16(1), data.OfferingSOMCShared, "")
 	if err != nil {
 		t.Fatal(err)
 	}

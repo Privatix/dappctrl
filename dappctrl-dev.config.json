@@ -205,7 +205,7 @@
     },
     "SOMC": {
         "SOMCTimeout": 30,
-        "URL": "ws://89.38.96.53:8081"
+        "URL": "ws://89.38.96.53:8080"
     },
     "SOMCServer": {
         "Addr": "localhost:5555",

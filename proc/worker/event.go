@@ -39,8 +39,8 @@ type logOfferingPopUpInput struct {
 	offeringHash  common.Hash
 	minDeposit    *big.Int
 	currentSupply uint16
-	somcType    uint8
-	somcData        string
+	somcType      uint8
+	somcData      data.Base64String
 }
 
 var (
@@ -104,6 +104,9 @@ func init() {
 	}
 
 	logOfferingPopUpDataArguments = abi.Arguments{
+		{
+			Type: abiUint16,
+		},
 		{
 			Type: abiUint8,
 		},
@@ -266,11 +269,11 @@ func extractLogOfferingPopUp(logger log.Logger,
 	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingPopUpInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
 		minDeposit:    minDeposit,
 		currentSupply: currentSupply,
-		somcType:     somcType,
-		somcData:     data.Base64String(somcData),
+		somcType:      somcType,
+		somcData:      data.Base64String(somcData),
 	}, nil
 }

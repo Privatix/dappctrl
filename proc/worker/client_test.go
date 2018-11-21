@@ -859,12 +859,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(10), data.OfferingSourceSOMC, []byte{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
+		uint16(10), data.OfferingSOMCShared, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -936,7 +931,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BigToHash(big.NewInt(100)),
 	}
 	logData, err := logOfferingPopUpDataArguments.Pack(
-		uint16(1), data.OfferingSourceSOMC, "")
+		uint16(1), data.OfferingSOMCShared, "")
 	if err != nil {
 		t.Fatal(err)
 	}

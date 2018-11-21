@@ -79,10 +79,10 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	somcType := data.OfferingSOMCShared
 	somcData := data.FromBytes([]byte(torHostname))
 	if len(somcData) > 0 {
-		l.Info("Offering source Tor")
+		l.Info("SOMC type Tor")
 		somcType = data.OfferingSOMCTor
 	} else {
-		l.Info("Offering source SOMC")
+		l.Info("SOMC type Shared")
 	}
 
 	abi, err := abi.JSON(

@@ -60,7 +60,7 @@ VALUES ('eth.max.deposit',
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.lastProcessedBlock',
         '0',
-        2,
+        1,
         'Last block number in blockchain stores last proccessed block.',
         'last processed block');
 

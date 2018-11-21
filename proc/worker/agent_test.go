@@ -771,17 +771,19 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
+		common.BigToHash(big.NewInt(100)),
 	}
 
-	logData, err := logOfferingPopUpDataArguments.Pack(uint8(0), "")
+	logData, err := logOfferingCreatedDataArguments.Pack(
+		uint16(1), data.OfferingSOMCShared, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ethLog := &data.JobEthLog{
+		Data:   logData,
 		Topics: topics,
 		Block:  12345,
-		Data:   logData,
 	}
 	setJobData(t, db, fxt.job, &data.JobData{
 		EthLog: ethLog,

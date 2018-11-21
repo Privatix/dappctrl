@@ -74,10 +74,15 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	eptConf *ept.Config, pscPeriods *eth.PSCPeriods,
 	torHostname string, torSocksListener uint) (*Worker, error) {
 
+	l := logger.Add("type", "proc/worker.Worker")
+
 	somcType := data.OfferingSOMCShared
 	somcData := data.FromBytes([]byte(torHostname))
 	if len(somcData) > 0 {
+		l.Info("SOMC type Tor")
 		somcType = data.OfferingSOMCTor
+	} else {
+		l.Info("SOMC type Shared")
 	}
 
 	abi, err := abi.JSON(
@@ -98,7 +103,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 
 	return &Worker{
 		abi:            abi,
-		logger:         logger.Add("type", "proc/worker.Worker"),
+		logger:         l,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
 		gasConf:        gasConc,

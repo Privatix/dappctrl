@@ -35,10 +35,12 @@ type logOfferingCreatedInput struct {
 }
 
 type logOfferingPopUpInput struct {
-	agentAddr    common.Address
-	offeringHash common.Hash
-	somcType     uint8
-	somcData     data.Base64String
+	agentAddr     common.Address
+	offeringHash  common.Hash
+	minDeposit    *big.Int
+	currentSupply uint16
+	somcType      uint8
+	somcData      data.Base64String
 }
 
 var (
@@ -102,6 +104,9 @@ func init() {
 	}
 
 	logOfferingPopUpDataArguments = abi.Arguments{
+		{
+			Type: abiUint16,
+		},
 		{
 			Type: abiUint8,
 		},
@@ -230,37 +235,45 @@ func extractLogOfferingCreated(logger log.Logger,
 
 func extractLogOfferingPopUp(logger log.Logger,
 	log *data.JobEthLog) (*logOfferingPopUpInput, error) {
-	if len(log.Topics) != 3 {
+	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
 	}
 
-	dataUnpacked, err := logOfferingPopUpDataArguments.UnpackValues(log.Data)
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(log.Data)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParseJobData
 	}
 
-	if len(dataUnpacked) != 2 {
+	if len(dataUnpacked) != 3 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
-	somcType, ok := dataUnpacked[0].(uint8)
+	currentSupply, ok := dataUnpacked[0].(uint16)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
-	somcData, ok := dataUnpacked[1].(string)
+	somcType, ok := dataUnpacked[1].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	somcData, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
 	offeringHash := log.Topics[2]
+	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingPopUpInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
-		somcType:     somcType,
-		somcData:     data.Base64String(somcData),
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
+		minDeposit:    minDeposit,
+		currentSupply: currentSupply,
+		somcType:      somcType,
+		somcData:      data.Base64String(somcData),
 	}, nil
 }

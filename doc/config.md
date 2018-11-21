@@ -202,6 +202,11 @@ SOMC adapter configuration
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"
-    }
+    },
+
+    "SOMCServer": {
+        "Addr": "localhost:5555",
+        "TLS": null
+    
 }
 ```

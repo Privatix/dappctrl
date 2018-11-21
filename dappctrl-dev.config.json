@@ -41,7 +41,7 @@
         "CheckTimeout": 10,
         "Contract": {
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "PSCAddrHex": "0x7ee4f7c659c1c58050d70af278e8901fc315a11e",
+            "PSCAddrHex": "0xef85cd1c955b36945687d56b1cec824ad84bd684",
             "Periods": {
                 "PopUp": 10,
                 "Challenge": 20,

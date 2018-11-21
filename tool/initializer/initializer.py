@@ -31,6 +31,7 @@ from urllib import URLopener
 from time import time, sleep
 from threading import Thread
 from contextlib import closing
+from SocketServer import TCPServer
 from urllib2 import urlopen, Request
 from argparse import ArgumentParser
 from ConfigParser import ConfigParser
@@ -43,6 +44,7 @@ from stat import S_IXUSR, S_IXGRP, S_IXOTH
 from subprocess import Popen, PIPE, STDOUT
 from distutils.version import StrictVersion
 from socket import socket, AF_INET, SOCK_STREAM
+from SimpleHTTPServer import SimpleHTTPRequestHandler
 from string import ascii_uppercase, ascii_lowercase, digits
 from re import search, sub, findall, compile, match, IGNORECASE
 from os import remove, mkdir, path, environ, stat, chmod, listdir, symlink
@@ -84,11 +86,15 @@ Exit code:
     33 - Problem with check or validate offer conf file
     34 - Try run app with update mode in first time
     35 - Not start service on 8000 port
+    36 - Problem with download binary for update
+    37 - Problem with replase new binary for update
 
     not save port 8000 from SessionServer and 9000 from PayServer if role is client
 """
 
 main_conf = dict(
+    bind_port=True,
+    bind_ports=[5555],
     log_path='/var/log/initializer.log',
     branch='develop',
     link_download='http://art.privatix.net/',
@@ -302,6 +308,8 @@ class Init:
     dappctrl_role = None  # the role: agent|client.
 
     def __init__(self):
+        self.bind_port = main_conf['bind_port']
+        self.bind_ports = main_conf['bind_ports']
         self.tmp_var = main_conf['tmp_var']
         self.fin_file = main_conf['mark_final']
         self.url_dwnld = main_conf['link_download']
@@ -368,8 +376,8 @@ class Init:
         self.db_log = back['db_log']
         self.db_stat = back['db_stat']
         self.p_unpck = dict(
-            vpn=[self.path_vpn,'0.0.0.0'],
-            common=[self.path_com,'0.0.0.0']
+            vpn=[self.path_vpn, '0.0.0.0'],
+            common=[self.path_com, '0.0.0.0']
         )
 
     def _init_nspwn(self):
@@ -553,7 +561,8 @@ class CommonCMD(Init):
             else:
                 check_stat = status
 
-            if 'failed' in res or not self._checker_port(port=port, status=check_stat):
+            if 'failed' in res or not self._checker_port(port=port,
+                                                         status=check_stat):
                 return False
             raw_res.append(True)
 
@@ -758,17 +767,18 @@ class CommonCMD(Init):
                     return False
                 sleep(2)
 
-    def _checker_port(self,  port, host='0.0.0.0', status='start', verb=False):
+    def _checker_port(self, port, host='0.0.0.0', status='start',
+                      verb=False):
         logging.debug('Checker: {}'.format(status))
         if not port:
             return None
         if isinstance(port, (list, set)):
             resp = list()
             for p in port:
-                resp.append(self._cycle_ask(host,p, status, verb))
+                resp.append(self._cycle_ask(host, p, status, verb))
             return True if all(resp) else False
         else:
-            return self._cycle_ask(host,port, status, verb)
+            return self._cycle_ask(host, port, status, verb)
 
     def __all_use_ports(self, d):
         for k, v in d.iteritems():
@@ -799,7 +809,7 @@ class CommonCMD(Init):
                     self.tmp_var = []
                     self.__all_use_ports(self.use_ports)
                     if int(port) in range(65535)[1:] and not self._ping_port(
-                            port=port) and int(port) not in self.tmp_var:
+                        port=port) and int(port) not in self.tmp_var:
                         break
                 except BaseException as bexpm:
                     logging.error('Check port: {}'.format(bexpm))
@@ -809,37 +819,51 @@ class CommonCMD(Init):
 
         return port
 
+    def __up_ports(self):
+        logging.debug('Bind ports mode')
+
+        def run_server(p):
+            httpd = TCPServer(('localhost', p), SimpleHTTPRequestHandler)
+            logging.debug(" ^ UP PORT: {}".format(p))
+            httpd.serve_forever()
+
+        for p in self.bind_ports:
+            t = Thread(target=run_server, args=(p,))
+            t.daemon = True
+            t.start()
+
     @Init.wait_decor
     def __wait_up(self):
         logging.info(self.wait_mess.format('Run services'))
 
         logging.debug('Wait when up all ports: {}'.format(self.use_ports))
-
+        if self.bind_port:
+            self.__up_ports()
         # check common
         if not self._checker_port(
-                host=self.p_unpck['common'][1],
-                port=self.use_ports['common'],
-                verb=True):
+            host=self.p_unpck['common'][1],
+            port=self.use_ports['common'],
+            verb=True):
             logging.info('Restart Common')
             self.run_service(comm=True, restart=True)
             if not self._checker_port(
-                    host=self.p_unpck['common'][1],
-                    port=self.use_ports['common'],
-                    verb=True):
+                host=self.p_unpck['common'][1],
+                port=self.use_ports['common'],
+                verb=True):
                 logging.error('Common is not ready')
                 exit(14)
 
         # check vpn
         if not self._checker_port(
-                host=self.p_unpck['vpn'][1],
-                port=self.use_ports['vpn'],
-                verb=True):
+            host=self.p_unpck['vpn'][1],
+            port=self.use_ports['vpn'],
+            verb=True):
             logging.info('Restart VPN')
             self.run_service(comm=False, restart=True)
             if not self._checker_port(
-                    host=self.p_unpck['vpn'][1],
-                    port=self.use_ports['vpn'],
-                    verb=True):
+                host=self.p_unpck['vpn'][1],
+                port=self.use_ports['vpn'],
+                verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
 
@@ -949,7 +973,7 @@ class CommonCMD(Init):
         p_vpn = self.p_contr + self.path_vpn + self.p_dapvpn_conf
         p_com = self.p_contr + self.path_com + self.p_dapvpn_conf
         root_dir = '/opt/privatix/initializer/files/example'
-        conf_agent = 'dappvpn.agent.config.json'    # vpn config
+        conf_agent = 'dappvpn.agent.config.json'  # vpn config
         conf_client = 'dappvpn.client.config.json'  # common config
 
         logging.debug('Path configs: \n\t{}\n\t{}'.format(p_com, p_vpn))
@@ -1070,6 +1094,7 @@ class CommonCMD(Init):
 
 class DB(CommonCMD):
     '''This class provides a check if the database is started from its logs'''
+
     def __init__(self):
         CommonCMD.__init__(self)
 
@@ -1279,7 +1304,8 @@ class Params(DB):
                 raw_tmp[-1] = str(self.sessServPort)
                 raw_data['Connector']['Addr'] = delim.join(raw_tmp)
                 logging.debug(
-                    'Connector Addr: {}.'.format(raw_data['Connector']['Addr']))
+                    'Connector Addr: {}.'.format(
+                        raw_data['Connector']['Addr']))
 
             self.file_rw(p=p,
                          log='Rewrite {} conf'.format(servs),
@@ -1329,9 +1355,15 @@ class Params(DB):
         self.file_rw(p=p, w=True,
                      data=raw_tmpl, log='Create file with test sql data.')
 
+
 class UpdateBynary(CommonCMD):
     def __init__(self):
         CommonCMD.__init__(self)
+        self.fold_route = 'binary/'
+        self.vpn_bin = 'dappvpn'
+        self.ctrl_bin = 'dappctrl'
+        self.dappvpn_route = ''
+        self.dappctrl_route = ''
 
     @Init.wait_decor
     def update_binary(self):
@@ -1346,45 +1378,50 @@ class UpdateBynary(CommonCMD):
 
     @Init.wait_decor
     def __download_binary(self):
-        logging.info('Begin download files.')
+
+        url = self.url_dwnld + self.fold_route
+        dwnld_bin = {
+            self.vpn_bin: url + self.dappvpn_route + self.vpn_bin,
+            self.ctrl_bin: url + self.dappctrl_route + self.ctrl_bin
+        }
+
+        logging.info('Begin download binary files.')
         obj = URLopener()
         try:
-            for f in (self.dappvpnBin,self.dappctrlBin):
+            for f, u in dwnld_bin.items():
                 logging.info(
                     self.wait_mess.format('Start download {}'.format(f)))
-
-                logging.debug(
-                    'url_dwnld:{}, f: {}'.format(self.url_dwnld, f))
-                dwnld_url = self.url_dwnld + '/binary/' + f
-                dwnld_url = dwnld_url.replace('///', '/')
-                logging.debug(' - dwnld url: "{}"'.format(dwnld_url))
-                obj.retrieve(dwnld_url, f)
+                logging.debug('Url binary downloading: {}'.format(u))
+                obj.retrieve(u, f)
                 sleep(0.1)
                 logging.info('Download {} done.'.format(f))
 
         except BaseException as down:
             logging.error('Download: {}.'.format(down))
-            self._rolback(code)
+            sys.exit(36)
 
     @Init.wait_decor
     def __move_binary(self):
         logging.info('Start copy binary to destination')
-        conts = dict(vpn=self.dappvpnBin,common=self.dappctrlBin)
+        conts = dict(vpn=self.vpn_bin, common=self.ctrl_bin)
         try:
-            for cont in conts.items():
+            for cont, f in conts.items():
                 dest = self.p_contr + cont + '/root/go/bin/' + f
                 logging.info('Destination {}'.format(dest))
-                cmd = 'mv -f {} {}'.format(f,dest)
-                logging.debug('mv cmd: {}'.format(cmd))
+                cmd = 'sudo mv -f {} {}'.format(f, dest)
+                logging.debug('Move binaty cmd: {}'.format(cmd))
                 self._sys_call(cmd=cmd)
+                logging.debug('Chown rule 777 for {}'.format(dest))
+                chmod(dest, 0777)
 
         except BaseException as down:
             logging.error('Download: {}.'.format(down))
-            self._rolback(code)
+            sys.exit(37)
 
 
 class Rdata(UpdateBynary):
     ''' Class for download, unpack, clear data '''
+
     def __init__(self):
         UpdateBynary.__init__(self)
 
@@ -1635,7 +1672,7 @@ class GUI(CommonCMD):
         logging.debug('Npm url: {}'.format(self.gui_npm_url))
         if self.old_vers:
             logging.debug('Download node for lxc.')
-            cmd = 'wget -O {} -q \'{}\''.format(npm_path,self.gui_npm_url)
+            cmd = 'wget -O {} -q \'{}\''.format(npm_path, self.gui_npm_url)
             self._sys_call(cmd=cmd, s_exit=11)
 
         else:
@@ -1804,10 +1841,10 @@ class Nspawn(Params):
 
             # rewrite server.conf file
             if not self.file_rw(
-                    p=conf_file,
-                    w=True,
-                    data=tmp_data,
-                    log='Rewrite server.conf'
+                p=conf_file,
+                w=True,
+                data=tmp_data,
+                log='Rewrite server.conf'
             ):
                 self._rolback(7)
 
@@ -1960,10 +1997,10 @@ class LXC(DB):
 
             # rewrite server.conf file
             if not self.file_rw(
-                    p=conf_file,
-                    w=True,
-                    data=tmp_data,
-                    log='Rewrite server.conf'
+                p=conf_file,
+                w=True,
+                data=tmp_data,
+                log='Rewrite server.conf'
             ):
                 self._rolback(7)
 
@@ -2030,11 +2067,11 @@ class LXC(DB):
 
                             # rewrite run sh file
                             if not self.file_rw(
-                                    p=conf_file,
-                                    w=True,
-                                    data=tmp_data,
-                                    log='Rewrite LXC {} run file'.format(
-                                        f_name)
+                                p=conf_file,
+                                w=True,
+                                data=tmp_data,
+                                log='Rewrite LXC {} run file'.format(
+                                    f_name)
                             ):
                                 self._rolback(7)
 
@@ -2054,7 +2091,6 @@ class LXC(DB):
             except BaseException as f_rw:
                 logging.error('R/W LXC run sh: {}'.format(f_rw))
                 self._rolback(32)
-
 
     @Init.wait_decor
     def _rw_container_intrfs(self):
@@ -2078,15 +2114,16 @@ class LXC(DB):
                             self.name_in_main_conf['LXC_ADDR='])
                     elif 'network' in row:
                         newrk = \
-                        self.name_in_main_conf['LXC_NETWORK='].split('/')[0]
+                            self.name_in_main_conf['LXC_NETWORK='].split(
+                                '/')[0]
                         tmp_data[indx] = 'network {}\n'.format(newrk)
 
                 # rewrite conf file
                 if not self.file_rw(
-                        p=conf_file,
-                        w=True,
-                        data=tmp_data,
-                        log='Rewrite LXC {} interfaces'.format(cont_name)
+                    p=conf_file,
+                    w=True,
+                    data=tmp_data,
+                    log='Rewrite LXC {} interfaces'.format(cont_name)
                 ):
                     self._rolback(7)
 
@@ -2181,10 +2218,10 @@ class LXC(DB):
 
                 # rewrite conf file
                 if not self.file_rw(
-                        p=conf_file,
-                        w=True,
-                        data=tmp_data,
-                        log='Rewrite LXC {} config'.format(cont_name)
+                    p=conf_file,
+                    w=True,
+                    data=tmp_data,
+                    log='Rewrite LXC {} config'.format(cont_name)
                 ):
                     self._rolback(7)
 
@@ -2415,17 +2452,19 @@ class AutoOffer:
             ],
             'id': self.id,
         }
-        timeWait = 25*60
+        timeWait = 25 * 60
         timeStar = time()
         while time() - timeStar < timeWait:
             res = self.__urlOpen(data=data, key='result')
             if res[0]:
                 items = res[1].get('items')
                 logging.debug("items: {}".format(items))
-                if items and isinstance(items,(list,set,tuple)):
+                if items and isinstance(items, (list, set, tuple)):
                     status = items[0].get('status')
                     offerStatus = items[0].get('offerStatus')
-                    logging.debug('status: {}, offerStatus: {}'.format(status, offerStatus))
+                    logging.debug(
+                        'status: {}, offerStatus: {}'.format(status,
+                                                             offerStatus))
                     if status == 'msg_channel_published' and offerStatus == 'registered':
                         logging.debug('Offerings for agent exist.')
                         return True, 'All done'
@@ -2445,40 +2484,42 @@ class AutoOffer:
                 raw_data = loads(f.read())
                 logging.debug('Read vpn conf: {}'.format(raw_data))
                 self.product_id = raw_data['Connector']['Username']
-                logging.debug( 'Product id: {}'.format(self.product_id))
+                logging.debug('Product id: {}'.format(self.product_id))
                 return True, 'Product id was found'
 
             except BaseException as readexpt:
                 logging.error('Read vpn conf: {}'.format(readexpt))
                 return False, readexpt
 
-        return False, 'there is no {} to determine Product Id'.format(self.vpnConf)
+        return False, 'there is no {} to determine Product Id'.format(
+            self.vpnConf)
 
     def __checkOfferData(self):
         logging.debug('Check offer data')
         params = {
-                    "product": self.product_id,
-                    "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523",
-                    "agent": self.agent_id,
-                    "serviceName": "my service",
-                    "description": "my service description",
-                    "country": self.__getCountryName(),
-                    "supply": 30,
-                    "unitName": "MB",
-                    "autoPopUp": True,
-                    "unitType": "units",
-                    "billingType": "postpaid",
-                    "setupPrice": 0,
-                    "unitPrice": 1000,
-                    "minUnits": 10000,
-                    "maxUnit": 30000,
-                    "billingInterval": 1,
-                    "maxBillingUnitLag": 100,
-                    "maxSuspendTime": 1800,
-                    "maxInactiveTimeSec": 1800,
-                    "freeUnits": 0,
-                    "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80},
-                }
+            "product": self.product_id,
+            "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523",
+            "agent": self.agent_id,
+            "serviceName": "my service",
+            "description": "my service description",
+            "country": self.__getCountryName(),
+            "supply": 30,
+            "unitName": "MB",
+            "autoPopUp": True,
+            "unitType": "units",
+            "billingType": "postpaid",
+            "setupPrice": 0,
+            "unitPrice": 1000,
+            "minUnits": 10000,
+            "maxUnit": 30000,
+            "billingInterval": 1,
+            "maxBillingUnitLag": 100,
+            "maxSuspendTime": 1800,
+            "maxInactiveTimeSec": 1800,
+            "freeUnits": 0,
+            "additionalParams": {"minDownloadMbits": 100,
+                                 "minUploadMbits": 80},
+        }
 
         if self.offerData:
             logging.debug('From file: {}'.format(self.offerData))
@@ -2491,23 +2532,27 @@ class AutoOffer:
                         res, self.in_args['file'], params['country']))
                     logging.info('Choose which country to use 1 or 2:\n'
                                  '1 - {}\n'
-                                 '2 - {}'.format(res,params['country']))
+                                 '2 - {}'.format(res, params['country']))
                     choise_task = {1: res, 2: params['country']}
 
                     while True:
                         choise_code = raw_input('>')
 
-                        if choise_code.isdigit() and int(choise_code) in choise_task:
-                            self.offerData['country'] = choise_task[int(choise_code)]
+                        if choise_code.isdigit() and int(
+                            choise_code) in choise_task:
+                            self.offerData['country'] = choise_task[
+                                int(choise_code)]
                             break
                         else:
-                            logging.info('Wrong choice. Make a choice between: '
-                                         '{}'.format(choise_task.keys()))
+                            logging.info(
+                                'Wrong choice. Make a choice between: '
+                                '{}'.format(choise_task.keys()))
 
             params.update(self.offerData)
 
         else:
-            logging.info('You file offer is empty.Install with default params')
+            logging.info(
+                'You file offer is empty.Install with default params')
 
         return params
 
@@ -2675,7 +2720,8 @@ class AutoOffer:
                 return False, jsonExpt
 
             if response.get('error', False):
-                logging.error("Error on response: {}".format(response['error']))
+                logging.error(
+                    "Error on response: {}".format(response['error']))
 
                 return False, response['error']
             if key:
@@ -2694,7 +2740,7 @@ class AutoOffer:
 
     def _setPswd(self):
         # 1.Set password for UI API access
-        logging.info( 'Set password')
+        logging.info('Set password')
 
         data = {
             'method': 'ui_setPassword',
@@ -2710,7 +2756,7 @@ class AutoOffer:
 
     def _createAcc(self):
         # Create account
-        logging.info( 'Create account')
+        logging.info('Create account')
         data = {
             'method': 'ui_generateAccount',
             'params': [
@@ -2755,7 +2801,7 @@ class AutoOffer:
 
     def _askBot(self):
         # Ask Privatix bot to transfer PRIX and ETH to address of account in
-        logging.info( 'Ask Privatix Bot')
+        logging.info('Ask Privatix Bot')
         stop_mark = 0
 
         data = {
@@ -2770,8 +2816,9 @@ class AutoOffer:
                     self.ethHash = res[1].get('ethHash')
                     if self.prixHash and self.ethHash:
                         return True, 'OK'
-                    logging.debug('prixHash:{}, ethHash:{}'.format(self.prixHash,
-                                                           self.ethHash))
+                    logging.debug(
+                        'prixHash:{}, ethHash:{}'.format(self.prixHash,
+                                                         self.ethHash))
                 else:
                     logging.error('Bot error: {}'.format(res[1]))
                 stop_mark += 1
@@ -2785,10 +2832,9 @@ class AutoOffer:
                 return False, res[1]
 
 
-
 def checker_fabric(inherit_class, old_vers, ver, dist_name):
     class Checker(Rdata, GUI, AutoOffer, inherit_class):
-        def __init__(self,old_vers,ver,dist_name):
+        def __init__(self, old_vers, ver, dist_name):
             GUI.__init__(self)
             AutoOffer.__init__(self)
             Rdata.__init__(self)
@@ -2879,15 +2925,17 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         elif self.in_args['cli']:
                             logging.debug('Cli mode.Wait when up 8000 port')
                             if not self._checker_port(
-                                    port='8000',
-                                    verb=True):
-                                logging.info('Sorry, but for unknown reasons,\n'
-                                             'the required service to continue work is not responding.\n'
-                                             'Try again.')
+                                port='8000',
+                                verb=True):
+                                logging.info(
+                                    'Sorry, but for unknown reasons,\n'
+                                    'the required service to continue work is not responding.\n'
+                                    'Try again.')
                                 self._rolback(35)
                             res = self.offerRun()
                             if not res[0]:
-                                logging.error('Auto offer: {}'.format(res[1]))
+                                logging.error(
+                                    'Auto offer: {}'.format(res[1]))
                                 raise BaseException(res[1])
                             mess = '    Congratulations, you posted your offer!\n' \
                                    '    It will be published once an hour.\n' \
@@ -2933,15 +2981,17 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         elif self.in_args['cli']:
                             logging.debug('Cli mode.Wait when up 8000 port')
                             if not self._checker_port(
-                                    port='8000',
-                                    verb=True):
-                                logging.info('Sorry, but for unknown reasons,\n'
-                                             'the required service to continue work is not responding.\n'
-                                             'Try again.')
+                                port='8000',
+                                verb=True):
+                                logging.info(
+                                    'Sorry, but for unknown reasons,\n'
+                                    'the required service to continue work is not responding.\n'
+                                    'Try again.')
                                 self._rolback(35)
                             res = self.offerRun()
                             if not res[0]:
-                                logging.error('Auto offer: {}'.format(res[1]))
+                                logging.error(
+                                    'Auto offer: {}'.format(res[1]))
                                 raise BaseException(res[1])
                             mess = '    Congratulations, you posted your offer!\n' \
                                    '    It will be published once an hour.\n' \
@@ -2995,6 +3045,30 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
         def __select_sources(self):
 
+            def dappvpn():
+                logging.info(
+                    'Enter the dappvpn build number for downloading')
+                vpnBin = raw_input('>')
+                mess = "You enter '{}'\n" \
+                       "Please enter N and try again or " \
+                       "Y if everything is correct".format(vpnBin)
+
+                if not self.prompt(mess):
+                    vpnBin = dappvpn()
+                return vpnBin
+
+            def dappctrl():
+                logging.info(
+                    'Enter the dappctrl build number for downloading')
+                ctrlBin = raw_input('>')
+                mess = "You enter '{}'\n" \
+                       "Please enter N and try again or " \
+                       "Y if everything is correct".format(ctrlBin)
+
+                if not self.prompt(mess):
+                    ctrlBin = dappctrl()
+                return ctrlBin + '/'
+
             def back():
                 logging.info('Enter the Back build number for downloading')
                 back_build = raw_input('>')
@@ -3021,7 +3095,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.back_route = back()
                 self.gui_route = gui()
 
-            if self.in_args['update_back'] or self.in_args['no_gui']:
+            if self.in_args['update_bin']:
+                self.dappvpn_route = dappvpn() + '/'
+                self.dappctrl_route = dappctrl() + '/'
+            elif self.in_args['update_back'] or self.in_args['no_gui']:
                 self.back_route = back()
             elif self.in_args['update_gui']:
                 self.gui_route = gui()
@@ -3050,7 +3127,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
         def __select_binary_sources(self):
 
             def dappvpn():
-                logging.info('Enter the dappvpn build number for downloading')
+                logging.info(
+                    'Enter the dappvpn build number for downloading')
                 vpnBin = raw_input('>')
                 mess = "You enter '{}'\n" \
                        "Please enter N and try again or " \
@@ -3061,7 +3139,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 return vpnBin
 
             def dappctrl():
-                logging.info('Enter the dappctrl build number for downloading')
+                logging.info(
+                    'Enter the dappctrl build number for downloading')
                 ctrlBin = raw_input('>')
                 mess = "You enter '{}'\n" \
                        "Please enter N and try again or " \
@@ -3087,10 +3166,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 if match(regex_url, url):
                     logging.info('The address: {} is correct.'.format(url))
                     check.url_dwnld = url + '/'
-                    if binary:
-                        self.__select_binary_sources()
-                    else:
-                        self.__select_sources()
+                    # if binary:
+                    #     self.__select_binary_sources()
+                    # else:
+                    self.__select_sources()
                     break
                 else:
                     logging.info(
@@ -3239,25 +3318,24 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 except BaseException as symlinkExpt:
                     logging.debug('Symlink expt: {}'.format(symlinkExpt))
 
-
             elif not self.old_vers and self.in_args['vpn']:
                 logging.debug('Vpn mode.')
                 sys.stdout.write(
                     str(self.service('vpn', self.in_args['vpn'],
-                                      self.use_ports['vpn'])))
+                                     self.use_ports['vpn'])))
 
             elif not self.old_vers and self.in_args['comm']:
                 logging.debug('Comm mode.')
                 sys.stdout.write(
                     str(self.service('comm', self.in_args['comm'],
-                                      self.use_ports['common'])))
+                                     self.use_ports['common'])))
 
             elif not self.old_vers and self.in_args['mass']:
                 logging.debug('Mass mode.')
                 comm_stat = self.service('comm', self.in_args['mass'],
-                                          self.use_ports['common'])
+                                         self.use_ports['common'])
                 vpn_stat = self.service('vpn', self.in_args['mass'],
-                                         self.use_ports['vpn'])
+                                        self.use_ports['vpn'])
                 sys.stdout.write(str(bool(all((comm_stat, vpn_stat)))))
 
             elif self.in_args['update_back']:
@@ -3293,19 +3371,15 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 self.check_role()
                 if self.clear_contr():
                     self.use_ports = dict(vpn=[], common=[],
-                                           mangmt=dict(vpn=None,
-                                                       common=None))
+                                          mangmt=dict(vpn=None,
+                                                      common=None))
                     self.init_os(True)
                 else:
                     logging.info('Problem with clear all old file.')
 
             elif self.in_args['update_bin']:
                 logging.info('Update binary mode.')
-                logging.info(
-                    'You chose was to update-bin.\n'
-                    'Please enter the address of the resource from which you want to update')
-                self.in_args['link'] = raw_input()
-                self.validate_url(self.in_args['link'], binary=True)
+                self.check_sudo()
                 self.update_binary()
 
             else:

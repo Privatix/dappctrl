@@ -2,15 +2,6 @@
 
 ## Fields description
 
-### AgentServer
-An agent server (ui endpoint) configuration.
-
-|Field|Type|Description|Example|
-|-|-|-|-|
-|Addr|string|The agent server ui endpoint address|localhost:3000|
-|TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}|
-|EthCallTimeout|uint|Ethereum operations call timeout in second|5|
-
 ### BlockMonitor
 An ethereum blockchan monitor configuration
 
@@ -119,6 +110,15 @@ SOMC adapter configuration
 |-|-|-|-|
 |Addr|int|the agents somc server address|5555|
 |TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}| 
+
+### SOMCServerAddr
+An agent server (ui endpoint) configuration.
+
+|Field|Type|Description|Example|
+|-|-|-|-|
+|Addr|string|The agent server ui endpoint address|localhost:3000|
+|TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}|
+|EthCallTimeout|uint|Ethereum operations call timeout in second|5|
 
 ### TorHostname
 

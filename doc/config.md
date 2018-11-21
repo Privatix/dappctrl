@@ -114,20 +114,11 @@ SOMC adapter configuration
 |ReconnPeriod|int|Reconnection period in milliseconds|5000|
 |URL|string|SOMC URL|ws://localhost:8080|
 
-### SOMCServerAddr
+### SOMCServer
 |Field|Type|Description|Example|
 |-|-|-|-|
 |Addr|int|the agents somc server address|5555|
 |TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}| 
-
-### SOMCServerAddr
-An agent server (ui endpoint) configuration.
-
-|Field|Type|Description|Example|
-|-|-|-|-|
-|Addr|string|The agent server ui endpoint address|localhost:3000|
-|TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}|
-|EthCallTimeout|uint|Ethereum operations call timeout in second|5|
 
 ### TorHostname
 

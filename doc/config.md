@@ -105,7 +105,7 @@ SOMC adapter configuration
 |ReconnPeriod|int|Reconnection period in milliseconds|5000|
 |URL|string|SOMC URL|ws://localhost:8080|
 
-### SOMCServer
+### SOMCServerAddr
 |Field|Type|Description|Example|
 |-|-|-|-|
 |Addr|int|the agents somc server address|5555|

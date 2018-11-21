@@ -225,7 +225,7 @@
         "SOMCTimeout": 30,
         "URL": "ws://190.2.137.9:8080"
     },
-    "SOMCServerAddr": {
+    "SOMCServer": {
         "Addr": "localhost:5555",
         "TLS": null
     },

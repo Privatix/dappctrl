@@ -78,4 +78,11 @@ VALUES ('offering.autopopup',
         'Allow offerings to pop up automatically.',
         'offering autopopup');
 
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('somc.transport.tor',
+        'false',
+        2,
+        'Whether to use Tor as service offering messaging protocol or not',
+        'use Tor');
+
 END TRANSACTION;

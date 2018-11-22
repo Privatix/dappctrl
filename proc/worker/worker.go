@@ -61,8 +61,7 @@ type Worker struct {
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
 	pscPeriods     *eth.PSCPeriods
-	somcType       uint8
-	somcData       data.Base64String
+	torHostName    data.Base64String
 	torClient      *http.Client
 }
 
@@ -75,15 +74,6 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	torHostname string, torSocksListener uint) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
-
-	somcType := data.OfferingSOMCShared
-	somcData := data.FromBytes([]byte(torHostname))
-	if len(somcData) > 0 {
-		l.Info("SOMC type Tor")
-		somcType = data.OfferingSOMCTor
-	} else {
-		l.Info("SOMC type Shared")
-	}
 
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
@@ -114,8 +104,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		somc:           somc,
 		countryConfig:  countryConf,
 		pscPeriods:     pscPeriods,
-		somcType:       somcType,
-		somcData:       somcData,
+		torHostName:    data.FromBytes([]byte(torHostname)),
 		torClient:      torClient,
 	}, nil
 }

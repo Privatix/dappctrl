@@ -18,6 +18,7 @@ const (
 	SettingMinConfirmations   = "eth.min.confirmations"
 	SettingPasswordHash       = "system.password"
 	SettingPasswordSalt       = "system.salt"
+	SettingSOMCUseTor         = "somc.transport.tor"
 )
 
 // ReadSetting reads value of a given setting.

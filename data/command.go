@@ -122,7 +122,6 @@ func createDatabase(connStr string) error {
 	i := strings.LastIndex(s, separator)
 	createStatements := s[:i]
 
-	fmt.Println(createStatements)
 	for _, query := range strings.Split(createStatements, ";") {
 		if _, err := db.Exec(query); err != nil {
 			return err
@@ -139,7 +138,6 @@ func createDatabase(connStr string) error {
 	defer CloseDB(conn)
 
 	configStatements := s[i+len(separator):]
-	fmt.Println(configStatements)
 	for _, query := range strings.Split(configStatements, ";") {
 		if _, err := conn.Exec(query); err != nil {
 			return err

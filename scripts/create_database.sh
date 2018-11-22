@@ -22,7 +22,8 @@ then
 fi
 
 
-PGPASSWORD=${POSTGRES_PASSWORD} psql -U ${POSTGRES_USER} -f "${DAPPCTRL_DIR}/data/create_db.sql"
+dappctrl db-create -conn \
+    'host=localhost sslmode=disable dbname=postgres user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
 
 dappctrl db-migrate -conn \
     'host=localhost sslmode=disable dbname=dappctrl user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}

@@ -167,7 +167,14 @@ func TestGetAgentChannels(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "GetAgentChannels")
 	defer fxt.close()
 
-	assertResult := func(res *ui.GetAgentChannelsResult, err error, exp, total int) {
+	ch := data.NewTestChannel(fxt.Account.EthAddr, fxt.User.EthAddr,
+		fxt.Offering.ID, 100, 100, data.ChannelWaitCoop)
+	ch.ServiceStatus = data.ServiceSuspended
+	data.InsertToTestDB(t, db, ch)
+	defer data.DeleteFromTestDB(t, db, ch)
+
+	assertResult := func(res *ui.GetAgentChannelsResult,
+		err error, exp, total int) {
 		assertErrEqual(nil, err)
 		if res == nil {
 			t.Fatal("result is empty")
@@ -182,30 +189,40 @@ func TestGetAgentChannels(t *testing.T) {
 	}
 
 	type testObject struct {
-		channelStatus string
-		serviceStatus string
+		channelStatus []string
+		serviceStatus []string
 		expected      int
 		offset        uint
 		limit         uint
 		total         int
 	}
 
-	_, err := handler.GetAgentChannels("wrong-password", "", "", 0, 0)
+	_, err := handler.GetAgentChannels("wrong-password",
+		[]string{}, []string{}, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	testData := []*testObject{
 		// Test pagination.
-		{"", "", 1, 0, 0, 1},
-		{"", "", 1, 0, 1, 1},
-		{"", "", 0, 1, 1, 1},
+		{[]string{}, []string{}, 2, 0, 0, 2},
+		{[]string{}, []string{}, 1, 0, 1, 2},
+		{[]string{}, []string{}, 0, 2, 1, 2},
 		// Test filtering by channel status and service status.
-		{"", "", 1, 0, 0, 1},
-		{data.ChannelActive, "", 1, 0, 0, 1},
-		{data.ChannelPending, "", 0, 0, 0, 0},
-		{"", data.ServicePending, 1, 0, 0, 1},
-		{"", data.ServiceActive, 0, 0, 0, 0},
-		{data.ChannelActive, data.ServicePending, 1, 0, 0, 1},
-		{data.ChannelActive, data.ServiceActive, 0, 0, 0, 0},
+		{[]string{data.ChannelActive}, []string{}, 1, 0, 0, 1},
+		{[]string{data.ChannelPending}, []string{}, 0, 0, 0, 0},
+		{[]string{}, []string{data.ServicePending}, 1, 0, 0, 1},
+		{[]string{}, []string{data.ServiceActive}, 0, 0, 0, 0},
+		{[]string{data.ChannelActive}, []string{data.ServicePending},
+			1, 0, 0, 1},
+		{[]string{data.ChannelActive}, []string{data.ServiceActive},
+			0, 0, 0, 0},
+		{[]string{data.ChannelActive, data.ChannelWaitCoop},
+			[]string{}, 2, 0, 0, 2},
+		// Test multi statuses.
+		{[]string{data.ChannelActive, data.ChannelWaitCoop},
+			[]string{data.ServicePending}, 1, 0, 0, 1},
+		{[]string{},
+			[]string{data.ServicePending, data.ServiceSuspended},
+			2, 0, 0, 2},
 	}
 
 	for _, v := range testData {

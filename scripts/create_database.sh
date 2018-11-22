@@ -5,13 +5,28 @@ if [ -z "${POSTGRES_PORT}" ]
 then
     POSTGRES_PORT=5432
 fi
+
+if [ -z "${POSTGRES_USER}" ]
+then
+    POSTGRES_USER=postgres
+fi
+
+if [ -z "${POSTGRES_PASSWORD}" ]
+then
+    POSTGRES_PASSWORD=
+fi
+
 if [ -z "${DAPPCTRL_DIR}" ]
 then
     DAPPCTRL_DIR=${GOPATH}/src/${DAPPCTRL}
 fi
 
-psql -U postgres -f "${DAPPCTRL_DIR}/data/settings.sql"
 
-dappctrl db-migrate -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port='${POSTGRES_PORT}
-dappctrl db-init-data -conn 'host=localhost sslmode=disable dbname=dappctrl user=postgres port='${POSTGRES_PORT}
+PGPASSWORD=${POSTGRES_PASSWORD} psql -U ${POSTGRES_USER} -f "${DAPPCTRL_DIR}/data/settings.sql"
+
+dappctrl db-migrate -conn \
+    'host=localhost sslmode=disable dbname=dappctrl user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
+
+dappctrl db-init-data -conn \
+    'host=localhost sslmode=disable dbname=dappctrl user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
 

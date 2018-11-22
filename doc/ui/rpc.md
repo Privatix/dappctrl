@@ -354,8 +354,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeCh
 
 *Parameters*: 
 1. Password (string)
-2. Channel status (string)
-3. Service status (string)
+2. Channel statuses (array of `string`s, can be empty)
+3. Service statuses (array of `string`s, can be empty)
 4. Offset (number)
 5. Limit (number)
 
@@ -367,7 +367,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeCh
 
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty","active","pending",0,1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty",["active"],["pending", "terminated"],0,1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -400,7 +400,40 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty","active","pending",0,1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty",[],[],0,1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "jsonrpc":"2.0",
+    "id":67,
+    "result":{
+        "items":[
+            {
+                "id":"aa79a640-540b-4a87-892c-7675b3f058b2",
+                "agent":"829be313281957b2c7fb34c99c05b7b0affc09d3",
+                "client":"7b8063c922db492c7116f79e84c5398c277f6d01",
+                "offering":"c872f3bb-6e66-4fef-a70d-9d8e97542705",
+                "block":1298498081,
+                "channelStatus":"active",
+                "serviceStatus":"pending",
+                "serviceChangedTime":"2018-10-21T23:44:11.309Z",
+                "preparedAt":"2018-11-21T23:44:11.309Z",
+                "totalDeposit":100,
+                "receiptBalance":5
+            }
+        ],
+        "totalItems":70
+    }
+}
+```
+
+</details>
+
+<details><summary>Example 3</summary>
+
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentChannels", "params": ["qwerty",["active"],["pending"],0,1], "id": 67}' http://localhost:8888/http
 
 // Result
 {

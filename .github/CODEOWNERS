@@ -5,7 +5,7 @@
 *.go            @furhat @ababo @dzeckelev
 
 # notify drew2a scripts and settings
-/.github/       @drew2a
+/.github/       @drew2a @sofabeat
 /scripts/       @drew2a
 
 # notify devops team about changes in docs

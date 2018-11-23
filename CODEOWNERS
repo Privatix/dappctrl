@@ -1,6 +1,8 @@
 # about codeowners:
 # https://help.github.com/articles/about-codeowners/
 
+* @drew2a
+
 # notify devops team about changes in docs
 /doc/           @kelewind @velopokatun
 

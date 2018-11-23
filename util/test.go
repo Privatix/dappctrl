@@ -22,15 +22,6 @@ func ReadTestConfig(conf interface{}) {
 	}
 }
 
-// NewTestLogger creates a new logger.
-func NewTestLogger(conf *LogConfig) *Logger {
-	logger, err := NewLogger(conf)
-	if err != nil {
-		log.Fatalf("failed to create logger: %s\n", err)
-	}
-	return logger
-}
-
 // TestExpectResult compares two errors and fails a test if they don't match.
 func TestExpectResult(t *testing.T, op string, expected, actual error) {
 	sameContent := expected != nil && actual != nil &&

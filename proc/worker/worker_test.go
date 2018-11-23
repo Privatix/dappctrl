@@ -39,7 +39,6 @@ type testConfig struct {
 	EptMsg    *ept.Config
 	Eth       *eth.Config
 	Job       *job.Config
-	Log       *util.LogConfig
 	StderrLog *log.WriterConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
@@ -54,7 +53,6 @@ func newTestConfig() *testConfig {
 		EptMsg:    ept.NewConfig(),
 		Eth:       eth.NewConfig(),
 		Job:       job.NewConfig(),
-		Log:       util.NewLogConfig(),
 		StderrLog: log.NewWriterConfig(),
 		SOMC:      somc.NewConfig(),
 		SOMCTest:  somc.NewTestConfig(),

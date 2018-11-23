@@ -22,7 +22,6 @@ const (
 var (
 	conf struct {
 		DB        *data.DBConfig
-		Log       *util.LogConfig
 		StderrLog *log.WriterConfig
 		PayServer *pay.Config
 		EptTest   *eptTestConfig

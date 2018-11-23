@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/pem"
 	"net"
-	"regexp"
 	"strconv"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -12,36 +11,16 @@ import (
 
 const certificate = "CERTIFICATE"
 
-var (
-	// Regular expression used to validate RFC1035 hostnames*/
-	hostnameRegex = regexp.MustCompile(
-		`^[[:alnum:]][[:alnum:]\-]{0,61}[[:alnum:]]|[[:alpha:]]$`)
-
-	hostnameRegex2 = regexp.MustCompile(
-		`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-
-	// Simple regular expression for IPv4 values,
-	// more rigorous checking is done via net.ParseIP
-	ipv4Regex = regexp.MustCompile(
-		`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
-)
-
 // IsIPv4 checks if this is a valid IPv4
 func IsIPv4(s string) bool {
 	ip := net.ParseIP(s)
-	if ip == nil {
-		return false
-	}
-	if !ipv4Regex.MatchString(s) {
-		return false
-	}
-	return true
+	return ip != nil
 }
 
 // IsHostname checks if this is a hostname
 func IsHostname(s string) bool {
-	if !hostnameRegex.MatchString(s) &&
-		!hostnameRegex2.MatchString(s) {
+	addrs, err := net.LookupHost(s)
+	if err != nil || len(addrs) == 0 {
 		return false
 	}
 	return true

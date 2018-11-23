@@ -13,3 +13,5 @@
 
 # notify devops team about changes in *.config.json
 *.config.json   @kelewind @velopokatun
+
+#some change

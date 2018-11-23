@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 DAPPCTRL=github.com/privatix/dappctrl
 
-if [ -z "${DAPPCTRL_DIR}" ]
-then
-    DAPPCTRL_DIR=${GOPATH}/src/${DAPPCTRL}
-fi
+echo ${DAPPCTRL_DIR:=${GOPATH}/src/${DAPPCTRL}}
 
 if [ ! -f "${GOPATH}"/bin/dep ]; then
     curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh

@@ -202,7 +202,7 @@ func (w *Worker) templateByHash(logger log.Logger, hash data.HexString) (*data.T
 	template := &data.Template{}
 	err := data.FindOneTo(w.db.Querier, template, "hash", hash)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Add("hash", hash).Error(err.Error())
 		return nil, ErrTemplateByHashNotFound
 	}
 	return template, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -1091,7 +1092,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 		return nil, ErrInternal
 	}
 
-	logger = logger.Add("msg", msg)
+	logger = logger.Add("msg", fmt.Sprintf("%+v", msg))
 
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {

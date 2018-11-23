@@ -1,33 +1,18 @@
 #!/usr/bin/env bash
 DAPPCTRL=github.com/privatix/dappctrl
 
-if [ -z "${POSTGRES_PORT}" ]
+port=${POSTGRES_PORT:-5432}
+user=${POSTGRES_USER:-postgres}
+
+connection_string="host=localhost sslmode=disable user=${user} port=${port}"
+
+if [[ "${POSTGRES_PASSWORD}" ]]
 then
-    POSTGRES_PORT=5432
+   connection_string="${connection_string} password=${POSTGRES_PASSWORD}"
 fi
 
-if [ -z "${POSTGRES_USER}" ]
-then
-    POSTGRES_USER=postgres
-fi
+echo Connection string: "${connection_string}"
 
-if [ -z "${POSTGRES_PASSWORD}" ]
-then
-    POSTGRES_PASSWORD=
-fi
-
-if [ -z "${DAPPCTRL_DIR}" ]
-then
-    DAPPCTRL_DIR=${GOPATH}/src/${DAPPCTRL}
-fi
-
-
-dappctrl db-create -conn \
-    'host=localhost sslmode=disable dbname=postgres user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
-
-dappctrl db-migrate -conn \
-    'host=localhost sslmode=disable dbname=dappctrl user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
-
-dappctrl db-init-data -conn \
-    'host=localhost sslmode=disable dbname=dappctrl user='${POSTGRES_USER}' port='${POSTGRES_PORT}' password='${POSTGRES_PASSWORD}
-
+dappctrl db-create -conn "${connection_string} dbname=postgres"
+dappctrl db-migrate -conn "${connection_string} dbname=dappctrl"
+dappctrl db-init-data -conn "${connection_string} dbname=dappctrl"

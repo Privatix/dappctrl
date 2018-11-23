@@ -2,7 +2,7 @@
 # https://help.github.com/articles/about-codeowners/
 
 # notify devops team about changes in docs
-/doc/           @privatix/devops
+/doc/           @kelewind @velopokatun
 
 # notify devops team about changes in *.config.json
-*.config.json   @privatix/devops
+*.config.json   @kelewind @velopokatun

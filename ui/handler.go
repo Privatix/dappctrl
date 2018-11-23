@@ -17,7 +17,7 @@ type Handler struct {
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
-	agent          bool
+	userRole       string
 	processor      *proc.Processor
 }
 
@@ -25,7 +25,7 @@ type Handler struct {
 func NewHandler(logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter,
 	encryptKeyFunc data.EncryptedKeyFunc,
-	decryptKeyFunc data.ToPrivateKeyFunc, agent bool,
+	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
 	processor *proc.Processor) *Handler {
 	logger = logger.Add("type", "uisrv.Handler")
 	return &Handler{
@@ -35,7 +35,7 @@ func NewHandler(logger log.Logger, db *reform.DB,
 		pwdStorage:     pwdStorage,
 		encryptKeyFunc: encryptKeyFunc,
 		decryptKeyFunc: decryptKeyFunc,
-		agent:          agent,
+		userRole:       userRole,
 		processor:      processor,
 	}
 }

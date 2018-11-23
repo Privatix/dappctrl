@@ -4,12 +4,10 @@ DAPPCTRL=github.com/privatix/dappctrl
 port=${POSTGRES_PORT:-5432}
 user=${POSTGRES_USER:-postgres}
 
-connection_string="host=localhost sslmode=disable user=${user} port=${port}"
-
-if [[ "${POSTGRES_PASSWORD}" ]]
-then
-   connection_string="${connection_string} password=${POSTGRES_PASSWORD}"
-fi
+connection_string="host=localhost sslmode=disable \
+user=${user} \
+port=${port} \
+${POSTGRES_PASSWORD:+ password=${POSTGRES_PASSWORD}}"
 
 echo Connection string: "${connection_string}"
 

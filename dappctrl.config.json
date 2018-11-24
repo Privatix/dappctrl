@@ -2,11 +2,6 @@
     "AgentMonitor": {
         "Interval": 5000
     },
-    "AgentServer": {
-        "Addr": "localhost:3000",
-        "TLS": null,
-        "EthCallTimeout": 5
-    },
     "BlockMonitor": {
         "QueryPause": 6,
         "EthCallTimeout": 60

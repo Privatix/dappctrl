@@ -34,7 +34,6 @@ import (
 	"github.com/privatix/dappctrl/sesssrv"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/ui"
-	"github.com/privatix/dappctrl/uisrv"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 	"github.com/privatix/dappctrl/util/rpcsrv"
@@ -49,7 +48,6 @@ var (
 
 type config struct {
 	AgentMonitor     *abill.Config
-	AgentServer      *uisrv.Config
 	BlockMonitor     *monitor.Config
 	ClientMonitor    *cbill.Config
 	Country          *country.Config
@@ -79,7 +77,6 @@ type config struct {
 func newConfig() *config {
 	return &config{
 		AgentMonitor:  abill.NewConfig(),
-		AgentServer:   uisrv.NewConfig(),
 		BlockMonitor:  monitor.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
 		Country:       country.NewConfig(),
@@ -297,18 +294,13 @@ func main() {
 		fatal <- queue.Process()
 	}()
 
-	uiSrv := uisrv.NewServer(conf.AgentServer, logger, db, conf.Role,
-		queue, pwdStorage, pr)
-	go func() {
-		fatal <- uiSrv.ListenAndServe()
-	}()
-	uiSrv2, err := createUIServer(
+	uiSrv, err := createUIServer(
 		conf.UI, logger, db, queue, pwdStorage, conf.Role, pr)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	go func() {
-		fatal <- uiSrv2.ListenAndServe()
+		fatal <- uiSrv.ListenAndServe()
 	}()
 
 	sess := sesssrv.NewServer(

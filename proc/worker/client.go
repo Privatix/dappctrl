@@ -997,6 +997,9 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		offering, err = w.fillOfferingFromSOMCReply(logger,
 			job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
 			block, offeringsData, somcType, somcData)
+		if err != nil {
+			return err
+		}
 	case data.OfferingSOMCTor:
 		hostnameBytes, err := data.ToBytes(somcData)
 		if err != nil {

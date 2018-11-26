@@ -118,7 +118,6 @@ func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
 			    AND status = 'active'`, j.RelatedID, j.Type)
 	}
 	if err == nil {
-		logger.Debug(ErrDuplicatedJob.Error())
 		return ErrDuplicatedJob
 	}
 
@@ -182,7 +181,6 @@ func (q *queue) Process() error {
 
 	if q.exit != nil {
 		q.mtx.Unlock()
-		logger.Debug(ErrAlreadyProcessing.Error())
 		return ErrAlreadyProcessing
 	}
 
@@ -190,6 +188,7 @@ func (q *queue) Process() error {
 	if num == 0 {
 		num = runtime.NumCPU()
 	}
+	logger = logger.Add("workerNumber", num)
 
 	// Make sure all workers can signal about errors simultaneously.
 	q.exit = make(chan struct{}, num)

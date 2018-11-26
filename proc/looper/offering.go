@@ -27,7 +27,6 @@ func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 	period uint32) []*data.Job {
 	logger = logger.Add("method", "AutoOfferingPopUp")
 
-	logger.Debug("started AutoOfferingPopUp")
 	do, err := data.ReadBoolSetting(
 		db.Querier, data.SettingOfferingAutoPopUp)
 	if err != nil {

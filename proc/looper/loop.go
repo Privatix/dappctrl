@@ -43,6 +43,7 @@ func loop(ctx context.Context, tik *time.Ticker, db *reform.DB, queue job.Queue,
 	for {
 		select {
 		case <-tik.C:
+			logger.Debug("new iteration")
 			for _, j := range f() {
 				res, err := db.SelectAllFrom(data.JobTable,
 					`WHERE related_id = $1

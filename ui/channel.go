@@ -180,8 +180,8 @@ func (h *Handler) GetAgentChannels(password string,
 }
 
 // GetClientChannels gets client channel information.
-func (h *Handler) GetClientChannels(password, channelStatus,
-	serviceStatus string, offset,
+func (h *Handler) GetClientChannels(password string, channelStatus,
+	serviceStatus []string, offset,
 	limit uint) (*GetClientChannelsResult, error) {
 	logger := h.logger.Add("method", "GetClientChannels",
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
@@ -189,17 +189,8 @@ func (h *Handler) GetClientChannels(password, channelStatus,
 	if err := h.checkPassword(logger, password); err != nil {
 		return nil, err
 	}
-	// TODO(maxim): Replace channelStatus, serviceStatus arguments types from string to []string.
-	var chStatuses []string
-	if channelStatus != "" {
-		chStatuses = append(chStatuses, channelStatus)
-	}
-	var serStatus []string
-	if serviceStatus != "" {
-		serStatus = append(serStatus, serviceStatus)
-	}
 
-	chs, total, err := h.getChannels(logger, chStatuses, serStatus,
+	chs, total, err := h.getChannels(logger, channelStatus, serviceStatus,
 		clientChannelsCondition, offset, limit)
 	if err != nil {
 		return nil, err

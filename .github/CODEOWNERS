@@ -4,7 +4,7 @@
 # notify go-team about changes in go files
 *.go            @furhat @ababo @dzeckelev
 
-# notify drew2a scripts and settings
+# notify drew2a about changes in scripts and settings
 /.github/       @drew2a
 /scripts/       @drew2a
 *.md            @drew2a

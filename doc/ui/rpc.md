@@ -1725,6 +1725,32 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
 ```
 </details>
 
+#### Get User Role
+
+*Method*:	`getUserRole`
+
+*Description*: Get user role.
+
+*Parameters*:
+1. Password (string)
+
+*Result (string)*: user role, can be `agent` or `client`.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRole", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": "client"
+}
+```
+</details>
+
 ## Subscriptions to asynchronous notifications
 
 #### Object change

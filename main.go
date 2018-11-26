@@ -159,7 +159,7 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 }
 
 func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
-	queue job.Queue, pwdStorage data.PWDGetSetter, agent bool,
+	queue job.Queue, pwdStorage data.PWDGetSetter, userRole string,
 	processor *proc.Processor) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf)
 	if err != nil {
@@ -167,7 +167,7 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	}
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, agent, processor)
+		data.EncryptedKey, data.ToPrivateKey, userRole, processor)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}
@@ -302,8 +302,8 @@ func main() {
 	go func() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
-	uiSrv2, err := createUIServer(conf.UI, logger, db, queue, pwdStorage,
-		conf.Role == data.RoleAgent, pr)
+	uiSrv2, err := createUIServer(
+		conf.UI, logger, db, queue, pwdStorage, conf.Role, pr)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

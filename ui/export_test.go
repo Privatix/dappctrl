@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 )
@@ -11,11 +10,7 @@ func (h *Handler) SetMockQueue(q job.Queue) {
 }
 
 func (h *Handler) SetMockRole(role string) {
-	if role == data.RoleAgent {
-		h.agent = true
-		return
-	}
-	h.agent = false
+	h.userRole = role
 }
 
 func (h *Handler) SetProcessor(processor *proc.Processor) {

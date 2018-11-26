@@ -99,7 +99,7 @@ func (h *Handler) TopUpChannel(password, channel string, gasPrice uint64) error 
 // ChangeChannelStatus updates channel state.
 func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 	logger := h.logger.Add("method", "ChangeChannelStatus",
-		"channel", channel, "action", action, "isAgent", h.agent)
+		"channel", channel, "action", action, "userRole", h.userRole)
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return err
@@ -107,7 +107,9 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 
 	condition := fmt.Sprintf("WHERE id = %s ", h.db.Placeholder(1))
 
-	if !h.agent {
+	isAgent := h.userRole == data.RoleAgent
+
+	if !isAgent {
 		condition = fmt.Sprintf("%s AND %s",
 			condition, clientChannelsCondition)
 	}
@@ -127,15 +129,15 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 	switch action {
 	case ChannelPauseAction:
 		_, err = h.processor.SuspendChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelResumeAction:
 		_, err = h.processor.ActivateChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelTerminateAction:
 		_, err = h.processor.TerminateChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelCloseAction:
-		if h.agent {
+		if isAgent {
 			logger.Error(ErrNotAllowedForAgent.Error())
 			return ErrNotAllowedForAgent
 		}

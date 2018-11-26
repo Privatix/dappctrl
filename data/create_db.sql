@@ -5,6 +5,10 @@ SET standard_conforming_strings = on;
 SET check_function_bodies = false;
 SET client_min_messages = warning;
 
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE pg_stat_activity.datname = 'dappctrl';
+
 DROP DATABASE IF EXISTS dappctrl;
 
 CREATE DATABASE dappctrl WITH TEMPLATE = template0 ENCODING = 'UTF8';

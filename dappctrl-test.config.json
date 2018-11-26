@@ -148,6 +148,9 @@
             },
             "agentAfterOfferingPopUp": {
                 "Duplicated": true
+            },
+            "completeServiceTransition": {
+                "Duplicated": true
             }
         }
     },

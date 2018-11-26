@@ -13,4 +13,4 @@
 /doc/           @kelewind @velopokatun
 
 # notify devops team about changes in *.config.json
-*.config.json   @kelewind @velopokatun
+*.config.json   @kelewind @velopokatun @ubozov

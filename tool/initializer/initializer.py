@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-    Initializer on pure Python 2.7
-    mode:
+        Initializer on pure Python 2.7
+
+        Version 0.0.1
+
+        mode:
     python initializer.py  -h                              get help information
     python initializer.py                                  start full install
     python initializer.py --build                          create cmd for dapp
@@ -691,11 +694,15 @@ class CommonCMD(Init):
                 self._sys_call('service dapp-vpn start')
 
     def _sys_call(self, cmd, rolback=True, s_exit=4):
-        resp = Popen(cmd, shell=True, stdout=PIPE,
-                     stderr=STDOUT).communicate()
-        logging.debug('Sys call cmd: {}. Stdout: {}'.format(cmd, resp))
+        logging.debug('Sys call cmd: {}.'.format(cmd))
+        obj = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT)
+
+        resp = obj.communicate()
+        # exit_code = obj.returncode
+
         if resp[1]:
-            logging.debug(resp[1])
+            logging.error('Response: {}'.format(resp))
+
             if rolback:
                 self._rolback(s_exit)
             else:
@@ -823,9 +830,12 @@ class CommonCMD(Init):
         logging.debug('Bind ports mode')
 
         def run_server(p):
-            httpd = TCPServer(('localhost', p), SimpleHTTPRequestHandler)
-            logging.debug(" ^ UP PORT: {}".format(p))
-            httpd.serve_forever()
+            try:
+                httpd = TCPServer(('localhost', p), SimpleHTTPRequestHandler)
+                logging.debug(" ^ UP PORT: {}".format(p))
+                httpd.serve_forever()
+            except BaseException as thrExpt:
+                logging.error(" ^ UP PORT: {}".format(thrExpt))
 
         for p in self.bind_ports:
             t = Thread(target=run_server, args=(p,))
@@ -1077,9 +1087,9 @@ class CommonCMD(Init):
                     raw_row[-1] = port
 
                     self.use_ports['common'].append(port)
-                    if k == 'AgentServer':
-                        self.apiEndpoint = port
-                        self.use_ports['apiEndpoint'] = port
+                    if k == 'UI':
+                        self.wsEndpoint = port
+                        self.use_ports['wsEndpoint'] = port
                     if k == 'SessionServer':
                         self.sessServPort = port
                         if self.dappctrl_role == 'client':
@@ -1118,6 +1128,7 @@ class DB(CommonCMD):
             if time() - t_start > t_wait:
                 logging.error(
                     'DB after {} sec does not run.'.format(t_wait))
+                logging.debug('Data base log: \n  {}'.format(raw))
                 self._rolback(code)
             sleep(5)
 
@@ -1625,16 +1636,17 @@ class GUI(CommonCMD):
                 'The dappctrlgui package is not installed correctly')
             self._rolback(27)
         self._prepare_icon()
-        self.__rewrite_config()
+        self.__gui_config()
 
-    def __rewrite_config(self):
+    def __gui_config(self):
         """
+        RW GUI config
         /opt/privatix/gui/node_modules/dappctrlgui/settings.json
         example data structure:
         {
             "firstStart": false,
             "accountCreated": true,
-            "apiEndpoint": "http://localhost:3000",
+            "wsEndpoint": "ws://localhost:8888/ws",
             "gas": {
                 "acceptOffering": 100000,
                 "createOffering": 100000,
@@ -1648,9 +1660,9 @@ class GUI(CommonCMD):
                                     log='Read settings.json',
                                     json_r=True)
             delim = ':'
-            raw_link = raw_data['apiEndpoint'].split(delim)
-            raw_link[-1] = self.apiEndpoint
-            raw_data['apiEndpoint'] = delim.join(raw_link)
+            raw_link = raw_data['wsEndpoint'].split(delim)
+            raw_link[-1] = '{}/ws'.format(self.wsEndpoint)
+            raw_data['wsEndpoint'] = delim.join(raw_link)
 
             if not self.file_rw(p=self.dappctrlgui,
                                 w=True,
@@ -1770,8 +1782,8 @@ class GUI(CommonCMD):
 
     def update_gui(self):
         logging.info('Update GUI.')
-        self.apiEndpoint = self.use_ports.get('apiEndpoint')
-        if not self.use_ports.get('apiEndpoint'):
+        self.wsEndpoint = self.use_ports.get('wsEndpoint')
+        if not self.use_ports.get('wsEndpoint'):
             logging.info('You can not upgrade GUI before '
                          'you not complete the installation.')
             sys.exit()
@@ -3014,6 +3026,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     logging.info('Invalid choice. Select {}.'.format(choise))
                     answ = raw_input('> ')
                     continue
+
+                logging.debug('Choise {}'.format(choise[1]))
                 if answ.upper() == choise[1]:
                     return True
                 return False

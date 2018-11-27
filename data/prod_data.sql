@@ -60,13 +60,13 @@ VALUES ('eth.max.deposit',
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.lastProcessedBlock',
         '0',
-        2,
+        1,
         'Last block number in blockchain stores last proccessed block.',
         'last processed block');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.15.1',
+        '0.16.0',
         1,
         'Version of database.',
         'db version');
@@ -77,5 +77,12 @@ VALUES ('offering.autopopup',
         2,
         'Allow offerings to pop up automatically.',
         'offering autopopup');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('somc.transport.tor',
+        'false',
+        2,
+        'Whether to use Tor as service offering messaging protocol or not',
+        'use Tor');
 
 END TRANSACTION;

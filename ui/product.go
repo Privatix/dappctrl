@@ -14,6 +14,11 @@ func (h *Handler) CreateProduct(password string,
 		return nil, err
 	}
 
+	if product.ServiceEndpointAddress != nil &&
+		!isValidSEAddress(*product.ServiceEndpointAddress) {
+		return nil, ErrBadServiceEndpointAddress
+	}
+
 	product.ID = util.NewUUID()
 	if err := insert(logger, h.db.Querier, &product); err != nil {
 		return nil, err
@@ -44,12 +49,24 @@ func (h *Handler) UpdateProduct(password string, product data.Product) error {
 		product.Password = oldProduct.Password
 	}
 
+	if product.ServiceEndpointAddress != nil &&
+		!isValidSEAddress(*product.ServiceEndpointAddress) {
+		return ErrBadServiceEndpointAddress
+	}
+
 	if err := update(logger, h.db.Querier, &product); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
 	}
 
 	return nil
+}
+
+func isValidSEAddress(address string) bool {
+	if util.IsIPv4(address) || util.IsHostname(address) {
+		return true
+	}
+	return false
 }
 
 // GetProducts returns all products available to the agent.

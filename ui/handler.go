@@ -7,50 +7,35 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/log"
-	"github.com/privatix/dappctrl/util/rpcsrv"
 )
-
-// Config is a handler configuration.
-type Config struct {
-	*rpcsrv.Config
-}
-
-// NewConfig creates a new handler configuration.
-func NewConfig() *Config {
-	return &Config{
-		Config: rpcsrv.NewConfig(),
-	}
-}
 
 // Handler is an UI RPC handler.
 type Handler struct {
-	conf           *Config
 	logger         log.Logger
 	db             *reform.DB
 	queue          job.Queue
 	pwdStorage     data.PWDGetSetter
 	encryptKeyFunc data.EncryptedKeyFunc
 	decryptKeyFunc data.ToPrivateKeyFunc
-	agent          bool
+	userRole       string
 	processor      *proc.Processor
 }
 
 // NewHandler creates a new handler.
-func NewHandler(conf *Config, logger log.Logger, db *reform.DB,
+func NewHandler(logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter,
 	encryptKeyFunc data.EncryptedKeyFunc,
-	decryptKeyFunc data.ToPrivateKeyFunc, agent bool,
+	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
 	processor *proc.Processor) *Handler {
 	logger = logger.Add("type", "uisrv.Handler")
 	return &Handler{
-		conf:           conf,
 		logger:         logger,
 		db:             db,
 		queue:          queue,
 		pwdStorage:     pwdStorage,
 		encryptKeyFunc: encryptKeyFunc,
 		decryptKeyFunc: decryptKeyFunc,
-		agent:          agent,
+		userRole:       userRole,
 		processor:      processor,
 	}
 }

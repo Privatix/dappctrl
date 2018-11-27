@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/agent/somcserver"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -78,14 +80,14 @@ func (w *Worker) clientValidateChannelForClose(
 
 func (w *Worker) clientPreChannelCreateCheckSupply(logger log.Logger,
 	offer *data.Offering, offerHash common.Hash) error {
-	_, _, _, supply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+	_, _, _, supplyFromContract, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, offerHash)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCOfferingSupply
 	}
 
-	if supply == 0 {
+	if supplyFromContract == 0 || offer.CurrentSupply == 0 {
 		return ErrOfferingNoSupply
 	}
 
@@ -271,20 +273,50 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	logger = logger.Add("endpointKey", key)
 
-	endpointParams, err := w.somc.GetEndpoint(key)
+	offering, err := w.offering(logger, ch.Offering)
 	if err != nil {
-		logger.Error(err.Error())
-		return ErrGetEndpoint
+		return err
 	}
 
-	var ep *somc.EndpointParams
-	if err := json.Unmarshal(endpointParams, &ep); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
+	var endpointMsgSealed []byte
+	switch offering.SOMCType {
+	case data.OfferingSOMCShared:
+		endpointParams, err := w.somc.GetEndpoint(key)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrGetEndpoint
+		}
+
+		var ep *somc.EndpointParams
+		if err := json.Unmarshal(endpointParams, &ep); err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+		endpointMsgSealed = ep.Endpoint
+
+	case data.OfferingSOMCTor:
+		if err == nil {
+			hostnameBytes, err := data.ToBytes(offering.SOMCData)
+			if err != nil {
+				logger.Error(err.Error())
+				return ErrGetEndpoint
+			}
+			somcClient := somcserver.NewClient(w.torClient, string(hostnameBytes))
+			rawMsg, err := somcClient.GetEndpoint(key)
+			if err != nil {
+				logger.Error(err.Error())
+				return ErrGetEndpoint
+			}
+			endpointMsgSealed, err = data.ToBytes(rawMsg)
+			if err != nil {
+				logger.Error(err.Error())
+				return ErrGetEndpoint
+			}
+		}
 	}
 
-	err = w.addJobWithData(logger, nil, data.JobClientPreEndpointMsgSOMCGet,
-		data.JobChannel, ch.ID, ep.Endpoint)
+	err = w.addJobWithData(logger, nil, data.JobClientEndpointRestore,
+		data.JobChannel, ch.ID, &data.JobEndpointCreateData{EndpointSealed: endpointMsgSealed})
 	if err != nil {
 		return err
 	}
@@ -298,7 +330,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
 }
 
-func (w *Worker) decodeEndpoint(logger log.Logger,
+func (w *Worker) extractEndpointMessage(logger log.Logger,
 	ch *data.Channel, sealed []byte) (*ept.Message, error) {
 	client, err := w.account(logger, ch.Client)
 	if err != nil {
@@ -347,24 +379,24 @@ func (w *Worker) decodeEndpoint(logger log.Logger,
 	return &msg, nil
 }
 
-// ClientPreEndpointMsgSOMCGet decodes endpoint message, saves it in the DB and
+// ClientEndpointCreate decodes endpoint message, saves it in the DB and
 // triggers product configuration.
-func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientPreEndpointMsgSOMCGet",
+func (w *Worker) ClientEndpointCreate(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientEndpointCreate",
 		"job", job)
 
 	ch, err := w.relatedChannel(logger, job,
-		data.JobClientPreEndpointMsgSOMCGet)
+		data.JobClientEndpointRestore)
 	if err != nil {
 		return err
 	}
 
-	var sealed []byte
-	if err := w.unmarshalDataTo(logger, job.Data, &sealed); err != nil {
+	var jdata data.JobEndpointCreateData
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
 		return err
 	}
 
-	msg, err := w.decodeEndpoint(logger, ch, sealed)
+	msg, err := w.extractEndpointMessage(logger, ch, jdata.EndpointSealed)
 	if err != nil {
 		return err
 	}
@@ -399,8 +431,8 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 			Template:               offer.Template,
 			Channel:                ch.ID,
 			Hash:                   msg.TemplateHash,
-			RawMsg:                 data.FromBytes(sealed),
-			Status:                 data.MsgUnpublished,
+			RawMsg:                 data.FromBytes(jdata.EndpointSealed),
+			Status:                 data.MsgChPublished,
 			PaymentReceiverAddress: raddr,
 			ServiceEndpointAddress: saddr,
 			Username:               pointer.ToString(msg.Username),
@@ -411,38 +443,6 @@ func (w *Worker) ClientPreEndpointMsgSOMCGet(job *data.Job) error {
 		if err = w.db.Insert(&endp); err != nil {
 			logger.Add("endpoint", endp).Error(err.Error())
 			return ErrInternal
-		}
-
-		return w.addJobWithData(logger, tx,
-			data.JobClientAfterEndpointMsgSOMCGet,
-			data.JobChannel, ch.ID, endp.ID)
-	})
-}
-
-// ClientAfterEndpointMsgSOMCGet cofigures a product.
-func (w *Worker) ClientAfterEndpointMsgSOMCGet(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientAfterEndpointMsgSOMCGet",
-		"job", job)
-
-	var epid string
-	if err := w.unmarshalDataTo(logger, job.Data, &epid); err != nil {
-		return err
-	}
-
-	endp, err := w.endpointByPK(logger, epid)
-	if err != nil {
-		return err
-	}
-
-	return w.db.InTransaction(func(tx *reform.TX) error {
-		endp.Status = data.MsgChPublished
-		if err := w.saveRecord(logger, w.db.Querier, endp); err != nil {
-			return err
-		}
-
-		ch, err := w.channel(logger, endp.Channel)
-		if err != nil {
-			return err
 		}
 
 		ch.ServiceStatus = data.ServiceSuspended
@@ -937,8 +937,9 @@ func (w *Worker) ClientAfterOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	return w.clientRetrieveAndSaveOffering(logger, job,
-		ethLog.Block, logOfferingCreated.agentAddr,
-		logOfferingCreated.offeringHash)
+		ethLog.Block, logOfferingCreated.somcType,
+		logOfferingCreated.somcData, logOfferingCreated.agentAddr,
+		logOfferingCreated.offeringHash, logOfferingCreated.currentSupply)
 }
 
 // ClientAfterOfferingPopUp updates offering in db or retrieves from somc
@@ -964,8 +965,9 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	if err == sql.ErrNoRows {
 		// New offering. Get from somc.
 		return w.clientRetrieveAndSaveOffering(logger, job,
-			ethLog.Block, logOfferingPopUp.agentAddr,
-			logOfferingPopUp.offeringHash)
+			ethLog.Block, logOfferingPopUp.somcType,
+			logOfferingPopUp.somcData, logOfferingPopUp.agentAddr,
+			logOfferingPopUp.offeringHash, logOfferingPopUp.currentSupply)
 	}
 	if err != nil {
 		logger.Error(err.Error())
@@ -980,21 +982,53 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
-	job *data.Job, block uint64, agentAddr common.Address, hash common.Hash) error {
-	offeringsData, err := w.somc.FindOfferings([]data.HexString{
-		data.HexFromBytes(hash.Bytes())})
-	if err != nil {
-		return ErrFindOfferings
+	job *data.Job, block uint64, somcType uint8, somcData data.Base64String,
+	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
+
+	var offering *data.Offering
+	switch somcType {
+	case data.OfferingSOMCShared:
+		offeringsData, err := w.somc.FindOfferings([]data.HexString{
+			data.HexFromBytes(hash.Bytes())})
+		if err != nil {
+			return ErrFindOfferings
+		}
+
+		offering, err = w.fillOfferingFromSOMCReply(logger,
+			job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
+			block, offeringsData, somcType, somcData)
+		if err != nil {
+			return err
+		}
+	case data.OfferingSOMCTor:
+		hostnameBytes, err := data.ToBytes(somcData)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrFindOfferings
+		}
+		somcClient := somcserver.NewClient(w.torClient, string(hostnameBytes))
+		hashHex := data.HexFromBytes(hash.Bytes())
+		offeringRawMsg, err := somcClient.GetOffering(hashHex)
+		if err != nil {
+			logger.Add("offeringHash", hashHex).Error(err.Error())
+			return ErrFindOfferings
+		}
+		offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrFindOfferings
+		}
+		offering, err = w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
+			block, data.HexFromBytes(agentAddr.Bytes()),
+			data.HexFromBytes(hash.Bytes()), job.RelatedID,
+			somcType, somcData)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrFindOfferings
+		}
 	}
 
-	offering, err := w.fillOfferingFromSOMCReply(logger,
-		job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
-		block, offeringsData)
-	if err != nil {
-		return err
-	}
-
-	_, minDeposit, mSupply, cSupply, _, _, err := w.ethBack.PSCGetOfferingInfo(
+	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hash)
 	if err != nil {
 		logger.Error(err.Error())
@@ -1006,7 +1040,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 
 	offering.Supply = mSupply
-	offering.CurrentSupply = cSupply
+	offering.CurrentSupply = currentSupply
 
 	if err := data.Insert(w.db.Querier, offering); err != nil {
 		logger.Add("offering", offering).Error(err.Error())
@@ -1018,19 +1052,28 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 
 func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 	relID string, agentAddr data.HexString, blockNumber uint64,
-	offeringsData []somc.OfferingData) (*data.Offering, error) {
+	offeringsData []somc.OfferingData,
+	somcType uint8, somcData data.Base64String) (*data.Offering, error) {
 	if len(offeringsData) == 0 {
 		return nil, ErrSOMCNoOfferings
 	}
 
 	offeringData := offeringsData[0]
 
-	_, err := w.offeringByHashString(logger, offeringData.Hash)
+	return w.fillOfferingFromMsg(logger, offeringData.Offering, blockNumber,
+		agentAddr, offeringData.Hash, relID, somcType, somcData)
+}
+
+func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
+	blockNumber uint64, agent, hash data.HexString, relID string,
+	somcType uint8, somcData data.Base64String) (*data.Offering, error) {
+	logger = logger.Add("offering", offering)
+	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {
 		return nil, ErrOfferingExists
 	}
 
-	hashBytes := common.BytesToHash(crypto.Keccak256(offeringData.Offering))
+	hashBytes := common.BytesToHash(crypto.Keccak256(offering))
 
 	// Check hash match to that in registered in blockchain.
 	_, _, _, _, _, active, err := w.ethBack.PSCGetOfferingInfo(
@@ -1044,15 +1087,15 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		return nil, ErrOfferingNotActive
 	}
 
-	msgRaw, sig := messages.UnpackSignature(offeringData.Offering)
+	msgRaw, sig := messages.UnpackSignature(offering)
 
 	msg := offer.Message{}
 	if err := json.Unmarshal(msgRaw, &msg); err != nil {
-		logger.Error(err.Error())
+		logger.Add("msgRaw", msgRaw).Error(err.Error())
 		return nil, ErrInternal
 	}
 
-	logger = logger.Add("msg", msg)
+	logger = logger.Add("msg", fmt.Sprintf("%+v", msg))
 
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
@@ -1086,12 +1129,12 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		ID:                 relID,
 		Template:           template.ID,
 		Product:            product.ID,
-		Hash:               offeringData.Hash,
+		Hash:               hash,
 		Status:             data.MsgChPublished,
 		OfferStatus:        data.OfferRegistered,
 		BlockNumberUpdated: blockNumber,
-		Agent:              agentAddr,
-		RawMsg:             data.FromBytes(offeringData.Offering),
+		Agent:              agent,
+		RawMsg:             data.FromBytes(offering),
 		ServiceName:        product.Name,
 		Country:            msg.Country,
 		Supply:             msg.ServiceSupply,
@@ -1109,6 +1152,8 @@ func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
 		MaxInactiveTimeSec: msg.MaxInactiveTimeSec,
 		FreeUnits:          msg.FreeUnits,
 		AdditionalParams:   msg.ServiceSpecificParameters,
+		SOMCType:           somcType,
+		SOMCData:           somcData,
 	}, nil
 }
 

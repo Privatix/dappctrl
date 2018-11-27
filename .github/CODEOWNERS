@@ -1,0 +1,16 @@
+# about codeowners:
+# https://help.github.com/articles/about-codeowners/
+
+# notify go-team about changes in go files
+*.go            @furhat @ababo @dzeckelev
+
+# notify drew2a about changes in scripts and settings
+/.github/       @drew2a
+/scripts/       @drew2a
+*.md            @drew2a
+
+# notify devops team about changes in docs
+/doc/           @kelewind @velopokatun
+
+# notify devops team about changes in *.config.json
+*.config.json   @kelewind @velopokatun

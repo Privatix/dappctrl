@@ -140,30 +140,29 @@ func (m *Monitor) Close() {
 }
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
+	logger := m.logger.Add("method", "processChannel", "channel", ch)
 	var offer data.Offering
 	if err := m.db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
-		m.logger.Add("offering", ch.Offering).Error(err.Error())
+		logger.Error(err.Error())
 		return ErrGetOffering
 	}
 
-	terminate, err := m.isToBeTerminated(ch, &offer)
+	terminate, err := m.isToBeTerminated(logger, ch, &offer)
 	if err != nil {
 		return err
 	}
 	if terminate {
-		_, err := m.pr.TerminateChannel(ch.ID, data.JobBillingChecker, false)
+		_, err := m.pr.TerminateChannel(ch.ID,
+			data.JobBillingChecker, false)
 		if err != nil {
 			if err != proc.ErrSameJobExists {
-				m.logger.Add("channel",
-					ch.ID).Error(err.Error())
+				logger.Error(err.Error())
 				return err
 			}
-			m.logger.Add("channel", ch.ID, "error",
-				err.Error()).Debug("failed to trigger" +
-				" termination")
+			logger.Add("error", err.Error()).Debug(
+				"failed to trigger termination")
 		} else {
-			m.logger.Add("channel", ch.ID).Info("trigger" +
-				" termination")
+			logger.Info("trigger termination")
 		}
 		return nil
 	}
@@ -173,7 +172,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		SELECT COALESCE(sum(units_used),0)
 		  FROM sessions
 		 WHERE channel = $1`, ch.ID).Scan(&consumed); err != nil {
-		m.logger.Add("channel", ch.ID).Error(err.Error())
+		logger.Error(err.Error())
 		return ErrGetConsumedUnits
 	}
 
@@ -194,20 +193,20 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 	return nil
 }
 
-func (m *Monitor) isToBeTerminated(
+func (m *Monitor) isToBeTerminated(logger log.Logger,
 	ch *data.Channel, offer *data.Offering) (bool, error) {
 
 	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
 		ch.ReceiptBalance == ch.TotalDeposit {
-		m.logger.Debug("channel is complete")
+		logger.Debug("channel is complete")
 		return true, nil
 	}
 
-	m.logger.Debug("channel not complete")
+	logger.Debug("channel not complete")
 
 	reached, err := m.maxInactiveTimeReached(ch, offer)
 	if err != nil {
-		m.logger.Error(err.Error())
+		logger.Error(err.Error())
 		// TODO: add error
 		return false, ErrGetConsumedUnits
 	}

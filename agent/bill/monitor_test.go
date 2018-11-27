@@ -23,7 +23,6 @@ var (
 		DB           *data.DBConfig
 		Job          *job.Config
 		StderrLog    *log.WriterConfig
-		Log          *util.LogConfig
 		Pc           *proc.Config
 	}
 
@@ -256,7 +255,6 @@ func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
 	conf.StderrLog = log.NewWriterConfig()
-	conf.Log = util.NewLogConfig()
 	conf.Pc = proc.NewConfig()
 	conf.BillingTest = newBillingTestConfig()
 

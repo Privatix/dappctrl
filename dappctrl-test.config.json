@@ -2,15 +2,6 @@
     "AgentMonitor": {
         "Interval": 5000
     },
-    "AgentServer": {
-        "Addr": "localhost:3000",
-        "TLS": null,
-        "EthCallTimeout": 5
-    },
-
-    "AgentServerTest": {
-        "ServerStartupDelay": 10
-    },
 
     "ClientBilling": {
         "CollectPeriod":  1
@@ -197,6 +188,11 @@
     "SOMC": {
         "SOMCTimeout": 1,
         "URL": "ws://localhost:8080"
+    },
+
+    "SOMCServer": {
+        "Addr": "localhost:5555",
+        "TLS": null
     },
 
     "SOMCTest": {

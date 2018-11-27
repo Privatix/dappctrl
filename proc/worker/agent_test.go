@@ -472,6 +472,14 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	useTorSetting := &data.Setting{
+		Key:   data.SettingSOMCUseTor,
+		Value: "false",
+		Name:  "tor",
+	}
+	env.insertToTestDB(t, useTorSetting)
+	defer env.deleteFromTestDB(t, useTorSetting)
+
 	// Test ethTx was recorder.
 	defer env.deleteEthTx(t, fixture.job.ID)
 
@@ -511,7 +519,8 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	env.ethBack.TestCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		new(big.Int).SetUint64(minDeposit), offering.Supply)
+		new(big.Int).SetUint64(minDeposit), offering.Supply,
+		data.OfferingSOMCShared, data.Base64String(""))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -536,6 +545,32 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
+
+	logData, err := logOfferingCreatedDataArguments.Pack(uint16(1),
+		data.OfferingSOMCShared, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	setJobData(t, env.db, fixture.job, &data.JobData{
+		EthLog: &data.JobEthLog{
+			Data: logData,
+			Topics: data.LogTopics{
+				common.BytesToHash([]byte{}),
+				common.BytesToHash([]byte{}),
+				common.BytesToHash([]byte{}),
+				common.BytesToHash([]byte{}),
+			},
+		},
+	})
+
+	useTorSetting := &data.Setting{
+		Key:   data.SettingSOMCUseTor,
+		Value: "false",
+		Name:  "tor",
+	}
+	env.insertToTestDB(t, useTorSetting)
+	defer env.deleteFromTestDB(t, useTorSetting)
 
 	runJob(t, env.worker.AgentAfterOfferingMsgBCPublish, fixture.job)
 
@@ -686,13 +721,18 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()
 
-	fxt := env.newTestFixture(t,
-		data.JobAgentPreOfferingPopUp, data.JobOffering)
+	fxt := env.newTestFixture(t, data.JobAgentPreOfferingPopUp, data.JobOffering)
 	defer fxt.close()
 
-	setJobData(t, env.db, fxt.job, &data.JobPublishData{
-		GasPrice: 123,
-	})
+	useTorSetting := &data.Setting{
+		Key:   data.SettingSOMCUseTor,
+		Value: "false",
+		Name:  "tor",
+	}
+	env.insertToTestDB(t, useTorSetting)
+	defer env.deleteFromTestDB(t, useTorSetting)
+
+	setJobData(t, env.db, fxt.job, &data.JobPublishData{GasPrice: 123})
 
 	duplicatedJob := *fxt.job
 	duplicatedJob.ID = util.NewUUID()
@@ -741,7 +781,8 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	offeringHash := data.TestToHash(t, fxt.Offering.Hash)
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
-		[common.HashLength]byte(offeringHash))
+		[common.HashLength]byte(offeringHash),
+		data.OfferingSOMCShared, data.Base64String(""))
 
 	env.db.Reload(fxt.Offering)
 
@@ -769,9 +810,17 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 		common.BytesToHash([]byte{}),
 		common.BytesToHash(agentAddr.Bytes()),
 		offeringHash,
+		common.BigToHash(big.NewInt(100)),
+	}
+
+	logData, err := logOfferingCreatedDataArguments.Pack(
+		uint16(1), data.OfferingSOMCShared, "")
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	ethLog := &data.JobEthLog{
+		Data:   logData,
 		Topics: topics,
 		Block:  12345,
 	}

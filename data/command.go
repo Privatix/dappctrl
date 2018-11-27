@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/privatix/dappctrl/data/migration"
@@ -18,6 +19,7 @@ type cmdFlag struct {
 }
 
 // ExecuteCommand executes commands to manage database
+// db-create - command to create database
 // db-migrate - command to execute migration scripts
 // db-init-data - command to initialize database by default values
 // db-version - command to print the version of the database schema.
@@ -27,25 +29,31 @@ func ExecuteCommand(args []string) error {
 	}
 
 	switch args[0] {
+	case "db-create":
+		f := readFlags(args)
+		if err := createDatabase(f.connection); err != nil {
+			panic("failed to create database: " + err.Error())
+		}
+		os.Exit(0)
 	case "db-migrate":
 		f := readFlags(args)
 		err := migration.Migrate(f.connection, f.version)
 		if err != nil {
-			panic(fmt.Sprintf("failed to run migration %s", err))
+			panic("failed to run migration: " + err.Error())
 		}
 		os.Exit(0)
 	case "db-init-data":
 		f := readFlags(args)
 		if err := initData(f.connection); err != nil {
-			panic(fmt.Sprintf("failed to init database %s", err))
+			panic("failed to init database: " + err.Error())
 		}
 		os.Exit(0)
 	case "db-version":
 		f := readFlags(args)
 		version, err := migration.Version(f.connection)
 		if err != nil {
-			msg := "failed to print database schema version"
-			panic(fmt.Sprintf("%s %s", msg, err))
+			msg := "failed to print database schema version: "
+			panic(msg + err.Error())
 		}
 		fmt.Println("database schema version:", version)
 		os.Exit(0)
@@ -93,4 +101,48 @@ func initData(connStr string) error {
 		}
 		return nil
 	})
+}
+
+func createDatabase(connStr string) error {
+	db, err := NewDBFromConnStr(connStr)
+	if err != nil {
+		return err
+	}
+	defer CloseDB(db)
+
+	file, err := statik.ReadFile("/scripts/create_db.sql")
+	if err != nil {
+		return err
+	}
+
+	s := string(file)
+	re := regexp.MustCompile(`(?m)\\connect \w*`)
+	separator := re.FindString(s)
+
+	i := strings.LastIndex(s, separator)
+	createStatements := s[:i]
+
+	for _, query := range strings.Split(createStatements, ";") {
+		if _, err := db.Exec(query); err != nil {
+			return err
+		}
+	}
+
+	// switch to dappctrl database and configurate
+	re = regexp.MustCompile(`(?m)dbname=\w*`)
+	connStr = re.ReplaceAllString(connStr, `dbname=`+separator[8:])
+	conn, err := NewDBFromConnStr(connStr)
+	if err != nil {
+		return err
+	}
+	defer CloseDB(conn)
+
+	configStatements := s[i+len(separator):]
+	for _, query := range strings.Split(configStatements, ";") {
+		if _, err := conn.Exec(query); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

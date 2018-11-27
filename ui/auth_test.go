@@ -79,8 +79,8 @@ func checkAccountsPKeys(t *testing.T, accounts []reform.Struct,
 func TestUpdatePassword(t *testing.T) {
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
-	handler := ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, false, nil)
+	handler := ui.NewHandler(logger, db, nil, pwdStorage,
+		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil)
 	err := server.RegisterName("ui2", handler)
 	if err != nil {
 		t.Fatal(err)

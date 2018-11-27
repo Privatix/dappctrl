@@ -30,17 +30,24 @@ type logOfferingCreatedInput struct {
 	offeringHash  common.Hash
 	minDeposit    *big.Int
 	currentSupply uint16
+	somcType      uint8
+	somcData      data.Base64String
 }
 
 type logOfferingPopUpInput struct {
-	agentAddr    common.Address
-	offeringHash common.Hash
+	agentAddr     common.Address
+	offeringHash  common.Hash
+	minDeposit    *big.Int
+	currentSupply uint16
+	somcType      uint8
+	somcData      data.Base64String
 }
 
 var (
 	logChannelTopUpDataArguments    abi.Arguments
 	logChannelCreatedDataArguments  abi.Arguments
 	logOfferingCreatedDataArguments abi.Arguments
+	logOfferingPopUpDataArguments   abi.Arguments
 )
 
 func init() {
@@ -55,6 +62,16 @@ func init() {
 	}
 
 	abiUint16, err := abi.NewType("uint16")
+	if err != nil {
+		panic(err)
+	}
+
+	abiUint8, err := abi.NewType("uint8")
+	if err != nil {
+		panic(err)
+	}
+
+	abiString, err := abi.NewType("string")
 	if err != nil {
 		panic(err)
 	}
@@ -77,6 +94,24 @@ func init() {
 	logOfferingCreatedDataArguments = abi.Arguments{
 		{
 			Type: abiUint16,
+		},
+		{
+			Type: abiUint8,
+		},
+		{
+			Type: abiString,
+		},
+	}
+
+	logOfferingPopUpDataArguments = abi.Arguments{
+		{
+			Type: abiUint16,
+		},
+		{
+			Type: abiUint8,
+		},
+		{
+			Type: abiString,
 		},
 	}
 }
@@ -165,11 +200,21 @@ func extractLogOfferingCreated(logger log.Logger,
 		return nil, ErrParseJobData
 	}
 
-	if len(dataUnpacked) != 1 {
+	if len(dataUnpacked) != 3 {
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
 	curSupply, ok := dataUnpacked[0].(uint16)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	somcType, ok := dataUnpacked[1].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	somcData, ok := dataUnpacked[2].(string)
 	if !ok {
 		return nil, ErrParseJobData
 	}
@@ -183,20 +228,52 @@ func extractLogOfferingCreated(logger log.Logger,
 		offeringHash:  offeringHash,
 		minDeposit:    minDeposit,
 		currentSupply: curSupply,
+		somcType:      somcType,
+		somcData:      data.Base64String(somcData),
 	}, nil
 }
 
 func extractLogOfferingPopUp(logger log.Logger,
 	log *data.JobEthLog) (*logOfferingPopUpInput, error) {
-	if len(log.Topics) != 3 {
+	if len(log.Topics) != 4 {
 		return nil, ErrWrongLogTopicsNumber
+	}
+
+	dataUnpacked, err := logOfferingCreatedDataArguments.UnpackValues(log.Data)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrParseJobData
+	}
+
+	if len(dataUnpacked) != 3 {
+		return nil, ErrWrongLogNonIndexedArgsNumber
+	}
+
+	currentSupply, ok := dataUnpacked[0].(uint16)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	somcType, ok := dataUnpacked[1].(uint8)
+	if !ok {
+		return nil, ErrParseJobData
+	}
+
+	somcData, ok := dataUnpacked[2].(string)
+	if !ok {
+		return nil, ErrParseJobData
 	}
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
 	offeringHash := log.Topics[2]
+	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
 
 	return &logOfferingPopUpInput{
-		agentAddr:    agentAddr,
-		offeringHash: offeringHash,
+		agentAddr:     agentAddr,
+		offeringHash:  offeringHash,
+		minDeposit:    minDeposit,
+		currentSupply: currentSupply,
+		somcType:      somcType,
+		somcData:      data.Base64String(somcData),
 	}, nil
 }

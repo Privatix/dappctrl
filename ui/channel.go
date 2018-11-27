@@ -99,7 +99,7 @@ func (h *Handler) TopUpChannel(password, channel string, gasPrice uint64) error 
 // ChangeChannelStatus updates channel state.
 func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 	logger := h.logger.Add("method", "ChangeChannelStatus",
-		"channel", channel, "action", action, "isAgent", h.agent)
+		"channel", channel, "action", action, "userRole", h.userRole)
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return err
@@ -107,7 +107,9 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 
 	condition := fmt.Sprintf("WHERE id = %s ", h.db.Placeholder(1))
 
-	if !h.agent {
+	isAgent := h.userRole == data.RoleAgent
+
+	if !isAgent {
 		condition = fmt.Sprintf("%s AND %s",
 			condition, clientChannelsCondition)
 	}
@@ -127,15 +129,15 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 	switch action {
 	case ChannelPauseAction:
 		_, err = h.processor.SuspendChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelResumeAction:
 		_, err = h.processor.ActivateChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelTerminateAction:
 		_, err = h.processor.TerminateChannel(
-			channel, data.JobUser, h.agent)
+			channel, data.JobUser, isAgent)
 	case ChannelCloseAction:
-		if h.agent {
+		if isAgent {
 			logger.Error(ErrNotAllowedForAgent.Error())
 			return ErrNotAllowedForAgent
 		}
@@ -157,8 +159,8 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 }
 
 // GetAgentChannels gets channels for agent.
-func (h *Handler) GetAgentChannels(
-	password, channelStatus, serviceStatus string,
+func (h *Handler) GetAgentChannels(password string,
+	channelStatus, serviceStatus []string,
 	offset, limit uint) (*GetAgentChannelsResult, error) {
 	logger := h.logger.Add("method", "GetAgentChannels",
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
@@ -178,8 +180,8 @@ func (h *Handler) GetAgentChannels(
 }
 
 // GetClientChannels gets client channel information.
-func (h *Handler) GetClientChannels(password, channelStatus,
-	serviceStatus string, offset,
+func (h *Handler) GetClientChannels(password string, channelStatus,
+	serviceStatus []string, offset,
 	limit uint) (*GetClientChannelsResult, error) {
 	logger := h.logger.Add("method", "GetClientChannels",
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
@@ -341,31 +343,42 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 	return result, err
 }
 
-func (h *Handler) getChannelsConditions(
-	channelStatus, serviceStatus string) (tail string, args []interface{}) {
+func (h *Handler) getChannelsConditions(channelStatuses,
+	serviceStatuses []string) (tail string, args []interface{}) {
 	var conditions []string
 
-	if channelStatus != "" {
-		conditions = append(conditions, "channel_status")
-		args = append(args, channelStatus)
+	ph := 1
+
+	statusCondition := func(arg []string, name string) string {
+		phs := h.db.Placeholders(ph, len(arg))
+		phSlice := strings.Join(phs, ",")
+		ph = ph + len(arg)
+		return fmt.Sprintf("%s IN (%s)", name, phSlice)
 	}
 
-	if serviceStatus != "" {
-		conditions = append(conditions, "service_status")
-		args = append(args, serviceStatus)
+	processStatuses := func(arg []string, name string) {
+		if len(arg) != 0 {
+			condition := statusCondition(arg, name)
+			conditions = append(conditions, condition)
+			for _, status := range arg {
+				args = append(args, status)
+			}
+		}
 	}
 
-	items := h.tailElements(conditions)
+	processStatuses(channelStatuses, "channel_status")
+	processStatuses(serviceStatuses, "service_status")
 
-	if len(items) > 0 {
-		tail = strings.Join(items, " AND ")
+	if len(conditions) > 0 {
+		tail = strings.Join(conditions, " AND ")
 	}
 
 	return tail, args
 }
 
-func (h *Handler) getChannels(logger log.Logger, channelStatus, serviceStatus,
-	specCondition string, offset, limit uint) ([]data.Channel, int, error) {
+func (h *Handler) getChannels(logger log.Logger, channelStatus,
+	serviceStatus []string, specCondition string,
+	offset, limit uint) ([]data.Channel, int, error) {
 	conditions, args := h.getChannelsConditions(
 		channelStatus, serviceStatus)
 

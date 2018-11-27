@@ -116,7 +116,11 @@ func (m *Monitor) clientOnOfferingDeleted(l *data.JobEthLog) ([]data.Job, error)
 }
 
 func (m *Monitor) clientOnOfferingPopedUp(l *data.JobEthLog) ([]data.Job, error) {
-	return m.onOfferingRelatedEvent(l, data.JobClientAfterOfferingPopUp)
+	oid := m.findOfferingID(l.Topics[2])
+	if oid == "" {
+		oid = util.NewUUID()
+	}
+	return m.produceCommon(l, oid, data.JobOffering, data.JobClientAfterOfferingPopUp)
 }
 
 func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog) ([]data.Job, error) {

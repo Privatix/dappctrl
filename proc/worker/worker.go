@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -16,6 +17,7 @@ import (
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
+	"github.com/privatix/dappctrl/util/tor"
 )
 
 // GasConf amounts of gas limit to use for contracts calls.
@@ -59,14 +61,20 @@ type Worker struct {
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
 	pscPeriods     *eth.PSCPeriods
+	torHostName    data.Base64String
+	torClient      *http.Client
 }
 
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack eth.Backend, gasConc *GasConf, payAddr string,
-	pwdGetter data.PWDGetter, countryConf *country.Config,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	pscPeriods *eth.PSCPeriods) (*Worker, error) {
+	ethBack eth.Backend, gasConc *GasConf, pscAddr common.Address,
+	payAddr string, pwdGetter data.PWDGetter,
+	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
+	eptConf *ept.Config, pscPeriods *eth.PSCPeriods,
+	torHostname string, torSocksListener uint) (*Worker, error) {
+
+	l := logger.Add("type", "proc/worker.Worker")
+
 	abi, err := abi.JSON(
 		strings.NewReader(contract.PrivatixServiceContractABI))
 	if err != nil {
@@ -78,19 +86,26 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		return nil, err
 	}
 
+	torClient, err := tor.NewHTTPClient(torSocksListener)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Worker{
 		abi:            abi,
-		logger:         logger.Add("type", "proc/worker.Worker"),
+		logger:         l,
 		db:             db,
 		decryptKeyFunc: decryptKeyFunc,
 		gasConf:        gasConc,
 		ept:            eptService,
 		ethBack:        ethBack,
-		pscAddr:        ethBack.PSCAddress(),
+		pscAddr:        pscAddr,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
 		pscPeriods:     pscPeriods,
+		torHostName:    data.FromBytes([]byte(torHostname)),
+		torClient:      torClient,
 	}, nil
 }
 

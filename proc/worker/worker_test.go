@@ -39,7 +39,6 @@ type testConfig struct {
 	EptMsg    *ept.Config
 	Eth       *eth.Config
 	Job       *job.Config
-	Log       *util.LogConfig
 	StderrLog *log.WriterConfig
 	PayServer *pay.Config
 	SOMC      *somc.Config
@@ -54,7 +53,6 @@ func newTestConfig() *testConfig {
 		EptMsg:    ept.NewConfig(),
 		Eth:       eth.NewConfig(),
 		Job:       job.NewConfig(),
-		Log:       util.NewLogConfig(),
 		StderrLog: log.NewWriterConfig(),
 		SOMC:      somc.NewConfig(),
 		SOMCTest:  somc.NewTestConfig(),
@@ -96,8 +94,9 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage.Set(data.TestPassword)
 
 	worker, err := NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.PayServer.Addr, pwdStorage, conf.Country,
-		data.TestToPrivateKey, conf.EptMsg, conf.Eth.Contract.Periods)
+		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
+		conf.Country, data.TestToPrivateKey, conf.EptMsg,
+		conf.Eth.Contract.Periods, "", 0)
 	if err != nil {
 		somcConn.Close()
 		fakeSOMC.Close()

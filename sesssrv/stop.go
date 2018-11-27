@@ -36,6 +36,13 @@ func (s *Server) handleUpdateStop(logger log.Logger,
 		return
 	}
 
+	// Make the server adapter to kill the session for non-active channel.
+	if prod.IsServer && ch.ServiceStatus != data.ServiceActive {
+		logger.Warn("non-active channel")
+		s.RespondError(logger, w, ErrNonActiveChannel)
+		return
+	}
+
 	clientStop := !prod.IsServer && stop
 
 	if clientStop {

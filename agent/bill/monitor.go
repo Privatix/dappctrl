@@ -241,25 +241,28 @@ func (m *Monitor) processRound() error {
 }
 
 func (m *Monitor) suspendService(uuid string) error {
+	logger := m.logger.Add("method", "suspendService", "channel", uuid)
 	_, err := m.pr.SuspendChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Add("channel", uuid).Info(err.Error())
+		logger.Info(err.Error())
 	}
 	return nil
 }
 
 func (m *Monitor) terminateService(uuid string) error {
+	logger := m.logger.Add("method", "terminateService", "channel", uuid)
 	_, err := m.pr.TerminateChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Add("channel", uuid).Info(err.Error())
+		logger.Info(err.Error())
 	}
 	return nil
 }
 
 func (m *Monitor) unsuspendService(uuid string) error {
+	logger := m.logger.Add("method", "unsuspendService", "channel", uuid)
 	_, err := m.pr.ActivateChannel(uuid, jobCreator, true)
 	if err != nil {
-		m.logger.Add("channel", uuid).Info(err.Error())
+		logger.Info(err.Error())
 	}
 	return nil
 }

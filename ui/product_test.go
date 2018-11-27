@@ -8,6 +8,32 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+var (
+	badHosts = []string{
+		"256.0.0.1",
+		"127.256.0.1",
+		"127.0.256.1",
+		"127.0.0.256",
+		"127.0.0.",
+		"127.0.0.0.0",
+		".127.0.0.1",
+		"127.0.0.1.",
+		"127.0.0..1",
+		"127.0..0.1",
+		"127.0..0.1",
+		"127..0.0.1",
+		"+example.com",
+		".example.com",
+		"!fff!.dfd.ff",
+		"mail@com",
+	}
+
+	goodHosts = []string{
+		"127.0.0.1",
+		"privatix.io",
+	}
+)
+
 func testProduct(offerTpl, accessTpl string) data.Product {
 	return data.Product{
 		Name:          "Test product",
@@ -21,6 +47,17 @@ func testProduct(offerTpl, accessTpl string) data.Product {
 	}
 }
 
+func checkSEAddress(product *data.Product,
+	actionFunc func(password string, product data.Product) error,
+	hosts []string, exp error,
+	assertErrEqual func(error, error)) {
+	for _, host := range hosts {
+		product.ServiceEndpointAddress = &host
+		err := actionFunc(data.TestPassword, *product)
+		assertErrEqual(exp, err)
+	}
+}
+
 func TestCrateProduct(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "CreateProduct")
 	defer fxt.close()
@@ -29,6 +66,16 @@ func TestCrateProduct(t *testing.T) {
 
 	_, err := handler.CreateProduct("wrong-password", product)
 	assertErrEqual(ui.ErrAccessDenied, err)
+
+	actionFunc := func(password string, product data.Product) error {
+		_, err := handler.CreateProduct(password, product)
+		return err
+	}
+
+	checkSEAddress(&product, actionFunc, badHosts,
+		ui.ErrBadServiceEndpointAddress, assertErrEqual)
+
+	product.ServiceEndpointAddress = nil
 
 	res, err := handler.CreateProduct(data.TestPassword, product)
 
@@ -53,6 +100,13 @@ func TestUpdateProduct(t *testing.T) {
 
 	err := handler.UpdateProduct("wrong-password", product)
 	assertErrEqual(ui.ErrAccessDenied, err)
+
+	checkSEAddress(&product, handler.UpdateProduct, badHosts,
+		ui.ErrBadServiceEndpointAddress, assertErrEqual)
+	checkSEAddress(&product, handler.UpdateProduct, goodHosts,
+		nil, assertErrEqual)
+
+	product.ServiceEndpointAddress = nil
 
 	unknownProduct := data.Product{ID: util.NewUUID()}
 	err = handler.UpdateProduct(data.TestPassword, unknownProduct)

@@ -22,7 +22,6 @@ var (
 		DB        *data.DBConfig
 		StderrLog *log.WriterConfig
 		Job       *job.Config
-		UI        *ui.Config
 		Proc      *proc.Config
 	}
 	logger log.Logger
@@ -107,8 +106,9 @@ func TestMain(m *testing.M) {
 
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
-	handler = ui.NewHandler(conf.UI, logger, db, nil, pwdStorage,
-		data.TestEncryptedKey, data.TestToPrivateKey, true, nil)
+	handler = ui.NewHandler(logger, db, nil, pwdStorage,
+		data.TestEncryptedKey, data.TestToPrivateKey,
+		data.RoleAgent, nil)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

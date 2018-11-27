@@ -227,7 +227,11 @@ CREATE TABLE offerings (
 
     additional_params json, -- all additional parameters stored as JSON -- todo: [suggestion] use jsonb to query for parameters
 
-    auto_pop_up bool -- if is true, then allow the offering to automatically pop up.
+    auto_pop_up bool, -- if is true, then allow the offering to automatically pop up
+
+    somc_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
+
+    somc_data text NOT NULL -- additional data to support defined somc_type.
 );
 
 -- State channels.

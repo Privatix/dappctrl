@@ -16,9 +16,8 @@ An ethereum blockchan monitor configuration
 
 |Field|Type|Description|Example|
 |-|-|-|-|
-|CollectPause|int|Pause between iterations to collect Ethereum logs in seconds|6|
-|SchedulePause|int|Pause between iterations of scheduler start in seconds|6|
-|Timeout|int|Timeout for a single iteration in seconds|5|
+|QueryPause|int|Pause between iterations to query Ethereum logs in seconds|6|
+|EthCallTimeout|int|Request timeout|5|
 
 ### DB
 A database configuration
@@ -115,6 +114,28 @@ SOMC adapter configuration
 |ReconnPeriod|int|Reconnection period in milliseconds|5000|
 |URL|string|SOMC URL|ws://localhost:8080|
 
+### SOMCServer
+|Field|Type|Description|Example|
+|-|-|-|-|
+|Addr|int|the agents somc server address|5555|
+|TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}| 
+
+### TorHostname
+
+|||
+|-|-|
+|Type|string|
+|Description|the agent hostname to send with offerings|
+|Example|ssadfktgsdfsdfsdf.onion|
+
+### TorSocksListener
+
+|||
+|-|-|
+|Type|number|
+|Description|Tor socks listener running port|
+|Example|9050|
+
 ## Example
 
 ```
@@ -181,6 +202,11 @@ SOMC adapter configuration
     "SOMC": {
         "ReconnPeriod": 5000,
         "URL": "ws://localhost:8080"
-    }
+    },
+
+    "SOMCServer": {
+        "Addr": "localhost:5555",
+        "TLS": null
+    
 }
 ```

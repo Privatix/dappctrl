@@ -46,6 +46,15 @@ func TestBadUpdate(t *testing.T) {
 	err := Post(conf.SessionServer.Config, logger,
 		fxt.Product.ID, data.TestPassword, PathUpdate, args, nil)
 	util.TestExpectResult(t, "Post", ErrSessionNotFound, err)
+
+	fxt.Product.IsServer = true
+	data.SaveToTestDB(t, db, fxt.Product)
+	fxt.Channel.ServiceStatus = data.ServicePending
+	data.SaveToTestDB(t, db, fxt.Channel)
+
+	err = Post(conf.SessionServer.Config, logger,
+		fxt.Product.ID, data.TestPassword, PathUpdate, args, nil)
+	util.TestExpectResult(t, "Post", ErrNonActiveChannel, err)
 }
 
 func TestNormalSessionFlow(t *testing.T) {

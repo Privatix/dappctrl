@@ -297,7 +297,7 @@ fh.setFormatter(form_file)
 logging.getLogger().addHandler(fh)
 
 ch = logging.StreamHandler()  # console debug
-ch.setLevel('DEBUG')
+ch.setLevel('INFO')
 ch.setFormatter(form_console)
 logging.getLogger().addHandler(ch)
 logging.info('--- Begin ---')

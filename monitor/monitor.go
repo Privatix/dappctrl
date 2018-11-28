@@ -27,15 +27,15 @@ type Client interface {
 
 // Config is a monitor configuration.
 type Config struct {
-	EthCallTimeout uint // In seconds.
-	QueryPause     uint // In seconds.
+	EthCallTimeout uint // In milliseconds.
+	QueryPause     uint // In milliseconds.
 }
 
 // NewConfig creates a default blockchain monitor configuration.
 func NewConfig() *Config {
 	return &Config{
-		QueryPause:     6,
-		EthCallTimeout: 60,
+		QueryPause:     6000,
+		EthCallTimeout: 60000,
 	}
 }
 
@@ -76,8 +76,8 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 		l.Error(err.Error())
 		return nil, ErrFailedToParseABI
 	}
-	ethCallTimeout := time.Duration(conf.EthCallTimeout) * time.Second
-	queryPause := time.Duration(conf.QueryPause) * time.Second
+	ethCallTimeout := time.Duration(conf.EthCallTimeout) * time.Millisecond
+	queryPause := time.Duration(conf.QueryPause) * time.Millisecond
 	m := &Monitor{
 		db:             db,
 		eth:            c,

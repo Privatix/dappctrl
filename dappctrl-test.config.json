@@ -2,16 +2,11 @@
     "AgentMonitor": {
         "Interval": 5000
     },
-
-    "ClientBilling": {
-        "CollectPeriod":  1
-    },
-
     "BillingTest": {
         "Channel": {
-            "BigDeposit":1000,
-            "MidDeposit":100,
-            "SmallDeposit":1
+            "BigDeposit": 1000,
+            "MidDeposit": 100,
+            "SmallDeposit": 1
         },
         "Offer": {
             "BigLag": 10000,
@@ -25,213 +20,176 @@
             "UnitsUsed": 300
         }
     },
-
     "BlockMonitor": {
-        "QueryPause": 6,
-        "EthCallTimeout": 60
+        "EthCallTimeout": 60000,
+        "QueryPause": 6000
     },
-
+    "ClientBilling": {
+        "CollectPeriod": 1
+    },
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
-            "sslmode": "disable",
-            "user": "postgres",
             "host": "localhost",
-            "port": "5432"
+            "port": "5432",
+            "sslmode": "disable",
+            "user": "postgres"
         }
     },
-
     "DBLog": {
         "Level": "info",
         "StackLevel": "error"
     },
-
-    "EptTest": {
-        "ServerConfig": {"A": "A", "B" :"B", "C": "C"},
-        "Host": "privatix.io:443"
-    },
     "EptMsg": {
-        "Timeout": 1
+        "Timeout": 1000
     },
-
+    "EptTest": {
+        "Host": "privatix.io:443",
+        "ServerConfig": {
+            "A": "A",
+            "B": "B",
+            "C": "C"
+        }
+    },
     "Eth": {
-        "Contract" : {
-            "PTCAddrHex": "",
+        "Contract": {
             "PSCAddrHex": "",
+            "PTCAddrHex": "",
             "Periods": {
-                "PopUp": 5,
                 "Challenge": 0,
+                "PopUp": 5,
                 "Remove": 0
             }
         },
-        "GethURL": "http://localhost:8545",
-        "TruffleAPIURL": "",
-        "Timeout": 10
+        "GethURL": "",
+        "Timeout": 10000
     },
-
-    "StderrLog": {
-        "Level": "info",
-        "StackLevel": "error",
-        "Prefix": "",
-        "UTC": false,
-        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
-        "FileMode": 420
-    },
-
-    "JobHandlerTest": {
-        "SOMCTimeout": 10,
-        "ReactionDelay": 10
-    },
-
     "Gas": {
-        "PTC": {
-            "Approve": 45375
-        },
         "PSC": {
             "AddBalanceERC20": 49412,
-            "RegisterServiceOffering": 95625,
-            "CreateChannel": 76797,
+            "BalanceOf": 23655,
             "CooperativeClose": 97566,
+            "CreateChannel": 76797,
+            "GetChannelInfo": 29066,
+            "GetKey": 27310,
+            "PopupServiceOffering": 32674,
+            "PublishServiceOfferingEndpoint": 30528,
+            "RegisterServiceOffering": 95625,
+            "RemoveServiceOffering": 39238,
             "ReturnBalanceERC20": 43417,
             "SetNetworkFee": 27400,
-            "UncooperativeClose": 56612,
             "Settle": 41828,
             "TopUp": 42065,
-            "GetChannelInfo": 29066,
-            "PublishServiceOfferingEndpoint": 30528,
-            "GetKey": 27310,
-            "BalanceOf": 23655,
-            "PopupServiceOffering": 32674,
-            "RemoveServiceOffering": 39238
+            "UncooperativeClose": 56612
+        },
+        "PTC": {
+            "Approve": 45375
         }
     },
-
-    "JobHanlderTest": {
-        "SOMCTimeout": 10,
-        "ReactionDelay": 10
-    },
-
     "Job": {
         "CollectJobs": 100,
         "CollectPeriod": 1,
-        "WorkerBufLen": 10,
-        "Workers": 0,
         "TryLimit": 3,
         "TryPeriod": 1,
         "Types": {
-            "clientPreChannelCreate": {
-                "TryLimit": 3,
-                "TryPeriod": 1
-            },
-            "preAccountAddBalanceApprove": {
-                "Duplicated": true
-            },
-            "preAccountAddBalance": {
-                "Duplicated": true
-            },
-            "afterAccountAddBalance": {
-                "Duplicated": true
-            },
-            "preAccountReturnBalance": {
-                "Duplicated": true
-            },
-            "afterAccountReturnBalance": {
-                "Duplicated": true
-            },
             "accountUpdateBalances": {
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "agentPreOfferingPopUp": {
+            "afterAccountAddBalance": {
+                "Duplicated": true
+            },
+            "afterAccountReturnBalance": {
                 "Duplicated": true
             },
             "agentAfterOfferingPopUp": {
                 "Duplicated": true
             },
+            "agentPreOfferingPopUp": {
+                "Duplicated": true
+            },
+            "clientPreChannelCreate": {
+                "TryLimit": 3,
+                "TryPeriod": 1
+            },
             "completeServiceTransition": {
                 "Duplicated": true
+            },
+            "preAccountAddBalance": {
+                "Duplicated": true
+            },
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true
+            },
+            "preAccountReturnBalance": {
+                "Duplicated": true
             }
-        }
+        },
+        "WorkerBufLen": 10,
+        "Workers": 0
     },
-
+    "JobHandlerTest": {
+        "ReactionDelay": 10,
+        "SOMCTimeout": 10
+    },
+    "JobHanlderTest": {
+        "ReactionDelay": 10,
+        "SOMCTimeout": 10
+    },
     "JobTest": {
         "StressJobs": 100
     },
-
     "Log": {
         "Level": "info",
         "LogPath": ""
     },
-
     "PayServer": {
         "Addr": "localhost:9000",
         "TLS": null
     },
-
     "PayServerTest": {
         "ServerStartupDelay": 10
     },
-
     "Role": "agent",
-
-    "SessionServer": {
-        "Addr": "localhost:8000",
-        "TLS": null
-    },
-
-    "SessionServerTest": {
-        "ServerStartupDelay": 10,
-        "Product": {
-            "ValidFormatConfig": {"A": "A", "B" :"B", "C": "C"}
-        }
-
-    },
-
     "SOMC": {
-        "SOMCTimeout": 1,
         "URL": "ws://localhost:8080"
     },
-
     "SOMCServer": {
         "Addr": "localhost:5555",
         "TLS": null
     },
-
     "SOMCTest": {
         "ServerStartupDelay": 10
     },
-
-    "TestTimeout": 30,
-
-    "VPNConfigPusher": {
-        "ExportConfigKeys": [ "proto", "cipher", "ping-restart", "ping",
-            "connect-retry", "ca", "comp-lzo", "keepalive" ],
-        "TestConfig": {
-            "ping": "1",
-            "ping-restart": "1",
-            "port": "8888",
-            "proto": "tcp",
-            "cipher": "AES-256-CBC",
-            "connect-retry": "1",
-            "comp-lzo": ""
+    "SessionServer": {
+        "Addr": "localhost:8000",
+        "TLS": null
+    },
+    "SessionServerTest": {
+        "Product": {
+            "ValidFormatConfig": {
+                "A": "A",
+                "B": "B",
+                "C": "C"
+            }
         },
-        "TimeOut": 120
-    },
-
-    "VPNMonitor": {
-        "Addr": "localhost:7505",
-        "ByteCountPeriod": 5
-    },
-
-    "VPNMonitorTest": {
         "ServerStartupDelay": 10
     },
-
+    "StderrLog": {
+        "FileMode": 420,
+        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
+        "Level": "info",
+        "Prefix": "",
+        "StackLevel": "error",
+        "UTC": false
+    },
+    "TestTimeout": 30,
     "UI": {
         "Addr": "localhost:8888",
-        "AllowedOrigins": ["*"],
-        "Handler": {},
+        "AllowedOrigins": [
+            "*"
+        ],
         "TLS": null
     }
 }

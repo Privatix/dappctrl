@@ -15,7 +15,7 @@ const UndefinedCountry = "ZZ"
 // Config is the configuration for obtaining a country code.
 type Config struct {
 	Field   string
-	Timeout uint64 // in seconds.
+	Timeout uint64 // in milliseconds.
 	// In a url template there should be an pattern {{ip}}.
 	// Pattern {{ip}} will be replaced by a ip address of the agent.
 	URLTemplate string
@@ -45,7 +45,7 @@ func do(ctx context.Context, req *http.Request) (*http.Response, error) {
 // Parses response in JSON format and returns a value of the field.
 func GetCountry(timeout uint64, url, field string) (string, error) {
 	ctx, cancel := context.WithTimeout(
-		context.Background(), time.Second*time.Duration(timeout))
+		context.Background(), time.Millisecond*time.Duration(timeout))
 	defer cancel()
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)

@@ -40,6 +40,8 @@ import (
 	"github.com/privatix/dappctrl/version"
 )
 
+//go:generate scripts/configs_prettify.sh
+
 // Values for versioning.
 var (
 	Commit  string
@@ -177,7 +179,7 @@ func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
 	ethBack eth.Backend) error {
 	var timeout time.Duration
 	if cfg.AutoOfferingPopUpTimeout != 0 {
-		timeout = time.Second *
+		timeout = time.Millisecond *
 			time.Duration(cfg.AutoOfferingPopUpTimeout)
 	} else {
 		timeout = time.Duration(period) * looper.BlockTime / 2

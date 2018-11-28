@@ -3,8 +3,8 @@
         "Interval": 5000
     },
     "BlockMonitor": {
-        "QueryPause": 6,
-        "EthCallTimeout": 60
+        "EthCallTimeout": 60000,
+        "QueryPause": 6000
     },
     "ClientMonitor": {
         "CollectPeriod": 5000,
@@ -12,17 +12,17 @@
         "RequestTimeout": 2500
     },
     "Country": {
-        "Field" : "country_code",
-        "Timeout": 30,
-        "URLTemplate" : "https://ipleak.net/json/{{ip}}"
+        "Field": "country_code",
+        "Timeout": 30000,
+        "URLTemplate": "https://ipleak.net/json/{{ip}}"
     },
     "DB": {
         "Conn": {
             "dbname": "dappctrl",
-            "sslmode": "disable",
-            "user": "postgres",
             "host": "localhost",
-            "port": "5432"
+            "port": "5432",
+            "sslmode": "disable",
+            "user": "postgres"
         }
     },
     "DBLog": {
@@ -30,99 +30,67 @@
         "StackLevel": "error"
     },
     "EptMsg": {
-        "Timeout": 1
+        "Timeout": 1000
     },
     "Eth": {
-        "CheckTimeout": 10,
+        "CheckTimeout": 10000,
         "Contract": {
-            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "PSCAddrHex": "0xef85cd1c955b36945687d56b1cec824ad84bd684",
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
             "Periods": {
-                "PopUp": 10,
                 "Challenge": 20,
+                "PopUp": 10,
                 "Remove": 5
             }
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
-        "Timeout": 120,
         "HTTPClient": {
-            "DialTimeout": 10,
-            "TLSHandshakeTimeout": 5,
-            "ResponseHeaderTimeout": 60,
-            "RequestTimeout": 60,
-            "IdleConnTimeout": 60,
-            "KeepAliveTimeout": 60
-        }
+            "DialTimeout": 10000,
+            "IdleConnTimeout": 60000,
+            "KeepAliveTimeout": 60000,
+            "RequestTimeout": 60000,
+            "ResponseHeaderTimeout": 60000,
+            "TLSHandshakeTimeout": 5000
+        },
+        "Timeout": 120000
     },
     "FileLog": {
-        "Level": "debug",
-        "StackLevel": "error",
-        "Prefix": "",
-        "UTC": false,
+        "FileMode": 420,
         "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
-        "FileMode": 420
+        "Level": "debug",
+        "Prefix": "",
+        "StackLevel": "error",
+        "UTC": false
     },
     "Gas": {
-        "PTC": {
-            "Approve": 100000
-        },
         "PSC": {
             "AddBalanceERC20": 100000,
-            "RegisterServiceOffering": 200000,
-            "CreateChannel": 200000,
+            "BalanceOf": 100000,
             "CooperativeClose": 200000,
+            "CreateChannel": 200000,
+            "GetChannelInfo": 100000,
+            "GetKey": 100000,
+            "PopupServiceOffering": 100000,
+            "PublishServiceOfferingEndpoint": 100000,
+            "RegisterServiceOffering": 200000,
+            "RemoveServiceOffering": 100000,
             "ReturnBalanceERC20": 100000,
             "SetNetworkFee": 100000,
-            "UncooperativeClose": 100000,
             "Settle": 100000,
             "TopUp": 100000,
-            "GetChannelInfo": 100000,
-            "PublishServiceOfferingEndpoint": 100000,
-            "GetKey": 100000,
-            "BalanceOf": 100000,
-            "PopupServiceOffering": 100000,
-            "RemoveServiceOffering": 100000
+            "UncooperativeClose": 100000
+        },
+        "PTC": {
+            "Approve": 100000
         }
     },
     "Job": {
         "CollectJobs": 100,
         "CollectPeriod": 1000,
-        "WorkerBufLen": 10,
-        "Workers": 0,
         "TryLimit": 3,
         "TryPeriod": 60000,
         "Types": {
-            "clientAfterOfferingMsgBCPublish": {
-                "TryLimit": 10,
-                "TryPeriod": 60000,
-                "FirstStartDelay": 30000
-            },
-            "clientPreUncooperativeClose": {
-                "TryLimit": 200,
-                "TryPeriod": 180000,
-                "FirstStartDelay": 7500000
-            },
-            "clientPreChannelCreate": {
-                "Duplicated": true,
-                "TryLimit": 3,
-                "TryPeriod": 60000
-            },
-            "clientAfterChannelCreate": {
-                "TryLimit": 10,
-                "TryPeriod": 30000,
-                "FirstStartDelay": 25000
-            },
-            "agentPreOfferingMsgSOMCPublish": {
-                "TryLimit": 10,
-                "TryPeriod": 60000,
-                "FirstStartDelay": 30000
-            },
-            "preAccountAddBalanceApprove": {
-                "Duplicated": true,
-                "TryLimit": 3,
-                "TryPeriod": 60000
-            },
-            "preAccountAddBalance": {
+            "accountUpdateBalances": {
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
@@ -132,22 +100,23 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "preAccountReturnBalance": {
-                "Duplicated": true,
-                "TryLimit": 3,
-                "TryPeriod": 60000
-            },
             "afterAccountReturnBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "clientPreServiceUnsuspend": {
-                "Duplicated": true,
-                "TryLimit": 2,
-                "TryPeriod": 20000
+            "agentAfterOfferingPopUp": {
+                "Duplicated": true
             },
-            "clientPreServiceSuspend": {
+            "agentPreOfferingMsgSOMCPublish": {
+                "FirstStartDelay": 30000,
+                "TryLimit": 10,
+                "TryPeriod": 60000
+            },
+            "agentPreOfferingPopUp": {
+                "Duplicated": true
+            },
+            "agentPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
@@ -157,15 +126,38 @@
                 "TryLimit": 2,
                 "TryPeriod": 20000
             },
-            "agentPreServiceSuspend": {
+            "clientAfterChannelCreate": {
+                "FirstStartDelay": 25000,
+                "TryLimit": 10,
+                "TryPeriod": 30000
+            },
+            "clientAfterOfferingMsgBCPublish": {
+                "FirstStartDelay": 30000,
+                "TryLimit": 10,
+                "TryPeriod": 60000
+            },
+            "clientPreChannelCreate": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
+            },
+            "clientPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
                 "TryPeriod": 20000
             },
-            "accountUpdateBalances": {
+            "clientPreServiceUnsuspend": {
                 "Duplicated": true,
-                "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryLimit": 2,
+                "TryPeriod": 20000
+            },
+            "clientPreUncooperativeClose": {
+                "FirstStartDelay": 7500000,
+                "TryLimit": 200,
+                "TryPeriod": 180000
+            },
+            "completeServiceTransition": {
+                "Duplicated": true
             },
             "decrementCurrentSupply": {
                 "Duplicated": true,
@@ -177,19 +169,27 @@
                 "TryLimit": 3,
                 "TryPeriod": 60000
             },
-            "agentPreOfferingPopUp": {
-                "Duplicated": true
+            "preAccountAddBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
-            "agentAfterOfferingPopUp": {
-                "Duplicated": true
+            "preAccountAddBalanceApprove": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             },
-            "completeServiceTransition": {
-                "Duplicated": true
+            "preAccountReturnBalance": {
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000
             }
-        }
+        },
+        "WorkerBufLen": 10,
+        "Workers": 0
     },
     "Looper": {
-        "AutoOfferingPopUpTimeout": 3600
+        "AutoOfferingPopUpTimeout": 3600000
     },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
@@ -197,16 +197,15 @@
         "TLS": null
     },
     "Role": "agent",
-    "SessionServer": {
-        "Addr": "localhost:8000",
-        "TLS": null
-    },
     "SOMC": {
-        "SOMCTimeout": 30,
         "URL": "ws://89.38.96.53:8080"
     },
     "SOMCServer": {
         "Addr": "localhost:5555",
+        "TLS": null
+    },
+    "SessionServer": {
+        "Addr": "localhost:8000",
         "TLS": null
     },
     "StaticPassword": "",
@@ -214,8 +213,9 @@
     "TorSocksListener": 9050,
     "UI": {
         "Addr": "localhost:8888",
-        "AllowedOrigins": ["*"],
-        "Handler": {},
+        "AllowedOrigins": [
+            "*"
+        ],
         "TLS": null
     }
 }

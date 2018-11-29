@@ -40,8 +40,6 @@ import (
 	"github.com/privatix/dappctrl/version"
 )
 
-//go:generate scripts/configs_prettify.sh
-
 // Values for versioning.
 var (
 	Commit  string

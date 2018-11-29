@@ -4,7 +4,7 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.0.2
+        Version 0.1.0
 
         mode:
     python initializer.py  -h                              get help information
@@ -23,6 +23,8 @@
     python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
     python initializer.py --cli                            auto offer mode
     python initializer.py --cli --file [path/to/file.json] auto offer mode with offer data from offer.json
+    python initializer.py --cli --republish                republish offer mode
+    python initializer.py --cli --file [] --republish      republish offer mode with offer data from offer.json
     python initializer.py --clean                          stop and delete all dirs containers and gui
 
 """
@@ -318,8 +320,10 @@ class Init:
         self.fin_file = main_conf['mark_final']
         self.url_dwnld = main_conf['link_download']
         self.wait_mess = main_conf['wait_mess']
-        self.p_dapctrl_conf = main_conf['dappctrl_conf_json']  # ping [3000,8000,9000]
-        self.p_dapctrl_dev_conf = main_conf['dappctrl_dev_conf_json'].format(main_conf['branch'])
+        self.p_dapctrl_conf = main_conf[
+            'dappctrl_conf_json']  # ping [3000,8000,9000]
+        self.p_dapctrl_dev_conf = main_conf['dappctrl_dev_conf_json'].format(
+            main_conf['branch'])
         self.p_dapvpn_conf = main_conf['dappvpn_conf_json']
         self.ovpn_conf = main_conf['openvpn_conf']
 
@@ -459,7 +463,6 @@ class Init:
 
 
 class CommonCMD(Init):
-
     def __init__(self):
         Init.__init__(self)
 
@@ -508,18 +511,18 @@ class CommonCMD(Init):
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
-
-        if self.target == 'back':
-            self.clear_contr(True)
-
-        elif self.target == 'gui':
-            self._clear_dir(self.gui_path)
-
-        elif self.target == 'both':
-            self.clear_contr(True)
-            self._clear_dir(self.gui_path)
-        else:
-            logging.debug('Absent `target` for cleaning!')
+        #
+        # if self.target == 'back':
+        #     self.clear_contr(True)
+        #
+        # elif self.target == 'gui':
+        #     self._clear_dir(self.gui_path)
+        #
+        # elif self.target == 'both':
+        #     self.clear_contr(True)
+        #     self._clear_dir(self.gui_path)
+        # else:
+        #     logging.debug('Absent `target` for cleaning!')
 
         sys.exit(code)
 
@@ -738,7 +741,7 @@ class CommonCMD(Init):
         else:
             logging.debug('dnsmasq conf not exist')
 
-    def _ping_port(self, port,  host='0.0.0.0', verb=False):
+    def _ping_port(self, port, host='0.0.0.0', verb=False):
 
         with closing(socket(AF_INET, SOCK_STREAM)) as sock:
             if sock.connect_ex((host, int(port))) == 0:
@@ -818,7 +821,7 @@ class CommonCMD(Init):
                     self.tmp_var = []
                     self.__all_use_ports(self.use_ports)
                     if int(port) in range(65535)[1:] and not self._ping_port(
-                        port=port) and int(port) not in self.tmp_var:
+                            port=port) and int(port) not in self.tmp_var:
                         break
                 except BaseException as bexpm:
                     logging.error('Check port: {}'.format(bexpm))
@@ -853,29 +856,29 @@ class CommonCMD(Init):
             self.__up_ports()
         # check common
         if not self._checker_port(
-            host=self.p_unpck['common'][1],
-            port=self.use_ports['common'],
-            verb=True):
-            logging.info('Restart Common')
-            self.run_service(comm=True, restart=True)
-            if not self._checker_port(
                 host=self.p_unpck['common'][1],
                 port=self.use_ports['common'],
                 verb=True):
+            logging.info('Restart Common')
+            self.run_service(comm=True, restart=True)
+            if not self._checker_port(
+                    host=self.p_unpck['common'][1],
+                    port=self.use_ports['common'],
+                    verb=True):
                 logging.error('Common is not ready')
                 exit(14)
 
         # check vpn
         if not self._checker_port(
-            host=self.p_unpck['vpn'][1],
-            port=self.use_ports['vpn'],
-            verb=True):
-            logging.info('Restart VPN')
-            self.run_service(comm=False, restart=True)
-            if not self._checker_port(
                 host=self.p_unpck['vpn'][1],
                 port=self.use_ports['vpn'],
                 verb=True):
+            logging.info('Restart VPN')
+            self.run_service(comm=False, restart=True)
+            if not self._checker_port(
+                    host=self.p_unpck['vpn'][1],
+                    port=self.use_ports['vpn'],
+                    verb=True):
                 logging.error('VPN is not ready')
                 exit(13)
 
@@ -891,7 +894,8 @@ class CommonCMD(Init):
         logging.debug('Symlink done')
 
     def _finalizer(self, rw=None, pass_check=False):
-        logging.debug('Finalizer. rw: {}, pass_check: {}'.format(rw,pass_check))
+        logging.debug(
+            'Finalizer. rw: {}, pass_check: {}'.format(rw, pass_check))
         if pass_check:
             logging.debug('Pass check PID file')
             return True
@@ -1027,9 +1031,33 @@ class CommonCMD(Init):
 
         return tmp_store
 
-    def conf_dappctrl_json(self, old_vers=False):
-        """Check ip addr, free ports and replace it in
-        common dappctrl.config.local.json"""
+    def pswd_from_conf(self):
+        # get password stored in dappctrl.config.local.json
+        logging.debug('Search pswd')
+
+        p = self.p_contr + self.path_com
+        if old_vers:
+            p += 'rootfs/'
+        p += self.p_dapctrl_conf
+
+        # Read dappctrl.config.local.json
+        data = self.file_rw(p=p, json_r=True, log='Read dappctrl conf')
+        if not data:
+            return False, 'Config dappctrl.config.local.json absend.\n' \
+                          'You must complete the installation.'
+
+        self.pswd = data.get('StaticPassword')
+        if self.pswd:
+            return True, 'Password was found.'
+        return False, 'The password does not exist.\n' \
+                      'It is necessary to perform auto-offering first, --cli mode.'
+
+    def conf_dappctrl_json(self, old_vers=False, get_pswd=False):
+        """
+        Check ip addr, free ports and replace it in
+        common dappctrl.config.local.json
+        in get_pswd=True,get password stored in dappctrl.config.local.json
+        """
         logging.debug('Check IP, Port in common dappctrl.local.json')
         # search_keys = ['AgentServer', 'PayAddress', 'PayServer',
         #                'SessionServer']
@@ -1112,7 +1140,7 @@ class CommonCMD(Init):
                         # default Addr is localhost:8000
                         self.sessServPort = port
 
-                    # elif k == 'SOMCServer' and self.dappctrl_role == 'client':
+                        # elif k == 'SOMCServer' and self.dappctrl_role == 'client':
                         # default Addr is localhost:5555
                         # ping only when role agent
                         # self.use_ports['common'].remove(port)
@@ -1127,7 +1155,6 @@ class CommonCMD(Init):
             tmp_store = self.__exclude_port(tmp_store)
 
         self.use_ports['common'] = [v for k, v in tmp_store.items()]
-
 
 
 class DB(CommonCMD):
@@ -1881,10 +1908,10 @@ class Nspawn(Params):
 
             # rewrite server.conf file
             if not self.file_rw(
-                p=conf_file,
-                w=True,
-                data=tmp_data,
-                log='Rewrite server.conf'
+                    p=conf_file,
+                    w=True,
+                    data=tmp_data,
+                    log='Rewrite server.conf'
             ):
                 self._rolback(7)
 
@@ -2037,10 +2064,10 @@ class LXC(DB):
 
             # rewrite server.conf file
             if not self.file_rw(
-                p=conf_file,
-                w=True,
-                data=tmp_data,
-                log='Rewrite server.conf'
+                    p=conf_file,
+                    w=True,
+                    data=tmp_data,
+                    log='Rewrite server.conf'
             ):
                 self._rolback(7)
 
@@ -2107,11 +2134,11 @@ class LXC(DB):
 
                             # rewrite run sh file
                             if not self.file_rw(
-                                p=conf_file,
-                                w=True,
-                                data=tmp_data,
-                                log='Rewrite LXC {} run file'.format(
-                                    f_name)
+                                    p=conf_file,
+                                    w=True,
+                                    data=tmp_data,
+                                    log='Rewrite LXC {} run file'.format(
+                                        f_name)
                             ):
                                 self._rolback(7)
 
@@ -2160,10 +2187,10 @@ class LXC(DB):
 
                 # rewrite conf file
                 if not self.file_rw(
-                    p=conf_file,
-                    w=True,
-                    data=tmp_data,
-                    log='Rewrite LXC {} interfaces'.format(cont_name)
+                        p=conf_file,
+                        w=True,
+                        data=tmp_data,
+                        log='Rewrite LXC {} interfaces'.format(cont_name)
                 ):
                     self._rolback(7)
 
@@ -2258,10 +2285,10 @@ class LXC(DB):
 
                 # rewrite conf file
                 if not self.file_rw(
-                    p=conf_file,
-                    w=True,
-                    data=tmp_data,
-                    log='Rewrite LXC {} config'.format(cont_name)
+                        p=conf_file,
+                        w=True,
+                        data=tmp_data,
+                        log='Rewrite LXC {} config'.format(cont_name)
                 ):
                     self._rolback(7)
 
@@ -2453,7 +2480,6 @@ class AutoOffer:
         self.id = 1
         self.url = 'http://localhost:8888/http'
         self.pswdSymbol = 12
-        # self.pswd = self.__random_pswd()
         self.acc_name = 'TestAcc'
         self.botUrl = 'http://89.38.96.53:3000/getprix'
         self.botAuth = 'dXNlcjpoRmZWRWRVMkNva0Y='
@@ -2469,13 +2495,8 @@ class AutoOffer:
         self.offer_id = None
         self.gasPrice = 2000000000
         self.waitBot = 1
-        self.waitblockchain = 60
+        self.waitblockchain = 90
         self.vpnConf = '/var/lib/container/vpn/opt/privatix/config/dappvpn.config.json'
-
-    # def __random_pswd(self):
-    #     return ''.join(SystemRandom().choice(
-    #         ascii_uppercase + ascii_lowercase + digits
-    #                             ) for _ in range(self.pswdSymbol))
 
     def _getAgentOffer(self, mark):
         logging.info('Get Offerings. Mark: {}'.format(mark))
@@ -2579,7 +2600,7 @@ class AutoOffer:
                         choise_code = raw_input('>')
 
                         if choise_code.isdigit() and int(
-                            choise_code) in choise_task:
+                                choise_code) in choise_task:
                             self.offerData['country'] = choise_task[
                                 int(choise_code)]
                             break
@@ -2613,6 +2634,52 @@ class AutoOffer:
             logging.error('Open file: {}'.format(oexpt))
             return False, 'Trouble when try open file: {}. Error: {}'.format(
                 path, oexpt)
+
+    @Init.wait_decor
+    def republishOffer(self):
+        logging.debug('Republish')
+        res = self.__getProductId()
+        if res[0]:
+            res = self._getAcc()
+            logging.debug('Get Acc: {}'.format(res))
+            if res[0]:
+
+                self.ethAddr = res[1][0]['ethAddr']
+                self.ptcBalance = res[1][0]['ptcBalance']
+                self.pscBalance = res[1][0]['pscBalance']
+                self.ethBalance = res[1][0]['ethBalance']
+                self.agent_id = res[1][0]['id']
+
+                logging.debug('ethAddr: {}'.format(self.ethAddr))
+                logging.debug('agent_id: {}'.format(self.agent_id))
+                logging.debug('ethBalance: {}'.format(self.ethBalance))
+                logging.debug('pscBalance: {}'.format(self.pscBalance))
+                logging.debug('ptcBalance: {}'.format(self.ptcBalance))
+                res = self._askBot()
+                if not res[0]:
+                    return res
+
+                self._wait_blockchain(target='ptc', republ=True)
+                res = self._transfer()
+                if not res[0]:
+                    return res
+                self._wait_blockchain(target='psc', republ=True)
+                res = self._createOffer()
+
+                logging.debug('ethAddr: {}'.format(self.ethAddr))
+                logging.debug('agent_id: {}'.format(self.agent_id))
+                logging.debug('ethBalance: {}'.format(self.ethBalance))
+                logging.debug('pscBalance: {}'.format(self.pscBalance))
+                logging.debug('ptcBalance: {}'.format(self.ptcBalance))
+                logging.debug('product_id: {}'.format(self.product_id))
+                logging.debug('ethHash: {}'.format(self.ethHash))
+                logging.debug('offer_id: {}'.format(self.offer_id))
+                logging.debug('prixHash: {}'.format(self.prixHash))
+                logging.debug('gasPrice: {}'.format(self.gasPrice))
+                if not res[0]:
+                    return res
+                return self._statusOffer()
+        return res
 
     @Init.wait_decor
     def offerRun(self):
@@ -2702,24 +2769,30 @@ class AutoOffer:
         else:
             return False, res[1]
 
-    def _wait_blockchain(self, target):
+    def _wait_blockchain(self, target, republ=False):
         logging.info('Wait blockchain.Target is: {}.'.format(target))
         waitCounter = 0
         while True:
+            sleep(self.waitblockchain)
             res = self._getEth()
             logging.debug('Wait {} min'.format(waitCounter))
             waitCounter += 1
             if res[0]:
                 if target == 'ptc' and int(res[1].get('ptcBalance', '0')):
+                    if republ and int(self.ptcBalance) >= int(
+                            res[1]['ptcBalance']):
+                        continue
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break
                 elif target == 'psc' and int(res[1].get('pscBalance', '0')):
+                    if republ and int(self.pscBalance) >= int(
+                            res[1]['pscBalance']):
+                        continue
                     self.pscBalance = res[1]['pscBalance']
                     self.ptcBalance = res[1]['ptcBalance']
                     self.ethBalance = res[1]['ethBalance']
                     break
-            sleep(self.waitblockchain)
 
     def _transfer(self):
         # Transfer some PRIX from PTC balance to PSC balance
@@ -2771,7 +2844,7 @@ class AutoOffer:
                     logging.error('Key {} not exist in response'.format(key))
                     return False, 'Key {} not exist in response'.format(key)
 
-            logging.debug('Response OK. {}'.format(response))
+            logging.debug('Response OK: {}'.format(response))
             return True, response
 
         except BaseException as urlexpt:
@@ -2793,6 +2866,24 @@ class AutoOffer:
             return self._createAcc()
         else:
             return False, res[1]
+
+    def _getAcc(self):
+        # Create account
+        '''curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAccounts", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+        {"jsonrpc":"2.0",
+        "id":67,
+        "result":[{"id":"25b84988-fde6-4882-91bc-ab1dfb86cbdb","ethAddr":"35218b6fc288e093d55295e2c3ce7304d216be64","isDefault":true,"inUse":true,"name":"TestAcc","ptcBalance":0,"pscBalance":700000000,"ethBalance":49654270000000000,"lastBalanceCheck":"2018-11-29T14:24:41.730652+01:00"}]}
+
+        '''
+        logging.info('Get account')
+        data = {
+            'method': 'ui_getAccounts',
+            'params': [self.pswd],
+            'id': self.id,
+        }
+        res = self.__urlOpen(data=data, key='result')
+        return res
 
     def _createAcc(self):
         # Create account
@@ -2965,8 +3056,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         elif self.in_args['cli']:
                             logging.debug('Cli mode.Wait when up 8000 port')
                             if not self._checker_port(
-                                port='8000',
-                                verb=True):
+                                    port='8000',
+                                    verb=True):
                                 logging.info(
                                     'Sorry, but for unknown reasons,\n'
                                     'the required service to continue work is not responding.\n'
@@ -3021,8 +3112,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         elif self.in_args['cli']:
                             logging.debug('Cli mode.Wait when up 8000 port')
                             if not self._checker_port(
-                                port='8000',
-                                verb=True):
+                                    port='8000',
+                                    verb=True):
                                 logging.info(
                                     'Sorry, but for unknown reasons,\n'
                                     'the required service to continue work is not responding.\n'
@@ -3234,13 +3325,13 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
         def check_role(self):
             mess = 'Please select your role.\n Enter digits 1 or 2.\n' \
                    '1 - You role are agent\n' \
-                   '2 - You role are client\n' \
+                   '2 - You role are client\n'
 
-            if self.prompt(mess=mess,choise=('1','2')):
-                #choise 2
+            if self.prompt(mess=mess, choise=('1', '2')):
+                # choise 2
                 self.dappctrl_role = 'client'
             else:
-                #choise 1
+                # choise 1
                 self.dappctrl_role = 'agent'
 
         def input_args(self):
@@ -3255,8 +3346,12 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                                 default=False,
                                 help='Install app without GUI and automate publishing offer.')
 
+            parser.add_argument("--republish", action='store_true',
+                                default=False,
+                                help='Republish offer. Use only with --cli.')
+
             parser.add_argument("--file", type=str, default=False, nargs='?',
-                                help='Add full path to file with offering configs on JSON format.Example: /opt/privatix/offer.json. cat offer.json --> {"country": "US"}')
+                                help='Add full path to file with offering configs on JSON format. Use only with --cli. Example: /opt/privatix/offer.json. cat offer.json --> {"country": "US"}')
 
             parser.add_argument("--update-back", action='store_true',
                                 default=False,
@@ -3332,19 +3427,48 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 logging.info('Auto offering.')
                 self.in_args['no_gui'] = True
                 if self.in_args['file']:
-                    logging.debug('Check existence offer file: {}'.format(self.in_args['file']))
+                    logging.debug('Check existence offer file: {}'.format(
+                        self.in_args['file']))
                     res = self.validateJson(self.in_args['file'])
                     if not res[0]:
                         logging.error(res[1])
                         exit(33)
 
-                self.target = 'back'
-                self.pswd = ''.join(SystemRandom().choice(
-                            ascii_uppercase + ascii_lowercase + digits
-                                ) for _ in range(self.pswdSymbol))
-                self.check_sudo()
-                self.dappctrl_role = 'agent'
-                self.init_os()
+                if self.in_args['republish']:
+                    logging.info('Republish offering.')
+                    resp = self.pswd_from_conf()
+                    logging.debug('Response: {}'.format(resp))
+                    if resp[0]:
+                        logging.debug('Republish mode available')
+                        res = self.republishOffer()
+                        if res[0]:
+                            logging.info(
+                                'Republish done successfully.\n'
+                                'ethAddr: {}\n'
+                                'offer id: {}\n'
+                                'agent id: {}\n'
+                                'eth Balance: {}\n'
+                                'psc Balance: {}\n'
+                                'ptc Balance: {}\n'.format(
+                                self.ethAddr,
+                                self.offer_id,
+                                self.agent_id,
+                                self.ethBalance,
+                                self.pscBalance,
+                                self.ptcBalance,
+                            ))
+
+                    else:
+                        logging.error('Repablish trouble: {}'.format(resp[1]))
+
+                else:
+                    self.target = 'back'
+                    self.pswd = ''.join(SystemRandom().choice(
+                        ascii_uppercase + ascii_lowercase + digits
+                    ) for _ in range(self.pswdSymbol))
+                    self.check_sudo()
+                    self.dappctrl_role = 'agent'
+                    self.init_os()
 
             elif self.in_args['clean']:
                 logging.info('Clean mode.')

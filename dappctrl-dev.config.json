@@ -7,7 +7,7 @@
         "QueryPause": 6000
     },
     "ClientMonitor": {
-        "CollectPeriod": 5000,
+        "CollectPeriod": 1500,
         "RequestTLS": false,
         "RequestTimeout": 2500
     },

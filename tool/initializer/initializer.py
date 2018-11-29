@@ -4,7 +4,7 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.0.1
+        Version 0.0.2
 
         mode:
     python initializer.py  -h                              get help information
@@ -18,6 +18,7 @@
     python initializer.py --update-back                    update all contaiter without GUI
     python initializer.py --update-mass                    update all contaiter with GUI
     python initializer.py --update-gui                     update only GUI
+    python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
     python initializer.py --cli                            auto offer mode
@@ -96,7 +97,7 @@ Exit code:
 """
 
 main_conf = dict(
-    bind_port=True,
+    bind_port=False,
     bind_ports=[5555],
     log_path='/var/log/initializer.log',
     branch='develop',
@@ -442,6 +443,7 @@ class Init:
     @staticmethod
     def wait_decor(self):
         def wrap(obj, args=None):
+            logging.debug('Wait decor args: {}.'.format(args))
             st = Thread(target=Init.long_waiting)
             st.daemon = True
             st.start()
@@ -1014,6 +1016,17 @@ class CommonCMD(Init):
             return json_conf
         return False
 
+    def __exclude_port(self, tmp_store):
+        logging.debug('Exclude port mode.')
+        # only if agent is client !
+        by_key = ['PayServer', 'SOMCServer']  # 9000,5555
+        for i in by_key:
+            if tmp_store.get(i):
+                logging.debug('Exclude: {}'.format(i))
+                del tmp_store[i]
+
+        return tmp_store
+
     def conf_dappctrl_json(self, old_vers=False):
         """Check ip addr, free ports and replace it in
         common dappctrl.config.local.json"""
@@ -1066,6 +1079,7 @@ class CommonCMD(Init):
             data['StaticPassword'] = self.pswd
 
         # Search ports in conf and store it to main_conf['ports']
+        tmp_store = dict()
         for k, v in data.iteritems():
             if isinstance(v, dict) and v.get('Addr'):
                 delim = ':'
@@ -1074,9 +1088,11 @@ class CommonCMD(Init):
                 logging.debug('Key: {} port: {}, Check it.'.format(k, port))
 
                 if k == 'PayServer':
+                    # default Addr is 0.0.0.0:9000
+                    # ping only when role agent
                     raw_row[-1] = pay_port['new']
-                    if not self.dappctrl_role == 'client':
-                        self.use_ports['common'].append(pay_port['new'])
+                    # if self.dappctrl_role == 'agent':
+                    tmp_store[k] = pay_port['new']
 
                 else:
                     if old_vers and raw_row[0] == self.def_comm_addr:
@@ -1086,20 +1102,32 @@ class CommonCMD(Init):
                     port = self.check_port(port)
                     raw_row[-1] = port
 
-                    self.use_ports['common'].append(port)
+                    tmp_store[k] = port
                     if k == 'UI':
+                        # default Addr is localhost:8888
                         self.wsEndpoint = port
                         self.use_ports['wsEndpoint'] = port
-                    if k == 'SessionServer':
+
+                    elif k == 'SessionServer':
+                        # default Addr is localhost:8000
                         self.sessServPort = port
-                        if self.dappctrl_role == 'client':
-                            self.use_ports['common'].remove(port)
+
+                    # elif k == 'SOMCServer' and self.dappctrl_role == 'client':
+                        # default Addr is localhost:5555
+                        # ping only when role agent
+                        # self.use_ports['common'].remove(port)
 
                 data[k]['Addr'] = delim.join(raw_row)
 
         # Rewrite dappctrl.config.local.json
         self.file_rw(p=p, w=True, json_r=True, data=data,
                      log='Rewrite conf')
+
+        if self.dappctrl_role == 'client':
+            tmp_store = self.__exclude_port(tmp_store)
+
+        self.use_ports['common'] = [v for k, v in tmp_store.items()]
+
 
 
 class DB(CommonCMD):

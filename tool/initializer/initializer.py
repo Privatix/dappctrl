@@ -4,7 +4,7 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.1.0
+        Version 0.2.0
 
         mode:
     python initializer.py  -h                              get help information
@@ -54,6 +54,7 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 from string import ascii_uppercase, ascii_lowercase, digits
 from re import search, sub, findall, compile, match, IGNORECASE
 from os import remove, mkdir, path, environ, stat, chmod, listdir, symlink
+
 
 """
 Exit code:
@@ -150,6 +151,11 @@ main_conf = dict(
         },
         db_log='/var/lib/container/common/var/log/postgresql/postgresql-10-main.log',
         db_stat='database system is ready to accept connections',
+        tor=dict(
+            socks_port=9099,
+            config='etc/tor/torrcprod',
+            hostname='var/lib/tor/hidden_service/hostname'
+        )
 
     ),
     back_lxc=dict(
@@ -387,6 +393,10 @@ class Init:
             vpn=[self.path_vpn, '0.0.0.0'],
             common=[self.path_com, '0.0.0.0']
         )
+        tor = back['tor']
+        self.tor_socks_port = tor['socks_port']
+        self.tor_config = tor['config']
+        self.tor_hostname_config = tor['hostname']
 
     def _init_nspwn(self):
         back = main_conf['back_nspwn']
@@ -511,18 +521,18 @@ class CommonCMD(Init):
             logging.debug('Rolback ip_forward')
             cmd = '/sbin/sysctl -w net.ipv4.ip_forward=0'
             self._sys_call(cmd)
-        #
-        # if self.target == 'back':
-        #     self.clear_contr(True)
-        #
-        # elif self.target == 'gui':
-        #     self._clear_dir(self.gui_path)
-        #
-        # elif self.target == 'both':
-        #     self.clear_contr(True)
-        #     self._clear_dir(self.gui_path)
-        # else:
-        #     logging.debug('Absent `target` for cleaning!')
+
+        if self.target == 'back':
+            self.clear_contr(True)
+
+        elif self.target == 'gui':
+            self._clear_dir(self.gui_path)
+
+        elif self.target == 'both':
+            self.clear_contr(True)
+            self._clear_dir(self.gui_path)
+        else:
+            logging.debug('Absent `target` for cleaning!')
 
         sys.exit(code)
 
@@ -742,6 +752,7 @@ class CommonCMD(Init):
             logging.debug('dnsmasq conf not exist')
 
     def _ping_port(self, port, host='0.0.0.0', verb=False):
+        '''open -> True  close -> False'''
 
         with closing(socket(AF_INET, SOCK_STREAM)) as sock:
             if sock.connect_ex((host, int(port))) == 0:
@@ -804,14 +815,14 @@ class CommonCMD(Init):
                 self.tmp_var.append(int(v))
 
     def check_port(self, port, auto=False):
+        '''_ping_port: open -> True  close -> False'''
 
         if self._ping_port(port=port):
             mark = False
             while True:
 
                 if auto and mark:
-                    port = int(port)
-                    port += 1
+                    port = int(port)+1
                 else:
                     logging.info("\nPort: {} is busy or wrong.\n"
                                  "Select a different port,in range 1 - 65535.".format(
@@ -1157,11 +1168,90 @@ class CommonCMD(Init):
         self.use_ports['common'] = [v for k, v in tmp_store.items()]
 
 
-class DB(CommonCMD):
+class Tor(CommonCMD):
+    def __init__(self):
+        CommonCMD.__init__(self)
+
+    def check_tor_port(self):
+        logging.info('Check Tor config')
+        self.tor_socks_port = self.check_port(port=self.tor_socks_port,
+                                     auto=True)
+        full_comm_p = self.p_contr + self.path_com
+        data = self.file_rw(p=full_comm_p + self.p_dapctrl_conf,
+                            json_r=True,
+                            log='Read dappctrl conf')
+
+        somc_serv = data.get('SOMCServer')
+        if somc_serv:
+            somc_serv_port = somc_serv['Addr'].split(':')[1]
+            serv_port = '80 127.0.0.1:{}\n'.format(somc_serv_port)
+            logging.debug('Tor HiddenServicePort: {}'.format(serv_port))
+            data = self.file_rw(p=full_comm_p + self.tor_config,
+                                log='Read tor conf.')
+            search_line = {
+                'SocksPort': '{}\n'.format(self.tor_socks_port),
+                'HiddenServicePort': serv_port
+            }
+
+            for row in data:
+                for k, v in search_line.items():
+                    if k in row:
+                        indx = data.index(row)
+                        data[indx] = '{} {}'.format(k, v)
+
+            self.file_rw(p=full_comm_p + self.tor_config,
+                         w=True,
+                         data=data,
+                         log='Write tor conf.')
+
+        else:
+            mess = 'On dappctrl.config.json absent SOMCServer field'
+            logging.error(mess)
+            raise BaseException(mess)
+
+    def get_onion_key(self):
+        logging.debug('Get onion key')
+        hostname_config = self.p_contr + self.path_com + self.tor_hostname_config
+        onion_key = self.file_rw(
+            p=hostname_config,
+            log='Read hostname conf')
+        logging.debug('Onion key: {}'.format(onion_key))
+
+        data = self.file_rw(
+            p=self.p_contr + self.path_com + self.p_dapctrl_conf,
+            json_r=True,
+            log='Read dappctrl conf')
+
+        data.update(dict(
+            TorHostname=onion_key[0].replace('\n', '')
+        ))
+
+        self.file_rw(p=self.p_contr + self.path_com + self.p_dapctrl_conf,
+                     w=True,
+                     json_r=True,
+                     data=data,
+                     log='Write add TorHostname to dappctrl conf.')
+
+    def set_socks_list(self):
+        logging.debug('Add TorSocksListener.')
+        data = self.file_rw(p=self.p_contr + self.path_com + self.p_dapctrl_conf,
+                            json_r=True,
+                            log='Read dappctrl conf')
+        data.update(dict(
+            TorSocksListener=self.tor_socks_port
+        ))
+
+        self.file_rw(p=self.p_contr + self.path_com + self.p_dapctrl_conf,
+                     json_r=True,
+                     data=data,
+                     log='Write dappctrl conf')
+
+
+class DB(Tor):
     '''This class provides a check if the database is started from its logs'''
 
     def __init__(self):
-        CommonCMD.__init__(self)
+        Tor.__init__(self)
 
     @Init.wait_decor
     def _check_db_run(self, code):
@@ -1176,6 +1266,8 @@ class DB(CommonCMD):
             raw = self.file_rw(p=self.db_log,
                                log='Read DB log')
             for i in raw:
+                logging.debug('DB : {}'.format(i))
+
                 if self.db_stat in i:
                     logging.info('DB was run.')
                     mark = False
@@ -3034,8 +3126,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         self.clean()
                         self._clear_db_log()
                         self.conf_dappctrl_json()
+                        self.check_tor_port()
                         self.run_service(comm=True)
                         self._check_db_run(9)
+
                         if self.in_args['test']:
                             logging.info('Test mode.')
                             self._test_mode()
@@ -3043,6 +3137,10 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                             logging.info('Full mode.')
                             self._run_dapp_cmd()
                             self._check_dapp_conf()
+                        if self.dappctrl_role == 'agent':
+                            self.get_onion_key()
+                        else:
+                            self.set_socks_list()
                         self.run_service(comm=True, restart=True)
                         self.run_service()
                         if not self.in_args['no_gui']:
@@ -3450,16 +3548,17 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                                 'eth Balance: {}\n'
                                 'psc Balance: {}\n'
                                 'ptc Balance: {}\n'.format(
-                                self.ethAddr,
-                                self.offer_id,
-                                self.agent_id,
-                                self.ethBalance,
-                                self.pscBalance,
-                                self.ptcBalance,
-                            ))
+                                    self.ethAddr,
+                                    self.offer_id,
+                                    self.agent_id,
+                                    self.ethBalance,
+                                    self.pscBalance,
+                                    self.ptcBalance,
+                                ))
 
                     else:
-                        logging.error('Repablish trouble: {}'.format(resp[1]))
+                        logging.error(
+                            'Repablish trouble: {}'.format(resp[1]))
 
                 else:
                     self.target = 'back'

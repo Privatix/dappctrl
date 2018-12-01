@@ -472,15 +472,6 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return ErrGeneratePasswordHash
 	}
 
-	channel.Password = passwordHash
-	channel.Salt = salt.Uint64()
-
-	if err = tx.Update(channel); err != nil {
-		logger.Error(err.Error())
-		tx.Rollback()
-		return ErrInternal
-	}
-
 	offering, err := w.offering(logger, channel.Offering)
 	if err != nil {
 		return err
@@ -492,6 +483,27 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 			tx.Rollback()
 			return err
 		}
+	}
+
+	channel.Password = passwordHash
+	channel.Salt = salt.Uint64()
+
+	if offering.SOMCType == data.OfferingSOMCTor {
+		if offering.BillingType == data.BillingPrepaid ||
+			offering.SetupPrice > 0 {
+			channel.ServiceStatus = data.ServiceSuspended
+
+		} else {
+			channel.ServiceStatus = data.ServiceActive
+		}
+		changedTime := time.Now().Add(time.Minute)
+		channel.ServiceChangedTime = &changedTime
+	}
+
+	if err = tx.Update(channel); err != nil {
+		logger.Error(err.Error())
+		tx.Rollback()
+		return ErrInternal
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -944,19 +956,6 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
-
-	useTor, err := data.ReadBoolSetting(w.db.Querier, data.SettingSOMCUseTor)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-	if useTor {
-		offering.SOMCType = data.OfferingSOMCTor
-		offering.SOMCData = w.torHostName
-	} else {
-		offering.SOMCType = data.OfferingSOMCShared
-		offering.SOMCData = ""
-	}
 
 	tx, err := w.ethBack.PSCPopupServiceOffering(auth, offeringHash,
 		offering.SOMCType, offering.SOMCData)

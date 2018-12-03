@@ -432,6 +432,64 @@ func checkClientChannelUsage(
 	}
 }
 
+func TestGetChannelUsage(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "GetChannelUsage")
+	defer fxt.close()
+
+	// Prepare common test state.
+	offering := fxt.Offering
+	channel := fxt.Channel
+
+	channel.TotalDeposit = 100
+	offering.UnitPrice = 5
+	offering.SetupPrice = 0
+	data.SaveToTestDB(t, fxt.DB, channel, offering)
+
+	// With total deposit 100, unit price 5 and setup price 0, max usage must be 20(100/10)
+	var expectedMaxUsage uint64 = 20
+
+	sess1 := data.NewTestSession(channel.ID)
+	sess2 := data.NewTestSession(channel.ID)
+	data.InsertToTestDB(t, fxt.DB, sess1, sess2)
+	defer data.DeleteFromTestDB(t, fxt.DB, sess2, sess1)
+
+	_, err := handler.GetChannelUsage("wrong-password", channel.ID)
+	assertErrEqual(ui.ErrAccessDenied, err)
+
+	// Test for scalar unit type.
+	sess1.UnitsUsed = 1
+	sess2.UnitsUsed = 2
+	var expectedCost uint64 = 3 * offering.UnitPrice
+	var expectedCurrentUsage uint64 = sess1.UnitsUsed + sess2.UnitsUsed
+	offering.UnitType = data.UnitScalar
+	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
+
+	ret, err := handler.GetChannelUsage(data.TestPassword, channel.ID)
+	assertErrEqual(nil, err)
+
+	if ret == nil || ret.Current != expectedCurrentUsage ||
+		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.Cost != expectedCost {
+		t.Fatal("wrong channel usage")
+	}
+
+	// Test for seconds unit type.
+	sess1.SecondsConsumed = 2
+	sess2.SecondsConsumed = 3
+	expectedCost = 5 * offering.UnitPrice
+	expectedCurrentUsage = sess1.SecondsConsumed + sess2.SecondsConsumed
+	offering.UnitType = data.UnitSeconds
+	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
+	ret, err = handler.GetChannelUsage(data.TestPassword, channel.ID)
+	assertErrEqual(nil, err)
+
+	if ret == nil || ret.Current != expectedCurrentUsage ||
+		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.Cost != expectedCost {
+		t.Fatal("wrong channel usage")
+	}
+}
+
 func TestGetClientChannels(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "GetClientChannels")
 	defer fxt.close()

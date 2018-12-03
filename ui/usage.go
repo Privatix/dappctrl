@@ -1,16 +1,5 @@
 package ui
 
-// GetChannelUsage returns total units used for a given channel.
-func (h *Handler) GetChannelUsage(password, channelID string) (*uint, error) {
-	logger := h.logger.Add("method", "GetChannelUsage",
-		"channelID", channelID)
-
-	return h.uintFromQuery(logger, password,
-		`SELECT SUM(sessions.units_used)
-		   FROM sessions
-		  WHERE channel=$1`, channelID)
-}
-
 // GetOfferingUsage returns total units used for all channels
 // with a given offering.
 func (h *Handler) GetOfferingUsage(password, offeringID string) (*uint, error) {

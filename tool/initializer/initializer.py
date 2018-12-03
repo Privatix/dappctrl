@@ -4,7 +4,7 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.2.0
+        Version 0.2.2
 
         mode:
     python initializer.py  -h                              get help information
@@ -34,6 +34,7 @@ import logging
 from codecs import open
 from shutil import copyfile
 from urllib import URLopener
+from uuid import uuid1
 from time import time, sleep
 from threading import Thread
 from contextlib import closing
@@ -320,6 +321,7 @@ class Init:
     dappctrl_role = None  # the role: agent|client.
 
     def __init__(self):
+        self.uid_dict = dict(userid=str(uuid1()))
         self.bind_port = main_conf['bind_port']
         self.bind_ports = main_conf['bind_ports']
         self.tmp_var = main_conf['tmp_var']
@@ -816,6 +818,7 @@ class CommonCMD(Init):
 
     def check_port(self, port, auto=False):
         '''_ping_port: open -> True  close -> False'''
+        logging.debug('Check port. In: {}'.format(port))
 
         if self._ping_port(port=port):
             mark = False
@@ -839,7 +842,7 @@ class CommonCMD(Init):
 
                 finally:
                     mark = True
-
+        logging.debug('Check port. Out: {}'.format(port))
         return port
 
     def __up_ports(self):
@@ -1158,6 +1161,13 @@ class CommonCMD(Init):
 
                 data[k]['Addr'] = delim.join(raw_row)
 
+        # add uid key in conf
+        logging.debug('Add userid on dappctrl.config.local.json')
+        if data.get('Report'):
+            data['Report'].update(self.uid_dict)
+        else:
+            data['Report'] = self.uid_dict
+
         # Rewrite dappctrl.config.local.json
         self.file_rw(p=p, w=True, json_r=True, data=data,
                      log='Rewrite conf')
@@ -1172,10 +1182,13 @@ class Tor(CommonCMD):
     def __init__(self):
         CommonCMD.__init__(self)
 
+
     def check_tor_port(self):
         logging.info('Check Tor config')
+
         self.tor_socks_port = self.check_port(port=self.tor_socks_port,
-                                     auto=True)
+                                              auto=True)
+
         full_comm_p = self.p_contr + self.path_com
         data = self.file_rw(p=full_comm_p + self.p_dapctrl_conf,
                             json_r=True,
@@ -1188,6 +1201,9 @@ class Tor(CommonCMD):
             logging.debug('Tor HiddenServicePort: {}'.format(serv_port))
             data = self.file_rw(p=full_comm_p + self.tor_config,
                                 log='Read tor conf.')
+            if not data:
+                raise BaseException('Tor config are absent!')
+
             search_line = {
                 'SocksPort': '{}\n'.format(self.tor_socks_port),
                 'HiddenServicePort': serv_port
@@ -1233,18 +1249,19 @@ class Tor(CommonCMD):
                      log='Write add TorHostname to dappctrl conf.')
 
     def set_socks_list(self):
-        logging.debug('Add TorSocksListener.')
+        logging.debug('Add TorSocksListener. Port: {}'.format(self.tor_socks_port))
         data = self.file_rw(p=self.p_contr + self.path_com + self.p_dapctrl_conf,
                             json_r=True,
                             log='Read dappctrl conf')
-        data.update(dict(
-            TorSocksListener=self.tor_socks_port
-        ))
+
+        data['TorSocksListener'] = self.tor_socks_port
 
         self.file_rw(p=self.p_contr + self.path_com + self.p_dapctrl_conf,
                      json_r=True,
+                     w=True,
                      data=data,
                      log='Write dappctrl conf')
+
 
 
 class DB(Tor):
@@ -1811,6 +1828,15 @@ class GUI(CommonCMD):
             raw_link[-1] = '{}/ws'.format(self.wsEndpoint)
             raw_data['wsEndpoint'] = delim.join(raw_link)
 
+            # add uid key in conf
+            logging.debug('Add userid on settings.json')
+
+            if raw_data.get('bugsnag'):
+                raw_data['bugsnag'].update(self.uid_dict)
+            else:
+                raw_data['bugsnag'] = self.uid_dict
+
+            # Rewrite settings.json
             if not self.file_rw(p=self.dappctrlgui,
                                 w=True,
                                 data=raw_data,

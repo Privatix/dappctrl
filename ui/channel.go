@@ -48,7 +48,7 @@ type ClientChannelInfo struct {
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
-	Usage  usageBlock      `json:"usage"`
+	Usage  *Usage          `json:"usage"`
 }
 
 type chanStatusBlock struct {
@@ -65,7 +65,8 @@ type jobBlock struct {
 	CreatedAt string `json:"createdAt"`
 }
 
-type usageBlock struct {
+// Usage accamulated usage from sessions.
+type Usage struct {
 	Current  uint64 `json:"current"`
 	MaxUsage uint64 `json:"maxUsage"`
 	Unit     string `json:"unit"`
@@ -179,6 +180,34 @@ func (h *Handler) GetAgentChannels(password string,
 	return &GetAgentChannelsResult{channels, total}, err
 }
 
+// GetChannelUsage returns detailed usage on channel.
+func (h *Handler) GetChannelUsage(password string, id string) (*Usage, error) {
+	logger := h.logger.Add("method", "GetChannelUsage", "channel", id)
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	ch := &data.Channel{}
+	if err := h.findByPrimaryKey(logger,
+		ErrChannelNotFound, ch, id); err != nil {
+		return nil, err
+	}
+
+	offering := &data.Offering{}
+	if err := h.findByPrimaryKey(logger,
+		ErrOfferingNotFound, offering, ch.Offering); err != nil {
+		return nil, err
+	}
+
+	sessions, err := h.getChannelSessions(logger, ch.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUsage(ch, offering, sessions), nil
+}
+
 // GetClientChannels gets client channel information.
 func (h *Handler) GetClientChannels(password string, channelStatus,
 	serviceStatus []string, offset,
@@ -249,8 +278,9 @@ func createJobBlock(job2 *data.Job) (result jobBlock) {
 	return result
 }
 
-func createUsageBlock(channel *data.Channel, offering *data.Offering,
-	sessions []*data.Session) (result usageBlock) {
+func newUsage(channel *data.Channel, offering *data.Offering,
+	sessions []*data.Session) *Usage {
+	result := &Usage{}
 	var usage uint64
 	var cost = offering.SetupPrice
 
@@ -307,15 +337,9 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 	logger = logger.Add("job", job2, "offering",
 		offering, "channel", channel)
 
-	sess, err := h.findAllFrom(logger, data.SessionTable,
-		"channel", channel.ID)
+	sessions, err := h.getChannelSessions(logger, channel.ID)
 	if err != nil {
 		return nil, err
-	}
-
-	var sessions []*data.Session
-	for _, v := range sess {
-		sessions = append(sessions, v.(*data.Session))
 	}
 
 	result.ID = channel.ID
@@ -338,9 +362,23 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 	result.Deposit = channel.TotalDeposit
 	result.ChStat = createChanStatusBlock(channel, offering)
 	result.Job = createJobBlock(job2)
-	result.Usage = createUsageBlock(channel, offering, sessions)
+	result.Usage = newUsage(channel, offering, sessions)
 
 	return result, err
+}
+
+func (h *Handler) getChannelSessions(logger log.Logger, channel string) ([]*data.Session, error) {
+	sess, err := h.findAllFrom(logger, data.SessionTable,
+		"channel", channel)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []*data.Session
+	for _, v := range sess {
+		sessions = append(sessions, v.(*data.Session))
+	}
+	return sessions, nil
 }
 
 func (h *Handler) getChannelsConditions(channelStatuses,

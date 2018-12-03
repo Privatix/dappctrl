@@ -580,14 +580,14 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 *Method*: `getChannelUsage`
 
-*Description*: Returns total units used for a given channel.
+*Description*: Returns detailed usage of a channel.
 
 
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
 
-*Result*:   Amount (number)
+*Result*:   Usage (object)
 
 <details><summary>Example</summary>
     
@@ -599,7 +599,12 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": 12345
+    "result": {
+                    "current":400,
+                    "maxUsage":454,
+                    "unit":"units",
+                    "cost":8811
+                }
 }
 ```
 </details>

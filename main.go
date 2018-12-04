@@ -172,9 +172,14 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	return server, nil
 }
 
-func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config, period uint32,
+func startAutoPopUpLoop(ctx context.Context, cfg *looper.Config,
 	logger log.Logger, db *reform.DB, queue job.Queue,
 	ethBack eth.Backend) error {
+	period, err := data.ReadUintSetting(db.Querier, data.SettingsPeriodPopUp)
+	if err != nil {
+		return err
+	}
+
 	var timeout time.Duration
 	if cfg.AutoOfferingPopUpTimeout != 0 {
 		timeout = time.Millisecond *
@@ -270,7 +275,7 @@ func main() {
 	worker, err := worker.NewWorker(logger, db, somcConn,
 		ethBack, conf.Gas, ethBack.PSCAddress(), conf.PayAddress,
 		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
-		conf.Eth.Contract.Periods, conf.TorHostname, conf.TorSocksListener)
+		conf.TorHostname, conf.TorSocksListener)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -332,7 +337,6 @@ func main() {
 		defer cancel()
 
 		err = startAutoPopUpLoop(ctx, conf.Looper,
-			conf.Eth.Contract.Periods.PopUp,
 			logger, db, queue, ethBack)
 		if err != nil {
 			logger.Fatal(err.Error())

@@ -802,7 +802,9 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	if err := w.checkOfferingDelete(logger, offeringHash); err != nil {
+	err = w.checkInPeriod(logger, offeringHash, data.SettingsPeriodRemove,
+		ErrOfferingDeletePeriodIsNotOver)
+	if err != nil {
 		return err
 	}
 
@@ -854,8 +856,9 @@ func (w *Worker) agentOfferingPopUpFindRelatedJobs(
 	return err
 }
 
-func (w *Worker) checkOfferingForPopUp(logger log.Logger,
-	hash common.Hash) error {
+// checkInPeriod checks an offering being in period specified by periodKey.
+func (w *Worker) checkInPeriod(logger log.Logger, hash common.Hash,
+	periodKey string, periodErr error) error {
 	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
 	if err != nil {
 		return err
@@ -867,28 +870,13 @@ func (w *Worker) checkOfferingForPopUp(logger log.Logger,
 		return ErrInternal
 	}
 
-	if uint64(updateBlockNumber+w.pscPeriods.PopUp) > lastBlock.Uint64() {
-		return ErrPopUpPeriodIsNotOver
-	}
-
-	return nil
-}
-
-func (w *Worker) checkOfferingDelete(logger log.Logger,
-	hash common.Hash) error {
-	updateBlockNumber, err := w.getOfferingBlockNumber(logger, hash)
+	removePeriod, err := data.ReadUintSetting(w.db.Querier, periodKey)
 	if err != nil {
-		return err
+		return periodErr
 	}
 
-	lastBlock, err := w.ethBack.LatestBlockNumber(context.Background())
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	if uint64(updateBlockNumber+w.pscPeriods.Remove) > lastBlock.Uint64() {
-		return ErrOfferingDeletePeriodIsNotOver
+	if uint64(updateBlockNumber)+uint64(removePeriod) > lastBlock.Uint64() {
+		return periodErr
 	}
 
 	return nil
@@ -943,7 +931,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
-	err = w.checkOfferingForPopUp(logger, offeringHash)
+	err = w.checkInPeriod(logger, offeringHash, data.SettingsPeriodPopUp,
+		ErrPopUpPeriodIsNotOver)
 	if err != nil {
 		return err
 	}

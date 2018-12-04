@@ -54,12 +54,7 @@
     "Eth": {
         "Contract": {
             "PSCAddrHex": "",
-            "PTCAddrHex": "",
-            "Periods": {
-                "Challenge": 0,
-                "PopUp": 5,
-                "Remove": 0
-            }
+            "PTCAddrHex": ""
         },
         "GethURL": "",
         "Timeout": 10000

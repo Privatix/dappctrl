@@ -36,12 +36,7 @@
         "CheckTimeout": 10000,
         "Contract": {
             "PSCAddrHex": "0xef85cd1c955b36945687d56b1cec824ad84bd684",
-            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec",
-            "Periods": {
-                "Challenge": 20,
-                "PopUp": 10,
-                "Remove": 5
-            }
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
         "HTTPClient": {

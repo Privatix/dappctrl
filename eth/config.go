@@ -1,19 +1,11 @@
 package eth
 
-// PSCPeriods psc periods.
-type PSCPeriods struct {
-	PopUp     uint32
-	Challenge uint32
-	Remove    uint32
-}
-
 // Config is a configuration for Ethereum client.
 type Config struct {
 	CheckTimeout uint64 // In milliseconds.
 	Contract     struct {
 		PTCAddrHex string
 		PSCAddrHex string
-		Periods    *PSCPeriods
 	}
 	GethURL    string
 	Timeout    uint64 // In milliseconds.

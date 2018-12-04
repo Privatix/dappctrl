@@ -13,4 +13,7 @@
 /doc/           @kelewind @velopokatun
 
 # notify devops team about changes in *.config.json
-*.config.json   @kelewind @velopokatun @ubozov
+*.config.json   @kelewind @velopokatun @ubozov @drew2a
+
+# notify js team about jobs changes
+/data/jobs.go   @privatix/js

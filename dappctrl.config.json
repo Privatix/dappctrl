@@ -207,7 +207,8 @@
             "github.com/privatix/dappctrl/report/log",
             "github.com/privatix/dappctrl/data/log"
         ],
-        "ReleaseStage": "production"
+        "ReleaseStage": "production",
+        "userid": ""
     },
     "ReportLog": {
         "Level": "info",

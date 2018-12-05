@@ -79,6 +79,13 @@ VALUES ('offering.autopopup',
         'offering autopopup');
 
 INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('client.somc.transports',
+        'tor',
+        2,
+        'Offering with what SOMC type to display.',
+        'allowed SOMC transport');
+
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('somc.transport.tor',
         'false',
         2,

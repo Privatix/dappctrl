@@ -9,19 +9,26 @@ import (
 
 // Setting keys.
 const (
-	SettingAppVersion         = "system.version.app"
-	SettingBlockLimit         = "eth.event.blocklimit"
-	SettingDefaultGasPrice    = "eth.default.gasprice"
-	SettingFreshBlocks        = "eth.event.freshblocks"
-	SettingOfferingAutoPopUp  = "offering.autopopup"
-	SettingLastProcessedBlock = "eth.event.lastProcessedBlock"
-	SettingMinConfirmations   = "eth.min.confirmations"
-	SettingPasswordHash       = "system.password"
-	SettingPasswordSalt       = "system.salt"
-	SettingsPeriodChallange   = "psc.periods.challenge"
-	SettingsPeriodPopUp       = "psc.periods.popup"
-	SettingsPeriodRemove      = "psc.periods.remove"
-	SettingSOMCUseTor         = "somc.transport.tor"
+	SettingAppVersion           = "system.version.app"
+	SettingBlockLimit           = "eth.event.blocklimit"
+	SettingDefaultGasPrice      = "eth.default.gasprice"
+	SettingFreshBlocks          = "eth.event.freshblocks"
+	SettingOfferingAutoPopUp    = "offering.autopopup"
+	SettingLastProcessedBlock   = "eth.event.lastProcessedBlock"
+	SettingMinConfirmations     = "eth.min.confirmations"
+	SettingPasswordHash         = "system.password"
+	SettingPasswordSalt         = "system.salt"
+	SettingsPeriodChallange     = "psc.periods.challenge"
+	SettingsPeriodPopUp         = "psc.periods.popup"
+	SettingsPeriodRemove        = "psc.periods.remove"
+	SettingSOMCUseTor           = "somc.transport.tor"
+	SettingSOMCClientTransports = "client.somc.transports"
+)
+
+// SOMC transport values in settings.
+const (
+	SOMCTor         = "tor"
+	SOMCCentrelised = "centrelised"
 )
 
 // ReadSetting reads value of a given setting.

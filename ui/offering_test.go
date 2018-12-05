@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"gopkg.in/reform.v1"
@@ -20,6 +21,7 @@ type testOfferingData struct {
 	isLocal            bool
 	blockNumberUpdated uint64
 	currentSupply      uint16
+	somcType           uint8
 }
 
 type testGetAgentOfferingsArgs struct {
@@ -105,7 +107,7 @@ func TestAcceptOffering(t *testing.T) {
 
 func createTestOffering(fxt *fixture, agent data.HexString,
 	offerStatus, status, country string, isLocal bool,
-	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
+	blockNumberUpdated uint64, currentSupply uint16, somcType uint8) *data.Offering {
 	offering := data.NewTestOffering(
 		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
 	if offerStatus != "" {
@@ -120,6 +122,7 @@ func createTestOffering(fxt *fixture, agent data.HexString,
 		offering.Country = country
 	}
 
+	offering.SOMCType = somcType
 	offering.IsLocal = isLocal
 
 	if blockNumberUpdated != 0 {
@@ -133,6 +136,14 @@ func createTestOffering(fxt *fixture, agent data.HexString,
 
 func testGetClientOfferings(t *testing.T,
 	fxt *fixture, assertErrEqual func(error, error), agent data.HexString) {
+
+	allowedTransports := &data.Setting{
+		Key:   data.SettingSOMCClientTransports,
+		Value: fmt.Sprint(data.SOMCTor),
+		Name:  "allowed transports",
+	}
+	data.InsertToTestDB(t, fxt.DB, allowedTransports)
+	defer data.DeleteFromTestDB(t, fxt.DB, allowedTransports)
 
 	assertResult := func(res *ui.GetClientOfferingsResult,
 		err error, exp, total int) {
@@ -187,6 +198,13 @@ func testGetClientOfferings(t *testing.T,
 			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
+
+	// Test results are filtered based on allowed transports.
+	allowedTransports.Value = fmt.Sprint(data.SOMCCentrelised)
+	data.SaveToTestDB(t, fxt.DB, allowedTransports)
+	res, err := handler.GetClientOfferings(data.TestPassword,
+		"", 0, 0, nil, 0, 100)
+	assertResult(res, err, 1, 1)
 }
 
 func TestGetClientOfferings(t *testing.T) {
@@ -200,23 +218,25 @@ func TestGetClientOfferings(t *testing.T) {
 
 	testData := []testOfferingData{
 		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
-			"US", false, 11, fxt.Offering.CurrentSupply},
+			"US", false, 11, fxt.Offering.CurrentSupply, data.OfferingSOMCCentrelised},
+		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
+			"US", false, 11, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{other.EthAddr, data.OfferRegistered, data.MsgChPublished,
-			"SU", false, 11111, fxt.Offering.CurrentSupply},
+			"SU", false, 11111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{other.EthAddr, data.OfferEmpty, "",
-			"SU", false, 111, fxt.Offering.CurrentSupply},
+			"SU", false, 111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{other.EthAddr, data.OfferEmpty, "",
-			"", true, 111111, fxt.Offering.CurrentSupply},
+			"", true, 111111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{agent.EthAddr, data.OfferRegistered, "",
-			"SU", false, 2, fxt.Offering.CurrentSupply},
+			"SU", false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{other.EthAddr, data.OfferPoppedUp, data.MsgChPublished,
-			"US", false, 222, 0},
+			"US", false, 222, 0, data.OfferingSOMCTor},
 	}
 
 	for _, v := range testData {
 		offering := createTestOffering(fxt,
 			v.agent, v.offerStatus, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply)
+			v.isLocal, v.blockNumberUpdated, v.currentSupply, v.somcType)
 		offerings = append(offerings, offering)
 	}
 
@@ -297,19 +317,19 @@ func TestGetAgentOfferings(t *testing.T) {
 
 	testData := []testOfferingData{
 		{fxt.Account.EthAddr, data.OfferRegistered, "", "",
-			false, 1, fxt.Offering.CurrentSupply},
+			false, 1, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{fxt.Account.EthAddr, data.OfferEmpty, "", "",
-			false, 2, fxt.Offering.CurrentSupply},
+			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{acc1.EthAddr, data.OfferRegistering, "", "",
-			false, 2, fxt.Offering.CurrentSupply},
+			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 		{acc2.EthAddr, data.OfferRegistered, "", "",
-			false, 2, fxt.Offering.CurrentSupply},
+			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
 	}
 
 	for _, v := range testData {
 		offering := createTestOffering(fxt,
 			v.agent, v.offerStatus, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply)
+			v.isLocal, v.blockNumberUpdated, v.currentSupply, v.somcType)
 		offerings = append(offerings, offering)
 	}
 

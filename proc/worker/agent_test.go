@@ -520,7 +520,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		data.OfferingSOMCShared, data.Base64String(""))
+		data.OfferingSOMCCentrelised, data.Base64String(""))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -547,7 +547,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	defer fixture.close()
 
 	logData, err := logOfferingCreatedDataArguments.Pack(uint16(1),
-		data.OfferingSOMCShared, "")
+		data.OfferingSOMCCentrelised, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -794,7 +794,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		data.OfferingSOMCShared, data.Base64String(""))
+		data.OfferingSOMCCentrelised, data.Base64String(""))
 
 	env.db.Reload(fxt.Offering)
 
@@ -826,7 +826,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSOMCShared, "")
+		uint16(1), data.OfferingSOMCCentrelised, "")
 	if err != nil {
 		t.Fatal(err)
 	}

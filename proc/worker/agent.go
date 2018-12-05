@@ -477,7 +477,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	if offering.SOMCType == data.OfferingSOMCShared {
+	if offering.SOMCType == data.OfferingSOMCCentrelised {
 		if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgSOMCPublish,
 			data.JobEndpoint, newEndpoint.ID); err != nil {
 			tx.Rollback()
@@ -658,7 +658,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(publishData.GasPrice)
 
-	offering.SOMCType = data.OfferingSOMCShared
+	offering.SOMCType = data.OfferingSOMCCentrelised
 	offering.SOMCData = ""
 
 	useTor, err := data.ReadBoolSetting(w.db.Querier, data.SettingSOMCUseTor)
@@ -720,7 +720,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	if logInput.somcType == data.OfferingSOMCShared {
+	if logInput.somcType == data.OfferingSOMCCentrelised {
 		return w.addJob(logger, nil, data.JobAgentPreOfferingMsgSOMCPublish,
 			data.JobOffering, offering.ID)
 	}

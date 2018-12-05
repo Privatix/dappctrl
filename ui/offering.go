@@ -133,7 +133,7 @@ func (h *Handler) ChangeOfferingStatus(
 
 func (h *Handler) getClientOfferingsConditions(
 	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
-	country []string) (conditions string, arguments []interface{}) {
+	country []string, allowedTransports []uint8) (conditions string, arguments []interface{}) {
 
 	count := 1
 
@@ -148,6 +148,16 @@ func (h *Handler) getClientOfferingsConditions(
 			return condition
 		}
 		return fmt.Sprintf("%s AND %s", conditions, condition)
+	}
+
+	indexes := h.db.Placeholders(count, len(allowedTransports))
+	count = count + len(allowedTransports)
+
+	conditions = join(conditions,
+		fmt.Sprintf("somc_type in (%s)", strings.Join(indexes, ",")))
+
+	for _, val := range allowedTransports {
+		arguments = append(arguments, val)
 	}
 
 	if agent != "" {
@@ -211,8 +221,31 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 		return nil, ErrBadUnitPriceRange
 	}
 
-	cond, args := h.getClientOfferingsConditions(
-		agent, minUnitPrice, maxUnitPrice, countries)
+	transports := &data.Setting{}
+	if err := h.db.FindOneTo(
+		transports, "key", data.SettingSOMCClientTransports); err != nil {
+		// TODO: return custom error.
+		return nil, err
+	}
+
+	allowedSOMCTypes := []uint8{}
+	for _, transport := range strings.Split(transports.Value, ",") {
+		var somcType uint8
+		if transport == data.SOMCCentrelised {
+			somcType = data.OfferingSOMCCentrelised
+		} else if transport == data.SOMCTor {
+			somcType = data.OfferingSOMCTor
+		} else {
+			logger.Error("unknown transport found in settings: " + transport)
+			return nil, ErrInternal
+		}
+		allowedSOMCTypes = append(allowedSOMCTypes, somcType)
+	}
+
+	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
+		maxUnitPrice, countries, allowedSOMCTypes)
+
+	logger.Info(fmt.Sprintf("\n\n\n%s\n%v\n\n\n", cond, args))
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)

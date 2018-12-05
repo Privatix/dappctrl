@@ -280,7 +280,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	var endpointMsgSealed []byte
 	switch offering.SOMCType {
-	case data.OfferingSOMCShared:
+	case data.OfferingSOMCCentrelised:
 		endpointParams, err := w.somc.GetEndpoint(key)
 		if err != nil {
 			logger.Error(err.Error())
@@ -996,7 +996,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 
 	var offering *data.Offering
 	switch somcType {
-	case data.OfferingSOMCShared:
+	case data.OfferingSOMCCentrelised:
 		offeringsData, err := w.somc.FindOfferings([]data.HexString{
 			data.HexFromBytes(hash.Bytes())})
 		if err != nil {

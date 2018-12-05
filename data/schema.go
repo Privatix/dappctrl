@@ -111,7 +111,7 @@ const (
 
 // Offering somc types.
 const (
-	OfferingSOMCShared uint8 = iota
+	OfferingSOMCCentrelised uint8 = iota
 	OfferingSOMCTor
 )
 

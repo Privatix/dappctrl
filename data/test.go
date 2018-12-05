@@ -194,6 +194,7 @@ func NewTestOffering(agent HexString, product, tpl string) *Offering {
 		SetupPrice:         11,
 		UnitPrice:          22,
 		MaxInactiveTimeSec: 1,
+		SOMCType:           OfferingSOMCTor,
 	}
 	return offering
 }

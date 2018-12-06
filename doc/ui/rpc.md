@@ -645,7 +645,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotal
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
-3. Gas price (number)
+3. Deposit value (number)
+4. Gas price (number)
 
 *Result*: None.
 
@@ -653,7 +654,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotal
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpChannel", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 10000], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpChannel", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 7000000, 10000], "id": 67}' http://localhost:8888/http
 
 // Result
 {

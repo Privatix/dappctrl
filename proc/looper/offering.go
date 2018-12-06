@@ -24,7 +24,7 @@ import (
 // the pop up time.
 func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 	ethBack eth.Backend, timeNowFunc func() time.Time,
-	period uint32) []*data.Job {
+	period uint) []*data.Job {
 	logger = logger.Add("method", "AutoOfferingPopUp")
 
 	do, err := data.ReadBoolSetting(
@@ -46,7 +46,7 @@ func AutoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 }
 
 func calcDelayToOfferingPopUp(offeringHash common.Hash,
-	ethBack eth.Backend, popUpPeriod uint32,
+	ethBack eth.Backend, popUpPeriod uint,
 	lastBlock *big.Int) (delay time.Duration, err error) {
 	_, _, _, _, lastUpdateBlock, _, err :=
 		ethBack.PSCGetOfferingInfo(&bind.CallOpts{}, offeringHash)
@@ -54,7 +54,7 @@ func calcDelayToOfferingPopUp(offeringHash common.Hash,
 		return 0, err
 	}
 
-	popUpBlock := uint64(lastUpdateBlock + popUpPeriod)
+	popUpBlock := uint64(lastUpdateBlock) + uint64(popUpPeriod)
 
 	if popUpBlock > lastBlock.Uint64() {
 		delayBlocks := popUpBlock - lastBlock.Uint64()
@@ -125,7 +125,7 @@ func findOfferingsToPopUp(logger log.Logger, db *reform.DB) []reform.Struct {
 
 func autoOfferingPopUp(logger log.Logger, abi abi.ABI, db *reform.DB,
 	ethBack eth.Backend, timeNowFunc func() time.Time,
-	period uint32) []*data.Job {
+	period uint) []*data.Job {
 	offerings := findOfferingsToPopUp(logger, db)
 	if len(offerings) == 0 {
 		logger.Debug("no offerings to pop up")

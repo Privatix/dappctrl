@@ -14,7 +14,6 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/report"
-	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -30,7 +29,7 @@ const (
 
 var (
 	defaultAccEth = data.HexString(new(common.Address).String())
-	defaultAppID  = emptyUUID()
+	defaultUserID = emptyUUID()
 
 	enable      bool
 	panicIgnore bool
@@ -48,9 +47,9 @@ type Log interface {
 
 // Config Bugsnag client config.
 type Config struct {
-	AppID            string
 	ReleaseStage     string
 	ExcludedPackages []string
+	UserID           string `json:"userid"`
 }
 
 // Client Bugsnag client object.
@@ -63,7 +62,7 @@ type Client struct {
 
 // NewConfig generates a new default Bugsnag client Config.
 func NewConfig() *Config {
-	return &Config{AppID: defaultAppID, ReleaseStage: defaultReleaseStage}
+	return &Config{UserID: defaultUserID, ReleaseStage: defaultReleaseStage}
 }
 
 // NewClient initializing Bugsnag client.
@@ -102,7 +101,7 @@ func NewClient(
 	cli := new(Client)
 	cli.db = db
 	cli.logger = log
-	cli.notifier = bugsnag.New(user(cfg.AppID))
+	cli.notifier = bugsnag.New(user(cfg.UserID))
 
 	//check enable service
 	e := cli.allowed()
@@ -145,15 +144,11 @@ func accEthAddresses(db *reform.DB) (addr []data.HexString) {
 	return addr
 }
 
-func user(appID string) bugsnag.User {
-	return bugsnag.User{Id: app(appID)}
-}
-
-func app(appID string) string {
-	if appID == "" || !util.IsUUID(appID) {
-		return defaultAppID
+func user(userID string) bugsnag.User {
+	if userID == "" {
+		userID = defaultUserID
 	}
-	return appID
+	return bugsnag.User{Id: userID}
 }
 
 // Notify takes three arguments:

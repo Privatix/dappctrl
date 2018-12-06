@@ -17,10 +17,6 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
-const (
-	second = time.Second
-)
-
 // Backend adapter to communicate with contract.
 type Backend interface {
 	LatestBlockNumber(ctx context.Context) (*big.Int, error)
@@ -156,11 +152,11 @@ func (b *backendInstance) addTimeout(
 		ctx = context.Background()
 	}
 	return context.WithTimeout(ctx,
-		time.Duration(b.cfg.Timeout)*second)
+		time.Duration(b.cfg.Timeout)*time.Millisecond)
 }
 
 func (b *backendInstance) connectionControl() {
-	timeout := time.Duration(b.cfg.CheckTimeout) * time.Second
+	timeout := time.Duration(b.cfg.CheckTimeout) * time.Millisecond
 
 	logger := b.logger.Add("method", "connectionControl",
 		"timeout", timeout.String())

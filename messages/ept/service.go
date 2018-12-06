@@ -12,7 +12,7 @@ import (
 
 // Config is a configuration for Endpoint Message Service.
 type Config struct {
-	Timeout uint
+	Timeout uint // In milliseconds.
 }
 
 type result struct {
@@ -69,7 +69,7 @@ func New(db *reform.DB, logger log.Logger, payAddr string,
 		db:      db,
 		msgChan: make(chan *req),
 		payAddr: payAddr,
-		timeout: time.Duration(timeout) * time.Second,
+		timeout: time.Duration(timeout) * time.Millisecond,
 		logger:  logger.Add("type", "messages/ept.Service"),
 	}, nil
 }

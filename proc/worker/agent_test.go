@@ -690,7 +690,13 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 	env.updateInTestDB(t, fxt.Offering)
 
 	env.ethBack.OfferingIsActive = true
-	conf.Eth.Contract.Periods.Remove = 10
+	removePeriodSetting := &data.Setting{
+		Key:   data.SettingsPeriodRemove,
+		Value: "10",
+		Name:  data.SettingsPeriodRemove,
+	}
+	env.insertToTestDB(t, removePeriodSetting)
+	defer env.deleteFromTestDB(t, removePeriodSetting)
 	env.ethBack.OfferUpdateBlockNumber = 10
 	env.ethBack.BlockNumber = big.NewInt(10)
 
@@ -762,7 +768,13 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	}
 
 	env.ethBack.OfferingIsActive = true
-	conf.Eth.Contract.Periods.PopUp = 3
+	popupPeriodSetting := &data.Setting{
+		Key:   data.SettingsPeriodPopUp,
+		Value: "3",
+		Name:  data.SettingsPeriodPopUp,
+	}
+	env.insertToTestDB(t, popupPeriodSetting)
+	defer env.deleteFromTestDB(t, popupPeriodSetting)
 	env.ethBack.OfferUpdateBlockNumber = 3
 	env.ethBack.BlockNumber = big.NewInt(4)
 

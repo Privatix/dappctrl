@@ -18,6 +18,9 @@ const (
 	SettingMinConfirmations   = "eth.min.confirmations"
 	SettingPasswordHash       = "system.password"
 	SettingPasswordSalt       = "system.salt"
+	SettingsPeriodChallange   = "psc.periods.challenge"
+	SettingsPeriodPopUp       = "psc.periods.popup"
+	SettingsPeriodRemove      = "psc.periods.remove"
 	SettingSOMCUseTor         = "somc.transport.tor"
 )
 

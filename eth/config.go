@@ -1,22 +1,14 @@
 package eth
 
-// PSCPeriods psc periods.
-type PSCPeriods struct {
-	PopUp     uint32
-	Challenge uint32
-	Remove    uint32
-}
-
 // Config is a configuration for Ethereum client.
 type Config struct {
-	CheckTimeout uint64
+	CheckTimeout uint64 // In milliseconds.
 	Contract     struct {
 		PTCAddrHex string
 		PSCAddrHex string
-		Periods    *PSCPeriods
 	}
 	GethURL    string
-	Timeout    uint64
+	Timeout    uint64 // In milliseconds.
 	HTTPClient *httpClientConf
 }
 
@@ -32,8 +24,8 @@ type httpClientConf struct {
 // NewConfig creates a default Ethereum client configuration.
 func NewConfig() *Config {
 	return &Config{
-		CheckTimeout: 20,
-		Timeout:      10,
+		CheckTimeout: 20000,
+		Timeout:      10000,
 		HTTPClient: &httpClientConf{
 			DialTimeout:           5,
 			TLSHandshakeTimeout:   2,

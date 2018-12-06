@@ -85,4 +85,25 @@ VALUES ('somc.transport.tor',
         'Whether to use Tor as service offering messaging protocol or not',
         'use Tor');
 
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('psc.periods.challenge',
+       '5000',
+       1,
+       'Number of blocks to be mined to finish uncooperative channel close',
+       'Challenge period');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('psc.periods.popup',
+       '500',
+       1,
+       'Number of blocks to be mined to repeatedly pop up an offering',
+       'Popup period');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('psc.periods.remove',
+       '100',
+       1,
+       'Number of blocks to be mined from last offering update in blockchain to remove offering',
+       'Remove period');
+
 END TRANSACTION;

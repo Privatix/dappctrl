@@ -2,6 +2,7 @@ package looper
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -12,9 +13,9 @@ import (
 )
 
 func expectedResult(t *testing.T, exp int,
-	timeNowFunc func() time.Time) []*data.Job {
+	timeNowFunc func() time.Time, period uint) []*data.Job {
 	jobs := AutoOfferingPopUp(logger, serviceContractABI, db, ethBackend,
-		timeNowFunc, conf.Eth.Contract.Periods.PopUp)
+		timeNowFunc, period)
 
 	if len(jobs) != exp {
 		t.Fatalf("the right amount of jobs: %d,"+
@@ -24,22 +25,29 @@ func expectedResult(t *testing.T, exp int,
 }
 
 func TestAutoOfferingPopUp(t *testing.T) {
-	jobs := expectedResult(t, 0, time.Now)
-
-	fxt := data.NewTestFixture(t, db)
-	defer fxt.Close()
-
 	autoPopUpSetting := &data.Setting{
 		Key:   data.SettingOfferingAutoPopUp,
 		Value: "true",
 		Name:  "autopopup",
 	}
 
-	data.InsertToTestDB(t, db, autoPopUpSetting)
-	defer data.DeleteFromTestDB(t, db, autoPopUpSetting)
+	period := uint(5)
+	periodSetting := &data.Setting{
+		Key:   data.SettingsPeriodPopUp,
+		Value: fmt.Sprint(period),
+		Name:  "popup period",
+	}
+
+	data.InsertToTestDB(t, db, autoPopUpSetting, periodSetting)
+	defer data.DeleteFromTestDB(t, db, periodSetting, autoPopUpSetting)
+
+	jobs := expectedResult(t, 0, time.Now, period)
+
+	fxt := data.NewTestFixture(t, db)
+	defer fxt.Close()
 
 	// Setting offering.autopopup not initialized.
-	jobs = expectedResult(t, 0, time.Now)
+	jobs = expectedResult(t, 0, time.Now, period)
 
 	fxt.Offering.OfferStatus = data.OfferRegistered
 	fxt.Offering.AutoPopUp = pointer.ToBool(true)
@@ -51,7 +59,7 @@ func TestAutoOfferingPopUp(t *testing.T) {
 	ethBackend.BlockNumber = big.NewInt(6)
 
 	// Not enough ETH.
-	jobs = expectedResult(t, 0, time.Now)
+	jobs = expectedResult(t, 0, time.Now, period)
 
 	ethBackend.BalanceEth = big.NewInt(100)
 
@@ -60,7 +68,7 @@ func TestAutoOfferingPopUp(t *testing.T) {
 		return timePoint
 	}
 
-	jobs = expectedResult(t, 1, timeNowFunc)
+	jobs = expectedResult(t, 1, timeNowFunc, period)
 
 	resultJob := jobs[0]
 

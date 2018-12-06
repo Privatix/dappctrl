@@ -264,7 +264,8 @@ func main() {
 
 	somcConn, err := somc.NewConn(conf.SOMC, logger)
 	if err != nil {
-		logger.Fatal(err.Error())
+		// HACK: ignoring error so app can continue to run even if dail fails.
+		logger.Error(err.Error())
 	}
 	defer somcConn.Close()
 

@@ -245,8 +245,6 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
 		maxUnitPrice, countries, allowedSOMCTypes)
 
-	logger.Info(fmt.Sprintf("\n\n\n%s\n%v\n\n\n", cond, args))
-
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)
 	if err != nil {

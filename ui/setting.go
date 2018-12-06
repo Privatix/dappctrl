@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"database/sql"
+
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const settingsCondition = "WHERE permissions > 0"
@@ -59,6 +62,13 @@ func (h *Handler) UpdateSettings(password string,
 
 	err = h.db.InTransaction(func(tx *reform.TX) error {
 		for k, v := range items {
+			if err := h.validateSetting(logger, k, v); err != nil {
+				logger.Add("key", k, "value", v).Error(err.Error())
+				return err
+			}
+		}
+
+		for k, v := range items {
 			logger = logger.Add("key", k, "value", v)
 
 			var settingFromDB data.Setting
@@ -90,6 +100,33 @@ func (h *Handler) UpdateSettings(password string,
 
 	if err != nil {
 		return h.catchError(logger, err)
+	}
+	return nil
+}
+
+func (h *Handler) validateSetting(logger log.Logger, k, v string) error {
+	if k == data.SettingSOMCAgentTransport && h.userRole == data.RoleAgent {
+		return h.validateAgentSOMCTransportSwitch(logger, v)
+	}
+	return nil
+}
+
+func (h *Handler) validateAgentSOMCTransportSwitch(
+	logger log.Logger, v string) error {
+	if v != data.SOMCCentrelised && v != data.SOMCTor {
+		return ErrInvalidValueForSetting
+	}
+	var inconsistentOfferingsQty sql.NullInt64
+	err := h.db.QueryRow(`SELECT count(*)
+						 FROM offerings
+						WHERE offer_status<>$1`,
+		data.OfferRemoved).Scan(&inconsistentOfferingsQty)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+	if inconsistentOfferingsQty.Int64 > 0 {
+		return ErrInconsistentSOMCSwitch
 	}
 	return nil
 }

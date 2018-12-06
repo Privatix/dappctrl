@@ -162,3 +162,49 @@ func TestUpdateSettings(t *testing.T) {
 	testGetSettings(t, 2, nil, assertMatchErr)
 	validateSetting(result, keyNew, testValue)
 }
+
+func TestUpdateAgentTransportSetting(t *testing.T) {
+	// Test update with invalid value.
+	fxt, assertMatchErr := newTest(t, "UpdateSettings")
+	defer fxt.close()
+
+	somcTransport := &data.Setting{
+		Key:   data.SettingSOMCAgentTransport,
+		Value: data.SOMCCentrelised,
+		Name:  "SOMC transport",
+	}
+	data.InsertToTestDB(t, fxt.DB, somcTransport)
+	defer data.DeleteFromTestDB(t, fxt.DB, somcTransport)
+
+	// Create handler with agent role.
+	handler := ui.NewHandler(logger, db, nil, new(data.PWDStorage),
+		data.TestEncryptedKey, data.TestToPrivateKey,
+		data.RoleAgent, nil)
+
+	err := handler.UpdateSettings(data.TestPassword, map[string]string{
+		data.SettingSOMCAgentTransport: "wrong-transport",
+	})
+	assertMatchErr(ui.ErrInvalidValueForSetting, err)
+
+	// Test update with active offerings on previous tranport.
+
+	// Set somc type to centrelised to test that validation error occurs.
+	fxt.Offering.SOMCType = data.OfferingSOMCCentrelised
+	data.SaveToTestDB(t, fxt.DB, fxt.Offering)
+
+	err = handler.UpdateSettings(data.TestPassword, map[string]string{
+		data.SettingSOMCAgentTransport: data.SOMCTor,
+	})
+	assertMatchErr(ui.ErrInconsistentSOMCSwitch, err)
+
+	// Test successful update.
+
+	// Set offering to removed state so no validation errors occur.
+	fxt.Offering.OfferStatus = data.OfferRemoved
+	data.SaveToTestDB(t, fxt.DB, fxt.Offering)
+
+	err = handler.UpdateSettings(data.TestPassword, map[string]string{
+		data.SettingSOMCAgentTransport: data.SOMCTor,
+	})
+	assertMatchErr(nil, err)
+}

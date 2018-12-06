@@ -790,16 +790,19 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 		return err
 	}
 
-	deposit := data.MinDeposit(offer)
+	logger = logger.Add("channel", ch, "offering", offer)
 
-	if err := w.checkDeposit(logger, acc, offer, deposit); err != nil {
+	var jdata data.JobTopUpChannelData
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
 		return err
 	}
 
-	logger = logger.Add("channel", ch, "offering", offer)
+	deposit := data.MinDeposit(offer)
+	if jdata.Deposit > deposit {
+		deposit = jdata.Deposit
+	}
 
-	var jdata data.JobPublishData
-	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
+	if err := w.checkDeposit(logger, acc, offer, deposit); err != nil {
 		return err
 	}
 

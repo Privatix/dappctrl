@@ -344,6 +344,9 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
+	fixture.Offering.SOMCType = data.OfferingSOMCCentrelised
+	env.updateInTestDB(t, fixture.Offering)
+
 	runJob(t, env.worker.AgentPreEndpointMsgCreate, fixture.job)
 
 	endpoint := &data.Endpoint{}
@@ -472,13 +475,13 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	defer env.close()
 	defer fixture.close()
 
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
+	somcTransport := &data.Setting{
+		Key:   data.SettingSOMCAgentTransport,
+		Value: data.SOMCTor,
+		Name:  "somc transports",
 	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
+	env.insertToTestDB(t, somcTransport)
+	defer env.deleteFromTestDB(t, somcTransport)
 
 	// Test ethTx was recorder.
 	defer env.deleteEthTx(t, fixture.job.ID)
@@ -520,7 +523,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		data.OfferingSOMCCentrelised, data.Base64String(""))
+		data.OfferingSOMCTor, data.Base64String(""))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -563,14 +566,6 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 			},
 		},
 	})
-
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
-	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
 
 	runJob(t, env.worker.AgentAfterOfferingMsgBCPublish, fixture.job)
 
@@ -730,14 +725,6 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	fxt := env.newTestFixture(t, data.JobAgentPreOfferingPopUp, data.JobOffering)
 	defer fxt.close()
 
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
-	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
-
 	setJobData(t, env.db, fxt.job, &data.JobPublishData{GasPrice: 123})
 
 	duplicatedJob := *fxt.job
@@ -794,7 +781,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		data.OfferingSOMCCentrelised, data.Base64String(""))
+		fxt.Offering.SOMCType, fxt.Offering.SOMCData)
 
 	env.db.Reload(fxt.Offering)
 

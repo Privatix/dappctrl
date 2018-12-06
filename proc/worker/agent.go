@@ -661,12 +661,14 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	offering.SOMCType = data.OfferingSOMCCentrelised
 	offering.SOMCData = ""
 
-	useTor, err := data.ReadBoolSetting(w.db.Querier, data.SettingSOMCUseTor)
+	somcTransport, err := data.ReadSetting(w.db.Querier, data.SettingSOMCAgentTransport)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
 	}
-	if useTor {
+	if somcTransport == data.SOMCCentrelised {
+		offering.SOMCType = data.OfferingSOMCCentrelised
+	} else if somcTransport == data.SOMCTor {
 		offering.SOMCType = data.OfferingSOMCTor
 		offering.SOMCData = w.torHostName
 	}

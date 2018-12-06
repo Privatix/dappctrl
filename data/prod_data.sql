@@ -86,11 +86,12 @@ VALUES ('client.somc.transports',
         'allowed SOMC transport');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('somc.transport.tor',
-        'false',
+VALUES ('agent.somc.trasport',
+        'tor',
         2,
-        'Whether to use Tor as service offering messaging protocol or not',
-        'use Tor');
+        'What is the trasport for offerings and product related information exchange with clients.'
+        'It is required that there are no not "removed" offerings with previous transport before changing this.',
+        'allowed SOMC transport');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES('psc.periods.challenge',

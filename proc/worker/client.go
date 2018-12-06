@@ -273,12 +273,13 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	logger = logger.Add("endpointKey", key)
 
+	var endpointMsgSealed []byte
+
 	offering, err := w.offering(logger, ch.Offering)
 	if err != nil {
 		return err
 	}
 
-	var endpointMsgSealed []byte
 	switch offering.SOMCType {
 	case data.OfferingSOMCCentrelised:
 		endpointParams, err := w.somc.GetEndpoint(key)

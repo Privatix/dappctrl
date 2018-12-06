@@ -21,7 +21,7 @@ const (
 	SettingsPeriodChallange     = "psc.periods.challenge"
 	SettingsPeriodPopUp         = "psc.periods.popup"
 	SettingsPeriodRemove        = "psc.periods.remove"
-	SettingSOMCUseTor           = "somc.transport.tor"
+	SettingSOMCAgentTransport   = "agent.somc.trasport"
 	SettingSOMCClientTransports = "client.somc.transports"
 )
 

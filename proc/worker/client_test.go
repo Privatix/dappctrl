@@ -118,6 +118,9 @@ func TestClientAfterChannelCreate(t *testing.T) {
 		data.JobClientAfterChannelCreate, data.JobChannel)
 	defer fxt.close()
 
+	fxt.Offering.SOMCType = data.OfferingSOMCCentrelised
+	env.updateInTestDB(t, fxt.Offering)
+
 	ethLog := &data.JobEthLog{
 		Block: 12345,
 	}

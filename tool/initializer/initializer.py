@@ -4,7 +4,7 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.2.2
+        Version 0.2.3
 
         mode:
     python initializer.py  -h                              get help information
@@ -938,8 +938,9 @@ class CommonCMD(Init):
                      'Or you can perform initializer.py with one of three \n'
                      'update modes:\n'
                      '--update-mass  and update back and gui\n'
-                     '--update_back  and update only back\n'
-                     '--update_gui   and update only gui\n'
+                     '--update-bin   and update only binary\n'
+                     '--update-back  and update only back\n'
+                     '--update-gui   and update only gui\n'
                      )
         return False
 
@@ -1181,7 +1182,6 @@ class CommonCMD(Init):
 class Tor(CommonCMD):
     def __init__(self):
         CommonCMD.__init__(self)
-
 
     def check_tor_port(self):
         logging.info('Check Tor config')
@@ -1578,16 +1578,20 @@ class UpdateBynary(CommonCMD):
     @Init.wait_decor
     def __move_binary(self):
         logging.info('Start copy binary to destination')
-        conts = dict(vpn=self.vpn_bin, common=self.ctrl_bin)
+        conts = dict(vpn=[self.vpn_bin], common=[self.ctrl_bin, self.vpn_bin])
+        move_cmd = 'sudo mv -f {} {}'
         try:
-            for cont, f in conts.items():
-                dest = self.p_contr + cont + '/root/go/bin/' + f
-                logging.info('Destination {}'.format(dest))
-                cmd = 'sudo mv -f {} {}'.format(f, dest)
-                logging.debug('Move binaty cmd: {}'.format(cmd))
-                self._sys_call(cmd=cmd)
-                logging.debug('Chown rule 777 for {}'.format(dest))
-                chmod(dest, 0777)
+            for cont, fls in conts.items():
+                for f in fls:
+                    dest = self.p_contr + cont + '/root/go/bin/' + f
+                    logging.info('Destination {}'.format(dest))
+                    cmd = move_cmd.format(f, dest)
+                    logging.debug('Move binaty cmd: {}'.format(cmd))
+                    self._sys_call(cmd=cmd)
+                    logging.debug('Chown rule 755 for {}'.format(dest))
+                    self._sys_call(cmd='sudo chmod 755 {}')
+
+                    # chmod(dest, 0755)
 
         except BaseException as down:
             logging.error('Download: {}.'.format(down))
@@ -1805,7 +1809,7 @@ class GUI(CommonCMD):
     def __gui_config(self):
         """
         RW GUI config
-        /opt/privatix/gui/node_modules/dappctrlgui/settings.json
+        /opt/privatix/gui/settings.json
         example data structure:
         {
             "firstStart": false,
@@ -2579,7 +2583,6 @@ class LXC(DB):
         self.__check_wget()
         if self.__check_lxc_exist():
             # lxc installed
-
             self.__check_contrs_by_cmd()
             self._check_contrs_by_path()
             logging.debug('Found LXC conteiners: {}'.format(self.lxc_contrs))
@@ -2587,7 +2590,7 @@ class LXC(DB):
             self._check_cont_addr()
 
         else:
-            #     # lxc not installed
+            # lxc not installed
             self.__install_lxc()
             # update to new config params
             self.__read_lxc_conf()
@@ -3226,9 +3229,8 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                         logging.debug('Containers: {}'.format(self.p_unpck))
                         logging.debug('Ports: {}'.format(self.use_ports))
                         if not self.in_args['no_gui']:
-                            self.target = 'both'
                             logging.info('GUI mode.')
-                            check.target = 'both'
+                            self.target = 'both'
                             if update:
                                 self.update_gui()
                             else:

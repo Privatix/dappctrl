@@ -74,9 +74,10 @@ type Usage struct {
 }
 
 // TopUpChannel initiates JobClientPreChannelTopUp job.
-func (h *Handler) TopUpChannel(password, channel string, gasPrice uint64) error {
+func (h *Handler) TopUpChannel(
+	password, channel string, deposit, gasPrice uint64) error {
 	logger := h.logger.Add("method", "TopUpChannel",
-		"channel", channel, "gasPrice", gasPrice)
+		"channel", channel, "deposit", deposit, "gasPrice", gasPrice)
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return err
@@ -88,13 +89,29 @@ func (h *Handler) TopUpChannel(password, channel string, gasPrice uint64) error 
 		return err
 	}
 
-	jdata, err := h.jobPublishData(logger, gasPrice)
+	jobData, err := h.topUpChannelJobData(logger, deposit, gasPrice)
 	if err != nil {
 		return err
 	}
 
 	return job.AddWithData(h.queue, nil, data.JobClientPreChannelTopUp,
-		data.JobChannel, ch.ID, data.JobUser, jdata)
+		data.JobChannel, ch.ID, data.JobUser, jobData)
+}
+
+func (h *Handler) topUpChannelJobData(logger log.Logger,
+	deposit, gasPrice uint64) (*data.JobTopUpChannelData, error) {
+	if gasPrice == 0 {
+		defGasPrice, err := h.defaultGasPrice(logger)
+		if err != nil {
+			return nil, err
+		}
+		gasPrice = defGasPrice
+	}
+
+	return &data.JobTopUpChannelData{
+		Deposit:  deposit,
+		GasPrice: gasPrice,
+	}, nil
 }
 
 // ChangeChannelStatus updates channel state.

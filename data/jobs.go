@@ -95,6 +95,12 @@ type JobPublishData struct {
 	GasPrice uint64
 }
 
+// JobTopUpChannelData is a data for top up channel job.
+type JobTopUpChannelData struct {
+	GasPrice uint64
+	Deposit  uint64
+}
+
 // JobCreateChannelData is a data required by client to accept an offering.
 type JobCreateChannelData struct {
 	GasPrice uint64

@@ -32,13 +32,13 @@ func TestTopUpChannel(t *testing.T) {
 		return nil
 	}))
 
-	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 123)
+	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 0, 123)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 123)
+	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 0, 123)
 	assertErrEqual(ui.ErrChannelNotFound, err)
 
-	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 123)
+	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 123)
 	assertErrEqual(nil, err)
 
 	if j == nil || j.RelatedType != data.JobChannel ||
@@ -47,15 +47,31 @@ func TestTopUpChannel(t *testing.T) {
 		t.Fatalf("expected job not created")
 	}
 
+	unmarshalJobData := func() (jobData *data.JobTopUpChannelData) {
+		jobData = &data.JobTopUpChannelData{}
+		json.Unmarshal(j.Data, jobData)
+		return jobData
+	}
+
 	// Test default gas price setup.
 	var testGasPrice uint64 = 500
 	deleteSetting := insertDefaultGasPriceSetting(t, testGasPrice)
 	defer deleteSetting()
-	handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0)
-	jdata := &data.JobPublishData{}
-	json.Unmarshal(j.Data, jdata)
+	handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 0)
+	jdata := unmarshalJobData()
 	if jdata.GasPrice != testGasPrice {
 		t.Fatal("job with default gas price expected")
+	}
+
+	var deposit uint64 = 1001
+
+	// Test custom deposit
+	err = handler.TopUpChannel(
+		data.TestPassword, fxt.Channel.ID, deposit, 123)
+	assertErrEqual(nil, err)
+	jdata = unmarshalJobData()
+	if jdata.Deposit != deposit {
+		t.Fatalf("wanted: %d, got: %d", deposit, jdata.Deposit)
 	}
 }
 

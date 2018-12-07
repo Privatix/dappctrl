@@ -83,7 +83,7 @@ VALUES ('client.somc.transports',
         'tor',
         2,
         'Offering with what SOMC type to display.',
-        'allowed SOMC transport');
+        'allowed SOMC transports');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('agent.somc.trasport',

@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"database/sql"
-
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -105,28 +103,6 @@ func (h *Handler) UpdateSettings(password string,
 }
 
 func (h *Handler) validateSetting(logger log.Logger, k, v string) error {
-	if k == data.SettingSOMCAgentTransport && h.userRole == data.RoleAgent {
-		return h.validateAgentSOMCTransportSwitch(logger, v)
-	}
-	return nil
-}
-
-func (h *Handler) validateAgentSOMCTransportSwitch(
-	logger log.Logger, v string) error {
-	if v != data.SOMCCentrelised && v != data.SOMCTor {
-		return ErrInvalidValueForSetting
-	}
-	var inconsistentOfferingsQty sql.NullInt64
-	err := h.db.QueryRow(`SELECT count(*)
-						 FROM offerings
-						WHERE offer_status<>$1`,
-		data.OfferRemoved).Scan(&inconsistentOfferingsQty)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-	if inconsistentOfferingsQty.Int64 > 0 {
-		return ErrInconsistentSOMCSwitch
-	}
+	// Run validators here.
 	return nil
 }

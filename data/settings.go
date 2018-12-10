@@ -9,26 +9,18 @@ import (
 
 // Setting keys.
 const (
-	SettingAppVersion           = "system.version.app"
-	SettingBlockLimit           = "eth.event.blocklimit"
-	SettingDefaultGasPrice      = "eth.default.gasprice"
-	SettingFreshBlocks          = "eth.event.freshblocks"
-	SettingOfferingAutoPopUp    = "offering.autopopup"
-	SettingLastProcessedBlock   = "eth.event.lastProcessedBlock"
-	SettingMinConfirmations     = "eth.min.confirmations"
-	SettingPasswordHash         = "system.password"
-	SettingPasswordSalt         = "system.salt"
-	SettingsPeriodChallange     = "psc.periods.challenge"
-	SettingsPeriodPopUp         = "psc.periods.popup"
-	SettingsPeriodRemove        = "psc.periods.remove"
-	SettingSOMCAgentTransport   = "agent.somc.trasport"
-	SettingSOMCClientTransports = "client.somc.transports"
-)
-
-// SOMC transport values in settings.
-const (
-	SOMCTor         = "tor"
-	SOMCCentrelised = "centrelised"
+	SettingAppVersion         = "system.version.app"
+	SettingBlockLimit         = "eth.event.blocklimit"
+	SettingDefaultGasPrice    = "eth.default.gasprice"
+	SettingFreshBlocks        = "eth.event.freshblocks"
+	SettingOfferingAutoPopUp  = "offering.autopopup"
+	SettingLastProcessedBlock = "eth.event.lastProcessedBlock"
+	SettingMinConfirmations   = "eth.min.confirmations"
+	SettingPasswordHash       = "system.password"
+	SettingPasswordSalt       = "system.salt"
+	SettingsPeriodChallange   = "psc.periods.challenge"
+	SettingsPeriodPopUp       = "psc.periods.popup"
+	SettingsPeriodRemove      = "psc.periods.remove"
 )
 
 // ReadSetting reads value of a given setting.

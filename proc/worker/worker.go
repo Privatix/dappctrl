@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -15,9 +14,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
-	"github.com/privatix/dappctrl/util/tor"
 )
 
 // GasConf amounts of gas limit to use for contracts calls.
@@ -46,31 +43,29 @@ type GasConf struct {
 
 // Worker has all worker routines.
 type Worker struct {
-	abi            abi.ABI
-	logger         log.Logger
-	db             *reform.DB
-	decryptKeyFunc data.ToPrivateKeyFunc
-	ept            *ept.Service
-	ethBack        eth.Backend
-	gasConf        *GasConf
-	pscAddr        common.Address
-	pwdGetter      data.PWDGetter
-	somc           *somc.Conn
-	queue          job.Queue
-	processor      *proc.Processor
-	ethConfig      *eth.Config
-	countryConfig  *country.Config
-	torHostName    data.Base64String
-	torClient      *http.Client
+	abi               abi.ABI
+	logger            log.Logger
+	db                *reform.DB
+	decryptKeyFunc    data.ToPrivateKeyFunc
+	ept               *ept.Service
+	ethBack           eth.Backend
+	gasConf           *GasConf
+	pscAddr           common.Address
+	pwdGetter         data.PWDGetter
+	queue             job.Queue
+	processor         *proc.Processor
+	ethConfig         *eth.Config
+	countryConfig     *country.Config
+	torHostName       data.Base64String
+	somcClientBuilder SOMCClientBuilderInterface
 }
 
 // NewWorker returns new instance of worker.
-func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
-	ethBack eth.Backend, gasConc *GasConf, pscAddr common.Address,
-	payAddr string, pwdGetter data.PWDGetter,
-	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
-	eptConf *ept.Config,
-	torHostname string, torSocksListener uint) (*Worker, error) {
+func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
+	gasConc *GasConf, pscAddr common.Address, payAddr string,
+	pwdGetter data.PWDGetter, countryConf *country.Config,
+	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
+	torHostname string, somcClientBuilder SOMCClientBuilderInterface) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
 
@@ -85,25 +80,19 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		return nil, err
 	}
 
-	torClient, err := tor.NewHTTPClient(torSocksListener)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Worker{
-		abi:            abi,
-		logger:         l,
-		db:             db,
-		decryptKeyFunc: decryptKeyFunc,
-		gasConf:        gasConc,
-		ept:            eptService,
-		ethBack:        ethBack,
-		pscAddr:        pscAddr,
-		pwdGetter:      pwdGetter,
-		somc:           somc,
-		countryConfig:  countryConf,
-		torHostName:    data.FromBytes([]byte(torHostname)),
-		torClient:      torClient,
+		abi:               abi,
+		logger:            l,
+		db:                db,
+		decryptKeyFunc:    decryptKeyFunc,
+		gasConf:           gasConc,
+		ept:               eptService,
+		ethBack:           ethBack,
+		pscAddr:           pscAddr,
+		pwdGetter:         pwdGetter,
+		countryConfig:     countryConf,
+		torHostName:       data.FromBytes([]byte(torHostname)),
+		somcClientBuilder: somcClientBuilder,
 	}, nil
 }
 

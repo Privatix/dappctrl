@@ -79,21 +79,6 @@ VALUES ('offering.autopopup',
         'offering autopopup');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('client.somc.transports',
-        'tor',
-        2,
-        'Offering with what SOMC type to display.',
-        'allowed SOMC transports');
-
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('agent.somc.trasport',
-        'tor',
-        2,
-        'What is the trasport for offerings and product related information exchange with clients.'
-        'It is required that there are no not "removed" offerings with previous transport before changing this.',
-        'allowed SOMC transport');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES('psc.periods.challenge',
        '5000',
        1,

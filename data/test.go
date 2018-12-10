@@ -228,7 +228,6 @@ func NewTestEndpoint(chanID, tplID string) *Endpoint {
 		ID:                     util.NewUUID(),
 		Template:               tplID,
 		Channel:                chanID,
-		Status:                 MsgBChainPublished,
 		RawMsg:                 FromBytes([]byte("the message")),
 		AdditionalParams:       []byte("{}"),
 		PaymentReceiverAddress: &addr,

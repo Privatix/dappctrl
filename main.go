@@ -32,7 +32,6 @@ import (
 	"github.com/privatix/dappctrl/report/bugsnag"
 	rlog "github.com/privatix/dappctrl/report/log"
 	"github.com/privatix/dappctrl/sesssrv"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -66,7 +65,6 @@ type config struct {
 	Report           *bugsnag.Config
 	Role             string
 	SessionServer    *sesssrv.Config
-	SOMC             *somc.Config
 	SOMCServer       *rpcsrv.Config
 	StaticPassword   string
 	TorHostname      string
@@ -92,7 +90,6 @@ func newConfig() *config {
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
-		SOMC:          somc.NewConfig(),
 		SOMCServer:    rpcsrv.NewConfig(),
 		UI:            rpcsrv.NewConfig(),
 	}
@@ -262,21 +259,14 @@ func main() {
 		os.Exit(1)
 	}()
 
-	somcConn, err := somc.NewConn(conf.SOMC, logger)
-	if err != nil {
-		// HACK: ignoring error so app can continue to run even if dail fails.
-		logger.Error(err.Error())
-	}
-	defer somcConn.Close()
-
 	pwdStorage := getPWDStorage(conf)
 
 	ethBack := eth.NewBackend(conf.Eth, logger)
 
-	worker, err := worker.NewWorker(logger, db, somcConn,
-		ethBack, conf.Gas, ethBack.PSCAddress(), conf.PayAddress,
-		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
-		conf.TorHostname, conf.TorSocksListener)
+	worker, err := worker.NewWorker(logger, db, ethBack, conf.Gas,
+		ethBack.PSCAddress(), conf.PayAddress, pwdStorage, conf.Country,
+		data.ToPrivateKey, conf.EptMsg, conf.TorHostname,
+		worker.NewSOMCClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

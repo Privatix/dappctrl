@@ -22,13 +22,13 @@ func NewClient(client *http.Client, hostname string) *Client {
 	return &Client{client, hostname}
 }
 
-// GetOffering gets offering message through tor net.
-func (c *Client) GetOffering(hash data.HexString) (data.Base64String, error) {
+// Offering gets offering message through tor net.
+func (c *Client) Offering(hash data.HexString) (data.Base64String, error) {
 	return c.requestWithPayload("api_offering", string(hash))
 }
 
-// GetEndpoint gets endpoint message through tor net.
-func (c *Client) GetEndpoint(channelKey data.Base64String) (data.Base64String, error) {
+// Endpoint gets endpoint message through tor net.
+func (c *Client) Endpoint(channelKey data.Base64String) (data.Base64String, error) {
 	return c.requestWithPayload("api_endpoint", string(channelKey))
 }
 

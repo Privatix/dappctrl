@@ -580,14 +580,14 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 *Method*: `getChannelUsage`
 
-*Description*: Returns total units used for a given channel.
+*Description*: Returns detailed usage of a channel.
 
 
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
 
-*Result*:   Amount (number)
+*Result*:   Usage (object)
 
 <details><summary>Example</summary>
     
@@ -599,7 +599,12 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": 12345
+    "result": {
+                    "current":400,
+                    "maxUsage":454,
+                    "unit":"units",
+                    "cost":8811
+                }
 }
 ```
 </details>
@@ -640,7 +645,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotal
 *Parameters*: 
 1. Password (string)
 2. Channel id (string)
-3. Gas price (number)
+3. Deposit (number)
+4. Gas price (number)
 
 *Result*: None.
 
@@ -648,7 +654,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotal
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpChannel", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 10000], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpChannel", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 100000000, 10000], "id": 67}' http://localhost:8888/http
 
 // Result
 {

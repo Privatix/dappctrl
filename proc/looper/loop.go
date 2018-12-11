@@ -13,7 +13,7 @@ import (
 
 // Config is a looper configuration.
 type Config struct {
-	AutoOfferingPopUpTimeout uint64 // in seconds
+	AutoOfferingPopUpTimeout uint64 // In milliseconds.
 }
 
 // NewConfig creates default looper configuration.

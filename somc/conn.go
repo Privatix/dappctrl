@@ -12,14 +12,14 @@ import (
 
 // Config is a configuration for SOMC connection.
 type Config struct {
-	CheckTimeout int // In seconds.
+	CheckTimeout int // In milliseconds.
 	URL          string
 }
 
 // NewConfig creates a default configuration for SOMC connection.
 func NewConfig() *Config {
 	return &Config{
-		CheckTimeout: 30,
+		CheckTimeout: 30000,
 		URL:          "ws://localhost:8080",
 	}
 }
@@ -42,7 +42,7 @@ type Conn struct {
 
 // NewConn creates and starts a new SOMC connection.
 func NewConn(conf *Config, logger log.Logger) (*Conn, error) {
-	timeout := time.Duration(conf.CheckTimeout) * time.Second
+	timeout := time.Duration(conf.CheckTimeout) * time.Millisecond
 
 	conn := &Conn{
 		conf:        conf,

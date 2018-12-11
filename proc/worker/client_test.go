@@ -272,19 +272,20 @@ func TestClientPreChannelTopUp(t *testing.T) {
 		data.JobClientPreChannelTopUp, data.JobChannel)
 	defer fxt.close()
 
-	setJobData(t, fxt.DB, fxt.job, data.JobPublishData{
-		GasPrice: uint64(eth.TestTXGasPrice),
-	})
-
 	minDeposit := fxt.Offering.UnitPrice*fxt.Offering.MinUnits +
 		fxt.Offering.SetupPrice
+
+	setJobData(t, fxt.DB, fxt.job, data.JobTopUpChannelData{
+		GasPrice: uint64(eth.TestTXGasPrice),
+		Deposit:  minDeposit + 1,
+	})
 
 	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit - 1)
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelTopUp(fxt.job))
 
 	issued := time.Now()
-	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit)
+	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit + 1)
 
 	runJob(t, env.worker.ClientPreChannelTopUp, fxt.job)
 
@@ -404,6 +405,14 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
 	defer fxt.close()
+
+	challangePeriodSetting := &data.Setting{
+		Key:   data.SettingsPeriodChallange,
+		Value: "0",
+		Name:  data.SettingsPeriodChallange,
+	}
+	env.insertToTestDB(t, challangePeriodSetting)
+	defer env.deleteFromTestDB(t, challangePeriodSetting)
 
 	runJob(t, env.worker.ClientAfterUncooperativeCloseRequest, fxt.job)
 

@@ -99,7 +99,7 @@ func httpClient(cfg *httpClientConf, transport *http.Transport) *http.Client {
 }
 
 func toTime(val uint64) time.Duration {
-	return time.Duration(time.Duration(val) * time.Second)
+	return time.Duration(time.Duration(val) * time.Millisecond)
 }
 
 func transport(config *httpClientConf) *http.Transport {

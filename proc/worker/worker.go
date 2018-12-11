@@ -60,7 +60,6 @@ type Worker struct {
 	processor      *proc.Processor
 	ethConfig      *eth.Config
 	countryConfig  *country.Config
-	pscPeriods     *eth.PSCPeriods
 	torHostName    data.Base64String
 	torClient      *http.Client
 }
@@ -70,7 +69,7 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 	ethBack eth.Backend, gasConc *GasConf, pscAddr common.Address,
 	payAddr string, pwdGetter data.PWDGetter,
 	countryConf *country.Config, decryptKeyFunc data.ToPrivateKeyFunc,
-	eptConf *ept.Config, pscPeriods *eth.PSCPeriods,
+	eptConf *ept.Config,
 	torHostname string, torSocksListener uint) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
@@ -103,7 +102,6 @@ func NewWorker(logger log.Logger, db *reform.DB, somc *somc.Conn,
 		pwdGetter:      pwdGetter,
 		somc:           somc,
 		countryConfig:  countryConf,
-		pscPeriods:     pscPeriods,
 		torHostName:    data.FromBytes([]byte(torHostname)),
 		torClient:      torClient,
 	}, nil

@@ -32,13 +32,13 @@ func TestTopUpChannel(t *testing.T) {
 		return nil
 	}))
 
-	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 123)
+	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 0, 123)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 123)
+	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 0, 123)
 	assertErrEqual(ui.ErrChannelNotFound, err)
 
-	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 123)
+	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 123)
 	assertErrEqual(nil, err)
 
 	if j == nil || j.RelatedType != data.JobChannel ||
@@ -47,15 +47,31 @@ func TestTopUpChannel(t *testing.T) {
 		t.Fatalf("expected job not created")
 	}
 
+	unmarshalJobData := func() (jobData *data.JobTopUpChannelData) {
+		jobData = &data.JobTopUpChannelData{}
+		json.Unmarshal(j.Data, jobData)
+		return jobData
+	}
+
 	// Test default gas price setup.
 	var testGasPrice uint64 = 500
 	deleteSetting := insertDefaultGasPriceSetting(t, testGasPrice)
 	defer deleteSetting()
-	handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0)
-	jdata := &data.JobPublishData{}
-	json.Unmarshal(j.Data, jdata)
+	handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 0)
+	jdata := unmarshalJobData()
 	if jdata.GasPrice != testGasPrice {
 		t.Fatal("job with default gas price expected")
+	}
+
+	var deposit uint64 = 1001
+
+	// Test custom deposit
+	err = handler.TopUpChannel(
+		data.TestPassword, fxt.Channel.ID, deposit, 123)
+	assertErrEqual(nil, err)
+	jdata = unmarshalJobData()
+	if jdata.Deposit != deposit {
+		t.Fatalf("wanted: %d, got: %d", deposit, jdata.Deposit)
 	}
 }
 
@@ -429,6 +445,64 @@ func checkClientChannelUsage(
 		offer.UnitPrice
 	if resp.Usage.MaxUsage != deposit {
 		t.Fatalf("expected %d, got: %d", deposit, resp.Usage.MaxUsage)
+	}
+}
+
+func TestGetChannelUsage(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "GetChannelUsage")
+	defer fxt.close()
+
+	// Prepare common test state.
+	offering := fxt.Offering
+	channel := fxt.Channel
+
+	channel.TotalDeposit = 100
+	offering.UnitPrice = 5
+	offering.SetupPrice = 0
+	data.SaveToTestDB(t, fxt.DB, channel, offering)
+
+	// With total deposit 100, unit price 5 and setup price 0, max usage must be 20(100/10)
+	var expectedMaxUsage uint64 = 20
+
+	sess1 := data.NewTestSession(channel.ID)
+	sess2 := data.NewTestSession(channel.ID)
+	data.InsertToTestDB(t, fxt.DB, sess1, sess2)
+	defer data.DeleteFromTestDB(t, fxt.DB, sess2, sess1)
+
+	_, err := handler.GetChannelUsage("wrong-password", channel.ID)
+	assertErrEqual(ui.ErrAccessDenied, err)
+
+	// Test for scalar unit type.
+	sess1.UnitsUsed = 1
+	sess2.UnitsUsed = 2
+	var expectedCost uint64 = 3 * offering.UnitPrice
+	var expectedCurrentUsage uint64 = sess1.UnitsUsed + sess2.UnitsUsed
+	offering.UnitType = data.UnitScalar
+	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
+
+	ret, err := handler.GetChannelUsage(data.TestPassword, channel.ID)
+	assertErrEqual(nil, err)
+
+	if ret == nil || ret.Current != expectedCurrentUsage ||
+		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.Cost != expectedCost {
+		t.Fatal("wrong channel usage")
+	}
+
+	// Test for seconds unit type.
+	sess1.SecondsConsumed = 2
+	sess2.SecondsConsumed = 3
+	expectedCost = 5 * offering.UnitPrice
+	expectedCurrentUsage = sess1.SecondsConsumed + sess2.SecondsConsumed
+	offering.UnitType = data.UnitSeconds
+	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
+	ret, err = handler.GetChannelUsage(data.TestPassword, channel.ID)
+	assertErrEqual(nil, err)
+
+	if ret == nil || ret.Current != expectedCurrentUsage ||
+		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.Cost != expectedCost {
+		t.Fatal("wrong channel usage")
 	}
 }
 

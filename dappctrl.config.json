@@ -210,12 +210,13 @@
         "StackLevel": "error"
     },
     "Role": "agent",
-    "SOMCServer": {
-        "Addr": "localhost:5555",
+    "Sess": {
+        "Addr": "localhost:8000",
+        "AllowedOrigins": ["*"],
         "TLS": null
     },
-    "SessionServer": {
-        "Addr": "localhost:8000",
+    "SOMCServer": {
+        "Addr": "localhost:5555",
         "TLS": null
     },
     "StaticPassword": "",

@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -57,7 +58,7 @@ type Worker struct {
 	ethConfig         *eth.Config
 	countryConfig     *country.Config
 	torHostName       data.Base64String
-	somcClientBuilder SOMCClientBuilderInterface
+	somcClientBuilder somc.ClientBuilderInterface
 }
 
 // NewWorker returns new instance of worker.
@@ -65,7 +66,7 @@ func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 	gasConc *GasConf, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter, countryConf *country.Config,
 	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	torHostname string, somcClientBuilder SOMCClientBuilderInterface) (*Worker, error) {
+	torHostname string, somcClientBuilder somc.ClientBuilderInterface) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
 

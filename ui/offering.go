@@ -85,6 +85,18 @@ func (h *Handler) AcceptOffering(password string, account data.HexString,
 		return nil, ErrDepositTooSmall
 	}
 
+	client, err := h.somcClientBuilder.NewClient(offer.SOMCType, offer.SOMCData)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrSOMCIsNotAvailable
+	}
+
+	err = client.Ping()
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrSOMCIsNotAvailable
+	}
+
 	rid := util.NewUUID()
 	jobData := &worker.ClientPreChannelCreateData{Account: acc.ID,
 		Offering: offering, GasPrice: gasPrice, Deposit: deposit}

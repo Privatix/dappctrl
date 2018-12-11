@@ -772,7 +772,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
-	testClient.v = expectedOffering.RawMsg
+	testClient.V = expectedOffering.RawMsg
 
 	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
 
@@ -936,7 +936,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		},
 	})
 
-	testClient.v = expectedOffering.RawMsg
+	testClient.V = expectedOffering.RawMsg
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
 

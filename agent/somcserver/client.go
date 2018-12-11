@@ -32,6 +32,12 @@ func (c *Client) Endpoint(channelKey data.Base64String) (data.Base64String, erro
 	return c.requestWithPayload("api_endpoint", string(channelKey))
 }
 
+// Ping returns an error if remote enpoint cannot be reached.
+func (c *Client) Ping() error {
+	_, err := c.client.Head(c.url())
+	return err
+}
+
 func (c *Client) requestWithPayload(method string, param string) (data.Base64String, error) {
 	resp, err := c.request(method, param)
 	if err != nil {
@@ -43,10 +49,13 @@ func (c *Client) requestWithPayload(method string, param string) (data.Base64Str
 }
 
 func (c *Client) request(method string, param string) (*http.Response, error) {
-	url := fmt.Sprintf("http://%s/http", c.hostname)
 	payload := fmt.Sprintf(`{"method": "%s",
 		"params": ["%s"], "id": "%s"}`, method, param, util.NewUUID())
-	return c.client.Post(url, "application/json", strings.NewReader(payload))
+	return c.client.Post(c.url(), "application/json", strings.NewReader(payload))
+}
+
+func (c *Client) url() string {
+	return fmt.Sprintf("http://%s/http", c.hostname)
 }
 
 func (c *Client) extractResult(resp *http.Response) (data.Base64String, error) {

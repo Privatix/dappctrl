@@ -15,6 +15,7 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -67,7 +68,7 @@ var (
 	conf       *testConfig
 	db         *reform.DB
 	logger     log.Logger
-	testClient *testSOMCClient
+	testClient *somc.TestClient
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
@@ -78,11 +79,11 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	testClient = newTestSOMCClient()
+	testClient = somc.NewTestClient()
 
 	worker, err := NewWorker(logger, db, ethBack, conf.Gas, conf.pscAddr,
 		conf.PayServer.Addr, pwdStorage, conf.Country, data.TestToPrivateKey,
-		conf.EptMsg, "", newTestSOMCClientBuilder(testClient))
+		conf.EptMsg, "", somc.NewTestClientBuilder(testClient))
 	if err != nil {
 		panic(err)
 	}

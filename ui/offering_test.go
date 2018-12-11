@@ -2,7 +2,7 @@ package ui_test
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"testing"
 
 	"gopkg.in/reform.v1"
@@ -21,7 +21,6 @@ type testOfferingData struct {
 	isLocal            bool
 	blockNumberUpdated uint64
 	currentSupply      uint16
-	somcType           uint8
 }
 
 type testGetAgentOfferingsArgs struct {
@@ -94,6 +93,12 @@ func TestAcceptOffering(t *testing.T) {
 		fxt.Offering.ID, minDeposit-1, 12345)
 	assertErrEqual(ui.ErrDepositTooSmall, err)
 
+	testSOMCClient.Err = errors.New("test error")
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+		fxt.Offering.ID, minDeposit, 12345)
+	assertErrEqual(ui.ErrSOMCIsNotAvailable, err)
+
+	testSOMCClient.Err = nil
 	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(nil, err)
@@ -107,7 +112,7 @@ func TestAcceptOffering(t *testing.T) {
 
 func createTestOffering(fxt *fixture, agent data.HexString,
 	offerStatus, status, country string, isLocal bool,
-	blockNumberUpdated uint64, currentSupply uint16, somcType uint8) *data.Offering {
+	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
 	offering := data.NewTestOffering(
 		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
 	if offerStatus != "" {
@@ -122,7 +127,6 @@ func createTestOffering(fxt *fixture, agent data.HexString,
 		offering.Country = country
 	}
 
-	offering.SOMCType = somcType
 	offering.IsLocal = isLocal
 
 	if blockNumberUpdated != 0 {
@@ -136,14 +140,6 @@ func createTestOffering(fxt *fixture, agent data.HexString,
 
 func testGetClientOfferings(t *testing.T,
 	fxt *fixture, assertErrEqual func(error, error), agent data.HexString) {
-
-	allowedTransports := &data.Setting{
-		Key:   data.SettingSOMCClientTransports,
-		Value: fmt.Sprint(data.SOMCTor),
-		Name:  "allowed transports",
-	}
-	data.InsertToTestDB(t, fxt.DB, allowedTransports)
-	defer data.DeleteFromTestDB(t, fxt.DB, allowedTransports)
 
 	assertResult := func(res *ui.GetClientOfferingsResult,
 		err error, exp, total int) {
@@ -198,13 +194,6 @@ func testGetClientOfferings(t *testing.T,
 			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
-
-	// Test results are filtered based on allowed transports.
-	allowedTransports.Value = fmt.Sprint(data.SOMCCentrelised)
-	data.SaveToTestDB(t, fxt.DB, allowedTransports)
-	res, err := handler.GetClientOfferings(data.TestPassword,
-		"", 0, 0, nil, 0, 100)
-	assertResult(res, err, 1, 1)
 }
 
 func TestGetClientOfferings(t *testing.T) {
@@ -217,26 +206,24 @@ func TestGetClientOfferings(t *testing.T) {
 	var offerings []reform.Record
 
 	testData := []testOfferingData{
-		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
-			"US", false, 11, fxt.Offering.CurrentSupply, data.OfferingSOMCCentrelised},
-		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
-			"US", false, 11, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
-		{other.EthAddr, data.OfferRegistered, data.MsgChPublished,
-			"SU", false, 11111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+		{agent.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
+			"US", false, 11, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
+			"SU", false, 11111, fxt.Offering.CurrentSupply},
 		{other.EthAddr, data.OfferEmpty, "",
-			"SU", false, 111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			"SU", false, 111, fxt.Offering.CurrentSupply},
 		{other.EthAddr, data.OfferEmpty, "",
-			"", true, 111111, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			"", true, 111111, fxt.Offering.CurrentSupply},
 		{agent.EthAddr, data.OfferRegistered, "",
-			"SU", false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
-		{other.EthAddr, data.OfferPoppedUp, data.MsgChPublished,
-			"US", false, 222, 0, data.OfferingSOMCTor},
+			"SU", false, 2, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferPoppedUp, data.MsgBChainPublished,
+			"US", false, 222, 0},
 	}
 
 	for _, v := range testData {
 		offering := createTestOffering(fxt,
 			v.agent, v.offerStatus, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply, v.somcType)
+			v.isLocal, v.blockNumberUpdated, v.currentSupply)
 		offerings = append(offerings, offering)
 	}
 
@@ -317,19 +304,19 @@ func TestGetAgentOfferings(t *testing.T) {
 
 	testData := []testOfferingData{
 		{fxt.Account.EthAddr, data.OfferRegistered, "", "",
-			false, 1, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			false, 1, fxt.Offering.CurrentSupply},
 		{fxt.Account.EthAddr, data.OfferEmpty, "", "",
-			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			false, 2, fxt.Offering.CurrentSupply},
 		{acc1.EthAddr, data.OfferRegistering, "", "",
-			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			false, 2, fxt.Offering.CurrentSupply},
 		{acc2.EthAddr, data.OfferRegistered, "", "",
-			false, 2, fxt.Offering.CurrentSupply, data.OfferingSOMCTor},
+			false, 2, fxt.Offering.CurrentSupply},
 	}
 
 	for _, v := range testData {
 		offering := createTestOffering(fxt,
 			v.agent, v.offerStatus, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply, v.somcType)
+			v.isLocal, v.blockNumberUpdated, v.currentSupply)
 		offerings = append(offerings, offering)
 	}
 
@@ -451,7 +438,7 @@ func TestUpdateOffering(t *testing.T) {
 	err = handler.UpdateOffering(data.TestPassword, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)
 
-	fxt.Offering.Status = data.MsgChPublished
+	fxt.Offering.Status = data.MsgBChainPublished
 
 	err = handler.UpdateOffering(data.TestPassword, fxt.Offering)
 	assertMatchErr(nil, err)
@@ -462,7 +449,7 @@ func TestUpdateOffering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if savedOffering.Status != data.MsgChPublished {
+	if savedOffering.Status != data.MsgBChainPublished {
 		t.Fatal("offering not updated")
 	}
 }
@@ -506,12 +493,12 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 	c2 := "CD"
 
 	testData := []*offeringsFilterParamsData{
-		{c1, data.OfferRegistered, data.MsgChPublished, 1, 1, 1},
-		{c1, data.OfferRegistered, data.MsgChPublished, 2, 2, 2},
-		{c2, data.OfferRegistered, data.MsgChPublished, 10, 10, 10},
+		{c1, data.OfferRegistered, data.MsgBChainPublished, 1, 1, 1},
+		{c1, data.OfferRegistered, data.MsgBChainPublished, 2, 2, 2},
+		{c2, data.OfferRegistered, data.MsgBChainPublished, 10, 10, 10},
 		// Ignored offerings.
-		{"YY", data.OfferEmpty, data.MsgChPublished, 20, 20, 20},
-		{"", data.OfferRegistered, data.MsgChPublished, 20, 20, 20},
+		{"YY", data.OfferEmpty, data.MsgBChainPublished, 20, 20, 20},
+		{"", data.OfferRegistered, data.MsgBChainPublished, 20, 20, 20},
 	}
 
 	var offerings []*data.Offering

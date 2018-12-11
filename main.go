@@ -16,6 +16,7 @@ import (
 	abill "github.com/privatix/dappctrl/agent/bill"
 	"github.com/privatix/dappctrl/agent/somcserver"
 	cbill "github.com/privatix/dappctrl/client/bill"
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
@@ -154,14 +155,15 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 
 func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter, userRole string,
-	processor *proc.Processor) (*rpcsrv.Server, error) {
+	processor *proc.Processor, somcClientBuilder somc.ClientBuilderInterface) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, userRole, processor)
+		data.EncryptedKey, data.ToPrivateKey, userRole, processor,
+		somcClientBuilder)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}
@@ -266,7 +268,7 @@ func main() {
 	worker, err := worker.NewWorker(logger, db, ethBack, conf.Gas,
 		ethBack.PSCAddress(), conf.PayAddress, pwdStorage, conf.Country,
 		data.ToPrivateKey, conf.EptMsg, conf.TorHostname,
-		worker.NewSOMCClientBuilder(conf.TorSocksListener))
+		somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -290,8 +292,8 @@ func main() {
 		fatal <- queue.Process()
 	}()
 
-	uiSrv, err := createUIServer(
-		conf.UI, logger, db, queue, pwdStorage, conf.Role, pr)
+	uiSrv, err := createUIServer(conf.UI, logger, db, queue, pwdStorage,
+		conf.Role, pr, somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

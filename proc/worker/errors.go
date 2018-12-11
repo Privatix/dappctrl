@@ -80,7 +80,6 @@ const (
 	ErrPopUpPeriodIsNotOver
 	ErrOfferingDeletePeriodIsNotOver
 	ErrOfferingDeposit
-	ErrUnknownSomcType
 )
 
 var errMsgs = errors.Messages{
@@ -158,7 +157,6 @@ var errMsgs = errors.Messages{
 	ErrPopUpPeriodIsNotOver:          "popup period is not over, try again later",
 	ErrOfferingDeletePeriodIsNotOver: "remove period is not over, try again later",
 	ErrOfferingDeposit:               "incorrect offering deposit",
-	ErrUnknownSomcType:               "unknown somc type",
 }
 
 func init() {

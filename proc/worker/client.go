@@ -973,7 +973,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, somcType uint8, somcData data.Base64String,
 	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
-	logger = logger.Add(job, fmt.Sprintf("%+v", job), "block", block, "somcType",
+	logger = logger.Add("job", fmt.Sprintf("%+v", job), "block", block, "somcType",
 		somcType, "somcData", somcData, "agentAddr", agentAddr, "hash", hash,
 		"currentSupply", currentSupply)
 

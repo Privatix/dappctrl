@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -612,8 +612,16 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
+	ethLog, err := w.ethLog(logger, job)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("ethLog", ethLog)
+
 	offering.Status = data.MsgBChainPublished
 	offering.OfferStatus = data.OfferRegistered
+	offering.BlockNumberUpdated = ethLog.Block
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal

@@ -453,9 +453,12 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var blockNumberUpdated uint64 = 100
+
 	setJobData(t, env.db, fixture.job, &data.JobData{
 		EthLog: &data.JobEthLog{
-			Data: logData,
+			Block: blockNumberUpdated,
+			Data:  logData,
 			Topics: data.LogTopics{
 				common.BytesToHash([]byte{}),
 				common.BytesToHash([]byte{}),
@@ -476,6 +479,11 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	if offering.OfferStatus != data.OfferRegistered {
 		t.Fatalf("wrong offer status, wanted: %s, got: %s",
 			data.OfferRegistered, offering.OfferStatus)
+	}
+
+	if offering.BlockNumberUpdated != blockNumberUpdated {
+		t.Fatalf("wrong block number updated, wanted: %d, got: %d",
+			blockNumberUpdated, offering.BlockNumberUpdated)
 	}
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,

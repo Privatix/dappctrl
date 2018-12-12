@@ -1186,8 +1186,8 @@ class Tor(CommonCMD):
     def check_tor_port(self):
         logging.info('Check Tor config')
 
-        self.tor_socks_port = self.check_port(port=self.tor_socks_port,
-                                              auto=True)
+        self.tor_socks_port = int(self.check_port(port=self.tor_socks_port,
+                                              auto=True))
 
         full_comm_p = self.p_contr + self.path_com
         data = self.file_rw(p=full_comm_p + self.p_dapctrl_conf,

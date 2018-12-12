@@ -4,6 +4,7 @@
     },
     "BlockMonitor": {
         "EthCallTimeout": 60000,
+        "InitialBlocks": 5760,
         "QueryPause": 6000
     },
     "ClientMonitor": {

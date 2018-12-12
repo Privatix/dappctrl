@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -27,15 +28,17 @@ type Client interface {
 
 // Config is a monitor configuration.
 type Config struct {
-	EthCallTimeout uint // In milliseconds.
-	QueryPause     uint // In milliseconds.
+	EthCallTimeout uint   // In milliseconds.
+	InitialBlocks  uint64 // In Ethereum blocks.
+	QueryPause     uint   // In milliseconds.
 }
 
 // NewConfig creates a default blockchain monitor configuration.
 func NewConfig() *Config {
 	return &Config{
-		QueryPause:     6000,
 		EthCallTimeout: 60000,
+		InitialBlocks:  5760, // Is equivalent to 24 hours.
+		QueryPause:     6000,
 	}
 }
 
@@ -90,6 +93,8 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 		queryPause:     queryPause,
 	}
 
+	m.initLastProcessedBlock(role, conf.InitialBlocks)
+
 	f := m.clientQueries
 	m.jobsProducers = m.clientJobsProducers()
 	if role == data.RoleAgent {
@@ -101,6 +106,50 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 	}
 
 	return m, nil
+}
+
+// initLastProcessedBlock calculates last processed block. If user role is
+// client and value of "eth.event.lastProcessedBlock" setting is 0, then value
+// of "eth.event.lastProcessedBlock" setting is equal the difference between
+// the last Ethereum block and a InitialBlocks value. If InitialBlocks
+// value is 0, then this parameter is ignored.
+func (m *Monitor) initLastProcessedBlock(role string, initialBlocks uint64) {
+	logger := m.logger.Add("method", "initLastProcessedBlock",
+		"role", role, "initialBlocks", initialBlocks)
+
+	block, err := m.getLastProcessedBlockNumber()
+	if block > 0 || err != nil || role != data.RoleClient ||
+		initialBlocks == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(),
+		m.ethCallTimeout)
+	defer cancel()
+
+	lastBlock, err := m.eth.HeaderByNumber(ctx, nil)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	lastEthBlockNum := lastBlock.Number.Uint64()
+	logger = logger.Add("lastEthBlockNum", lastEthBlockNum)
+
+	if initialBlocks > lastEthBlockNum {
+		logger.Warn("initialBlocks value is very big")
+		return
+	}
+
+	lastProcessedBlock := lastEthBlockNum - initialBlocks
+
+	_, err = m.db.Exec(`UPDATE settings SET value=$1 WHERE key=$2`,
+		lastProcessedBlock, data.SettingLastProcessedBlock)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	logger.Debug(fmt.Sprintf("last processed block: %d",
+		lastProcessedBlock))
 }
 
 // Start starts scanning blockchain for events.

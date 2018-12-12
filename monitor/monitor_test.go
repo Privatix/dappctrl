@@ -26,15 +26,10 @@ var (
 	db        *reform.DB
 	ethClient *testEthereumClient
 	mon       *monitor.Monitor
+	logger    log.Logger
 	pscABI    abi.ABI
 	pscAddr   common.Address
 )
-
-type testContext struct {
-	db        *reform.DB
-	ethClient *testEthereumClient
-	mon       *monitor.Monitor
-}
 
 type testEthereumClient struct {
 	HeaderByNumberResult uint64
@@ -86,12 +81,41 @@ func blockSettings(t *testing.T, fresh, limit,
 	}
 }
 
-func TestMain(m *testing.M) {
-	var conf struct {
-		DB  *data.DBConfig
-		Log *log.FileConfig
-		Job *job.Config
+func TestInitLastProcessedBlock(t *testing.T) {
+	cleanup := blockSettings(t, 10, 10, 0, 0)
+	defer cleanup()
+
+	ethClient.HeaderByNumberResult = 3000
+	config := &monitor.Config{InitialBlocks: 1000}
+
+	_, err := monitor.NewMonitor(config, ethClient, db, logger,
+		pscAddr, common.HexToAddress("0x2"), data.RoleClient, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	exp := ethClient.HeaderByNumberResult - config.InitialBlocks
+
+	v, err := data.GetUint64Setting(db, data.SettingLastProcessedBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if v != exp {
+		t.Fatalf("wrong last proccessed block,"+
+			" wanted: %v, got: %v", exp, v)
+	}
+}
+
+func TestMain(m *testing.M) {
+	var (
+		conf struct {
+			DB  *data.DBConfig
+			Log *log.FileConfig
+			Job *job.Config
+		}
+		err error
+	)
 	conf.DB = data.NewDBConfig()
 	conf.Log = log.NewFileConfig()
 	conf.Job = job.NewConfig()
@@ -99,7 +123,7 @@ func TestMain(m *testing.M) {
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err := log.NewStderrLogger(conf.Log.WriterConfig)
+	logger, err = log.NewStderrLogger(conf.Log.WriterConfig)
 	if err != nil {
 		panic(err)
 	}

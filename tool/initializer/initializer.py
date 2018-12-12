@@ -2640,12 +2640,10 @@ class AutoOffer:
                 items = res[1].get('items')
                 logging.debug("items: {}".format(items))
                 if items and isinstance(items, (list, set, tuple)):
-                    status = items[0].get('status')
+                    # status = items[0].get('status')
                     offerStatus = items[0].get('offerStatus')
-                    logging.debug(
-                        'status: {}, offerStatus: {}'.format(status,
-                                                             offerStatus))
-                    if status == 'msg_channel_published' and offerStatus == 'registered':
+                    logging.debug('offerStatus: {}'.format(offerStatus))
+                    if offerStatus == 'registered':
                         logging.debug('Offerings for agent exist.')
                         return True, 'All done'
             logging.debug('Wait')

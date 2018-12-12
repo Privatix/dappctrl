@@ -1,11 +1,9 @@
 package worker
 
 import (
-	"bytes"
 	"encoding/json"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,7 +11,6 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -339,18 +336,18 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	// msg_status="unpublished"
 	// "preEndpointMsgSOMCPublish"
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentPreEndpointMsgCreate,
+	fxt := env.newTestFixture(t, data.JobAgentPreEndpointMsgCreate,
 		data.JobChannel)
 	defer env.close()
-	defer fixture.close()
+	defer fxt.close()
 
-	runJob(t, env.worker.AgentPreEndpointMsgCreate, fixture.job)
+	runJob(t, env.worker.AgentPreEndpointMsgCreate, fxt.job)
 
 	endpoint := &data.Endpoint{}
 	if err := env.db.SelectOneTo(endpoint,
-		"where template=$1 and channel=$2 and status=$3",
-		fixture.TemplateAccess.ID,
-		fixture.Channel.ID, data.MsgUnpublished); err != nil {
+		"WHERE template=$1 AND channel=$2 AND id<>$3",
+		fxt.TemplateAccess.ID,
+		fxt.Channel.ID, fxt.Endpoint.ID); err != nil {
 		t.Fatalf("could not find %T: %v", endpoint, err)
 	}
 	env.deleteFromTestDB(t, endpoint)
@@ -366,100 +363,13 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 	}
 
 	channel := &data.Channel{}
-	env.findTo(t, channel, fixture.Channel.ID)
-	if channel.Password == fixture.Channel.Password ||
-		channel.Salt == fixture.Channel.Salt {
+	env.findTo(t, channel, fxt.Channel.ID)
+	if channel.Password == fxt.Channel.Password ||
+		channel.Salt == fxt.Channel.Salt {
 		t.Fatal("password is not stored in channel")
 	}
 
-	// Check pre publish job created.
-	env.deleteJob(t, data.JobAgentPreEndpointMsgSOMCPublish,
-		data.JobEndpoint, endpoint.ID)
-
-	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fixture.job)
-}
-
-func TestAgentPreEndpointMsgSOMCPublish(t *testing.T) {
-	// 1. publish to SOMC
-	// 2. set msg_status="msg_channel_published"
-	// 3. "afterEndpointMsgSOMCPublish"
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t,
-		data.JobAgentPreEndpointMsgSOMCPublish, data.JobEndpoint)
-	defer env.close()
-	defer fixture.close()
-
-	somcEndpointChan := make(chan somc.TestEndpointParams)
-	go func() {
-		somcEndpointChan <- env.fakeSOMC.ReadPublishEndpoint(t)
-	}()
-
-	workerF := env.worker.AgentPreEndpointMsgSOMCPublish
-	runJob(t, workerF, fixture.job)
-
-	channelKey, _ := data.ChannelKey(fixture.Channel.Client,
-		fixture.Channel.Agent, fixture.Channel.Block,
-		fixture.Offering.Hash)
-
-	select {
-	case ret := <-somcEndpointChan:
-		if ret.Channel != data.FromBytes(channelKey) {
-			t.Fatal("wrong channel used to publish endpoint")
-		}
-		msgBytes := data.TestToBytes(t, fixture.Endpoint.RawMsg)
-		if !bytes.Equal(msgBytes, ret.Endpoint) {
-			t.Fatal("wrong endpoint sent to somc")
-		}
-	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
-		t.Fatal("timeout")
-	}
-
-	endpoint := &data.Endpoint{}
-	env.findTo(t, endpoint, fixture.Endpoint.ID)
-	if endpoint.Status != data.MsgChPublished {
-		t.Fatal("endpoint status is not updated")
-	}
-
-	// Test after publish job created.
-	env.deleteJob(t, data.JobAgentAfterEndpointMsgSOMCPublish,
-		data.JobChannel, endpoint.Channel)
-
-	testCommonErrors(t, workerF, *fixture.job)
-}
-
-func testAgentAfterEndpointMsgSOMCPublish(t *testing.T,
-	fixture *workerTestFixture, env *workerTest,
-	setupPrice uint64, billingType, expectedStatus string) {
-
-	fixture.Channel.ServiceStatus = data.ServicePending
-	env.updateInTestDB(t, fixture.Channel)
-
-	fixture.Offering.SetupPrice = setupPrice
-	fixture.Offering.BillingType = billingType
-	env.updateInTestDB(t, fixture.Offering)
-
-	runJob(t, env.worker.AgentAfterEndpointMsgSOMCPublish, fixture.job)
-
-	testServiceStatusChanged(t, fixture.job, env, expectedStatus)
-}
-
-func TestAgentAfterEndpointMsgSOMCPublish(t *testing.T) {
-	// 1. If pre_paid OR setup_price > 0, then
-	// svc_status="Suspended"
-	// else svc_status="Active"
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobAgentAfterEndpointMsgSOMCPublish,
-		data.JobChannel)
-	defer env.close()
-	defer fixture.close()
-
-	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env, 0, data.BillingPrepaid,
-		data.ServiceSuspended)
-	testAgentAfterEndpointMsgSOMCPublish(t, fixture, env, 1, data.BillingPostpaid,
-		data.ServiceSuspended)
-
-	testCommonErrors(t, env.worker.AgentAfterEndpointMsgSOMCPublish,
-		*fixture.job)
+	testCommonErrors(t, env.worker.AgentPreEndpointMsgCreate, *fxt.job)
 }
 
 func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
@@ -471,14 +381,6 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		data.JobOffering)
 	defer env.close()
 	defer fixture.close()
-
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
-	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
 
 	// Test ethTx was recorder.
 	defer env.deleteEthTx(t, fixture.job.ID)
@@ -495,8 +397,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	fixture.Product.Country = &country
 	env.updateInTestDB(t, fixture.Product)
 
-	minDeposit := fixture.Offering.MinUnits*fixture.Offering.UnitPrice +
-		fixture.Offering.SetupPrice
+	minDeposit := data.MinDeposit(fixture.Offering)
 
 	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit*
 		uint64(fixture.Offering.Supply) + 1)
@@ -520,7 +421,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		data.OfferingSOMCShared, data.Base64String(""))
+		data.OfferingSOMCTor, data.Base64String(""))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -547,7 +448,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	defer fixture.close()
 
 	logData, err := logOfferingCreatedDataArguments.Pack(uint16(1),
-		data.OfferingSOMCShared, "")
+		data.OfferingSOMCTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,14 +465,6 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 		},
 	})
 
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
-	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
-
 	runJob(t, env.worker.AgentAfterOfferingMsgBCPublish, fixture.job)
 
 	offering := &data.Offering{}
@@ -585,67 +478,8 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 			data.OfferRegistered, offering.OfferStatus)
 	}
 
-	// Test somc publish job created.
-	env.deleteJob(t, data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering,
-		offering.ID)
-
 	testCommonErrors(t, env.worker.AgentAfterOfferingMsgBCPublish,
 		*fixture.job)
-}
-
-func TestAgentPreOfferingMsgSOMCPublish(t *testing.T) {
-	// 1. publish to SOMC
-	// 2. set msg_status="msg_channel_published"
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t,
-		data.JobAgentPreOfferingMsgSOMCPublish, data.JobOffering)
-
-	env.setOfferingHash(t, fixture)
-	defer env.close()
-	defer fixture.close()
-
-	somcOfferingsChan := make(chan somc.TestOfferingParams)
-	go func() {
-		somcOfferingsChan <- env.fakeSOMC.ReadPublishOfferings(t)
-	}()
-
-	workerF := env.worker.AgentPreOfferingMsgSOMCPublish
-	runJob(t, workerF, fixture.job)
-
-	offering := &data.Offering{}
-	env.findTo(t, offering, fixture.Offering.ID)
-	if offering.Status != data.MsgChPublished {
-		t.Fatal("offering's status is not updated")
-	}
-
-	select {
-	case ret := <-somcOfferingsChan:
-		if ret.Data != offering.RawMsg {
-			t.Fatal("wrong offering published")
-		}
-
-		inHash, err := data.ToBytes(ret.Hash)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		hash, err := data.HexToBytes(offering.Hash)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !bytes.Equal(inHash, hash) {
-			t.Fatal("wrong hash stored")
-		}
-	case <-time.After(conf.JobHandlerTest.SOMCTimeout * time.Second):
-		t.Fatal("timeout")
-	}
-
-	// Test update balances job created.
-	env.deleteJob(t, data.JobAccountUpdateBalances,
-		data.JobAccount, fixture.Account.ID)
-
-	testCommonErrors(t, workerF, *fixture.job)
 }
 
 func TestAgentAfterOfferingDelete(t *testing.T) {
@@ -730,14 +564,6 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	fxt := env.newTestFixture(t, data.JobAgentPreOfferingPopUp, data.JobOffering)
 	defer fxt.close()
 
-	useTorSetting := &data.Setting{
-		Key:   data.SettingSOMCUseTor,
-		Value: "false",
-		Name:  "tor",
-	}
-	env.insertToTestDB(t, useTorSetting)
-	defer env.deleteFromTestDB(t, useTorSetting)
-
 	setJobData(t, env.db, fxt.job, &data.JobPublishData{GasPrice: 123})
 
 	duplicatedJob := *fxt.job
@@ -794,7 +620,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.ethBack.TestCalled(t, "PopupServiceOffering", agentAddr,
 		env.worker.gasConf.PSC.PopupServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		data.OfferingSOMCShared, data.Base64String(""))
+		fxt.Offering.SOMCType, fxt.Offering.SOMCData)
 
 	env.db.Reload(fxt.Offering)
 
@@ -826,7 +652,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSOMCShared, "")
+		uint16(1), data.OfferingSOMCTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}

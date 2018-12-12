@@ -2,6 +2,7 @@ package ui_test
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"gopkg.in/reform.v1"
@@ -92,6 +93,12 @@ func TestAcceptOffering(t *testing.T) {
 		fxt.Offering.ID, minDeposit-1, 12345)
 	assertErrEqual(ui.ErrDepositTooSmall, err)
 
+	testSOMCClient.Err = errors.New("test error")
+	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+		fxt.Offering.ID, minDeposit, 12345)
+	assertErrEqual(ui.ErrSOMCIsNotAvailable, err)
+
+	testSOMCClient.Err = nil
 	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(nil, err)
@@ -199,9 +206,9 @@ func TestGetClientOfferings(t *testing.T) {
 	var offerings []reform.Record
 
 	testData := []testOfferingData{
-		{agent.EthAddr, data.OfferRegistered, data.MsgChPublished,
+		{agent.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
 			"US", false, 11, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferRegistered, data.MsgChPublished,
+		{other.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
 			"SU", false, 11111, fxt.Offering.CurrentSupply},
 		{other.EthAddr, data.OfferEmpty, "",
 			"SU", false, 111, fxt.Offering.CurrentSupply},
@@ -209,7 +216,7 @@ func TestGetClientOfferings(t *testing.T) {
 			"", true, 111111, fxt.Offering.CurrentSupply},
 		{agent.EthAddr, data.OfferRegistered, "",
 			"SU", false, 2, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferPoppedUp, data.MsgChPublished,
+		{other.EthAddr, data.OfferPoppedUp, data.MsgBChainPublished,
 			"US", false, 222, 0},
 	}
 
@@ -431,7 +438,7 @@ func TestUpdateOffering(t *testing.T) {
 	err = handler.UpdateOffering(data.TestPassword, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)
 
-	fxt.Offering.Status = data.MsgChPublished
+	fxt.Offering.Status = data.MsgBChainPublished
 
 	err = handler.UpdateOffering(data.TestPassword, fxt.Offering)
 	assertMatchErr(nil, err)
@@ -442,7 +449,7 @@ func TestUpdateOffering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if savedOffering.Status != data.MsgChPublished {
+	if savedOffering.Status != data.MsgBChainPublished {
 		t.Fatal("offering not updated")
 	}
 }
@@ -486,12 +493,12 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 	c2 := "CD"
 
 	testData := []*offeringsFilterParamsData{
-		{c1, data.OfferRegistered, data.MsgChPublished, 1, 1, 1},
-		{c1, data.OfferRegistered, data.MsgChPublished, 2, 2, 2},
-		{c2, data.OfferRegistered, data.MsgChPublished, 10, 10, 10},
+		{c1, data.OfferRegistered, data.MsgBChainPublished, 1, 1, 1},
+		{c1, data.OfferRegistered, data.MsgBChainPublished, 2, 2, 2},
+		{c2, data.OfferRegistered, data.MsgBChainPublished, 10, 10, 10},
 		// Ignored offerings.
-		{"YY", data.OfferEmpty, data.MsgChPublished, 20, 20, 20},
-		{"", data.OfferRegistered, data.MsgChPublished, 20, 20, 20},
+		{"YY", data.OfferEmpty, data.MsgBChainPublished, 20, 20, 20},
+		{"", data.OfferRegistered, data.MsgBChainPublished, 20, 20, 20},
 	}
 
 	var offerings []*data.Offering

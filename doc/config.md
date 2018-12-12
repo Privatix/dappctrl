@@ -206,14 +206,6 @@ Desription
 ### Role
 Either "client" or "agent".
 
-### SOMC
-SOMC adapter configuration
-
-|Field|Type|Description|Example|
-|-|-|-|-|
-|CheckTimeout|int|Period to check connection status in milliseconds|30000|
-|URL|string|SOMC URL|ws://localhost:8080|
-
 ### SOMCServer
 Independent agent somc server. Intended to be shared via tor net. For agents only.
 

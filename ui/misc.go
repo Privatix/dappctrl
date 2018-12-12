@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"database/sql"
+
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -15,7 +16,7 @@ import (
 const (
 	activeOfferingCondition = `
 		offer_status in ('registered', 'popped_up')
-			AND status = 'msg_channel_published'
+			AND status = 'bchain_published'
 			AND NOT is_local
 			AND current_supply > 0
 			AND agent NOT IN (SELECT eth_addr FROM accounts)`

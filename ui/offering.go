@@ -85,6 +85,18 @@ func (h *Handler) AcceptOffering(password string, account data.HexString,
 		return nil, ErrDepositTooSmall
 	}
 
+	client, err := h.somcClientBuilder.NewClient(offer.SOMCType, offer.SOMCData)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrSOMCIsNotAvailable
+	}
+
+	err = client.Ping()
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrSOMCIsNotAvailable
+	}
+
 	rid := util.NewUUID()
 	jobData := &worker.ClientPreChannelCreateData{Account: acc.ID,
 		Offering: offering, GasPrice: gasPrice, Deposit: deposit}
@@ -211,8 +223,8 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 		return nil, ErrBadUnitPriceRange
 	}
 
-	cond, args := h.getClientOfferingsConditions(
-		agent, minUnitPrice, maxUnitPrice, countries)
+	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
+		maxUnitPrice, countries)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)

@@ -79,13 +79,6 @@ VALUES ('offering.autopopup',
         'offering autopopup');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('somc.transport.tor',
-        'false',
-        2,
-        'Whether to use Tor as service offering messaging protocol or not',
-        'use Tor');
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES('psc.periods.challenge',
        '5000',
        1,

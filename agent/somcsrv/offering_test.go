@@ -1,10 +1,10 @@
-package somcserver_test
+package somcsrv_test
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/offer"
@@ -14,7 +14,7 @@ import (
 func TestGetOfferingMessage(t *testing.T) {
 	// Test offering does not exist.
 	_, err := handler.Offering("123")
-	util.TestExpectResult(t, "Offering", somcserver.ErrOfferingNotFound, err)
+	util.TestExpectResult(t, "Offering", somcsrv.ErrOfferingNotFound, err)
 
 	// Test offering exists.
 	fxt := data.NewTestFixture(t, db)

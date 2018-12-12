@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/privatix/dappctrl/client/somc"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -11,14 +12,15 @@ import (
 
 // Handler is an UI RPC handler.
 type Handler struct {
-	logger         log.Logger
-	db             *reform.DB
-	queue          job.Queue
-	pwdStorage     data.PWDGetSetter
-	encryptKeyFunc data.EncryptedKeyFunc
-	decryptKeyFunc data.ToPrivateKeyFunc
-	userRole       string
-	processor      *proc.Processor
+	logger            log.Logger
+	db                *reform.DB
+	queue             job.Queue
+	pwdStorage        data.PWDGetSetter
+	encryptKeyFunc    data.EncryptedKeyFunc
+	decryptKeyFunc    data.ToPrivateKeyFunc
+	userRole          string
+	processor         *proc.Processor
+	somcClientBuilder somc.ClientBuilderInterface
 }
 
 // NewHandler creates a new handler.
@@ -26,16 +28,18 @@ func NewHandler(logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter,
 	encryptKeyFunc data.EncryptedKeyFunc,
 	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
-	processor *proc.Processor) *Handler {
+	processor *proc.Processor,
+	somcClientBuilder somc.ClientBuilderInterface) *Handler {
 	logger = logger.Add("type", "uisrv.Handler")
 	return &Handler{
-		logger:         logger,
-		db:             db,
-		queue:          queue,
-		pwdStorage:     pwdStorage,
-		encryptKeyFunc: encryptKeyFunc,
-		decryptKeyFunc: decryptKeyFunc,
-		userRole:       userRole,
-		processor:      processor,
+		logger:            logger,
+		db:                db,
+		queue:             queue,
+		pwdStorage:        pwdStorage,
+		encryptKeyFunc:    encryptKeyFunc,
+		decryptKeyFunc:    decryptKeyFunc,
+		userRole:          userRole,
+		processor:         processor,
+		somcClientBuilder: somcClientBuilder,
 	}
 }

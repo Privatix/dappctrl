@@ -14,8 +14,9 @@ import (
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	cbill "github.com/privatix/dappctrl/client/bill"
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	dblog "github.com/privatix/dappctrl/data/log"
@@ -32,7 +33,6 @@ import (
 	"github.com/privatix/dappctrl/report/bugsnag"
 	rlog "github.com/privatix/dappctrl/report/log"
 	"github.com/privatix/dappctrl/sesssrv"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -66,7 +66,6 @@ type config struct {
 	Report           *bugsnag.Config
 	Role             string
 	SessionServer    *sesssrv.Config
-	SOMC             *somc.Config
 	SOMCServer       *rpcsrv.Config
 	StaticPassword   string
 	TorHostname      string
@@ -92,7 +91,6 @@ func newConfig() *config {
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
 		SessionServer: sesssrv.NewConfig(),
-		SOMC:          somc.NewConfig(),
 		SOMCServer:    rpcsrv.NewConfig(),
 		UI:            rpcsrv.NewConfig(),
 	}
@@ -157,14 +155,15 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 
 func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter, userRole string,
-	processor *proc.Processor) (*rpcsrv.Server, error) {
+	processor *proc.Processor, somcClientBuilder somc.ClientBuilderInterface) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf)
 	if err != nil {
 		return nil, err
 	}
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, userRole, processor)
+		data.EncryptedKey, data.ToPrivateKey, userRole, processor,
+		somcClientBuilder)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}
@@ -218,7 +217,7 @@ func newAgentSOMCServer(conf *rpcsrv.Config, db *reform.DB,
 		return nil, err
 	}
 
-	handler := somcserver.NewHandler(db, logger)
+	handler := somcsrv.NewHandler(db, logger)
 	if err := server.AddHandler("api", handler); err != nil {
 		return nil, err
 	}
@@ -262,20 +261,14 @@ func main() {
 		os.Exit(1)
 	}()
 
-	somcConn, err := somc.NewConn(conf.SOMC, logger)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-	defer somcConn.Close()
-
 	pwdStorage := getPWDStorage(conf)
 
 	ethBack := eth.NewBackend(conf.Eth, logger)
 
-	worker, err := worker.NewWorker(logger, db, somcConn,
-		ethBack, conf.Gas, ethBack.PSCAddress(), conf.PayAddress,
-		pwdStorage, conf.Country, data.ToPrivateKey, conf.EptMsg,
-		conf.TorHostname, conf.TorSocksListener)
+	worker, err := worker.NewWorker(logger, db, ethBack, conf.Gas,
+		ethBack.PSCAddress(), conf.PayAddress, pwdStorage, conf.Country,
+		data.ToPrivateKey, conf.EptMsg, conf.TorHostname,
+		somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -299,8 +292,8 @@ func main() {
 		fatal <- queue.Process()
 	}()
 
-	uiSrv, err := createUIServer(
-		conf.UI, logger, db, queue, pwdStorage, conf.Role, pr)
+	uiSrv, err := createUIServer(conf.UI, logger, db, queue, pwdStorage,
+		conf.Role, pr, somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

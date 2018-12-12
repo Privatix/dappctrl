@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/privatix/dappctrl/client/somc"
+
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
@@ -26,9 +28,10 @@ var (
 	}
 	logger log.Logger
 
-	db      *reform.DB
-	handler *ui.Handler
-	client  *rpc.Client
+	db             *reform.DB
+	handler        *ui.Handler
+	client         *rpc.Client
+	testSOMCClient *somc.TestClient
 )
 
 type fixture struct {
@@ -41,7 +44,7 @@ func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
 	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
 	fxt.Offering.OfferStatus = data.OfferRegistered
-	fxt.Offering.Status = data.MsgChPublished
+	fxt.Offering.Status = data.MsgBChainPublished
 	data.SaveToTestDB(t, db, fxt.Offering)
 
 	hash, err := data.HashPassword(
@@ -106,9 +109,10 @@ func TestMain(m *testing.M) {
 
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
+	testSOMCClient = somc.NewTestClient()
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
 		data.TestEncryptedKey, data.TestToPrivateKey,
-		data.RoleAgent, nil)
+		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient))
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

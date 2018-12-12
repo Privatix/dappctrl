@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
+	"github.com/privatix/dappctrl/client/somc"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -80,7 +82,8 @@ func TestUpdatePassword(t *testing.T) {
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
 	handler := ui.NewHandler(logger, db, nil, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil)
+		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil,
+		somc.NewTestClientBuilder(testSOMCClient))
 	err := server.RegisterName("ui2", handler)
 	if err != nil {
 		t.Fatal(err)

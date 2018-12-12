@@ -54,11 +54,8 @@ const (
 	JobAgentPreServiceUnsuspend             = "agentPreServiceUnsuspend"
 	JobAgentPreServiceTerminate             = "agentPreServiceTerminate"
 	JobAgentPreEndpointMsgCreate            = "agentPreEndpointMsgCreate"
-	JobAgentPreEndpointMsgSOMCPublish       = "agentPreEndpointMsgSOMCPublish"
-	JobAgentAfterEndpointMsgSOMCPublish     = "agentAfterEndpointMsgSOMCPublish"
 	JobAgentPreOfferingMsgBCPublish         = "agentPreOfferingMsgBCPublish"
 	JobAgentAfterOfferingMsgBCPublish       = "agentAfterOfferingMsgBCPublish"
-	JobAgentPreOfferingMsgSOMCPublish       = "agentPreOfferingMsgSOMCPublish"
 	JobAgentPreOfferingDelete               = "agentPreOfferingDelete"
 	JobAgentPreOfferingPopUp                = "agentPreOfferingPopUp"
 	JobAgentAfterOfferingPopUp              = "agentAfterOfferingPopUp"
@@ -73,6 +70,7 @@ const (
 	JobIncrementCurrentSupply               = "incrementCurrentSupply"
 )
 
+// JobEthLog is log data a job derived from.
 type JobEthLog struct {
 	Block  uint64    `json:"block"`
 	Data   []byte    `json:"data"`
@@ -80,6 +78,7 @@ type JobEthLog struct {
 	TxHash HexString `json:"transactionHash"`
 }
 
+// JobData data set by blockchain monitor for log derived jobs.
 type JobData struct {
 	EthLog *JobEthLog `json:"ethereumLog"`
 }

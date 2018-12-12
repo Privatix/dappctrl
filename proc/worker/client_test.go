@@ -126,15 +126,6 @@ func TestClientAfterChannelCreate(t *testing.T) {
 	fxt.Channel.ServiceStatus = data.ServicePending
 	data.SaveToTestDB(t, db, fxt.Channel)
 
-	channelKey, _ := data.ChannelKey(fxt.Channel.Client, fxt.Channel.Agent,
-		uint32(ethLog.Block), fxt.Offering.Hash)
-
-	go func() {
-		// Mock reply from SOMC.
-		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
-		env.fakeSOMC.WriteGetEndpoint(t, data.FromBytes(channelKey), nil)
-	}()
-
 	runJob(t, env.worker.ClientAfterChannelCreate, fxt.job)
 
 	// Test account balance update job was created.
@@ -230,7 +221,6 @@ func testClientEndpointCreate(t *testing.T,
 		strings.Trim(string(endp.Hash), " ") !=
 			string(msg.TemplateHash) ||
 		endp.RawMsg != data.FromBytes(sealed) ||
-		endp.Status != data.MsgChPublished ||
 		endp.PaymentReceiverAddress == nil ||
 		*endp.PaymentReceiverAddress != msg.PaymentReceiverAddress ||
 		endp.ServiceEndpointAddress == nil ||
@@ -737,7 +727,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	// Create expected offering.
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
-	expectedOffering.Status = data.MsgChPublished
+	expectedOffering.Status = data.MsgBChainPublished
 	expectedOffering.OfferStatus = data.OfferRegistered
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
@@ -760,8 +750,8 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 		data.MinDeposit(&expectedOffering))
 
 	// Create eth log records used by job.
-	var curSupply uint16 = expectedOffering.Supply
-	logData, err := logOfferingCreatedDataArguments.Pack(curSupply, uint8(0), "")
+	logData, err := logOfferingCreatedDataArguments.Pack(expectedOffering.Supply,
+		data.OfferingSOMCTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -782,13 +772,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	setJobData(t, db, fxt.job, &data.JobData{EthLog: ethLog})
 
-	go func() {
-		// Mock reply from SOMC.
-		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
-		env.fakeSOMC.WriteFindOfferings(t,
-			[]data.HexString{expectedOffering.Hash},
-			[][]byte{packed})
-	}()
+	testClient.V = expectedOffering.RawMsg
 
 	runJob(t, env.worker.ClientAfterOfferingMsgBCPublish, fxt.job)
 
@@ -798,7 +782,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	if expectedOffering.Template != created.Template ||
 		expectedOffering.Product != created.Product ||
-		created.Status != data.MsgChPublished ||
+		created.Status != data.MsgBChainPublished ||
 		expectedOffering.Agent != created.Agent ||
 		expectedOffering.RawMsg != created.RawMsg ||
 		fxt.Product.Name != created.ServiceName ||
@@ -868,7 +852,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(10), data.OfferingSOMCShared, "")
+		uint16(10), data.OfferingSOMCTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -908,7 +892,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	// Create expected offering.
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
-	expectedOffering.Status = data.MsgChPublished
+	expectedOffering.Status = data.MsgBChainPublished
 	expectedOffering.OfferStatus = data.OfferPoppedUp
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
@@ -940,7 +924,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BigToHash(big.NewInt(100)),
 	}
 	logData, err := logOfferingPopUpDataArguments.Pack(
-		uint16(1), data.OfferingSOMCShared, "")
+		uint16(1), data.OfferingSOMCTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -952,13 +936,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		},
 	})
 
-	go func() {
-		// Mock reply from SOMC.
-		time.Sleep(conf.JobHandlerTest.ReactionDelay * time.Millisecond)
-		env.fakeSOMC.WriteFindOfferings(t,
-			[]data.HexString{expectedOffering.Hash},
-			[][]byte{packed})
-	}()
+	testClient.V = expectedOffering.RawMsg
 
 	runJob(t, env.worker.ClientAfterOfferingPopUp, fxt.job)
 
@@ -968,7 +946,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 
 	if expectedOffering.Template != created.Template ||
 		expectedOffering.Product != created.Product ||
-		created.Status != data.MsgChPublished ||
+		created.Status != data.MsgBChainPublished ||
 		expectedOffering.Agent != created.Agent ||
 		expectedOffering.RawMsg != created.RawMsg ||
 		fxt.Product.Name != created.ServiceName ||

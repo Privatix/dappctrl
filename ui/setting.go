@@ -4,6 +4,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const settingsCondition = "WHERE permissions > 0"
@@ -59,6 +60,13 @@ func (h *Handler) UpdateSettings(password string,
 
 	err = h.db.InTransaction(func(tx *reform.TX) error {
 		for k, v := range items {
+			if err := h.validateSetting(logger, k, v); err != nil {
+				logger.Add("key", k, "value", v).Error(err.Error())
+				return err
+			}
+		}
+
+		for k, v := range items {
 			logger = logger.Add("key", k, "value", v)
 
 			var settingFromDB data.Setting
@@ -91,5 +99,10 @@ func (h *Handler) UpdateSettings(password string,
 	if err != nil {
 		return h.catchError(logger, err)
 	}
+	return nil
+}
+
+func (h *Handler) validateSetting(logger log.Logger, k, v string) error {
+	// Run validators here.
 	return nil
 }

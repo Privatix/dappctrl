@@ -345,7 +345,7 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 
 	endpoint := &data.Endpoint{}
 	if err := env.db.SelectOneTo(endpoint,
-		"where template=$1 and channel=$2 and id<>$3",
+		"WHERE template=$1 AND channel=$2 AND id<>$3",
 		fxt.TemplateAccess.ID,
 		fxt.Channel.ID, fxt.Endpoint.ID); err != nil {
 		t.Fatalf("could not find %T: %v", endpoint, err)

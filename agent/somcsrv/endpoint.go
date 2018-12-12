@@ -1,4 +1,4 @@
-package somcserver
+package somcsrv
 
 import (
 	"github.com/privatix/dappctrl/data"

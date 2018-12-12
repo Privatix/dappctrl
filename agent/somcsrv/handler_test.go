@@ -1,4 +1,4 @@
-package somcserver_test
+package somcsrv_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 
 	reform "gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -18,7 +18,7 @@ var (
 		StderrLog *log.WriterConfig
 	}
 	db      *reform.DB
-	handler *somcserver.Handler
+	handler *somcsrv.Handler
 )
 
 func TestMain(m *testing.M) {
@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	handler = somcserver.NewHandler(db, logger)
+	handler = somcsrv.NewHandler(db, logger)
 
 	os.Exit(m.Run())
 }

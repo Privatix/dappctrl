@@ -1,7 +1,7 @@
 package somc
 
 import (
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/tor"
 )
@@ -19,7 +19,7 @@ type ClientBuilderInterface interface {
 }
 
 // Contracts. Clients must implement interface.
-var _ Client = new(somcserver.Client)
+var _ Client = new(somcsrv.Client)
 
 // ClientBuilder responsible for creating Client's.
 type ClientBuilder struct {
@@ -39,7 +39,7 @@ func (b *ClientBuilder) NewClient(somcType uint8, somcData data.Base64String) (C
 			return nil, err
 		}
 		torClient, err := tor.NewHTTPClient(b.torSocks)
-		return somcserver.NewClient(torClient, string(hostnameBytes)), nil
+		return somcsrv.NewClient(torClient, string(hostnameBytes)), nil
 	}
 
 	return nil, ErrUnknownSOMCType

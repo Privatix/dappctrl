@@ -14,7 +14,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
@@ -217,7 +217,7 @@ func newAgentSOMCServer(conf *rpcsrv.Config, db *reform.DB,
 		return nil, err
 	}
 
-	handler := somcserver.NewHandler(db, logger)
+	handler := somcsrv.NewHandler(db, logger)
 	if err := server.AddHandler("api", handler); err != nil {
 		return nil, err
 	}

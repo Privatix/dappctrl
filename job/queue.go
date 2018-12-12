@@ -385,12 +385,12 @@ func (q *queue) processJob(job *data.Job,
 
 	tconf := q.typeConfig(job)
 
-	logger.Info("processing job")
+	logger.Info(fmt.Sprintf("processing job %s", job.Type))
 	err := handler(job)
 
 	if err == nil {
 		job.Status = data.JobDone
-		logger.Info("job is done")
+		logger.Info(fmt.Sprintf("job %s is done", job.Type))
 		return nil
 	}
 
@@ -404,8 +404,9 @@ func (q *queue) processJob(job *data.Job,
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn(fmt.Sprintf("retry for job scheduled to %s: %s",
-			job.NotBefore.Format(time.RFC3339), err))
+		q.logger.Warn(fmt.Sprintf(
+			"retry for job %s scheduled to %s: %s",
+			job.Type, job.NotBefore.Format(time.RFC3339), err))
 	}
 
 	return err

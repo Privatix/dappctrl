@@ -1586,12 +1586,10 @@ class UpdateBynary(CommonCMD):
                     dest = self.p_contr + cont + '/root/go/bin/' + f
                     logging.info('Destination {}'.format(dest))
                     cmd = move_cmd.format(f, dest)
-                    logging.debug('Move binaty cmd: {}'.format(cmd))
+                    logging.debug('Move cmd: {}'.format(cmd))
                     self._sys_call(cmd=cmd)
-                    logging.debug('Chown rule 755 for {}'.format(dest))
-                    self._sys_call(cmd='sudo chmod 755 {}')
-
-                    # chmod(dest, 0755)
+                    logging.debug('Binary chmod 777 for {}'.format(dest))
+                    chmod(dest, 0777)
 
         except BaseException as down:
             logging.error('Download: {}.'.format(down))

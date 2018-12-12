@@ -1186,8 +1186,8 @@ class Tor(CommonCMD):
     def check_tor_port(self):
         logging.info('Check Tor config')
 
-        self.tor_socks_port = self.check_port(port=self.tor_socks_port,
-                                              auto=True)
+        self.tor_socks_port = int(self.check_port(port=self.tor_socks_port,
+                                              auto=True))
 
         full_comm_p = self.p_contr + self.path_com
         data = self.file_rw(p=full_comm_p + self.p_dapctrl_conf,
@@ -2640,12 +2640,10 @@ class AutoOffer:
                 items = res[1].get('items')
                 logging.debug("items: {}".format(items))
                 if items and isinstance(items, (list, set, tuple)):
-                    status = items[0].get('status')
+                    # status = items[0].get('status')
                     offerStatus = items[0].get('offerStatus')
-                    logging.debug(
-                        'status: {}, offerStatus: {}'.format(status,
-                                                             offerStatus))
-                    if status == 'msg_channel_published' and offerStatus == 'registered':
+                    logging.debug('offerStatus: {}'.format(offerStatus))
+                    if offerStatus == 'registered':
                         logging.debug('Offerings for agent exist.')
                         return True, 'All done'
             logging.debug('Wait')

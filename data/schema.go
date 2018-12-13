@@ -90,13 +90,6 @@ const (
 	BillingPostpaid = "postpaid"
 )
 
-// Message statuses.
-const (
-	MsgUnpublished      = "unpublished"       // Saved but not published.
-	MsgBChainPublishing = "bchain_publishing" // To blockchain.
-	MsgBChainPublished  = "bchain_published"  // To blockchain.
-)
-
 // Offering statuses.
 const (
 	OfferEmpty       = "empty"
@@ -122,7 +115,6 @@ type Offering struct {
 	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
 	Hash               HexString       `json:"hash" reform:"hash"`                           // Offering's hash.
 	Status             string          `json:"status" reform:"status"`
-	OfferStatus        string          `json:"offerStatus" reform:"offer_status"`
 	BlockNumberUpdated uint64          `json:"blockNumberUpdated" reform:"block_number_updated"`
 	Agent              HexString       `json:"agent" reform:"agent" validate:"required"`
 	RawMsg             Base64String    `json:"rawMsg" reform:"raw_msg"`

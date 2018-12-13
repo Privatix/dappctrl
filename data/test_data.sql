@@ -7,14 +7,14 @@ INSERT INTO accounts (id, eth_addr, public_key, private_key, name, ptc_balance,
 VALUES ('e8b17880-8ee5-4fc1-afb2-e6900655d8d5', '', '', '', 'Test channel',
     0, 0, '');
 
-INSERT INTO offerings (id, is_local, tpl, product, hash, status, offer_status,
+INSERT INTO offerings (id, is_local, tpl, product, hash, status,
     block_number_updated, agent, raw_msg, service_name, country, supply,
     unit_name, unit_type, billing_type, setup_price, unit_price, min_units,
     max_unit, billing_interval, max_billing_unit_lag, max_suspended_time,
     free_units)
 VALUES ('32000ae1-f752-4d55-8d58-22d05ef08803', true,
     'efc61769-96c8-4c0d-b50a-e4d11fc30523',
-    '4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', '', 'bchain_published',
+    '4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532', 'bchain_published',
     'registered', 1, '', '', 'VPN', 'US', 1, 'megabyte', 'units', 'prepaid', 1, 1,
     1, 100, 1, 0, 0, 0);
 

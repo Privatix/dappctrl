@@ -205,7 +205,10 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
-		"maxUnitPrice", maxUnitPrice, "countries", countries)
+		"maxUnitPrice", maxUnitPrice, "countries", countries, "offset", offset,
+		"limit", limit)
+
+	logger.Info("running")
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return nil, err
@@ -231,6 +234,7 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 	tail := fmt.Sprintf("%s %s %s",
 		cond, activeOfferingSorting, offsetLimit)
 
+	logger.Info(tail)
 	result, err := h.selectAllFrom(
 		logger, data.OfferingTable, tail, args...)
 	if err != nil {
@@ -259,7 +263,7 @@ func (h *Handler) getAgentOfferingsConditions(
 
 	if status != "" {
 		condition := fmt.Sprintf(
-			"offer_status = %s", h.db.Placeholder(index))
+			"status = %s", h.db.Placeholder(index))
 		if conditions == "" {
 			conditions = condition
 		} else {
@@ -373,8 +377,7 @@ func (h *Handler) fillOffering(
 	}
 
 	offering.ID = util.NewUUID()
-	offering.OfferStatus = data.OfferEmpty
-	offering.Status = data.MsgUnpublished
+	offering.Status = data.OfferEmpty
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
 	offering.CurrentSupply = offering.Supply

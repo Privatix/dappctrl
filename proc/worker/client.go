@@ -961,7 +961,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 
 	// Existing offering, just update offering status.
 	offering.BlockNumberUpdated = ethLog.Block
-	offering.OfferStatus = data.OfferPoppedUp
+	offering.Status = data.OfferPoppedUp
 
 	return w.saveRecord(logger, w.db.Querier, &offering)
 }
@@ -1090,8 +1090,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 		Template:           template.ID,
 		Product:            product.ID,
 		Hash:               hash,
-		Status:             data.MsgBChainPublished,
-		OfferStatus:        data.OfferRegistered,
+		Status:             data.OfferRegistered,
 		BlockNumberUpdated: blockNumber,
 		Agent:              agent,
 		RawMsg:             data.FromBytes(offering),
@@ -1121,4 +1120,43 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
 	return w.updateRelatedOffering(
 		job, data.JobClientAfterOfferingDelete, data.OfferRemoved)
+}
+
+// DecrementCurrentSupply finds offering and decrements its current supply.
+func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
+	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
+	offering, err := w.relatedOffering(logger, job, data.JobDecrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply--
+
+	err = data.Save(w.db.Querier, offering)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
+}
+
+// IncrementCurrentSupply finds offering and increments its current supply.
+func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
+	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
+	offering, err := w.relatedOffering(logger, job,
+		data.JobIncrementCurrentSupply)
+	if err != nil {
+		return err
+	}
+
+	offering.CurrentSupply++
+
+	err = data.Save(w.db.Querier, offering)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
 }

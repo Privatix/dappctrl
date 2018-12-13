@@ -112,7 +112,7 @@ func jobOfferingPopUpData(gasPrice *big.Int) ([]byte, error) {
 
 func findOfferingsToPopUp(logger log.Logger, db *reform.DB) []reform.Struct {
 	offerings, err := db.SelectAllFrom(data.OfferingTable,
-		`WHERE offer_status in ('registered', 'popped_up')
+		`WHERE status in ('registered', 'popped_up')
 			AND agent IN (SELECT eth_addr FROM accounts)
 			AND (SELECT in_use FROM accounts WHERE eth_addr = agent)
 			AND auto_pop_up`)

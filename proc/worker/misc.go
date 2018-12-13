@@ -267,7 +267,7 @@ func (w *Worker) updateRelatedOffering(job *data.Job, jobType, status string) er
 		return err
 	}
 
-	offering.OfferStatus = status
+	offering.Status = status
 
 	return w.saveRecord(logger, w.db.Querier, offering)
 }

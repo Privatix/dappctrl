@@ -15,13 +15,6 @@ import (
 )
 
 func TestAgentAfterChannelCreate(t *testing.T) {
-	// GetTransactionByHash to retrieve public key
-	// Derive public Client's public key
-	// Add public key to users (ignore on duplicate)
-	// Add new channel to DB.channels with DB.channels.id = DB.jobs.related_id
-	// ch_status="Active"
-	// svc_status="Pending"
-	// "preEndpointMsgCreate"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterChannelCreate,
 		data.JobChannel)
@@ -328,13 +321,6 @@ func testCooperativeCloseCalled(t *testing.T, env *workerTest,
 }
 
 func TestAgentPreEndpointMsgCreate(t *testing.T) {
-	// generate password
-	// store password in DB.channels.password + DB.channels.salt
-	// fill & encrypt & sign endpoint message
-	// store msg in DB.endpoints filling only "NOT NULL" fields
-	// store raw endpoint message in DB.endpoints.raw_msg
-	// msg_status="unpublished"
-	// "preEndpointMsgSOMCPublish"
 	env := newWorkerTest(t)
 	fxt := env.newTestFixture(t, data.JobAgentPreEndpointMsgCreate,
 		data.JobChannel)
@@ -373,9 +359,6 @@ func TestAgentPreEndpointMsgCreate(t *testing.T) {
 }
 
 func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
-	// 1. PSC.registerServiceOffering()
-	// 2. msg_status="bchain_publishing"
-	// 3. offer_status="registered"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentPreOfferingMsgBCPublish,
 		data.JobOffering)
@@ -425,13 +408,9 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
-	if offering.Status != data.MsgBChainPublishing {
-		t.Fatalf("wrong msg status, wanted: %s, got: %s",
-			data.MsgBChainPublishing, offering.Status)
-	}
-	if offering.OfferStatus != data.OfferRegistering {
+	if offering.Status != data.OfferRegistering {
 		t.Fatalf("wrong offering status, wanted: %s, got: %s",
-			data.OfferRegistering, offering.OfferStatus)
+			data.OfferRegistering, offering.Status)
 	}
 
 	testCommonErrors(t, env.worker.AgentPreOfferingMsgBCPublish,
@@ -439,8 +418,6 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 }
 
 func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
-	// 1. msg_status="bchain_published"
-	// 2. "preOfferingMsgSOMCPublish"
 	env := newWorkerTest(t)
 	fixture := env.newTestFixture(t, data.JobAgentAfterOfferingMsgBCPublish,
 		data.JobOffering)
@@ -474,13 +451,9 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 
 	offering := &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
-	if offering.Status != data.MsgBChainPublished {
-		t.Fatalf("wrong msg status, wanted: %s, got: %s",
-			data.MsgBChainPublished, offering.Status)
-	}
-	if offering.OfferStatus != data.OfferRegistered {
+	if offering.Status != data.OfferRegistered {
 		t.Fatalf("wrong offer status, wanted: %s, got: %s",
-			data.OfferRegistered, offering.OfferStatus)
+			data.OfferRegistered, offering.Status)
 	}
 
 	if offering.BlockNumberUpdated != blockNumberUpdated {
@@ -508,9 +481,9 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 	updated := data.Offering{}
 	env.findTo(t, &updated, fxt.job.RelatedID)
 
-	if updated.OfferStatus != data.OfferRemoved {
+	if updated.Status != data.OfferRemoved {
 		t.Fatalf("expected offering status: %s, got: %s",
-			data.OfferRemoved, updated.OfferStatus)
+			data.OfferRemoved, updated.Status)
 	}
 
 	testCommonErrors(t, env.worker.AgentAfterOfferingDelete, *fxt.job)
@@ -533,7 +506,7 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 		t.Fatal("offering status not validated")
 	}
 
-	fxt.Offering.OfferStatus = data.OfferRegistered
+	fxt.Offering.Status = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
 	env.ethBack.OfferingIsActive = true
@@ -565,7 +538,7 @@ func TestAgentPreOfferingDelete(t *testing.T) {
 		[common.HashLength]byte(offeringHash))
 
 	env.db.Reload(fxt.Offering)
-	if fxt.Offering.OfferStatus != data.OfferRemoving {
+	if fxt.Offering.Status != data.OfferRemoving {
 		t.Fatal("offering status not updated")
 	}
 }
@@ -590,7 +563,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 	env.insertToTestDB(t, &duplicatedJob)
 	defer env.deleteFromTestDB(t, &duplicatedJob)
 
-	fxt.Offering.OfferStatus = data.OfferRegistered
+	fxt.Offering.Status = data.OfferRegistered
 	env.updateInTestDB(t, fxt.Offering)
 
 	if err := env.worker.AgentPreOfferingPopUp(
@@ -637,7 +610,7 @@ func TestAgentPreOfferingPopUp(t *testing.T) {
 
 	env.db.Reload(fxt.Offering)
 
-	if fxt.Offering.OfferStatus != data.OfferPoppingUp {
+	if fxt.Offering.Status != data.OfferPoppingUp {
 		t.Fatal("offering status not updated")
 	}
 }
@@ -688,7 +661,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 		t.Fatal("offering block number was not updated")
 	}
 
-	if offering.OfferStatus != data.OfferPoppedUp {
+	if offering.Status != data.OfferPoppedUp {
 		t.Fatal("offering status not updated")
 	}
 }

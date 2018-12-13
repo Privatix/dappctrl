@@ -18,7 +18,7 @@ VALUES ('eth.min.confirmations',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
-        '1000',
+        '11520',
         2,
         'defines number of latest ethereum blocks to retrieve.' ||
         ' If eth.event.freshblocks is null or zero then all events' ||

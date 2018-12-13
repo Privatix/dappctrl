@@ -21,10 +21,10 @@ import (
 
 var (
 	conf struct {
-		DB        *data.DBConfig
-		StderrLog *log.WriterConfig
-		Job       *job.Config
-		Proc      *proc.Config
+		DB   *data.DBConfig
+		Log  *log.WriterConfig
+		Job  *job.Config
+		Proc *proc.Config
 	}
 	logger log.Logger
 
@@ -95,17 +95,21 @@ func TestMain(m *testing.M) {
 	var err error
 
 	conf.DB = data.NewDBConfig()
-	conf.StderrLog = log.NewWriterConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.Proc = proc.NewConfig()
-	util.ReadTestConfig(&conf)
+
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
+
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
+	if err != nil {
+		panic(err)
+	}
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
-
-	logger, err = log.NewStderrLogger(conf.StderrLog)
-	if err != nil {
-		panic(err.Error())
-	}
 
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)

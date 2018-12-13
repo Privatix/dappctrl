@@ -27,7 +27,7 @@ var (
 		ClientBilling *Config
 		DB            *data.DBConfig
 		Job           *job.Config
-		StderrLog     *log.WriterConfig
+		Log           *log.WriterConfig
 		Proc          *proc.Config
 		TestTimeout   uint64
 	}
@@ -255,17 +255,19 @@ func TestPayment(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
-	conf.StderrLog = log.NewWriterConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
-	l, err := log.NewStderrLogger(conf.StderrLog)
+	var err error
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}
-
-	logger = l
 
 	db = data.NewTestDB(conf.DB)
 	queue := job.NewQueue(conf.Job, logger, db, nil)

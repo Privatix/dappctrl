@@ -36,10 +36,6 @@
             "user": "postgres"
         }
     },
-    "DBLog": {
-        "Level": "info",
-        "StackLevel": "error"
-    },
     "EptMsg": {
         "Timeout": 1000
     },
@@ -162,14 +158,6 @@
             }
         },
         "ServerStartupDelay": 10
-    },
-    "StderrLog": {
-        "FileMode": 420,
-        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
-        "Level": "info",
-        "Prefix": "",
-        "StackLevel": "error",
-        "UTC": false
     },
     "TestTimeout": 30,
     "UI": {

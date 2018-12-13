@@ -66,7 +66,10 @@ func TestRecoverServiceStatuses(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = NewDBConfig()
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
 	db = NewTestDB(conf.DB)
 

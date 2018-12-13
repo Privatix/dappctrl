@@ -21,10 +21,10 @@ import (
 
 var (
 	conf struct {
-		DB        *data.DBConfig
-		Eth       *eth.Config
-		Job       *job.Config
-		StderrLog *log.WriterConfig
+		DB  *data.DBConfig
+		Eth *eth.Config
+		Job *job.Config
+		Log *log.WriterConfig
 	}
 	logger             log.Logger
 	db                 *reform.DB
@@ -105,14 +105,17 @@ func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
 	conf.Eth = eth.NewConfig()
 	conf.Job = job.NewConfig()
-	conf.StderrLog = log.NewWriterConfig()
-	util.ReadTestConfig(&conf)
-
-	l, err := log.NewStderrLogger(conf.StderrLog)
-	if err != nil {
-		panic(err.Error())
+	conf.Log = log.NewWriterConfig()
+	args := &util.TestArgs{
+		Conf: &conf,
 	}
-	logger = l
+	util.ReadTestArgs(args)
+
+	var err error
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
+	if err != nil {
+		panic(err)
+	}
 
 	db = data.NewTestDB(conf.DB)
 

@@ -111,19 +111,22 @@ func TestMain(m *testing.M) {
 	var (
 		conf struct {
 			DB  *data.DBConfig
-			Log *log.FileConfig
+			Log *log.WriterConfig
 			Job *job.Config
 		}
 		err error
 	)
 	conf.DB = data.NewDBConfig()
-	conf.Log = log.NewFileConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.Job = job.NewConfig()
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err = log.NewStderrLogger(conf.Log.WriterConfig)
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}

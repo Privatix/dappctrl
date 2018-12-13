@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/agent/somcsrv"
 	"github.com/privatix/dappctrl/data"
@@ -14,8 +14,8 @@ import (
 
 var (
 	conf struct {
-		DB        *data.DBConfig
-		StderrLog *log.WriterConfig
+		DB  *data.DBConfig
+		Log *log.WriterConfig
 	}
 	db      *reform.DB
 	handler *somcsrv.Handler
@@ -23,16 +23,19 @@ var (
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
-	conf.StderrLog = log.NewWriterConfig()
-	util.ReadTestConfig(&conf)
+	conf.Log = log.NewWriterConfig()
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
-	db = data.NewTestDB(conf.DB)
-	defer data.CloseDB(db)
-
-	logger, err := log.NewStderrLogger(conf.StderrLog)
+	logger, err := log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}
+
+	db = data.NewTestDB(conf.DB)
+	defer data.CloseDB(db)
 
 	handler = somcsrv.NewHandler(db, logger)
 

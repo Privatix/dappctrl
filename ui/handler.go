@@ -30,7 +30,7 @@ func NewHandler(logger log.Logger, db *reform.DB,
 	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
 	processor *proc.Processor,
 	somcClientBuilder somc.ClientBuilderInterface) *Handler {
-	logger = logger.Add("type", "uisrv.Handler")
+	logger = logger.Add("type", "ui.Handler")
 	return &Handler{
 		logger:            logger,
 		db:                db,

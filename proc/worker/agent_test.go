@@ -421,7 +421,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		data.OfferingSOMCTor, data.Base64String(""))
+		data.OfferingSOMCTor, data.FromBytes([]byte("testhostname")))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)

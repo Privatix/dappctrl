@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -574,10 +573,12 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(publishData.GasPrice)
 
+	if w.torHostName == "" {
+		return ErrTorNoSet
+	}
+
 	offering.SOMCType = data.OfferingSOMCTor
 	offering.SOMCData = w.torHostName
-
-	fmt.Println(minDeposit)
 
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(common.BytesToHash(offeringHash)),

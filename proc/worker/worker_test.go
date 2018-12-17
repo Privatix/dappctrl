@@ -83,7 +83,7 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	worker, err := NewWorker(logger, db, ethBack, conf.Gas, conf.pscAddr,
 		conf.PayServer.Addr, pwdStorage, conf.Country, data.TestToPrivateKey,
-		conf.EptMsg, "", somc.NewTestClientBuilder(testClient))
+		conf.EptMsg, "testhostname", somc.NewTestClientBuilder(testClient))
 	if err != nil {
 		panic(err)
 	}

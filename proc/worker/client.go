@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -978,6 +979,10 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		"currentSupply", currentSupply)
 
 	client, err := w.somcClientBuilder.NewClient(somcType, somcData)
+	if err == somc.ErrUnknownSOMCType {
+		logger.Warn(err.Error())
+		return nil
+	}
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrFindOfferings

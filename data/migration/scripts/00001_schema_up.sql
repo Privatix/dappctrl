@@ -230,7 +230,9 @@ CREATE TABLE offerings (
 
     somc_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
 
-    somc_data text NOT NULL -- additional data to support defined somc_type.
+    somc_data text NOT NULL, -- additional data to support defined somc_type
+
+    somc_success_ping timestamp with time zone  -- last success ping to somc.
 );
 
 -- State channels.

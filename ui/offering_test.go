@@ -549,3 +549,31 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		t.Fatalf("wanted: %v, got: %v", max, res.MaxPrice)
 	}
 }
+
+func TestPingOfferings(t *testing.T) {
+	fxt, assertErrorEquals := newTest(t, "PingOfferings")
+	defer fxt.close()
+
+	_, err := handler.PingOfferings("wrong-password", []string{"sdfs"})
+	assertErrorEquals(ui.ErrAccessDenied, err)
+
+	_, err = handler.PingOfferings(data.TestPassword, []string{util.NewUUID()})
+	assertErrorEquals(ui.ErrOfferingNotFound, err)
+
+	ret, err := handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID})
+	assertErrorEquals(nil, err)
+	if !ret[fxt.Offering.ID] {
+		t.Fatalf("wrong ping result: got %v", ret)
+	}
+	fxt.DB.Reload(fxt.Offering)
+	if fxt.Offering.SOMCSuccessPing == nil {
+		t.Fatalf("somc success ping time not recorded")
+	}
+
+	testSOMCClient.Err = errors.New("test error")
+	ret, err = handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID})
+	assertErrorEquals(nil, err)
+	if ret[fxt.Offering.ID] {
+		t.Fatalf("wrong ping result, got %v", ret)
+	}
+}

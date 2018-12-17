@@ -1178,6 +1178,36 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOf
 </details>
 </details>
 
+#### Ping Offerings
+
+*Method*:	`pingOfferings`
+
+*Description*: Ping offerings.
+
+*Parameters*:
+1. Password (string)
+2. IDs of Offerings to ping (string)
+
+*Result*: Object with IDs of Offerings as keys as ping result as values.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_pingOfferings", "params": ["qwert", ["687f26ab-5c62-4b05-8225-12e102a99450"]], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {
+        "687f26ab-5c62-4b05-8225-12e102a99450": true
+    }
+}
+```
+</details>
+</details>
+
 
 ### Ethereum Logs
 

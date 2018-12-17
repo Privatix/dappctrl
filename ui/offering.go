@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -85,16 +86,8 @@ func (h *Handler) AcceptOffering(password string, account data.HexString,
 		return nil, ErrDepositTooSmall
 	}
 
-	client, err := h.somcClientBuilder.NewClient(offer.SOMCType, offer.SOMCData)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrSOMCIsNotAvailable
-	}
-
-	err = client.Ping()
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrSOMCIsNotAvailable
+	if err := h.pingOffering(logger, offer); err != nil {
+		return nil, err
 	}
 
 	rid := util.NewUUID()
@@ -524,4 +517,50 @@ func (h *Handler) GetClientOfferingsFilterParams(
 	}
 
 	return &GetClientOfferingsFilterParamsResult{countries, min, max}, nil
+}
+
+// PingOfferings given offerings ids pings each of them and returns result of the test.
+func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool, error) {
+	logger := h.logger.Add("method", "PingOffeirngs")
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	ret := make(map[string]bool)
+	for _, id := range ids {
+		offering, err := h.findActiveOfferingByID(logger, id)
+		if err != nil {
+			return nil, err
+		}
+		err = h.pingOffering(logger, offering)
+		if err == nil {
+			ret[id] = true
+			offering.SOMCSuccessPing = &now
+			err = update(logger, h.db.Querier, offering)
+			if err != nil {
+				logger.Warn(err.Error())
+			}
+		} else {
+			ret[id] = false
+			logger.Debug(err.Error())
+		}
+	}
+
+	return ret, nil
+}
+
+func (h *Handler) pingOffering(logger log.Logger, offering *data.Offering) error {
+	client, err := h.somcClientBuilder.NewClient(offering.SOMCType, offering.SOMCData)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrSOMCIsNotAvailable
+	}
+	err = client.Ping()
+	if err != nil {
+		logger.Warn(err.Error())
+		return ErrSOMCIsNotAvailable
+	}
+	return err
 }

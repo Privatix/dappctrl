@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -521,7 +522,7 @@ func (h *Handler) GetClientOfferingsFilterParams(
 
 // PingOfferings given offerings ids pings each of them and returns result of the test.
 func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool, error) {
-	logger := h.logger.Add("method", "PingOffeirngs")
+	logger := h.logger.Add("method", "PingOfferings", "ids", ids)
 
 	if err := h.checkPassword(logger, password); err != nil {
 		return nil, err
@@ -529,25 +530,32 @@ func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool,
 
 	now := time.Now()
 	ret := make(map[string]bool)
+
+	wg := new(sync.WaitGroup)
 	for _, id := range ids {
 		offering, err := h.findActiveOfferingByID(logger, id)
 		if err != nil {
 			return nil, err
 		}
-		err = h.pingOffering(logger, offering)
-		if err == nil {
-			ret[id] = true
-			offering.SOMCSuccessPing = &now
-			err = update(logger, h.db.Querier, offering)
-			if err != nil {
-				logger.Warn(err.Error())
+		go func(offering *data.Offering) {
+			err := h.pingOffering(logger, offering)
+			if err == nil {
+				ret[offering.ID] = true
+				offering.SOMCSuccessPing = &now
+				err = update(logger, h.db.Querier, offering)
+				if err != nil {
+					logger.Warn(err.Error())
+				}
+			} else {
+				ret[offering.ID] = false
+				logger.Debug(err.Error())
 			}
-		} else {
-			ret[id] = false
-			logger.Debug(err.Error())
-		}
+			wg.Done()
+		}(offering)
+		wg.Add(1)
 	}
 
+	wg.Wait()
 	return ret, nil
 }
 

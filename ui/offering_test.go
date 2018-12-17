@@ -560,9 +560,14 @@ func TestPingOfferings(t *testing.T) {
 	_, err = handler.PingOfferings(data.TestPassword, []string{util.NewUUID()})
 	assertErrorEquals(ui.ErrOfferingNotFound, err)
 
-	ret, err := handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID})
+	offering := *fxt.Offering
+	offering.ID = util.NewUUID()
+	offering.Hash = data.HexString("sdfsdf")
+	data.InsertToTestDB(t, fxt.DB, &offering)
+	defer data.DeleteFromTestDB(t, fxt.DB, &offering)
+	ret, err := handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID, offering.ID})
 	assertErrorEquals(nil, err)
-	if !ret[fxt.Offering.ID] {
+	if !ret[fxt.Offering.ID] || !ret[offering.ID] {
 		t.Fatalf("wrong ping result: got %v", ret)
 	}
 	fxt.DB.Reload(fxt.Offering)

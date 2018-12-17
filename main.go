@@ -250,6 +250,10 @@ func main() {
 	defer closer.Close()
 	defer panicHunter(logger)
 
+	if err := data.Recover(db); err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, os.Kill)
 

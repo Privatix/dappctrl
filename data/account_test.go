@@ -4,21 +4,12 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/util"
 )
-
-func TestMain(m *testing.M) {
-	// Ignore config flags when run all packages tests.
-	util.ReadTestConfig(&struct{}{})
-
-	os.Exit(m.Run())
-}
 
 func TestPrivateKeyEncrypttionAndDecryption(t *testing.T) {
 	auth := "test-passphrase"

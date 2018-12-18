@@ -62,7 +62,7 @@ func (m *Monitor) queryLogsAndCreateJobs(
 					log.Topics[0].Hex() + ". skipping")
 				continue
 			}
-			jobs, err := producerF(jEthLog)
+			jobs, err := producerF(jEthLog, jobsToCreate)
 			if err != nil {
 				return err
 			}

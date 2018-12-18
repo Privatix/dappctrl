@@ -55,6 +55,12 @@ func NewTestEthBackend(pscAddr common.Address) *TestEthBackend {
 	return b
 }
 
+// PendingNonceAt returns the account nonce of the given account in the pending state.
+// This is the nonce that should be used for the next transaction.
+func (b *TestEthBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+	return 123, nil
+}
+
 // LatestBlockNumber is mock to LatestBlockNumber.
 func (b *TestEthBackend) LatestBlockNumber(ctx context.Context) (*big.Int, error) {
 	block := b.BlockNumber

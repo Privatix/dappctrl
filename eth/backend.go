@@ -19,6 +19,8 @@ import (
 
 // Backend adapter to communicate with contract.
 type Backend interface {
+	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
+
 	LatestBlockNumber(ctx context.Context) (*big.Int, error)
 
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
@@ -193,6 +195,14 @@ func (b *backendInstance) connectionControl() {
 
 		logger.Debug("Ethereum communication checked")
 	}
+}
+
+// PendingNonceAt returns the account nonce of the given account in the pending state.
+// This is the nonce that should be used for the next transaction.
+func (b *backendInstance) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+	ctx, cancel := b.addTimeout(ctx)
+	defer cancel()
+	return b.conn.ethClient().PendingNonceAt(ctx, account)
 }
 
 // LatestBlockNumber returns a block number from the current canonical chain.

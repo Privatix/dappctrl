@@ -532,6 +532,7 @@ func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool,
 	ret := make(map[string]bool)
 
 	wg := new(sync.WaitGroup)
+	wg.Add(len(ids))
 	for _, id := range ids {
 		offering, err := h.findActiveOfferingByID(logger, id)
 		if err != nil {
@@ -552,9 +553,7 @@ func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool,
 			}
 			wg.Done()
 		}(offering)
-		wg.Add(1)
 	}
-
 	wg.Wait()
 	return ret, nil
 }

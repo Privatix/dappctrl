@@ -633,8 +633,27 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 
 // AgentAfterOfferingDelete set offering status to `remove`
 func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
-	return w.updateRelatedOffering(job, data.JobAgentAfterOfferingDelete,
-		data.OfferRemoved)
+	logger := w.logger.Add(
+		"method", "AgentAfterOfferingDelete", "job", job)
+
+	offering, err := w.relatedOffering(
+		logger, job, data.JobAgentAfterOfferingDelete)
+	if err != nil {
+		return err
+	}
+	offering.OfferStatus = data.OfferRemoved
+
+	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
+		return err
+	}
+
+	agent, err := w.account(logger, offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(logger, nil,
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentPreOfferingDelete calls psc remove an offering.

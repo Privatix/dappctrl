@@ -500,6 +500,9 @@ func TestAgentAfterOfferingDelete(t *testing.T) {
 
 	runJob(t, env.worker.AgentAfterOfferingDelete, fxt.job)
 
+	defer env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fxt.Account.ID)
+
 	updated := data.Offering{}
 	env.findTo(t, &updated, fxt.job.RelatedID)
 

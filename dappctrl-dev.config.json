@@ -128,7 +128,6 @@
                 "TryPeriod": 30000
             },
             "clientAfterOfferingMsgBCPublish": {
-                "FirstStartDelay": 30000,
                 "TryLimit": 10,
                 "TryPeriod": 60000
             },

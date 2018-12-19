@@ -430,6 +430,11 @@ func checkClientChannelUsage(
 		t.Fatal("unsupported unit type")
 	}
 
+	if resp.Usage.UnitName != offer.UnitName {
+		t.Fatalf("expected %s, got: %s",
+			offer.UnitName, resp.Usage.UnitName)
+	}
+
 	if resp.Usage.Current != usage {
 		t.Fatalf("expected %d, got: %d",
 			usage, resp.Usage.Current)
@@ -484,7 +489,9 @@ func TestGetChannelUsage(t *testing.T) {
 	assertErrEqual(nil, err)
 
 	if ret == nil || ret.Current != expectedCurrentUsage ||
-		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.MaxUsage != expectedMaxUsage ||
+		ret.UnitName != offering.UnitName ||
+		ret.UnitType != offering.UnitType ||
 		ret.Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}
@@ -500,7 +507,9 @@ func TestGetChannelUsage(t *testing.T) {
 	assertErrEqual(nil, err)
 
 	if ret == nil || ret.Current != expectedCurrentUsage ||
-		ret.MaxUsage != expectedMaxUsage || ret.Unit != offering.UnitType ||
+		ret.MaxUsage != expectedMaxUsage ||
+		ret.UnitName != offering.UnitName ||
+		ret.UnitType != offering.UnitType ||
 		ret.Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}

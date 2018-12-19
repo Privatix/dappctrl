@@ -69,7 +69,8 @@ type jobBlock struct {
 type Usage struct {
 	Current  uint64 `json:"current"`
 	MaxUsage uint64 `json:"maxUsage"`
-	Unit     string `json:"unit"`
+	UnitName string `json:"unitName"`
+	UnitType string `json:"unitType"`
 	Cost     uint64 `json:"cost"`
 }
 
@@ -318,7 +319,8 @@ func newUsage(channel *data.Channel, offering *data.Offering,
 	result.Cost = cost
 	result.Current = usage
 	result.MaxUsage = deposit
-	result.Unit = offering.UnitType
+	result.UnitName = offering.UnitName
+	result.UnitType = offering.UnitType
 
 	return result
 }

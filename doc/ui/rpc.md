@@ -499,7 +499,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                 "usage":{
                     "current":400,
                     "maxUsage":454,
-                    "unit":"units",
+                    "unitName":"MB",
+                    "unitType":"units",
                     "cost":8811
                 }
             }
@@ -545,7 +546,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                 "usage":{
                     "current":400,
                     "maxUsage":454,
-                    "unit":"units",
+                    "unitName":"MB",
+                    "unitType":"units",
                     "cost":8811
                 }
             }
@@ -602,7 +604,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
     "result": {
                     "current":400,
                     "maxUsage":454,
-                    "unit":"units",
+                    "unitName":"MB",
+                    "unitType":"units",
                     "cost":8811
                 }
 }

@@ -48,10 +48,6 @@ func (w *Worker) checkDeposit(logger log.Logger, acc *data.Account,
 		return ErrInsufficientPSCBalance
 	}
 
-	if deposit < data.MinDeposit(offer) {
-		return ErrSmallDeposit
-	}
-
 	return nil
 }
 
@@ -178,6 +174,10 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 
 	if err := w.checkDeposit(logger, acc, offering, deposit); err != nil {
 		return err
+	}
+
+	if deposit < data.MinDeposit(offering) {
+		return ErrSmallDeposit
 	}
 
 	offerHash, err := data.HexToHash(offering.Hash)
@@ -778,17 +778,12 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 		return err
 	}
 
-	deposit := data.MinDeposit(offer)
-	if jdata.Deposit > deposit {
-		deposit = jdata.Deposit
-	}
-
-	if err := w.checkDeposit(logger, acc, offer, deposit); err != nil {
+	if err := w.checkDeposit(logger, acc, offer, jdata.Deposit); err != nil {
 		return err
 	}
 
 	return w.clientPreChannelTopUpSaveTx(logger, job, ch, acc, offer,
-		jdata.GasPrice, new(big.Int).SetUint64(deposit))
+		jdata.GasPrice, new(big.Int).SetUint64(jdata.Deposit))
 }
 
 // ClientAfterChannelTopUp updates deposit of a channel.

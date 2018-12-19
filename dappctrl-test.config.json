@@ -141,22 +141,16 @@
         "ServerStartupDelay": 10
     },
     "Role": "agent",
+    "Sess": {
+        "Addr": "localhost:8000",
+        "AllowedOrigins": ["*"],
+        "TLS": null
+    },
     "SOMCServer": {
         "Addr": "localhost:5555",
         "TLS": null
     },
-    "SessionServer": {
-        "Addr": "localhost:8000",
-        "TLS": null
-    },
-    "SessionServerTest": {
-        "Product": {
-            "ValidFormatConfig": {
-                "A": "A",
-                "B": "B",
-                "C": "C"
-            }
-        },
+    "SOMCTest": {
         "ServerStartupDelay": 10
     },
     "TestTimeout": 30,

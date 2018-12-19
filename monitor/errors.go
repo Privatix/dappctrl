@@ -15,6 +15,7 @@ const (
 	ErrWrongNumberOfEventArgs
 	ErrWrongBlockArgumentType
 	ErrUnsupportedTopic
+	ErrInternal
 )
 
 var errMsgs = errors.Messages{
@@ -29,6 +30,7 @@ var errMsgs = errors.Messages{
 	ErrWrongNumberOfEventArgs: "wrong number of event arguments",
 	ErrWrongBlockArgumentType: "wrong block number argument type",
 	ErrUnsupportedTopic:       "unsupported topic",
+	ErrInternal:               "an internal error occurred",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

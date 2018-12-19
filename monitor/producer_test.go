@@ -334,7 +334,7 @@ func TestJobsProducers(t *testing.T) {
 		testProducedJobs(t, clientProducersMap, tc.l, nil, tc.clientProduced)
 	}
 
-	// Decrement current supply needs to find offering to decerement supply at.
+	// Decrement/Increment current supply needs to find offering to decerement supply at.
 	// If related Offering created job was not yet in db, it is most
 	// likely in current list of jobs to create, which is in memory.
 	// Test case below ensures decrement current supply correctly examines produced jobs
@@ -410,6 +410,43 @@ func TestJobsProducers(t *testing.T) {
 	} {
 		testProducedJobs(t, clientProducersMap, test.log, producingJobs, test.ret)
 	}
+
+	// It is possilbe to have both uncooperative and cooperative close logs related
+	// to the same channel. This tests increment current supply job not created
+	// for cooperative channel close if there were uncooperative channel close
+	// and increment job.
+	randHash1 := randHash()
+	randHash2 := randHash()
+	offeringHash = common.HexToHash(string(fxt.Offering.Hash))
+	jobData, _ = json.Marshal(&data.JobData{EthLog: &data.JobEthLog{
+		Topics: []common.Hash{
+			eth.ServiceUnCooperativeChannelClose,
+			randHash1,
+			randHash2,
+			offeringHash,
+		},
+		Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+	}})
+	uncoopIncrementJob := &data.Job{
+		ID:          util.NewUUID(),
+		Type:        data.JobIncrementCurrentSupply,
+		RelatedID:   fxt.Offering.ID,
+		RelatedType: data.JobOffering,
+		Data:        jobData,
+		Status:      data.JobActive,
+		CreatedBy:   data.JobBCMonitor,
+	}
+	data.InsertToTestDB(t, fxt.DB, uncoopIncrementJob)
+	defer data.DeleteFromTestDB(t, fxt.DB, uncoopIncrementJob)
+	testProducedJobs(t, clientProducersMap, &data.JobEthLog{
+		Topics: []common.Hash{
+			eth.ServiceCooperativeChannelClose,
+			randHash1,
+			randHash2,
+			offeringHash,
+		},
+		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+	}, nil, nil)
 }
 
 func testProducedJobs(t *testing.T, producers monitor.JobsProducers,

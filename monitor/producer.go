@@ -133,9 +133,18 @@ func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog, producingJo
 	}
 
 	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
-
 	if err != nil {
 		return nil, err
+	}
+
+	if len(updateJobs) > 0 {
+		created, err := m.incrementSupplyAlreadyCreated(l)
+		if err != nil {
+			return nil, err
+		}
+		if created {
+			return jobs, nil
+		}
 	}
 
 	return append(jobs, updateJobs...), nil
@@ -289,7 +298,6 @@ func (m *Monitor) updateCurrentSupplyJobs(
 	if oid == "" {
 		oid = m.offeringCreateJobRelatedID(offering)
 		if oid == "" {
-			fmt.Println("m.findByHashIn(offering, producingJobs)")
 			oid = m.findByHashIn(offering, producingJobs)
 		}
 		if oid == "" {
@@ -343,10 +351,10 @@ func (m *Monitor) getOpenBlockNumber(
 }
 
 func (m *Monitor) offeringCreateJobRelatedID(hash common.Hash) string {
-	hashHex := fmt.Sprintf("0x%064v", hash.Hex())
+	hashHex := hashToHex(hash)
 	job := &data.Job{}
 	err := m.db.SelectOneTo(job,
-		`WHERE data->'ethereum_logs'->'topics'->>2 = $1
+		`WHERE data->'ethereumLog'->'topics'->>2 = $1
 		    AND jobs.type in ($2, $3)`,
 		hashHex,
 		data.JobClientAfterOfferingMsgBCPublish,
@@ -382,6 +390,56 @@ func (m *Monitor) findByHashIn(hash common.Hash, jobs []data.Job) string {
 	return ""
 }
 
+func (m *Monitor) incrementSupplyAlreadyCreated(l *data.JobEthLog) (bool, error) {
+	if l.Topics[0] != eth.ServiceCooperativeChannelClose && len(l.Topics) != 4 {
+		return false, ErrWrongNumberOfEventArgs
+	}
+	// Find cooperative closing channel block number.
+	inputs := m.pscABI.Events[logUnCooperativeChannelClose].Inputs
+	args, err := inputs.UnpackValues(l.Data)
+	if err != nil {
+		m.logger.Error(err.Error())
+		return false, ErrInternal
+	}
+	closingChannelblock := args[0].(uint32)
+
+	event := hashToHex(eth.ServiceUnCooperativeChannelClose)
+	agent := hashToHex(l.Topics[1])
+	client := hashToHex(l.Topics[2])
+	offering := hashToHex(l.Topics[3])
+	jobsStructs, err := m.db.SelectAllFrom(data.JobTable,
+		`WHERE data->'ethereumLog'->'topics'->>0 = $1
+			AND data->'ethereumLog'->'topics'->>1 = $2
+			AND data->'ethereumLog'->'topics'->>2 = $3
+			AND data->'ethereumLog'->'topics'->>3 = $4
+			AND type = $5`,
+		event, agent, client, offering, data.JobIncrementCurrentSupply,
+	)
+	if err != nil {
+		m.logger.Error(err.Error())
+		return false, ErrInternal
+	}
+	for _, item := range jobsStructs {
+		job := item.(*data.Job)
+		jdata := &data.JobData{}
+		err := json.Unmarshal(job.Data, jdata)
+		if err != nil {
+			m.logger.Error(err.Error())
+			return false, ErrInternal
+		}
+		inputs := m.pscABI.Events[logCooperativeChannelClose].Inputs
+		args, err := inputs.UnpackValues(jdata.EthLog.Data)
+		if err != nil {
+			m.logger.Error(err.Error())
+			return false, ErrInternal
+		}
+		if args[0].(uint32) == closingChannelblock {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
 	logger := m.logger.Add("method", "blockNumber")
 
@@ -405,4 +463,12 @@ func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
 	}
 
 	return blockNumber, nil
+}
+
+func hashToHex(hash common.Hash) string {
+	ret := hash.Hex()
+	if len(ret) < 2 || ret[:2] != "0x" {
+		ret = fmt.Sprintf("0x%064v", hash.Hex())
+	}
+	return ret
 }

@@ -329,15 +329,129 @@ func TestJobsProducers(t *testing.T) {
 		},
 	} {
 		t.Log("before", i)
-		testProducedJobs(t, agentProducersMap, tc.l, tc.agentProduced)
+		testProducedJobs(t, agentProducersMap, tc.l, nil, tc.agentProduced)
 		t.Log("after", i)
-		testProducedJobs(t, clientProducersMap, tc.l, tc.clientProduced)
+		testProducedJobs(t, clientProducersMap, tc.l, nil, tc.clientProduced)
 	}
+
+	// Decrement/Increment current supply needs to find offering to decerement supply at.
+	// If related Offering created job was not yet in db, it is most
+	// likely in current list of jobs to create, which is in memory.
+	// Test case below ensures decrement current supply correctly examines produced jobs
+	// to find related offering id from job that is not yet in db.
+	offeringHash = randHash()
+	ethLog := &data.JobEthLog{
+		Topics: []common.Hash{randHash(), randHash(), offeringHash},
+	}
+	jobData, _ := json.Marshal(&data.JobData{EthLog: ethLog})
+	producingJobs := []data.Job{{
+		Type:        data.JobClientAfterOfferingMsgBCPublish,
+		RelatedID:   util.NewUUID(),
+		RelatedType: data.JobOffering,
+		Data:        jobData,
+	}}
+	for _, test := range []struct {
+		log *data.JobEthLog
+		ret []data.Job
+	}{
+		{
+			log: &data.JobEthLog{
+				Topics: []common.Hash{
+					eth.ServiceChannelCreated,
+					randHash(),
+					randHash(),
+					offeringHash,
+				},
+			},
+			ret: []data.Job{
+				{
+					RelatedID:   producingJobs[0].RelatedID,
+					RelatedType: data.JobOffering,
+					Type:        data.JobDecrementCurrentSupply,
+				},
+			},
+		},
+		{
+			log: &data.JobEthLog{
+				Topics: []common.Hash{
+					eth.ServiceCooperativeChannelClose,
+					randHash(),
+					randHash(),
+					offeringHash,
+				},
+				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+			},
+			ret: []data.Job{
+				{
+					RelatedID:   producingJobs[0].RelatedID,
+					RelatedType: data.JobOffering,
+					Type:        data.JobIncrementCurrentSupply,
+				},
+			},
+		},
+		{
+			log: &data.JobEthLog{
+				Topics: []common.Hash{
+					eth.ServiceUnCooperativeChannelClose,
+					randHash(),
+					randHash(),
+					offeringHash,
+				},
+				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+			},
+			ret: []data.Job{
+				{
+					RelatedID:   producingJobs[0].RelatedID,
+					RelatedType: data.JobOffering,
+					Type:        data.JobIncrementCurrentSupply,
+				},
+			},
+		},
+	} {
+		testProducedJobs(t, clientProducersMap, test.log, producingJobs, test.ret)
+	}
+
+	// It is possilbe to have both uncooperative and cooperative close logs related
+	// to the same channel. This tests increment current supply job not created
+	// for cooperative channel close if there were uncooperative channel close
+	// and increment job.
+	randHash1 := randHash()
+	randHash2 := randHash()
+	offeringHash = common.HexToHash(string(fxt.Offering.Hash))
+	jobData, _ = json.Marshal(&data.JobData{EthLog: &data.JobEthLog{
+		Topics: []common.Hash{
+			eth.ServiceUnCooperativeChannelClose,
+			randHash1,
+			randHash2,
+			offeringHash,
+		},
+		Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+	}})
+	uncoopIncrementJob := &data.Job{
+		ID:          util.NewUUID(),
+		Type:        data.JobIncrementCurrentSupply,
+		RelatedID:   fxt.Offering.ID,
+		RelatedType: data.JobOffering,
+		Data:        jobData,
+		Status:      data.JobActive,
+		CreatedBy:   data.JobBCMonitor,
+	}
+	data.InsertToTestDB(t, fxt.DB, uncoopIncrementJob)
+	defer data.DeleteFromTestDB(t, fxt.DB, uncoopIncrementJob)
+	testProducedJobs(t, clientProducersMap, &data.JobEthLog{
+		Topics: []common.Hash{
+			eth.ServiceCooperativeChannelClose,
+			randHash1,
+			randHash2,
+			offeringHash,
+		},
+		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+	}, nil, nil)
 }
 
 func testProducedJobs(t *testing.T, producers monitor.JobsProducers,
-	l *data.JobEthLog, jobs []data.Job) {
-	produced, err := producers[l.Topics[0]](l)
+	l *data.JobEthLog, alreadyProducedJobs, jobs []data.Job) {
+	produced, err := producers[l.Topics[0]](l, alreadyProducedJobs)
 	util.TestExpectResult(t, "produceFunc", nil, err)
 	if len(jobs) != len(produced) {
 		t.Fatalf("wanted %v jobs, got: %v", len(jobs),

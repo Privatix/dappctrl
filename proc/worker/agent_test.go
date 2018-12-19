@@ -469,6 +469,8 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	})
 
 	runJob(t, env.worker.AgentAfterOfferingMsgBCPublish, fixture.job)
+	defer env.deleteJob(t, data.JobAccountUpdateBalances,
+		data.JobAccount, fixture.Account.ID)
 
 	offering := &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)

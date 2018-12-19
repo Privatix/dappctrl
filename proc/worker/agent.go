@@ -628,7 +628,13 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return ErrInternal
 	}
 
-	return nil
+	agent, err := w.account(logger, offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(logger, nil,
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentAfterOfferingDelete set offering status to `remove`

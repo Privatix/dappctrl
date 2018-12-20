@@ -216,6 +216,7 @@ func TestSubscribe(t *testing.T) {
 
 	job2 := job1
 	job2.Type = "b"
+	job2.RelatedID = util.NewUUID()
 
 	var q *queue
 	handlers := HandlerMap{
@@ -245,8 +246,13 @@ func TestSubscribe(t *testing.T) {
 	util.TestExpectResult(t, "Add job", nil, q.Add(nil, &job1))
 	util.TestExpectResult(t, "Subscribe", nil,
 		q.Subscribe([]string{job1.RelatedID}, "1234", subf))
+	util.TestExpectResult(t, "Subscribe", nil,
+		q.Subscribe([]string{job2.Type}, "4321", subf))
+
 	util.TestExpectResult(t, "Subscribe", ErrSubscriptionExists,
 		q.Subscribe([]string{job1.RelatedID}, "1234", subf))
+	util.TestExpectResult(t, "Subscribe", ErrSubscriptionExists,
+		q.Subscribe([]string{job2.Type}, "4321", subf))
 
 	if params := <-subch; params.job.ID != job1.ID ||
 		params.result == nil || params.result.Error() != "some error" {
@@ -261,8 +267,13 @@ func TestSubscribe(t *testing.T) {
 
 	util.TestExpectResult(t, "Unsubscribe", nil,
 		q.Unsubscribe([]string{job1.RelatedID}, "1234"))
+	util.TestExpectResult(t, "Unsubscribe", nil,
+		q.Unsubscribe([]string{job2.Type}, "4321"))
+
 	util.TestExpectResult(t, "Unsubscribe", ErrSubscriptionNotFound,
 		q.Unsubscribe([]string{job1.RelatedID}, "1234"))
+	util.TestExpectResult(t, "Unsubscribe", ErrSubscriptionNotFound,
+		q.Unsubscribe([]string{job2.Type}, "4321"))
 }
 
 func TestMain(m *testing.M) {

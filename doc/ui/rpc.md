@@ -1870,7 +1870,8 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRo
 *Parameters*:
 1. Token (string)
 2. Type (string, can be `offering`, `channel`, `endpoint` or `account`)
-3. Object ids (array of strings)
+3. Subscription keys (each key can be a related object id or a job type, array
+of strings)
 
 *Notification result (object)*:
 - `object` (object) - changed object

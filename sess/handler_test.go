@@ -47,10 +47,14 @@ func newTestFixture(t *testing.T) *data.TestFixture {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
+<<<<<<< HEAD
 	args := &util.TestArgs{
 		Conf: &conf,
 	}
 	util.ReadTestArgs(args)
+=======
+	util.ReadTestArgs(&util.TestArgs{Conf: &conf})
+>>>>>>> Implement ConnChange subscriptions
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)

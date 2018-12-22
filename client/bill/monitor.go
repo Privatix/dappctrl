@@ -198,11 +198,11 @@ func (m *Monitor) isToBeTerminated(logger log.Logger,
 
 	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
 		ch.ReceiptBalance == ch.TotalDeposit {
-		logger.Debug("channel is complete")
+		logger.Debug("channel reached its max. deposit")
 		return true, nil
 	}
 
-	logger.Debug("channel not complete")
+	logger.Debug("channel max. deposit is not reached")
 
 	reached, err := m.maxInactiveTimeReached(ch, offer)
 	if err != nil {

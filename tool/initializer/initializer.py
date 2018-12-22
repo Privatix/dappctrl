@@ -3355,7 +3355,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             if self.in_args['update_bin']:
                 self.dappvpn_route = dappvpn() + '/'
                 self.dappctrl_route = dappctrl() + '/'
-            elif self.in_args['update_back'] or self.in_args['no_gui']:
+            elif self.in_args['update_back'] or self.in_args['no_gui'] or self.in_args['cli']:
                 self.back_route = back()
             elif self.in_args['update_gui']:
                 self.gui_route = gui()

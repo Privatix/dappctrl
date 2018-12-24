@@ -10,10 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/somc/fake"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -31,7 +31,7 @@ var (
 	db             *reform.DB
 	handler        *ui.Handler
 	client         *rpc.Client
-	testSOMCClient *somc.TestClient
+	testSOMCClient *fake.TestClient
 	testToken      *dumbToken
 )
 
@@ -131,11 +131,11 @@ func TestMain(m *testing.M) {
 
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
-	testSOMCClient = somc.NewTestClient()
+	testSOMCClient = fake.NewTestClient()
 	testToken = &dumbToken{}
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
 		data.TestEncryptedKey, data.TestToPrivateKey,
-		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient),
+		data.RoleAgent, nil, fake.NewTestClientBuilder(testSOMCClient),
 		testToken)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)

@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/privatix/dappctrl/client/somc"
+	"github.com/privatix/dappctrl/somc"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"

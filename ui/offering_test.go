@@ -3,6 +3,7 @@ package ui_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"gopkg.in/reform.v1"
@@ -20,6 +21,7 @@ type testOfferingData struct {
 	isLocal            bool
 	blockNumberUpdated uint64
 	currentSupply      uint16
+	somcType           uint8
 }
 
 type testGetAgentOfferingsArgs struct {
@@ -40,6 +42,8 @@ type testGetClientOfferingsArgs struct {
 	offset       uint
 	limit        uint
 	total        int
+	useTor       bool
+	useDirect    bool
 }
 
 type testField struct {
@@ -108,26 +112,25 @@ func TestAcceptOffering(t *testing.T) {
 	}
 }
 
-func createTestOffering(fxt *fixture, agent data.HexString,
-	status, country string, isLocal bool,
-	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
+func createTestOffering(fxt *fixture, d *testOfferingData) *data.Offering {
 	offering := data.NewTestOffering(
-		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
-	if status != "" {
-		offering.Status = status
+		d.agent, fxt.Product.ID, fxt.TemplateOffer.ID)
+	if d.status != "" {
+		offering.Status = d.status
 	}
 
-	if country != "" {
-		offering.Country = country
+	if d.country != "" {
+		offering.Country = d.country
 	}
 
-	offering.IsLocal = isLocal
+	offering.IsLocal = d.isLocal
 
-	if blockNumberUpdated != 0 {
-		offering.BlockNumberUpdated = blockNumberUpdated
+	if d.blockNumberUpdated != 0 {
+		offering.BlockNumberUpdated = d.blockNumberUpdated
 	}
 
-	offering.CurrentSupply = currentSupply
+	offering.CurrentSupply = d.currentSupply
+	offering.SOMCType = d.somcType
 
 	return offering
 }
@@ -136,30 +139,104 @@ func TestGetClientOfferings(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "GetClientOfferings")
 	defer fxt.close()
 
+	useTor := &data.Setting{
+		Key:   data.SettingSOMCTOR,
+		Value: "true",
+		Name:  "use tor",
+	}
+	useDirect := &data.Setting{
+		Key:   data.SettingSOMCDirect,
+		Value: "true",
+		Name:  "use direct",
+	}
+	data.InsertToTestDB(t, db, useTor, useDirect)
+	defer data.DeleteFromTestDB(t, db, useTor, useDirect)
+
 	other := data.NewTestAccount(data.TestPassword)
 	agent := data.NewTestAccount(data.TestPassword)
 
 	var offerings []reform.Record
 
+	somcTypeAllTransports := uint8(3)
+	somcTorOnly := uint8(1)
+	somcDirectOnly := uint8(2)
 	testData := []testOfferingData{
-		{agent.EthAddr, data.OfferRegistered,
-			"US", false, 11, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferRegistered,
-			"SU", false, 11111, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferEmpty,
-			"SU", false, 111, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferEmpty,
-			"", true, 111111, fxt.Offering.CurrentSupply},
-		{agent.EthAddr, data.OfferRegistered,
-			"SU", false, 2, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferPoppedUp,
-			"US", false, 222, 0},
+		{
+			agent:              agent.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "US",
+			isLocal:            false,
+			blockNumberUpdated: 11,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              agent.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "US",
+			isLocal:            false,
+			blockNumberUpdated: 33,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTorOnly,
+		},
+		{
+			agent:              agent.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "US",
+			isLocal:            false,
+			blockNumberUpdated: 12312,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcDirectOnly,
+		},
+		{
+			agent:              other.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "SU",
+			isLocal:            false,
+			blockNumberUpdated: 11111,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              other.EthAddr,
+			status:             data.OfferEmpty,
+			country:            "SU",
+			isLocal:            false,
+			blockNumberUpdated: 111,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              other.EthAddr,
+			status:             data.OfferEmpty,
+			country:            "",
+			isLocal:            true,
+			blockNumberUpdated: 111111,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              agent.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "SU",
+			isLocal:            false,
+			blockNumberUpdated: 2,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              other.EthAddr,
+			status:             data.OfferPoppedUp,
+			country:            "US",
+			isLocal:            false,
+			blockNumberUpdated: 222,
+			currentSupply:      0,
+			somcType:           somcTypeAllTransports,
+		},
 	}
 
 	for _, v := range testData {
-		offering := createTestOffering(fxt,
-			v.agent, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply)
+		offering := createTestOffering(fxt, &v)
 		offerings = append(offerings, offering)
 	}
 
@@ -197,27 +274,37 @@ func TestGetClientOfferings(t *testing.T) {
 
 	testArgs := []testGetClientOfferingsArgs{
 		// Test pagination.
-		{1, "", 0, 0, nil, 0, 1, 4},
-		{2, "", 0, 0, nil, 1, 2, 4},
-		{0, "", 0, 0, nil, 4, 3, 4},
-		// // Test by filters.
-		{4, "", 0, 0, nil, 0, 0, 4},
-		{0, "", 0, lowPrice, nil, 0, 0, 0},
-		{0, "", highPrice, 0, nil, 0, 0, 0},
-		{4, "", lowPrice, price, nil, 0, 0, 4},
-		{4, "", price, highPrice, nil, 0, 0, 4},
-		{4, "", price, price, nil, 0, 0, 4},
-		{1, "", 0, 0, []string{"US"}, 0, 0, 1},
-		{2, "", 0, 0, []string{"SU"}, 0, 0, 2},
-		{3, "", 0, 0, []string{"SU", "US"}, 0, 0, 3},
-		{0, data.NewTestAccount(data.TestPassword).EthAddr, 0, 0, nil, 0, 0, 0},
-		{2, agent.EthAddr, 0, 0, nil, 0, 0, 2},
+		{1, "", 0, 0, nil, 0, 1, 6, true, true},
+		{2, "", 0, 0, nil, 1, 2, 6, true, true},
+		{2, "", 0, 0, nil, 4, 3, 6, true, true},
+		// Test by filters.
+		{6, "", 0, 0, nil, 0, 0, 6, true, true},
+		{0, "", 0, lowPrice, nil, 0, 0, 0, true, true},
+		{0, "", highPrice, 0, nil, 0, 0, 0, true, true},
+		{6, "", lowPrice, price, nil, 0, 0, 6, true, true},
+		{6, "", price, highPrice, nil, 0, 0, 6, true, true},
+		{6, "", price, price, nil, 0, 0, 6, true, true},
+		{3, "", 0, 0, []string{"US"}, 0, 0, 3, true, true},
+		{2, "", 0, 0, []string{"SU"}, 0, 0, 2, true, true},
+		{5, "", 0, 0, []string{"SU", "US"}, 0, 0, 5, true, true},
+		{0, data.NewTestAccount(data.TestPassword).EthAddr, 0, 0, nil, 0, 0, 0, true, true},
+		{4, agent.EthAddr, 0, 0, nil, 0, 0, 4, true, true},
+		// Test by allowed transports and filters.
+		{4, "", 0, 0, nil, 0, 0, 4, false, true},
+		{5, "", 0, 0, nil, 0, 0, 5, true, false},
+		{0, "", 0, 0, nil, 0, 0, 0, false, false},
 	}
 
 	for _, v := range testArgs {
+		useTor.Value = fmt.Sprint(v.useTor)
+		useDirect.Value = fmt.Sprint(v.useDirect)
+		data.SaveToTestDB(t, db, useTor, useDirect)
 		res, err := handler.GetClientOfferings(testToken.v,
 			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country,
 			v.offset, v.limit)
+		for _, x := range res.Items {
+			fmt.Println(x.SOMCType)
+		}
 		assertResult(res, err, v.exp, v.total)
 	}
 }
@@ -288,21 +375,48 @@ func TestGetAgentOfferings(t *testing.T) {
 	acc2 := createNotUsedAcc(t)
 	defer data.DeleteFromTestDB(t, fxt.DB, acc1, acc2)
 
+	somcTypeAllTransports := uint8(3)
 	testData := []testOfferingData{
-		{fxt.Account.EthAddr, data.OfferRegistered, "",
-			false, 1, fxt.Offering.CurrentSupply},
-		{fxt.Account.EthAddr, data.OfferEmpty, "",
-			false, 2, fxt.Offering.CurrentSupply},
-		{acc1.EthAddr, data.OfferRegistering, "",
-			false, 2, fxt.Offering.CurrentSupply},
-		{acc2.EthAddr, data.OfferRegistered, "",
-			false, 2, fxt.Offering.CurrentSupply},
+		{
+			agent:              fxt.Account.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "",
+			isLocal:            false,
+			blockNumberUpdated: 1,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              fxt.Account.EthAddr,
+			status:             data.OfferEmpty,
+			country:            "",
+			isLocal:            false,
+			blockNumberUpdated: 2,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              acc1.EthAddr,
+			status:             data.OfferRegistering,
+			country:            "",
+			isLocal:            false,
+			blockNumberUpdated: 2,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
+		{
+			agent:              acc2.EthAddr,
+			status:             data.OfferRegistered,
+			country:            "",
+			isLocal:            false,
+			blockNumberUpdated: 2,
+			currentSupply:      fxt.Offering.CurrentSupply,
+			somcType:           somcTypeAllTransports,
+		},
 	}
 
 	for _, v := range testData {
-		offering := createTestOffering(fxt,
-			v.agent, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply)
+		offering := createTestOffering(fxt, &v)
 		offerings = append(offerings, offering)
 	}
 

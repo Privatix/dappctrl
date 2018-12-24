@@ -21,6 +21,8 @@ const (
 	SettingsPeriodChallange   = "psc.periods.challenge"
 	SettingsPeriodPopUp       = "psc.periods.popup"
 	SettingsPeriodRemove      = "psc.periods.remove"
+	SettingSOMCTOR            = "somc.transport.tor"
+	SettingSOMCDirect         = "somc.transport.direct"
 )
 
 // ReadSetting reads value of a given setting.

@@ -139,7 +139,7 @@ func (h *Handler) ChangeOfferingStatus(
 
 func (h *Handler) getClientOfferingsConditions(
 	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
-	country []string) (conditions string, arguments []interface{}) {
+	country []string, usingTor, usingDirect bool) (conditions string, arguments []interface{}) {
 
 	count := 1
 
@@ -154,6 +154,32 @@ func (h *Handler) getClientOfferingsConditions(
 			return condition
 		}
 		return fmt.Sprintf("%s AND %s", conditions, condition)
+	}
+
+	if usingTor || usingDirect {
+		if usingTor && usingDirect {
+			condition := fmt.Sprintf(
+				"%s in (%s, %s, %s)", "somc_type", index(), index(), index())
+			conditions = join(conditions, condition)
+		} else {
+			condition := fmt.Sprintf(
+				"%s in (%s, %s)", "somc_type", index(), index())
+			conditions = join(conditions, condition)
+		}
+		if usingTor {
+			arguments = append(arguments, 1)
+		}
+		if usingDirect {
+			arguments = append(arguments, 2)
+		}
+		arguments = append(arguments, 3)
+	}
+
+	if !usingTor && !usingDirect {
+		condition := fmt.Sprintf(
+			"%s not in (%s, %s, %s)", "somc_type", index(), index(), index())
+		conditions = join(conditions, condition)
+		arguments = append(arguments, 1, 2, 3)
 	}
 
 	if agent != "" {
@@ -220,8 +246,20 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 		return nil, ErrBadUnitPriceRange
 	}
 
+	usingTor, err := data.ReadBoolSetting(h.db.Querier, data.SettingSOMCTOR)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
+	usingDirect, err := data.ReadBoolSetting(h.db.Querier, data.SettingSOMCDirect)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
 	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
-		maxUnitPrice, countries)
+		maxUnitPrice, countries, usingTor, usingDirect)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)

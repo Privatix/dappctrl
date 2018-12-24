@@ -404,7 +404,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
-		data.OfferingSOMCTor, data.FromBytes([]byte("testhostname")))
+		somcTypeTor, string(data.FromBytes([]byte("testhostname"))))
 
 	offering = &data.Offering{}
 	env.findTo(t, offering, fixture.Offering.ID)
@@ -425,7 +425,7 @@ func TestAgentAfterOfferingMsgBCPublish(t *testing.T) {
 	defer fixture.close()
 
 	logData, err := logOfferingCreatedDataArguments.Pack(uint16(1),
-		data.OfferingSOMCTor, "")
+		somcTypeTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +638,7 @@ func TestAgentAfterOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(1), data.OfferingSOMCTor, "")
+		uint16(1), somcTypeTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,12 @@
 {
+    "AgentDirectSOMC": {
+        "Addr": ""
+    },
     "AgentMonitor": {
         "Interval": 5000
+    },
+    "AgentTorSOMC": {
+        "Hostname": ""
     },
     "BlockMonitor": {
         "EthCallTimeout": 60000,
@@ -210,13 +216,15 @@
         "StackLevel": "error"
     },
     "Role": "agent",
-    "Sess": {
-        "Addr": "localhost:8000",
-        "AllowedOrigins": ["*"],
+    "SOMCServer": {
+        "Addr": "0.0.0.0:5555",
         "TLS": null
     },
-    "SOMCServer": {
-        "Addr": "localhost:5555",
+    "Sess": {
+        "Addr": "localhost:8000",
+        "AllowedOrigins": [
+            "*"
+        ],
         "TLS": null
     },
     "StaticPassword": "",

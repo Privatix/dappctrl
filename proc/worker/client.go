@@ -16,13 +16,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
+	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -967,7 +967,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
-	job *data.Job, block uint64, somcType uint8, somcData data.Base64String,
+	job *data.Job, block uint64, somcType uint8, somcData string,
 	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
 	logger = logger.Add("job", fmt.Sprintf("%+v", job), "block", block, "somcType",
 		somcType, "somcData", somcData, "agentAddr", agentAddr, "hash", hash,
@@ -997,7 +997,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
 		block, data.HexFromBytes(agentAddr.Bytes()),
-		data.HexFromBytes(hash.Bytes()), job.RelatedID,
+		hashHex, job.RelatedID,
 		somcType, somcData)
 	if err != nil {
 		// Ignore all errors except internal.
@@ -1032,7 +1032,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 
 func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	blockNumber uint64, agent, hash data.HexString, relID string,
-	somcType uint8, somcData data.Base64String) (*data.Offering, error) {
+	somcType uint8, somcData string) (*data.Offering, error) {
 	logger = logger.Add("offering", offering)
 	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {

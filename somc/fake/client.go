@@ -1,9 +1,10 @@
 // +build !notest
 
-package somc
+package fake
 
 import (
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/somc"
 )
 
 // TestClient for tests.
@@ -13,7 +14,7 @@ type TestClient struct {
 }
 
 // Must implement interface.
-var _ Client = new(TestClient)
+var _ somc.Client = new(TestClient)
 
 // NewTestClient creates new test client instance.
 func NewTestClient() *TestClient {
@@ -37,18 +38,18 @@ func (c *TestClient) Ping() error {
 
 // TestClientBuilder for tests.
 type TestClientBuilder struct {
-	c Client
+	c somc.Client
 }
 
 // Must implement interface.
-var _ ClientBuilderInterface = new(TestClientBuilder)
+var _ somc.ClientBuilderInterface = new(TestClientBuilder)
 
 // NewTestClientBuilder creates client builder that always returns same client.
-func NewTestClientBuilder(client Client) *TestClientBuilder {
+func NewTestClientBuilder(client somc.Client) *TestClientBuilder {
 	return &TestClientBuilder{client}
 }
 
 // NewClient returns stored client instance.
-func (b *TestClientBuilder) NewClient(uint8, data.Base64String) (Client, error) {
+func (b *TestClientBuilder) NewClient(uint8, string) (somc.Client, error) {
 	return b.c, nil
 }

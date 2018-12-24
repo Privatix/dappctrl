@@ -99,4 +99,18 @@ VALUES('psc.periods.remove',
        'Number of blocks to be mined from last offering update in blockchain to remove offering',
        'Remove period');
 
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('somc.transport.tor',
+       'true',
+       2,
+       'Whether to use tor for somc or not',
+       'Transport TOR');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('somc.transport.direct',
+       'true',
+       2,
+       'Whether to use direct http access by ip for somc or not',
+       'Transport Direct');
+
 END TRANSACTION;

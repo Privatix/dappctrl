@@ -12,13 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/proc"
+	fakesomc "github.com/privatix/dappctrl/somc/fake"
 	"github.com/privatix/dappctrl/util"
 )
 
@@ -189,7 +189,7 @@ func testClientEndpointCreate(t *testing.T,
 	fxt.Offering.Country = countryFromAgent
 	env.updateInTestDB(t, fxt.Offering)
 
-	ts := country.NewServerMock(testCountryField, resultCountry)
+	ts := fakesomc.NewServerMock(testCountryField, resultCountry)
 	defer ts.Close()
 
 	conf.Country.URLTemplate = ts.Server.URL
@@ -750,7 +750,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	// Create eth log records used by job.
 	logData, err := logOfferingCreatedDataArguments.Pack(expectedOffering.Supply,
-		data.OfferingSOMCTor, "")
+		somcTypeTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -850,7 +850,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 	}
 
 	logData, err := logOfferingCreatedDataArguments.Pack(
-		uint16(10), data.OfferingSOMCTor, "")
+		uint16(10), somcTypeTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -921,7 +921,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		common.BigToHash(big.NewInt(100)),
 	}
 	logData, err := logOfferingPopUpDataArguments.Pack(
-		uint16(1), data.OfferingSOMCTor, "")
+		uint16(1), somcTypeTor, "")
 	if err != nil {
 		t.Fatal(err)
 	}

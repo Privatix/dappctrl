@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -15,6 +14,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -42,6 +42,9 @@ type GasConf struct {
 	}
 }
 
+// SOMCPropsFunc returns configured somc properties for new offerings.
+type SOMCPropsFunc func() (somcType uint8, somcData data.Base64String, err error)
+
 // Worker has all worker routines.
 type Worker struct {
 	abi               abi.ABI
@@ -57,8 +60,8 @@ type Worker struct {
 	processor         *proc.Processor
 	ethConfig         *eth.Config
 	countryConfig     *country.Config
-	torHostName       data.Base64String
 	somcClientBuilder somc.ClientBuilderInterface
+	somcProps         *somc.Props
 }
 
 // NewWorker returns new instance of worker.
@@ -66,7 +69,7 @@ func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 	gasConc *GasConf, pscAddr common.Address, payAddr string,
 	pwdGetter data.PWDGetter, countryConf *country.Config,
 	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
-	torHostname string, somcClientBuilder somc.ClientBuilderInterface) (*Worker, error) {
+	somcProps *somc.Props, somcClientBuilder somc.ClientBuilderInterface) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
 
@@ -92,7 +95,7 @@ func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 		pscAddr:           pscAddr,
 		pwdGetter:         pwdGetter,
 		countryConfig:     countryConf,
-		torHostName:       data.FromBytes([]byte(torHostname)),
+		somcProps:         somcProps,
 		somcClientBuilder: somcClientBuilder,
 	}, nil
 }

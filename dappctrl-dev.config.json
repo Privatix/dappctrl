@@ -1,6 +1,12 @@
 {
+    "AgentDirectSOMC": {
+        "Addr": ""
+    },
     "AgentMonitor": {
         "Interval": 5000
+    },
+    "AgentTorSOMC": {
+        "Hostname": ""
     },
     "BlockMonitor": {
         "EthCallTimeout": 60000,
@@ -11,6 +17,9 @@
         "CollectPeriod": 1500,
         "RequestTLS": false,
         "RequestTimeout": 2500
+    },
+    "ClientTorSOMC": {
+        "Socks": 9050
     },
     "Country": {
         "Field": "country_code",
@@ -209,18 +218,18 @@
         "StackLevel": "error"
     },
     "Role": "agent",
-    "Sess": {
-        "Addr": "localhost:8000",
-        "AllowedOrigins": ["*"],
+    "SOMCServer": {
+        "Addr": "0.0.0.0:5555",
         "TLS": null
     },
-    "SOMCServer": {
-        "Addr": "localhost:5555",
+    "Sess": {
+        "Addr": "localhost:8000",
+        "AllowedOrigins": [
+            "*"
+        ],
         "TLS": null
     },
     "StaticPassword": "",
-    "TorHostname": "",
-    "TorSocksListener": 9050,
     "UI": {
         "Addr": "localhost:8888",
         "AllowedOrigins": [

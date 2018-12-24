@@ -31,7 +31,7 @@ type logOfferingCreatedInput struct {
 	minDeposit    *big.Int
 	currentSupply uint16
 	somcType      uint8
-	somcData      data.Base64String
+	somcData      string
 }
 
 type logOfferingPopUpInput struct {
@@ -40,7 +40,7 @@ type logOfferingPopUpInput struct {
 	minDeposit    *big.Int
 	currentSupply uint16
 	somcType      uint8
-	somcData      data.Base64String
+	somcData      string
 }
 
 var (
@@ -229,7 +229,7 @@ func extractLogOfferingCreated(logger log.Logger,
 		minDeposit:    minDeposit,
 		currentSupply: curSupply,
 		somcType:      somcType,
-		somcData:      data.Base64String(somcData),
+		somcData:      somcData,
 	}, nil
 }
 
@@ -274,6 +274,6 @@ func extractLogOfferingPopUp(logger log.Logger,
 		minDeposit:    minDeposit,
 		currentSupply: currentSupply,
 		somcType:      somcType,
-		somcData:      data.Base64String(somcData),
+		somcData:      somcData,
 	}, nil
 }

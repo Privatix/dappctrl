@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/somc/fake"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
@@ -82,7 +82,7 @@ func TestUpdatePassword(t *testing.T) {
 	pwdStorage := new(data.PWDStorage)
 	handler := ui.NewHandler(logger, db, nil, pwdStorage,
 		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil,
-		somc.NewTestClientBuilder(testSOMCClient), testToken)
+		fake.NewTestClientBuilder(testSOMCClient), testToken)
 	err := server.RegisterName("ui2", handler)
 	if err != nil {
 		t.Fatal(err)

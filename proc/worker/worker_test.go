@@ -15,7 +15,6 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -25,6 +24,8 @@ import (
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
+	"github.com/privatix/dappctrl/somc"
+	fakesomc "github.com/privatix/dappctrl/somc/fake"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -65,10 +66,11 @@ type workerTest struct {
 }
 
 var (
-	conf       *testConfig
-	db         *reform.DB
-	logger     log.Logger
-	testClient *somc.TestClient
+	conf        *testConfig
+	db          *reform.DB
+	logger      log.Logger
+	testClient  *fakesomc.TestClient
+	somcTypeTor = uint8(1)
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
@@ -79,11 +81,12 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	testClient = somc.NewTestClient()
+	testClient = fakesomc.NewTestClient()
 
 	worker, err := NewWorker(logger, db, ethBack, conf.Gas, conf.pscAddr,
 		conf.PayServer.Addr, pwdStorage, conf.Country, data.TestToPrivateKey,
-		conf.EptMsg, "testhostname", somc.NewTestClientBuilder(testClient))
+		conf.EptMsg, somc.NewProps(&somc.TorAgentConfig{Hostname: "testhostname"}),
+		fakesomc.NewTestClientBuilder(testClient))
 	if err != nil {
 		panic(err)
 	}

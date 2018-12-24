@@ -1,6 +1,4 @@
-// +build !notest
-
-package country
+package fake
 
 import (
 	"fmt"

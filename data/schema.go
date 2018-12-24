@@ -101,11 +101,6 @@ const (
 	OfferRemoved     = "removed"
 )
 
-// Comminication types.
-const (
-	OfferingSOMCTor uint8 = 1 + iota
-)
-
 // Offering is a service offering.
 //reform:offerings
 type Offering struct {
@@ -138,7 +133,7 @@ type Offering struct {
 	AdditionalParams   json.RawMessage `json:"additionalParams" reform:"additional_params" validate:"required"`
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
 	SOMCType           uint8           `json:"somcType" reform:"somc_type"`
-	SOMCData           Base64String    `json:"somcData" reform:"somc_data"`
+	SOMCData           string          `json:"somcData" reform:"somc_data"`
 	SOMCSuccessPing    *time.Time      `json:"somcSuccessPing" reform:"somc_success_ping"`
 }
 

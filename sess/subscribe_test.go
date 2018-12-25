@@ -22,9 +22,32 @@ func subscribeConnChange(client *rpc.Client, product, password string,
 		"sess", ch, "connChange", product, password)
 }
 
+func setChannelServiceStatus(t *testing.T,
+	fxt *data.TestFixture, status string) {
+	fxt.Channel.ServiceStatus = status
+	data.SaveToTestDB(t, db, fxt.Channel)
+}
+
+var connChangeEvents = []struct{ t, s string }{
+	{data.JobClientPreServiceSuspend, data.ServiceSuspended},     // ignored
+	{data.JobClientPreServiceSuspend, data.ServiceSuspending},    // ok
+	{data.JobClientPreServiceUnsuspend, data.ServiceActive},      // ignored
+	{data.JobClientPreServiceUnsuspend, data.ServiceActivating},  // ok
+	{data.JobClientPreServiceTerminate, data.ServiceTerminated},  // ignored
+	{data.JobClientPreServiceTerminate, data.ServiceTerminating}, // ok
+}
+
+var connChangeStatuses = []string{
+	sess.ConnStop,
+	sess.ConnStart,
+	sess.ConnStop,
+}
+
 func TestConnChange(t *testing.T) {
 	fxt := newTestFixture(t)
 	defer fxt.Close()
+
+	setChannelServiceStatus(t, fxt, data.ServicePending)
 
 	unsubscribed := false
 	mtx := sync.Mutex{}
@@ -44,13 +67,14 @@ func TestConnChange(t *testing.T) {
 		case job.MockSubscribe:
 			go func() {
 				time.Sleep(time.Millisecond)
-				subFunc(j, errors.New("some error"))
-				j.Type = data.JobClientPreServiceSuspend
-				subFunc(j, nil)
-				j.Type = data.JobClientPreServiceUnsuspend
-				subFunc(j, nil)
-				j.Type = data.JobClientPreServiceTerminate
-				subFunc(j, nil)
+
+				subFunc(j, errors.New("some error")) // ignored
+
+				for _, cs := range connChangeEvents {
+					j.Type = cs.t
+					setChannelServiceStatus(t, fxt, cs.s)
+					subFunc(j, nil)
+				}
 			}()
 		case job.MockUnsubscribe:
 			unsubscribed = true
@@ -75,19 +99,12 @@ func TestConnChange(t *testing.T) {
 		fxt.Product.ID, data.TestPassword, ch)
 	util.TestExpectResult(t, "ConnChange", nil, err)
 
-	ret := <-ch
-	if ret.Channel != fxt.Channel.ID || ret.Status != sess.ConnStop {
-		t.Fatalf("wrong data for the first notification")
-	}
+	for i, v := range connChangeStatuses {
+		ret := <-ch
+		if ret.Channel != fxt.Channel.ID || ret.Status != v {
+			t.Fatalf("wrong data for notification %d", i)
+		}
 
-	ret = <-ch
-	if ret.Channel != fxt.Channel.ID || ret.Status != sess.ConnStart {
-		t.Fatalf("wrong data for the second notification")
-	}
-
-	ret = <-ch
-	if ret.Channel != fxt.Channel.ID || ret.Status != sess.ConnStop {
-		t.Fatalf("wrong data for the third notification")
 	}
 
 	sub.Unsubscribe()

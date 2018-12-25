@@ -30,6 +30,12 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 		return
 	}
 
+	if ch.ServiceStatus != data.ServiceActivating &&
+		ch.ServiceStatus != data.ServiceSuspending &&
+		ch.ServiceStatus != data.ServiceTerminating {
+		return
+	}
+
 	var offer data.Offering
 	err = data.FindByPrimaryKeyTo(h.db.Querier, &offer, ch.Offering)
 	if err != nil {

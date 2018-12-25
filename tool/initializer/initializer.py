@@ -1139,11 +1139,11 @@ class CommonCMD(Init):
             if r:
                 r.update({"host": self.p_unpck['common'][1]})
 
-        if self.in_args['link']:
-            db_conn = data.get('DB')  # save db params from local
-            res = self.conf_dappctrl_dev_json(db_conn)
-            if res:
-                data = res
+        # if self.in_args['link']:
+        #     db_conn = data.get('DB')  # save db params from local
+        #     res = self.conf_dappctrl_dev_json(db_conn)
+        #     if res:
+        #         data = res
 
         # Check and change self ip and port for PayAddress
         my_ip = urlopen(url='http://icanhazip.com').read().replace('\n', '')

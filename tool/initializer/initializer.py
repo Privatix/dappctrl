@@ -4,11 +4,9 @@
 """
         Initializer on pure Python 2.7
 
-        Version 0.2.3
-
         mode:
+    python initializer.py                                  start full installation
     python initializer.py  -h                              get help information
-    python initializer.py                                  start full install
     python initializer.py --build                          create cmd for dapp
     python initializer.py --vpn start/stop/restart/status  control vpn servise
     python initializer.py --comm start/stop/restart/status control common servise
@@ -18,6 +16,7 @@
     python initializer.py --update-back                    update all contaiter without GUI
     python initializer.py --update-mass                    update all contaiter with GUI
     python initializer.py --update-gui                     update only GUI
+    python initializer.py --update-bin                     download and update binary files in containers
     python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --link                           use another link for download.if not use, def link in main_conf[link_download]
     python initializer.py --branch                         use another branch than 'develop' for download. template https://raw.githubusercontent.com/Privatix/dappctrl/{ branch }/
@@ -26,6 +25,8 @@
     python initializer.py --cli --republish                republish offer mode
     python initializer.py --cli --file [] --republish      republish offer mode with offer data from offer.json
     python initializer.py --clean                          stop and delete all dirs containers and gui
+    python initializer.py --no-wait                        installation without checking ports and waiting for their open
+    python initializer.py --D                              switch on debug mode, and show it on console on installation process
 
 """
 
@@ -101,11 +102,12 @@ Exit code:
 """
 
 main_conf = dict(
+    i_version='0.2.4',
     bind_port=False,
     bind_ports=[5555],
     log_path='/var/log/initializer.log',
     branch='develop',
-    link_download='http://art.privatix.net/',
+    link_download='https://github.com/Privatix/privatix/releases/download/{}',
     mask=['/24', '255.255.255.0'],
     mark_final='/var/run/installer.pid',
     wait_mess='{}.Please wait until completed.\n It may take about 5-10 minutes.\n Do not turn it off.',
@@ -124,6 +126,10 @@ main_conf = dict(
         addr='10.217.3.0',
         ports=dict(vpn=[], common=[],
                    mangmt=dict(vpn=None, common=None)),
+
+        file_download_git=[
+            'systemd_containers_ubuntu_x64_{}.tar.xz',
+            'systemd_units_ubuntu_x64_{}.tar.xz'],
 
         file_download=[
             'vpn.tar.xz',
@@ -199,6 +205,10 @@ main_conf = dict(
             'lxc.uts.name',
             'hwaddr'
         ],
+
+        file_download_git=[
+            'systemd_containers_ubuntu_x64_{}.tar.xz',
+            'systemd_units_ubuntu_x64_{}.tar.xz'],
 
         file_download=[
             'dapp-common',
@@ -309,7 +319,7 @@ ch = logging.StreamHandler()  # console debug
 ch.setLevel('INFO')
 ch.setFormatter(form_console)
 logging.getLogger().addHandler(ch)
-logging.info('--- Begin ---')
+logging.debug('\n\n\n--- Begin ---')
 
 
 class Init:
@@ -322,6 +332,7 @@ class Init:
 
     def __init__(self):
         self.old_vers = None  # True if use LXC ond False if Nspawn
+        self.i_version = main_conf['i_version']
         self.url_dwnld = main_conf['link_download']
         self.uid_dict = dict(userid=str(uuid1()))
         self.bind_port = main_conf['bind_port']
@@ -384,6 +395,7 @@ class Init:
     def __init_back(self, back):
         self.addr = back['addr']
         self.p_contr = back['path_container']
+        self.f_dwnld_git = back['file_download_git']
         self.f_dwnld = back['file_download']
         self.path_vpn = back['path_vpn']
         self.path_com = back['path_com']
@@ -479,6 +491,38 @@ class Init:
 class CommonCMD(Init):
     def __init__(self):
         Init.__init__(self)
+
+    def get_latest_tag(self):
+        logging.info('Get latest tag in repo.')
+
+        owner = 'Privatix'
+        repo = 'privatix'
+        url_api = 'https://api.github.com/repos/{}/{}/releases/latest'.format(
+            owner, repo)
+
+        resp = self._get_url(link=url_api)
+
+        if resp and resp.get('tag_name'):
+            tag_name = resp['tag_name']
+            logging.info('Latest tag name: {}'.format(tag_name))
+            self.latest_tag = tag_name
+
+            # todo *
+            self.url_dwnld = self.url_dwnld.format('test_draft')
+            # self.url_dwnld = self.url_dwnld.format(tag_name)
+
+            for i, f in enumerate(self.f_dwnld_git):
+
+                # todo *
+                self.f_dwnld_git[i] = f.format('0.18.0')
+                # self.f_dwnld_git[i]=f.format(tag_name)
+
+            # todo *
+            self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format('0.18.0')
+            # self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format(tag_name)
+
+        else:
+            raise BaseException('GitHub not responding')
 
     def _sysctl(self):
         """ Return True if ip_forward=1 by default,
@@ -819,7 +863,7 @@ class CommonCMD(Init):
                 self.tmp_var.append(int(v))
 
     def check_port(self, port, auto=False):
-        '''_ping_port: open -> True  close -> False'''
+        """_ping_port: open -> True  close -> False"""
         logging.debug('Check port. In: {}'.format(port))
 
         if self._ping_port(port=port):
@@ -830,8 +874,8 @@ class CommonCMD(Init):
                     port = int(port)+1
                 else:
                     logging.info("\nPort: {} is busy or wrong.\n"
-                                 "Select a different port,in range 1 - 65535.".format(
-                        port))
+                                 "Select a different port,"
+                                 "in range 1 - 65535.".format(port))
                     port = raw_input('>')
                 try:
                     self.tmp_var = []
@@ -1265,9 +1309,9 @@ class Tor(CommonCMD):
                      log='Write dappctrl conf')
 
 
-
 class DB(Tor):
-    '''This class provides a check if the database is started from its logs'''
+    """This class provides a check
+       if the database is started from its logs"""
 
     def __init__(self):
         Tor.__init__(self)
@@ -1547,7 +1591,9 @@ class UpdateBynary(CommonCMD):
         logging.debug('Stop containers')
         self.service('vpn', 'stop', self.use_ports['vpn'])
         self.service('comm', 'stop', self.use_ports['common'])
+        self.get_latest_tag()
         self.__download_binary()
+        self.__unpack_binary()
         self.__move_binary()
         logging.debug('Run containers')
         self.run_service(comm=True)
@@ -1555,27 +1601,23 @@ class UpdateBynary(CommonCMD):
 
     @Init.wait_decor
     def __download_binary(self):
+        logging.info('Download binary.')
+        url = self.url_dwnld + '/' + self.bin_arch
+        self._sys_call(
+            cmd='wget -N {} -P {}'.format(url, self.p_contr))
 
-        url = self.url_dwnld + self.fold_route
-        dwnld_bin = {
-            self.vpn_bin: url + self.dappvpn_route + self.vpn_bin,
-            self.ctrl_bin: url + self.dappctrl_route + self.ctrl_bin
-        }
+        logging.info('Download binary arch done.')
 
-        logging.info('Begin download binary files.')
-        obj = URLopener()
-        try:
-            for f, u in dwnld_bin.items():
-                logging.info(
-                    self.wait_mess.format('Start download {}'.format(f)))
-                logging.debug('Url binary downloading: {}'.format(u))
-                obj.retrieve(u, f)
-                sleep(0.1)
-                logging.info('Download {} done.'.format(f))
 
-        except BaseException as down:
-            logging.error('Download: {}.'.format(down))
-            sys.exit(36)
+    @Init.wait_decor
+    def __unpack_binary(self):
+        logging.info('Begin unpacking binary.')
+
+        cmd = 'tar xpf {} -C {} --numeric-owner'.format(
+            self.p_contr + self.bin_arch, self.p_contr)
+        self._sys_call(cmd)
+        logging.info('Unpacking git {} done.'.format(self.bin_arch))
+
 
     @Init.wait_decor
     def __move_binary(self):
@@ -1587,19 +1629,19 @@ class UpdateBynary(CommonCMD):
                 for f in fls:
                     dest = self.p_contr + cont + '/root/go/bin/' + f
                     logging.info('Destination {}'.format(dest))
-                    cmd = move_cmd.format(f, dest)
+                    cmd = move_cmd.format(self.p_contr + f, dest)
                     logging.debug('Move cmd: {}'.format(cmd))
                     self._sys_call(cmd=cmd)
                     logging.debug('Binary chmod 777 for {}'.format(dest))
                     chmod(dest, 0777)
 
         except BaseException as down:
-            logging.error('Download: {}.'.format(down))
+            logging.error('Move bin: {}.'.format(down))
             sys.exit(37)
 
 
 class Rdata(UpdateBynary):
-    ''' Class for download, unpack, clear data '''
+    """ Class for download, unpack, clear data """
 
     def __init__(self):
         UpdateBynary.__init__(self)
@@ -1638,6 +1680,28 @@ class Rdata(UpdateBynary):
             self._rolback(code)
 
     @Init.wait_decor
+    def download_git(self):
+        try:
+
+            logging.info('Begin download from git repo')
+
+            for f in self.f_dwnld_git:
+                logging.info(
+                    self.wait_mess.format('Start download {}'.format(f)))
+
+                dwnld_url = self.url_dwnld + '/' + f
+                dwnld_url = dwnld_url.replace('///', '/')
+                logging.debug('Url git: {}'.format(dwnld_url))
+                self._sys_call(cmd='wget -N {} -P {}'.format(dwnld_url, self.p_contr))
+                sleep(0.1)
+                logging.info('Download {} done.'.format(f))
+            return True
+
+        except BaseException as down:
+            logging.error('Download: {}.'.format(down))
+            self._rolback(6)
+
+    @Init.wait_decor
     def unpacking(self):
         logging.info('Begin unpacking download files.')
         try:
@@ -1657,10 +1721,25 @@ class Rdata(UpdateBynary):
         except BaseException as expt_unpck:
             logging.error('Unpack: {}.'.format(expt_unpck))
 
+    @Init.wait_decor
+    def unpacking_git(self):
+        logging.info('Begin unpacking download files.')
+        try:
+            for f in self.f_dwnld_git:
+                logging.info('Unpacking {}.'.format(f))
+
+                cmd = 'tar xpf {} -C {} --numeric-owner'.format(
+                    self.p_contr + f, self.p_contr)
+                self._sys_call(cmd)
+                logging.info('Unpacking git {} done.'.format(f))
+
+        except BaseException as expt_unpck:
+            logging.error('Unpack git: {}.'.format(expt_unpck))
+
     def clean(self):
         logging.info('Delete downloaded files.')
 
-        for f in self.f_dwnld:
+        for f in self.f_dwnld_git + self.f_dwnld:
             logging.info('Delete {}'.format(f))
             remove(self.p_contr + f)
 
@@ -2232,7 +2311,7 @@ class LXC(DB):
     def _rw_container_run_sh(self):
         logging.debug('LXC cont name: {}'.format(self.p_unpck))
 
-        for f_name in self.f_dwnld:
+        for f_name in self.f_dwnld_git:
             try:
                 if not '.tar.xz' == f_name[-7:]:
                     logging.info('Rewrite {} run file.'.format(f_name))
@@ -2630,7 +2709,6 @@ class AutoOffer:
                 'registered',
                 0,
                 1
-
             ],
             'id': self.id,
         }
@@ -3142,11 +3220,14 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     sys.exit(28)
 
                 self.__check_os()
+                self.get_latest_tag()
+
                 if not self.old_vers:
                     ip, intfs, tun, port = self._iptables()
 
-                    self.download(6)
+                    self.download_git()
                     try:
+                        self.unpacking_git()
                         self.unpacking()
                         self._rw_openvpn_conf(ip, tun, port, 7)
                         self._rw_unit_file(ip, intfs, 5)
@@ -3207,8 +3288,9 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                 else:
                     port = findall('\d+', self.ovpn_port[0])[0]
                     self.use_ports['vpn'] = self.check_port(port)
-                    self.download(6)
+                    self.download_git()
                     try:
+                        self.unpacking_git()
                         self.unpacking()
                         self._rw_container_conf()
                         self._rw_openvpn_conf(7)
@@ -3460,7 +3542,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
 
         def input_args(self):
             ''' Get input args and parse it '''
-            parser = ArgumentParser(description=' *** Installer *** ')
+            parser = ArgumentParser(description=' *** Initializer v.{} *** '.format(self.i_version))
 
             parser.add_argument("--build", action='store_true',
                                 default=False,
@@ -3505,12 +3587,15 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                                 default=False,
                                 help='Cleaning after the initialization process. Removing GUI, downloaded files, initialization pid file, stopping containers.')
 
-            parser.add_argument("--link", type=str, default=False, nargs='?',
-                                help='Enter link for download. default "http://art.privatix.net/"')
+            # parser.add_argument("--link", type=str, default=False, nargs='?',
+            #                     help='Enter link for download. default "http://art.privatix.net/"')
 
-            parser.add_argument("--branch", type=str, default=False,
-                                nargs='?',
-                                help='Enter different branch for download. default "develop"')
+            parser.add_argument("--D", action='store_true', default=False,
+                                help='Switch on debug mode')
+
+            # parser.add_argument("--branch", type=str, default=False,
+            #                     nargs='?',
+            #                     help='Enter different branch for download. default "develop"')
 
             if not self.old_vers:
                 parser.add_argument('--vpn', type=str, default=False,
@@ -3529,19 +3614,25 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             return vars(parser.parse_args())
 
         def main_cycle(self):
-            if self.in_args['link']:
-                logging.info(
-                    'You chose was to change link from: {}   to: {}'.format(
-                        main_conf['link_download'], self.in_args['link']))
+            if self.in_args['D']:
+                ch.setLevel('DEBUG')
+                ch.setFormatter(form_console)
+                logging.getLogger().addHandler(ch)
+                logging.debug('Debug mode enabled')
 
-                self.validate_url(self.in_args['link'])
+            # if self.in_args['link']:
+            #     logging.info(
+            #         'You chose was to change link from: {}   to: {}'.format(
+            #             main_conf['link_download'], self.in_args['link']))
+            #
+            #     self.validate_url(self.in_args['link'])
 
-            if self.in_args['branch']:
-                logging.debug('Change branch from: {}, to: {}'.format(
-                    main_conf['branch'], self.in_args['branch']))
-
-                main_conf['branch'] = self.in_args['branch']
-                self.init_branch()
+            # if self.in_args['branch']:
+            #     logging.debug('Change branch from: {}, to: {}'.format(
+            #         main_conf['branch'], self.in_args['branch']))
+            #
+            #     main_conf['branch'] = self.in_args['branch']
+            #     self.init_branch()
 
             if self.in_args['build']:
                 logging.info('Build mode.')

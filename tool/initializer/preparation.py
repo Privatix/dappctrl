@@ -9,7 +9,10 @@
 """
 
 import logging
-from urllib import URLopener
+from json import load, dump, loads, dumps
+
+from urllib import urlretrieve
+from urllib2 import urlopen, Request
 from os.path import isfile
 from sys import exit as sys_exit
 from argparse import ArgumentParser
@@ -19,18 +22,18 @@ from subprocess import Popen, PIPE, STDOUT
 from re import compile, match, IGNORECASE
 
 
-
 class Prepare:
 
     def __init__(self):
         self.log_path = '/var/log/preparation.log'
         self.pack_name = 'dapp-privatix'
-        self.link = 'http://art.privatix.net/'
-        self.dwnld_url = '{}{}.deb'.format(self.link, self.pack_name)
+        self.link = 'https://github.com/'
+        self.dwnld_url = ''
         self.dst_path = '{}.deb'.format(self.pack_name)
         self.inst_pack_cmd = 'sudo apt update && sudo dpkg -i {} || sudo apt-get install -f -y'.format(
             self.dst_path)
-        self.search_pack_cmd = 'sudo dpkg -l {} >/dev/null 2>&1'.format(self.pack_name)
+        self.search_pack_cmd = 'sudo dpkg -l {} >/dev/null 2>&1'.format(
+            self.pack_name)
         self.del_pack_cmd = 'sudo apt purge {} -y'.format(self.pack_name)
         self.create_sudoers = 'su - root -c\'touch {0} && echo "{1}" >> {0}\''
         self.user_file = '/etc/sudoers.d/{}'
@@ -38,6 +41,7 @@ class Prepare:
         self.check_sudo = 'dpkg -l | grep sudo'
         self.install_sudo = 'su -c \'apt install sudo\''
         self.logger()
+        self.get_latest_tag()
 
     def logger(self):
         logging.getLogger().setLevel('DEBUG')
@@ -55,17 +59,77 @@ class Prepare:
         logging.getLogger().addHandler(fh)
 
         ch = logging.StreamHandler()  # console debug
-        ch.setLevel('INFO')
+        ch.setLevel('DEBUG')
         ch.setFormatter(form_console)
         logging.getLogger().addHandler(ch)
         logging.info(' - Begin - ')
 
-    def sys_call(self,cmd):
-        resp = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT).communicate()
+    def _byteify(self, data, ignore_dicts=False):
+        if isinstance(data, unicode):
+            return data.encode('utf-8')
+        if isinstance(data, list):
+            return [self._byteify(item, ignore_dicts=True) for item in data]
+        if isinstance(data, dict) and not ignore_dicts:
+            return {
+                self._byteify(key, ignore_dicts=True): self._byteify(value,
+                                                                     ignore_dicts=True)
+                for key, value in data.iteritems()
+            }
+        return data
+
+    def __json_load_byteified(self, file_handle):
+        return self._byteify(
+            load(file_handle, object_hook=self._byteify),
+            ignore_dicts=True
+        )
+
+    def _get_url(self, link, to_json=True):
+        resp = urlopen(url=link)
+        if to_json:
+            return self.__json_load_byteified(resp)
+        else:
+            return resp.read()
+
+    def get_latest_tag(self):
+        '''https://github.com/Privatix/privatix/releases/download/test_draft/privatix_ubuntu_x64_0.18.0_cli.deb'''
+        logging.info('Get latest tag in repo.')
+
+        owner = 'Privatix'
+        repo = 'privatix'
+        url_api = 'https://api.github.com/repos/{}/{}/releases/latest'.format(
+            owner, repo)
+
+        resp = self._get_url(link=url_api)
+
+        if resp and resp.get('tag_name'):
+            tag_name = resp['tag_name']
+            logging.info('Latest tag name: {}'.format(tag_name))
+            self.dwnld_url = '{}Privatix/privatix/releases/download/' \
+                             '{}/privatix_ubuntu_x64_{}_cli.deb'.format(
+                self.link,
+                'test_draft',
+                '0.18.0')
+
+            # todo*
+            # self.dwnld_url = '{}Privatix/privatix/releases/download/' \
+            #                  '{}/privatix_ubuntu_x64_{}_cli.deb'.format(
+            #     self.link,
+            #     tag_name,
+            #     tag_name)
+
+            logging.debug('Download url: {}'.format(self.dwnld_url))
+
+        else:
+            raise BaseException('GitHub not responding')
+
+    def sys_call(self, cmd):
+        resp = Popen(cmd, shell=True, stdout=PIPE,
+                     stderr=STDOUT).communicate()
 
         logging.debug('Sys call cmd: {}. Stdout: {}'.format(cmd, resp))
         if resp[1]:
-            logging.error('Trouble when call: {}. Result: {}'.format(cmd, resp[1]))
+            logging.error(
+                'Trouble when call: {}. Result: {}'.format(cmd, resp[1]))
             return False
         return resp[0]
 
@@ -78,7 +142,8 @@ class Prepare:
             if not isfile(f_path):
 
                 line = '{} ALL=(ALL:ALL) NOPASSWD:ALL'.format(user)
-                logging.debug('Add line: {} to file: {}'.format(line, f_path))
+                logging.debug(
+                    'Add line: {} to file: {}'.format(line, f_path))
 
                 f = open(f_path, "wb")
                 try:
@@ -132,12 +197,11 @@ class Prepare:
 
     def dwnld_pack(self):
 
-        obj = URLopener()
         logging.info('Download {}.\n'
                      'Please wait, '
                      'this may take a few minutes!'.format(self.pack_name))
         logging.info('Download from: {}'.format(self.dwnld_url))
-        obj.retrieve(self.dwnld_url, self.dst_path)
+        urlretrieve(self.dwnld_url, self.dst_path)
         logging.info('Download done. Install pack.')
 
         if system(self.inst_pack_cmd):
@@ -163,8 +227,9 @@ class Prepare:
             logging.debug('First run')
             self.check_dist()()
         else:
-            logging.info('The package {} is already installed on your computer.\n'
-                         'Do you want to reinstall it?'.format(self.pack_name))
+            logging.info(
+                'The package {} is already installed on your computer.\n'
+                'Do you want to reinstall it?'.format(self.pack_name))
             if self.ask():
                 logging.debug('Reinstall pack')
                 if system(self.del_pack_cmd):
@@ -173,7 +238,8 @@ class Prepare:
                                   'Try to remove the package manually and repeat the installation.')
                     sys_exit(7)
                 else:
-                    logging.info('The package {} deleted'.format(self.pack_name))
+                    logging.info(
+                        'The package {} deleted'.format(self.pack_name))
 
             else:
                 logging.debug('Quit')
@@ -222,4 +288,3 @@ class Prepare:
 if __name__ == "__main__":
     pr = Prepare()
     pr.run()
-

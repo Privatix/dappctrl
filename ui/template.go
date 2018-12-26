@@ -12,18 +12,17 @@ import (
 )
 
 // GetTemplates returns templates.
-func (h *Handler) GetTemplates(
-	password, tplType string) ([]data.Template, error) {
+func (h *Handler) GetTemplates(tkn, tplType string) ([]data.Template, error) {
 	logger := h.logger.Add(
 		"method", "GetTemplates", "type", tplType)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	var templates []reform.Struct
 
+	var err error
 	if tplType != "" {
 		templates, err = h.selectAllFrom(
 			logger, data.TemplateTable,
@@ -62,16 +61,15 @@ func checkTemplate(logger log.Logger, template *data.Template) error {
 
 // CreateTemplate creates template.
 func (h *Handler) CreateTemplate(
-	password string, template *data.Template) (*string, error) {
+	tkn string, template *data.Template) (*string, error) {
 	logger := h.logger.Add("method", "CreateTemplate",
 		"template", template)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
-	err = checkTemplate(logger, template)
+	err := checkTemplate(logger, template)
 	if err != nil {
 		return nil, err
 	}

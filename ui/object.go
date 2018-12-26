@@ -47,13 +47,12 @@ var objectWithHashTypes = map[string]reform.Table{
 // GetObject finds object in a database by id,
 // then returns an object on raw JSON format.
 func (h *Handler) GetObject(
-	password, objectType, id string) (json.RawMessage, error) {
+	tkn, objectType, id string) (json.RawMessage, error) {
 	logger := h.logger.Add("method", "GetObject",
 		"type", objectType, "id", id)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	table, ok := objectTypes[objectType]
@@ -90,13 +89,12 @@ func (h *Handler) insertObject(object reform.Struct) error {
 // GetObjectByHash finds object in a database by hash,
 // then returns an object on raw JSON format.
 func (h *Handler) GetObjectByHash(
-	password, objectType, hash string) (json.RawMessage, error) {
+	tkn, objectType, hash string) (json.RawMessage, error) {
 	logger := h.logger.Add("method", "GetObjectByHash",
 		"type", objectType, "hash", hash)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	table, ok := objectWithHashTypes[objectType]

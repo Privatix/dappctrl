@@ -26,13 +26,13 @@ var objectChangeTables = map[string]reform.Table{
 }
 
 // ObjectChange subscribes to changes for objects of a given type.
-func (h *Handler) ObjectChange(ctx context.Context, password, objectType string,
+func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	objectIDs []string) (*rpc.Subscription, error) {
 	logger := h.logger.Add("method", "ObjectChange",
 		"objectType", objectType, "objectIDs", objectIDs)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	table, ok := objectChangeTables[objectType]

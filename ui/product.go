@@ -6,12 +6,12 @@ import (
 )
 
 // CreateProduct creates new product.
-func (h *Handler) CreateProduct(password string,
+func (h *Handler) CreateProduct(tkn string,
 	product data.Product) (*string, error) {
 	logger := h.logger.Add("method", "CreateProduct", "product", product)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	if product.ServiceEndpointAddress != nil &&
@@ -28,11 +28,11 @@ func (h *Handler) CreateProduct(password string,
 }
 
 // UpdateProduct updates a product.
-func (h *Handler) UpdateProduct(password string, product data.Product) error {
+func (h *Handler) UpdateProduct(tkn string, product data.Product) error {
 	logger := h.logger.Add("method", "UpdateProduct", "product", product)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	oldProduct := &data.Product{}
@@ -70,17 +70,17 @@ func isValidSEAddress(address string) bool {
 }
 
 // GetProducts returns all products available to the agent.
-func (h *Handler) GetProducts(password string) ([]data.Product, error) {
+func (h *Handler) GetProducts(tkn string) ([]data.Product, error) {
 	logger := h.logger.Add("method", "GetProducts")
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	result, err := h.db.SelectAllFrom(data.ProductTable,
 		"WHERE products.is_server")
 	if err != nil {
-		h.logger.Error(err.Error())
+		logger.Error(err.Error())
 		return nil, ErrInternal
 	}
 

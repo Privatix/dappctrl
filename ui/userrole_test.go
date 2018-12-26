@@ -11,10 +11,10 @@ func TestGetUserRole(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "GetUserRole")
 	defer fxt.close()
 
-	_, err := handler.GetUserRole("wrong-password")
+	_, err := handler.GetUserRole("wrong-token")
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	res, err := handler.GetUserRole(data.TestPassword)
+	res, err := handler.GetUserRole(testToken.v)
 	assertErrEqual(nil, err)
 	if *res != data.RoleAgent && *res != data.RoleClient {
 		t.Fatal("wrong user role")

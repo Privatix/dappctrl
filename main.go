@@ -163,7 +163,7 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
 		data.EncryptedKey, data.ToPrivateKey, userRole, processor,
-		somcClientBuilder)
+		somcClientBuilder, ui.NewSimpleToken())
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}

@@ -23,7 +23,6 @@ from re import compile, match, IGNORECASE
 
 
 class Prepare:
-
     def __init__(self):
         self.log_path = '/var/log/preparation.log'
         self.pack_name = 'dapp-privatix'
@@ -212,15 +211,22 @@ class Prepare:
         sys_exit(0)
 
     def ask(self):
-        answ = raw_input('>')
-        while True:
-            if answ.lower() not in ['n', 'y']:
-                logging.info('Invalid choice. Select y or n.')
-                answ = raw_input('> ')
-                continue
-            if answ.lower() == 'y':
-                return True
-            return False
+        logging.debug('Ask confirmation')
+        """ 
+        Disable reinstall confirmation request. 26.12.18.
+        To activate the confirmation, you need to remove `return True` 
+        and uncomment the cycle below.
+        """
+        return True
+        # answ = raw_input('>')
+        # while True:
+        #     if answ.lower() not in ['n', 'y']:
+        #         logging.info('Invalid choice. Select y or n.')
+        #         answ = raw_input('> ')
+        #         continue
+        #     if answ.lower() == 'y':
+        #         return True
+        #     return False
 
     def prep_checks(self):
         if system(self.search_pack_cmd):

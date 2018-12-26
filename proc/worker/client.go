@@ -988,7 +988,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		// Ignoring errors if did not receive an offering from an agent.
 		logger.Add("offeringHash", hashHex).Warn(
 			"could not find offerings, error: " + err.Error())
-		return nil
+		return ErrFindOfferings
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
 	if err != nil {

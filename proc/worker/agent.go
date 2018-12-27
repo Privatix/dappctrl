@@ -645,7 +645,7 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 	if err != nil {
 		return err
 	}
-	offering.OfferStatus = data.OfferRemoved
+	offering.Status = data.OfferRemoved
 
 	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
 		return err

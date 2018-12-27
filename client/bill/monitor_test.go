@@ -70,16 +70,6 @@ func newWaitGroup() *sync.WaitGroup {
 	return &wg
 }
 
-func awaitingProcessing(wg *sync.WaitGroup, processErrors chan error) {
-	defer wg.Done()
-
-	select {
-	case <-processErrors:
-	case <-time.After(
-		time.Duration(conf.TestTimeout) * time.Second):
-	}
-}
-
 func awaitingPosting(wg *sync.WaitGroup, postErrors chan error) {
 	defer wg.Done()
 
@@ -198,9 +188,6 @@ func TestPayment(t *testing.T) {
 	processErrors := make(chan error)
 	postErrors := make(chan error)
 
-	wg := newWaitGroup()
-	go awaitingProcessing(wg, processErrors)
-
 	mon, ch := newTestMonitor(processErrors, postErrors)
 	defer closeTestMonitor(t, mon, ch)
 
@@ -216,15 +203,7 @@ func TestPayment(t *testing.T) {
 		return err
 	}
 
-	wg.Wait()
-
-	mtx.Lock()
-	if called {
-		t.Fatalf("unexpected payment triggering")
-	}
-	mtx.Unlock()
-
-	wg = newWaitGroup()
+	wg := newWaitGroup()
 	go awaitingPosting(wg, postErrors)
 
 	sess2 := data.NewTestSession(fxt.Channel.ID)

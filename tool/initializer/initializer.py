@@ -504,22 +504,22 @@ class CommonCMD(Init):
 
         if resp and resp.get('tag_name'):
             tag_name = resp['tag_name']
-            logging.info('Latest tag name: {}'.format(tag_name))
+            logging.info(' * Latest release: {}'.format(tag_name))
             self.latest_tag = tag_name
 
             # todo *
-            self.url_dwnld = self.url_dwnld.format('test_draft')
-            # self.url_dwnld = self.url_dwnld.format(tag_name)
+            # self.url_dwnld = self.url_dwnld.format('test_draft')
+            self.url_dwnld = self.url_dwnld.format(tag_name)
 
             for i, f in enumerate(self.f_dwnld_git):
 
                 # todo *
-                self.f_dwnld_git[i] = f.format('0.18.0')
-                # self.f_dwnld_git[i]=f.format(tag_name)
+                # self.f_dwnld_git[i] = f.format('0.18.0')
+                self.f_dwnld_git[i]=f.format(tag_name)
 
             # todo *
-            self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format('0.18.0')
-            # self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format(tag_name)
+            # self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format('0.18.0')
+            self.bin_arch = 'privatix_ubuntu_x64_{}_binary.tar.xz'.format(tag_name)
 
         else:
             raise BaseException('GitHub not responding')
@@ -2684,6 +2684,8 @@ class AutoOffer:
         self.botUrl = 'http://89.38.96.53:3000/getprix'
         self.botAuth = 'dXNlcjpoRmZWRWRVMkNva0Y='
         self.offerData = None
+        self.pswd = None
+        self.token = None
         self.ethAddr = None
         self.prixHash = None
         self.agent_id = None  # id of account to be created.
@@ -2704,7 +2706,7 @@ class AutoOffer:
         data = {
             'method': 'ui_getAgentOfferings',
             'params': [
-                self.pswd,
+                self.token,
                 self.product_id,
                 'registered',
                 0,
@@ -2934,7 +2936,7 @@ class AutoOffer:
         data = {
             'method': 'ui_changeOfferingStatus',
             'params': [
-                self.pswd,
+                self.token,
                 self.offer_id,
                 'publish',
                 self.gasPrice,
@@ -2953,7 +2955,7 @@ class AutoOffer:
         data = {
             'method': 'ui_createOffering',
             'params': [
-                self.pswd,
+                self.token,
                 self.__checkOfferData()
             ],
             'id': self.id,
@@ -2997,7 +2999,7 @@ class AutoOffer:
         data = {
             'method': 'ui_transferTokens',
             'params': [
-                self.pswd,
+                self.token,
                 self.agent_id,
                 'psc',
                 self.ptcBalance,
@@ -3060,6 +3062,23 @@ class AutoOffer:
 
         res = self.__urlOpen(data)
         if res[0]:
+            return self._getTok()
+        else:
+            return False, res[1]
+
+    def _getTok(self):
+        # Given paswd and returns new access token.
+        logging.info('Get token')
+
+        data = {
+            'method': 'ui_getToken',
+            'params': [self.pswd],
+            'id': self.id,
+        }
+        res = self.__urlOpen(data=data, key='result')
+        if res[0]:
+            self.token = res[1]
+            logging.debug('Token: {}'.format(self.token))
             return self._createAcc()
         else:
             return False, res[1]
@@ -3076,7 +3095,7 @@ class AutoOffer:
         logging.info('Get account')
         data = {
             'method': 'ui_getAccounts',
-            'params': [self.pswd],
+            'params': [self.token],
             'id': self.id,
         }
         res = self.__urlOpen(data=data, key='result')
@@ -3088,7 +3107,7 @@ class AutoOffer:
         data = {
             'method': 'ui_generateAccount',
             'params': [
-                self.pswd,
+                self.token,
                 {
                     'name': self.acc_name,
                     'isDefault': True,
@@ -3114,7 +3133,7 @@ class AutoOffer:
         data = {
             'method': 'ui_getObject',
             'params': [
-                self.pswd,
+                self.token,
                 'account',
                 self.agent_id,
             ],

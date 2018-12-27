@@ -404,9 +404,9 @@ func (q *queue) processJob(job *data.Job,
 	} else {
 		job.NotBefore = time.Now().Add(
 			time.Duration(tconf.TryPeriod) * time.Millisecond)
-		q.logger.Warn(fmt.Sprintf(
-			"retry for job %s scheduled to %s: %s",
-			job.Type, job.NotBefore.Format(time.RFC3339), err))
+		q.logger.Add("job", job).Warn(fmt.Sprintf(
+			"retry for job %s(%s) scheduled to %s: %s",
+			job.Type, job.ID, job.NotBefore.Format(time.RFC3339), err))
 	}
 
 	return err

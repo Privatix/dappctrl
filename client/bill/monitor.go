@@ -197,7 +197,7 @@ func (m *Monitor) isToBeTerminated(logger log.Logger,
 	ch *data.Channel, offer *data.Offering) (bool, error) {
 
 	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
-		ch.ReceiptBalance == ch.TotalDeposit {
+		ch.ReceiptBalance >= ch.TotalDeposit {
 		logger.Debug("channel reached its max. deposit")
 		return true, nil
 	}

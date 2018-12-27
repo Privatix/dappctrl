@@ -53,7 +53,7 @@ func checkSEAddress(product *data.Product,
 	assertErrEqual func(error, error)) {
 	for _, host := range hosts {
 		product.ServiceEndpointAddress = &host
-		err := actionFunc(data.TestPassword, *product)
+		err := actionFunc(testToken.v, *product)
 		assertErrEqual(exp, err)
 	}
 }
@@ -64,7 +64,7 @@ func TestCrateProduct(t *testing.T) {
 
 	product := testProduct(fxt.TemplateOffer.ID, fxt.TemplateAccess.ID)
 
-	_, err := handler.CreateProduct("wrong-password", product)
+	_, err := handler.CreateProduct("wrong-token", product)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	actionFunc := func(password string, product data.Product) error {
@@ -77,7 +77,7 @@ func TestCrateProduct(t *testing.T) {
 
 	product.ServiceEndpointAddress = nil
 
-	res, err := handler.CreateProduct(data.TestPassword, product)
+	res, err := handler.CreateProduct(testToken.v, product)
 
 	prodInDB := &data.Product{}
 	err = fxt.DB.FindByPrimaryKeyTo(prodInDB, res)
@@ -98,7 +98,7 @@ func TestUpdateProduct(t *testing.T) {
 	product.Salt = 0
 	product.Password = ""
 
-	err := handler.UpdateProduct("wrong-password", product)
+	err := handler.UpdateProduct("wrong-token", product)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	checkSEAddress(&product, handler.UpdateProduct, badHosts,
@@ -109,10 +109,10 @@ func TestUpdateProduct(t *testing.T) {
 	product.ServiceEndpointAddress = nil
 
 	unknownProduct := data.Product{ID: util.NewUUID()}
-	err = handler.UpdateProduct(data.TestPassword, unknownProduct)
+	err = handler.UpdateProduct(testToken.v, unknownProduct)
 	assertErrEqual(ui.ErrProductNotFound, err)
 
-	assertErrEqual(nil, handler.UpdateProduct(data.TestPassword, product))
+	assertErrEqual(nil, handler.UpdateProduct(testToken.v, product))
 	fxt.DB.Reload(&product)
 	if product.Name != newName ||
 		product.Salt == 0 || product.Password == "" {
@@ -124,7 +124,7 @@ func TestGetProducts(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "GetProducts")
 	defer fxt.close()
 
-	_, err := handler.GetProducts("wrong-password")
+	_, err := handler.GetProducts("wrong-token")
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	// pr2 expected to be ignored from reply.
@@ -136,7 +136,7 @@ func TestGetProducts(t *testing.T) {
 	data.InsertToTestDB(t, fxt.DB, &pr2)
 	defer data.DeleteFromTestDB(t, fxt.DB, &pr2)
 
-	result, _ := handler.GetProducts(data.TestPassword)
+	result, _ := handler.GetProducts(testToken.v)
 	if len(result) != 1 {
 		t.Fatal("expected 1 product, got ", len(result))
 	}

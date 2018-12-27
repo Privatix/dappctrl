@@ -48,23 +48,23 @@ func TestIncome(t *testing.T) {
 		&ch1)
 
 	// Test offerings income.
-	_, err := handler.GetOfferingIncome("wrong-password", ch1.Offering)
+	_, err := handler.GetOfferingIncome("wrong-token", ch1.Offering)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	actual, err := handler.GetOfferingIncome(data.TestPassword, fxt.Offering.ID)
+	actual, err := handler.GetOfferingIncome(testToken.v, fxt.Offering.ID)
 	expected := uint(ch1.ReceiptBalance + fxt.Channel.ReceiptBalance)
 	assertResult(expected, actual, err)
 
 	// Test products income.
-	_, err = handler.GetProductIncome("wrong-password", ch1.Offering)
+	_, err = handler.GetProductIncome("wrong-token", ch1.Offering)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	actual, err = handler.GetProductIncome(data.TestPassword, product.ID)
+	actual, err = handler.GetProductIncome(testToken.v, product.ID)
 	expected = uint(ch2.ReceiptBalance + ch3.ReceiptBalance)
 	assertResult(expected, actual, err)
 
 	// Test total income.
-	actual, err = handler.GetTotalIncome(data.TestPassword)
+	actual, err = handler.GetTotalIncome(testToken.v)
 	expected = uint(ch1.ReceiptBalance + ch2.ReceiptBalance +
 		ch3.ReceiptBalance)
 	assertResult(expected, actual, err)

@@ -13,7 +13,7 @@ This document describes a UI JSON RPC API located in "ui" namespace.
 *Description*: Export a private key in Ethereum Keystore format by account id.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account id (string)
 
 *Result (array of `byte`s)*: private key in Ethereum Keystore format.
@@ -40,7 +40,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_exportPr
 *Description*: Generate new private key and create new account.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account params (`ui.AccountParams` object)
 
 *Result (string)*: id of account to be created.
@@ -67,7 +67,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
 *Description*: Get accounts.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result (array of `data.Account` objects)*: accounts.
 
@@ -120,7 +120,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
 *Description*: Import private key from hex and create new account.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account params with hex key (`ui.AccountParamsWithHexKey` object)
 
 *Result (string)*: id of account to be created.
@@ -147,7 +147,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_importAc
 *Description*: Import private key from JSON blob with password and create new account.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account params (`ui.AccountParams` object)
 3. Key in Ethereum keystore format (object)
 4. Password to decrypting key in Ethereum keystore format (string)
@@ -176,7 +176,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_importAc
 *Description*: Create transfer of tokens between Privatix token & Privatix service contracts.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account id (string)
 3. Destination smart contract name (string, can be `ptc` or `psc`)
 4. Token amount (number)
@@ -206,7 +206,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_transfer
 *Description*: Updates an account.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account id (string)
 3. Name (string)
 4. IsDefault (bool)
@@ -236,7 +236,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateAc
 *Description*: Actualize the PRIX token balance for a specific account.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account id (string)
 
 *Result*: None.
@@ -259,6 +259,32 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
 
 
 ### Authentication
+
+#### Get Token
+
+*Method*: `getToken`
+
+*Description*: Given correct password, generates and returns new access token.
+
+*Parameters*:
+1. Password (string)
+
+*Result*: Token (string).
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getToken", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+  "id": 67,
+  "jsonrpc": "2.0",
+  "result": "HyTT5U_u4WIXjuGM6-ruTF9_Zk1rKRtAB7BDhPWabtY=",
+}
+```
+</details>
 
 #### Set password
 
@@ -324,7 +350,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePa
 *Description*: Update channel state.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Channel id (string)
 3. Action (string, can be `terminate`, `pause`, `resume` or `close`)
 
@@ -353,7 +379,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeCh
 *Description*: Get channels for agent.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Channel statuses (array of `string`s, can be empty)
 3. Service statuses (array of `string`s, can be empty)
 4. Offset (number)
@@ -455,7 +481,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 *Description*: Get client channel information.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Channel statuses (array of `string`s, can be empty)
 3. Service statuses (array of `string`s, can be empty)
 4. Offset (number)
@@ -586,7 +612,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Channel id (string)
 
 *Result*:   Usage (object)
@@ -620,7 +646,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
 *Description*: Get total receipt balance from all channels.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 
 *Result*: Amount (number)
 
@@ -646,7 +672,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getTotal
 *Description*: Top up a channel.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Channel id (string)
 3. Deposit (number)
 4. Gas price (number)
@@ -679,7 +705,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 *Description*: get endpoints.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Channel id (string)
 3. Template id (string)
 
@@ -695,7 +721,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 *Description*: Get an object of a specified type.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Object type (string, can be `account`, `user`, `template`, `product`,
  `offering`, `channel`, `session`, `contract`, `endpoint`, `job`, `ethTx` or `ethLog`)
 3. Object id (string)
@@ -735,7 +761,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
 *Description*: Get an object of a specified type by hash.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Object type (string, can be `template`, `offering`, `endpoint`or `ethTx`)
 3. Object hash (string)
 
@@ -794,7 +820,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
 *Description*: Accept offering and create a new channel.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Account ethereum address (string)
 3. Offering id (string)
 4. Deposit of tokens (number)
@@ -825,7 +851,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_acceptOf
 *Description*: Change the status of a offering.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Offering id (string)
 3. Action (string, can be `publish`, `popup` or `deactivate`)
 4. Gas price (number)
@@ -855,7 +881,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeOf
 *Description*: Create offering.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Offering (`data.Offering` object)
 
 *Result (string)*: id of offering to be created.
@@ -883,7 +909,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
 *Description*: Get active agent offerings.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Product id (string)
 3. Status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
 4. Offset (number)
@@ -965,7 +991,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 *Description*: Get active client offerings.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Agent ethereum address (string)
 3. Minimum unit price (number)
 4. Maximum unit price (number)
@@ -1048,7 +1074,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 *Description*: Get offerings filter parameters for client.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result (object)*:
 - `countries` (array of strings) - Country codes ISO 3166-1 alpha-2.
@@ -1101,7 +1127,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 *Description*: Get total receipt balance from all channels of offering with given id.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Offering id (string)
 
 *Result*: Amount (number)
@@ -1129,7 +1155,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getOffer
 *Description*: Returns total units used for all channels with a given offering.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Offering id (string)
 
 *Result*:   Amount (number)
@@ -1157,7 +1183,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getOffer
 *Description*: Update an offering.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Offering (`data.Offering` object)
 
 *Result*: None.
@@ -1185,7 +1211,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOf
 *Description*: Ping offerings.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. IDs of Offerings to ping (string)
 
 *Result*: Object with IDs of Offerings as keys as ping result as values.
@@ -1218,7 +1244,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_pingOffe
 *Description*: returns max(block_number) of collected ethereum logs + min confirmations setting value.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result*: Block Number (number)
 
@@ -1247,7 +1273,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLastB
 *Description*: Get back end log, paginated.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Log levels (array of strings, strings can be `debug`, `info`, `warning`, `error` or `fatal`) 
 3. Search text (string)
 4. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
@@ -1347,7 +1373,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getLogs"
 *Description*: Creates a new product.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Product (`data.Product` object)
 
 *Result (string)*: id of created product.
@@ -1375,7 +1401,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createPr
 *Description*: Get all products available to the agent.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result (array of `data.Product` objects)*: products.
 
@@ -1439,7 +1465,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getProdu
 *Description*: Get total receipt balance from all channels of all offerings with given product id.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Product id (string)
 
 *Result*: Amount (number)
@@ -1466,7 +1492,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getProdu
 *Description*: Returns total units used in all channel of all offerings with a given product.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Product id (string)
 
 *Result*:   Amount (number)
@@ -1494,7 +1520,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getProdu
 *Description*: Updates a new product. If salt is 0, ignores its change. If password is empty, ignores its change.
 
 *Parameters*: 
-1. Password (string)
+1. Token (string)
 2. Product (`data.Product` object)
 
 *Result*: None.
@@ -1525,7 +1551,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 *Description*: get sessions.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Channel id (string)
 
 *Result (array of `data.Session` objects)*: sessions.
@@ -1540,7 +1566,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updatePr
 *Description*: Get settings.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result (object)*: object with keys as setting keys and values as setting information.
 - `value` (string) - setting value.
@@ -1622,7 +1648,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getSetti
 *Description*: Update existing settings.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Object with keys as setting names and values as setting values (object)
 
 *Result*: None.
@@ -1653,7 +1679,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateSe
 *Description*: Create new template.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Template (`data.Template` object)
 
 *Result (string)*: id of template to be created.
@@ -1681,7 +1707,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createTe
 *Description*: Get templates.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Template type (string, can be `offer` or `access`)
 
 *Result (array of `data.Template` objects)*: returned templates.
@@ -1746,7 +1772,7 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
 *Description*: Get Ethereum transactions. If related type is `accountAggregated`, then get an Ethereum address of the account and find all transactions where this address is the sender.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Related type (string, can be `offering`, `channel`, `endpoint`, `account`, `accountAggregated` or empty)
 3. Related id (string, either uuid or empty)
 4. Offset (number)
@@ -1814,7 +1840,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
 *Description*: Get user role.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 
 *Result (string)*: user role, can be `agent` or `client`.
 
@@ -1842,7 +1868,7 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRo
 *Description*: Subscribe to changes for objects of a given type.
 
 *Parameters*:
-1. Password (string)
+1. Token (string)
 2. Type (string, can be `offering`, `channel`, `endpoint` or `account`)
 3. Object ids (array of strings)
 

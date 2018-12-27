@@ -50,10 +50,10 @@ func TestObjectChange(t *testing.T) {
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = subscribe(client, ch, "objectChange",
-		data.TestPassword, "bad-object-type", nil)
+		testToken.v, "bad-object-type", nil)
 	assertErrEqual(ui.ErrBadObjectType, err)
 
-	sub, err := subscribe(client, ch, "objectChange", data.TestPassword,
+	sub, err := subscribe(client, ch, "objectChange", testToken.v,
 		data.JobChannel, []string{j1.RelatedID, j2.RelatedID})
 	assertErrEqual(nil, err)
 

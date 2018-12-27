@@ -68,7 +68,7 @@ func TestGetLogs(t *testing.T) {
 		Context: []byte("{\"foo\": \"bar\"}"),
 	})
 
-	_, err := handler.GetLogs("wrong-password",
+	_, err := handler.GetLogs("wrong-token",
 		[]string{string(log.Error)}, "", "", "", 2, 1)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
@@ -101,7 +101,7 @@ func TestGetLogs(t *testing.T) {
 
 	for _, v := range testData {
 		res, err := handler.GetLogs(
-			data.TestPassword, v.level, v.searchText,
+			testToken.v, v.level, v.searchText,
 			v.dateFrom, v.dataTo, v.offset, v.limit)
 		assertResult(t, res, err, v.totalItems, v.exp, assertErrEqual)
 	}

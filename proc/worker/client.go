@@ -985,7 +985,9 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	hashHex := data.HexFromBytes(hash.Bytes())
 	offeringRawMsg, err := client.Offering(hashHex)
 	if err != nil {
-		logger.Add("offeringHash", hashHex).Error(err.Error())
+		// Ignoring errors if did not receive an offering from an agent.
+		logger.Add("offeringHash", hashHex).Warn(
+			"could not find offerings, error: " + err.Error())
 		return ErrFindOfferings
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
@@ -998,7 +1000,11 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		data.HexFromBytes(hash.Bytes()), job.RelatedID,
 		somcType, somcData)
 	if err != nil {
-		logger.Error(err.Error())
+		// Ignore all errors except internal.
+		if err != ErrInternal {
+			logger.Warn(err.Error())
+			return nil
+		}
 		return ErrFindOfferings
 	}
 

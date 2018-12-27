@@ -21,6 +21,7 @@ type Handler struct {
 	userRole          string
 	processor         *proc.Processor
 	somcClientBuilder somc.ClientBuilderInterface
+	token             TokenMakeChecker
 }
 
 // NewHandler creates a new handler.
@@ -29,7 +30,8 @@ func NewHandler(logger log.Logger, db *reform.DB,
 	encryptKeyFunc data.EncryptedKeyFunc,
 	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
 	processor *proc.Processor,
-	somcClientBuilder somc.ClientBuilderInterface) *Handler {
+	somcClientBuilder somc.ClientBuilderInterface,
+	token TokenMakeChecker) *Handler {
 	logger = logger.Add("type", "ui.Handler")
 	return &Handler{
 		logger:            logger,
@@ -41,5 +43,6 @@ func NewHandler(logger log.Logger, db *reform.DB,
 		userRole:          userRole,
 		processor:         processor,
 		somcClientBuilder: somcClientBuilder,
+		token:             token,
 	}
 }

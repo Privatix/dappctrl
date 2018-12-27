@@ -118,10 +118,10 @@ func (h *Handler) catchError(logger log.Logger, err error) error {
 	return ErrInternal
 }
 
-func (h *Handler) uintFromQuery(logger log.Logger, password,
+func (h *Handler) uintFromQuery(logger log.Logger, tkn,
 	query string, arg ...interface{}) (*uint, error) {
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	var queryRet sql.NullInt64

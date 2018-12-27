@@ -57,14 +57,14 @@ type GetClientOfferingsFilterParamsResult struct {
 }
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
-func (h *Handler) AcceptOffering(password string, account data.HexString,
+func (h *Handler) AcceptOffering(tkn string, account data.HexString,
 	offering string, deposit, gasPrice uint64) (*string, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
 		"account", account, "offering", offering,
 		"deposit", deposit, "gasPrice", gasPrice)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	var acc data.Account
@@ -107,12 +107,12 @@ func (h *Handler) AcceptOffering(password string, account data.HexString,
 // JobAgentPreOfferingPopUp or JobAgentPreOfferingDelete job,
 // depending on a selected action.
 func (h *Handler) ChangeOfferingStatus(
-	password, offering, action string, gasPrice uint64) error {
+	tkn, offering, action string, gasPrice uint64) error {
 	logger := h.logger.Add("method", "ChangeOfferingStatus",
 		"offering", offering, "action", action, "gasPrice", gasPrice)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	jobType, ok := OfferingChangeActions[action]
@@ -200,7 +200,7 @@ func (h *Handler) getClientOfferingsConditions(
 }
 
 // GetClientOfferings returns active offerings available for a client.
-func (h *Handler) GetClientOfferings(password string, agent data.HexString,
+func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	minUnitPrice, maxUnitPrice uint64, countries []string,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
@@ -210,8 +210,8 @@ func (h *Handler) GetClientOfferings(password string, agent data.HexString,
 
 	logger.Info("running")
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	if minUnitPrice != 0 && maxUnitPrice != 0 &&
@@ -288,13 +288,13 @@ func (h *Handler) getAgentOfferingsConditions(
 }
 
 // GetAgentOfferings returns active offerings available for a agent.
-func (h *Handler) GetAgentOfferings(password, product, status string,
+func (h *Handler) GetAgentOfferings(tkn, product, status string,
 	offset, limit uint) (*GetAgentOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetAgentOfferings",
 		"product", product, "status", status)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	conditions, args := h.getAgentOfferingsConditions(product, status)
@@ -404,17 +404,15 @@ func (h *Handler) prepareOffering(
 }
 
 // UpdateOffering updates an offering.
-func (h *Handler) UpdateOffering(password string,
-	offering *data.Offering) error {
+func (h *Handler) UpdateOffering(tkn string, offering *data.Offering) error {
 	logger := h.logger.Add(
 		"method", "UpdateOffering", "offering", offering)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
-	err = h.findByPrimaryKey(
+	err := h.findByPrimaryKey(
 		logger, ErrOfferingNotFound, &data.Offering{}, offering.ID)
 	if err != nil {
 		return err
@@ -429,17 +427,16 @@ func (h *Handler) UpdateOffering(password string,
 }
 
 // CreateOffering creates an offering.
-func (h *Handler) CreateOffering(password string,
+func (h *Handler) CreateOffering(tkn string,
 	offering *data.Offering) (*string, error) {
 	logger := h.logger.Add(
 		"method", "CreateOffering", "offering", offering)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
-	err = h.prepareOffering(logger, offering)
+	err := h.prepareOffering(logger, offering)
 	if err != nil {
 		return nil, err
 	}
@@ -503,11 +500,11 @@ func (h *Handler) offeringsMinMaxPrice(
 
 // GetClientOfferingsFilterParams returns offerings filter parameters for client.
 func (h *Handler) GetClientOfferingsFilterParams(
-	password string) (*GetClientOfferingsFilterParamsResult, error) {
+	tkn string) (*GetClientOfferingsFilterParamsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferingsFilterParams")
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	countries, err := h.offeringCountries(logger)
@@ -524,11 +521,11 @@ func (h *Handler) GetClientOfferingsFilterParams(
 }
 
 // PingOfferings given offerings ids pings each of them and returns result of the test.
-func (h *Handler) PingOfferings(password string, ids []string) (map[string]bool, error) {
+func (h *Handler) PingOfferings(tkn string, ids []string) (map[string]bool, error) {
 	logger := h.logger.Add("method", "PingOfferings", "ids", ids)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	now := time.Now()

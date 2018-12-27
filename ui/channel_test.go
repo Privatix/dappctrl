@@ -32,13 +32,13 @@ func TestTopUpChannel(t *testing.T) {
 		return nil
 	}))
 
-	err := handler.TopUpChannel("wrong-password", fxt.Channel.ID, 0, 123)
+	err := handler.TopUpChannel("wrong-token", fxt.Channel.ID, 0, 123)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	err = handler.TopUpChannel(data.TestPassword, util.NewUUID(), 0, 123)
+	err = handler.TopUpChannel(testToken.v, util.NewUUID(), 0, 123)
 	assertErrEqual(ui.ErrChannelNotFound, err)
 
-	err = handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 123)
+	err = handler.TopUpChannel(testToken.v, fxt.Channel.ID, 0, 123)
 	assertErrEqual(nil, err)
 
 	if j == nil || j.RelatedType != data.JobChannel ||
@@ -57,7 +57,7 @@ func TestTopUpChannel(t *testing.T) {
 	var testGasPrice uint64 = 500
 	deleteSetting := insertDefaultGasPriceSetting(t, testGasPrice)
 	defer deleteSetting()
-	handler.TopUpChannel(data.TestPassword, fxt.Channel.ID, 0, 0)
+	handler.TopUpChannel(testToken.v, fxt.Channel.ID, 0, 0)
 	jdata := unmarshalJobData()
 	if jdata.GasPrice != testGasPrice {
 		t.Fatal("job with default gas price expected")
@@ -67,7 +67,7 @@ func TestTopUpChannel(t *testing.T) {
 
 	// Test custom deposit
 	err = handler.TopUpChannel(
-		data.TestPassword, fxt.Channel.ID, deposit, 123)
+		testToken.v, fxt.Channel.ID, deposit, 123)
 	assertErrEqual(nil, err)
 	jdata = unmarshalJobData()
 	if jdata.Deposit != deposit {
@@ -123,7 +123,7 @@ func TestChangeChannelStatus(t *testing.T) {
 			data.SaveToTestDB(t, db, v.channel)
 
 			err := handler.ChangeChannelStatus(
-				data.TestPassword, v.channel.ID, v.action)
+				testToken.v, v.channel.ID, v.action)
 			assertErrEqual(nil, err)
 
 			if j == nil || j.Type != v.expJobType ||
@@ -156,18 +156,18 @@ func TestChangeChannelStatus(t *testing.T) {
 			data.ServiceActive},
 	}
 
-	err := handler.ChangeChannelStatus("wrong-password",
+	err := handler.ChangeChannelStatus("wrong-token",
 		fxt.Channel.ID, ui.ChannelPauseAction)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	err = handler.ChangeChannelStatus(data.TestPassword,
+	err = handler.ChangeChannelStatus(testToken.v,
 		fxt.Channel.ID, "wrong-action")
 	assertErrEqual(ui.ErrBadAction, err)
 
 	// Agent side.
 	handler.SetMockRole(data.RoleAgent)
 
-	err = handler.ChangeChannelStatus(data.TestPassword, fxt.Channel.ID,
+	err = handler.ChangeChannelStatus(testToken.v, fxt.Channel.ID,
 		ui.ChannelCloseAction)
 	assertErrEqual(ui.ErrNotAllowedForAgent, err)
 
@@ -213,7 +213,7 @@ func TestGetAgentChannels(t *testing.T) {
 		total         int
 	}
 
-	_, err := handler.GetAgentChannels("wrong-password",
+	_, err := handler.GetAgentChannels("wrong-token",
 		[]string{}, []string{}, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
@@ -242,7 +242,7 @@ func TestGetAgentChannels(t *testing.T) {
 	}
 
 	for _, v := range testData {
-		res, err := handler.GetAgentChannels(data.TestPassword,
+		res, err := handler.GetAgentChannels(testToken.v,
 			v.channelStatus, v.serviceStatus, v.offset, v.limit)
 		assertResult(res, err, v.expected, v.total)
 	}
@@ -474,7 +474,7 @@ func TestGetChannelUsage(t *testing.T) {
 	data.InsertToTestDB(t, fxt.DB, sess1, sess2)
 	defer data.DeleteFromTestDB(t, fxt.DB, sess2, sess1)
 
-	_, err := handler.GetChannelUsage("wrong-password", channel.ID)
+	_, err := handler.GetChannelUsage("wrong-token", channel.ID)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	// Test for scalar unit type.
@@ -485,7 +485,7 @@ func TestGetChannelUsage(t *testing.T) {
 	offering.UnitType = data.UnitScalar
 	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
 
-	ret, err := handler.GetChannelUsage(data.TestPassword, channel.ID)
+	ret, err := handler.GetChannelUsage(testToken.v, channel.ID)
 	assertErrEqual(nil, err)
 
 	if ret == nil || ret.Current != expectedCurrentUsage ||
@@ -503,7 +503,7 @@ func TestGetChannelUsage(t *testing.T) {
 	expectedCurrentUsage = sess1.SecondsConsumed + sess2.SecondsConsumed
 	offering.UnitType = data.UnitSeconds
 	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
-	ret, err = handler.GetChannelUsage(data.TestPassword, channel.ID)
+	ret, err = handler.GetChannelUsage(testToken.v, channel.ID)
 	assertErrEqual(nil, err)
 
 	if ret == nil || ret.Current != expectedCurrentUsage ||
@@ -552,7 +552,7 @@ func TestGetClientChannels(t *testing.T) {
 		}
 	}
 
-	_, err := handler.GetClientChannels("wrong-password",
+	_, err := handler.GetClientChannels("wrong-token",
 		[]string{}, []string{}, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
@@ -588,7 +588,7 @@ func TestGetClientChannels(t *testing.T) {
 	}
 
 	for _, v := range testData {
-		res, err := handler.GetClientChannels(data.TestPassword,
+		res, err := handler.GetClientChannels(testToken.v,
 			v.channelStatus, v.serviceStatus, v.offset, v.limit)
 		assertResult(res, err, v.expected, v.total)
 	}

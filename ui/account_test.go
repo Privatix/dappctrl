@@ -26,7 +26,7 @@ func TestExportPrivateKey(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "ExportPrivateKey")
 	defer fxt.close()
 
-	_, err := handler.ExportPrivateKey("wrong-password", fxt.Account.ID)
+	_, err := handler.ExportPrivateKey("wrong-token", fxt.Account.ID)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	expectedBytes := []byte(`{"hello": "world"}`)
@@ -34,7 +34,7 @@ func TestExportPrivateKey(t *testing.T) {
 
 	data.SaveToTestDB(t, db, fxt.Account)
 
-	res, err := handler.ExportPrivateKey(data.TestPassword, fxt.Account.ID)
+	res, err := handler.ExportPrivateKey(testToken.v, fxt.Account.ID)
 	assertMatchErr(nil, err)
 
 	if !bytes.Equal(res, expectedBytes) {
@@ -49,10 +49,10 @@ func TestGetAccounts(t *testing.T) {
 
 	expectedAccNumber := 2 // from fixture
 
-	_, err := handler.GetAccounts("wrong-password")
+	_, err := handler.GetAccounts("wrong-token")
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	res, err := handler.GetAccounts(data.TestPassword)
+	res, err := handler.GetAccounts(testToken.v)
 	assertMatchErr(nil, err)
 
 	if len(res) != expectedAccNumber {
@@ -160,7 +160,7 @@ func TestGenerateAccount(t *testing.T) {
 	params := &ui.AccountParams{}
 	params.Name = util.NewUUID()[:30]
 
-	res, err := handler.GenerateAccount(data.TestPassword, params)
+	res, err := handler.GenerateAccount(testToken.v, params)
 	assertMatchErr(nil, err)
 
 	account := &data.Account{}
@@ -196,7 +196,7 @@ func TestImportAccountFromHex(t *testing.T) {
 	params.Name = util.NewUUID()[:30]
 	params.PrivateKeyHex = data.HexFromBytes(crypto.FromECDSA(pk))
 
-	res, err := handler.ImportAccountFromHex(data.TestPassword, params)
+	res, err := handler.ImportAccountFromHex(testToken.v, params)
 	assertMatchErr(nil, err)
 
 	testImportAccount(t, res, &params.AccountParams, pk, j)
@@ -225,7 +225,7 @@ func TestImportAccountFromJSON(t *testing.T) {
 	params.Name = util.NewUUID()[:30]
 
 	res, err := handler.ImportAccountFromJSON(
-		data.TestPassword, params, key, pass)
+		testToken.v, params, key, pass)
 	assertMatchErr(nil, err)
 
 	testImportAccount(t, res, params, pk, j)
@@ -248,7 +248,7 @@ func TestTransferTokens(t *testing.T) {
 		return nil
 	}))
 
-	res := handler.TransferTokens("wrong-password",
+	res := handler.TransferTokens("wrong-token",
 		fxt.Account.ID, data.ContractPSC, 1, 1)
 	assertMatchErr(ui.ErrAccessDenied, res)
 
@@ -274,7 +274,7 @@ func TestTransferTokens(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		res := handler.TransferTokens(data.TestPassword,
+		res := handler.TransferTokens(testToken.v,
 			testCase.account, testCase.destination,
 			testCase.amount, testCase.gasPrice)
 		if res == nil {
@@ -300,7 +300,7 @@ func TestTransferTokens(t *testing.T) {
 		}
 	}
 
-	res = handler.TransferTokens(data.TestPassword,
+	res = handler.TransferTokens(testToken.v,
 		fxt.Account.ID, data.ContractPTC,
 		payload.amount, payload.gasPrice)
 	assertMatchErr(nil, res)
@@ -312,7 +312,7 @@ func TestTransferTokens(t *testing.T) {
 	}
 	checkJobDataFields(j.Data, payload.amount, payload.gasPrice)
 
-	res = handler.TransferTokens(data.TestPassword,
+	res = handler.TransferTokens(testToken.v,
 		fxt.Account.ID, data.ContractPSC,
 		payload.amount, payload.gasPrice)
 	assertMatchErr(nil, res)
@@ -342,10 +342,10 @@ func TestUpdateBalance(t *testing.T) {
 		return nil
 	}))
 
-	res := handler.UpdateBalance("wrong-password", fxt.Account.ID)
+	res := handler.UpdateBalance("wrong-token", fxt.Account.ID)
 	assertMatchErr(ui.ErrAccessDenied, res)
 
-	res = handler.UpdateBalance(data.TestPassword, fxt.Account.ID)
+	res = handler.UpdateBalance(testToken.v, fxt.Account.ID)
 	assertMatchErr(nil, res)
 
 	if j == nil || j.RelatedType != data.JobAccount ||
@@ -360,7 +360,7 @@ func TestUpdateAccount(t *testing.T) {
 	defer fxt.close()
 
 	res := handler.UpdateAccount(
-		"wrong-password", fxt.Account.ID, "", false, false)
+		"wrong-token", fxt.Account.ID, "", false, false)
 	assertMatchErr(ui.ErrAccessDenied, res)
 
 	oldName := fxt.Account.Name
@@ -379,7 +379,7 @@ func TestUpdateAccount(t *testing.T) {
 	}
 
 	for _, td := range testData {
-		res = handler.UpdateAccount(data.TestPassword,
+		res = handler.UpdateAccount(testToken.v,
 			fxt.Account.ID, td.name, td.isDefault, td.inUse)
 		assertMatchErr(nil, res)
 

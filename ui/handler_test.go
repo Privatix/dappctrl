@@ -3,14 +3,14 @@ package ui_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
-
-	"github.com/privatix/dappctrl/client/somc"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
@@ -32,7 +32,24 @@ var (
 	handler        *ui.Handler
 	client         *rpc.Client
 	testSOMCClient *somc.TestClient
+	testToken      *dumbToken
 )
+
+type dumbToken struct {
+	v string
+}
+
+// Contract.
+var _ ui.TokenMakeChecker = new(dumbToken)
+
+func (t *dumbToken) Make() (string, error) {
+	t.v = fmt.Sprint(rand.Int())
+	return t.v, nil
+}
+
+func (t *dumbToken) Check(s string) bool {
+	return s == t.v
+}
 
 type fixture struct {
 	*data.TestFixture
@@ -41,6 +58,8 @@ type fixture struct {
 }
 
 func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
+	testToken.Make()
+
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
 	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
 	fxt.Offering.Status = data.OfferRegistered
@@ -113,9 +132,11 @@ func TestMain(m *testing.M) {
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
 	testSOMCClient = somc.NewTestClient()
+	testToken = &dumbToken{}
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
 		data.TestEncryptedKey, data.TestToPrivateKey,
-		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient))
+		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient),
+		testToken)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

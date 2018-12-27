@@ -68,12 +68,12 @@ func TestGetObjectByHash(t *testing.T) {
 		{ui.TypeEthTx, tx.Hash},
 	}
 
-	_, err := handler.GetObjectByHash("wrong-password",
+	_, err := handler.GetObjectByHash("wrong-token",
 		ui.TypeOffering, string(fxt.Offering.Hash))
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	for _, v := range testData {
-		res, err := handler.GetObjectByHash(data.TestPassword,
+		res, err := handler.GetObjectByHash(testToken.v,
 			v.oType, string(v.hash))
 		assertResult(v, res, err)
 	}

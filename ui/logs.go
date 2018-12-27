@@ -132,15 +132,14 @@ func (h *Handler) getLogs(logger log.Logger, conditions string,
 }
 
 // GetLogs returns back end log, paginated.
-func (h *Handler) GetLogs(password string, levels []string, searchText,
+func (h *Handler) GetLogs(tkn string, levels []string, searchText,
 	dateFrom, dateTo string, offset, limit uint) (*GetLogsResult, error) {
 	logger := h.logger.Add("method", "GetLogs", "searchText",
 		searchText, "levels", levels, "dateFrom", dateFrom, "dateTo",
 		dateTo, "offset", offset, "limit", limit)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	args := &getLogsArgs{

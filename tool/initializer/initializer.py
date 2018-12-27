@@ -2772,7 +2772,7 @@ class AutoOffer:
             "unitPrice": 1000,
             "minUnits": 10000,
             "maxUnit": 30000,
-            "billingInterval": 1,
+            "billingInterval": 20,
             "maxBillingUnitLag": 100,
             "maxSuspendTime": 1800,
             "maxInactiveTimeSec": 1800,

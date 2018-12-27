@@ -58,8 +58,7 @@ CREATE TYPE chan_status AS ENUM (
 CREATE TYPE msg_status AS ENUM (
     'unpublished', -- saved in DB, but not published
     'bchain_publishing', -- publishing in blockchain
-    'bchain_published', -- published in blockchain
-    'msg_channel_published' -- published in messaging channel
+    'bchain_published' -- published in blockchain
 );
 
 -- Offering statuses
@@ -231,7 +230,9 @@ CREATE TABLE offerings (
 
     somc_type smallint NOT NULL DEFAULT 0, -- defines messages communication method with agent
 
-    somc_data text NOT NULL -- additional data to support defined somc_type.
+    somc_data text NOT NULL, -- additional data to support defined somc_type
+
+    somc_success_ping timestamp with time zone  -- last success ping to somc.
 );
 
 -- State channels.
@@ -292,7 +293,6 @@ CREATE TABLE endpoints (
     template uuid NOT NULL REFERENCES templates(id), -- corresponding endpoint template
     channel uuid NOT NULL REFERENCES channels(id), -- channel id that is being accessed
     hash hash_hex NOT NULL, -- message hash
-    status msg_status NOT NULL, -- message status
     payment_receiver_address varchar(106), -- address ("hostname:port") of payment receiver. Can be dns or IP.
     service_endpoint_address varchar(106), -- address ("hostname:port") of service endpoint. Can be dns or IP.
     username varchar(100),

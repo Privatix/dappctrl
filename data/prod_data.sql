@@ -18,7 +18,7 @@ VALUES ('eth.min.confirmations',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
-        '1000',
+        '11520',
         2,
         'defines number of latest ethereum blocks to retrieve.' ||
         ' If eth.event.freshblocks is null or zero then all events' ||
@@ -66,7 +66,7 @@ VALUES ('eth.event.lastProcessedBlock',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.17.2',
+        '0.18.0',
         1,
         'Version of database.',
         'db version');
@@ -77,13 +77,6 @@ VALUES ('offering.autopopup',
         2,
         'Allow offerings to pop up automatically.',
         'offering autopopup');
-
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('somc.transport.tor',
-        'false',
-        2,
-        'Whether to use Tor as service offering messaging protocol or not',
-        'use Tor');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES('psc.periods.challenge',

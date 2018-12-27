@@ -21,7 +21,7 @@ func TestGetSessions(t *testing.T) {
 	data.InsertToTestDB(t, db, channel, session1, session2)
 	defer data.DeleteFromTestDB(t, db, session2, session1, channel)
 
-	_, err := handler.GetSessions("wrong-password", "")
+	_, err := handler.GetSessions("wrong-token", "")
 	assertErrEquals(ui.ErrAccessDenied, err)
 
 	assertResult := func(res []data.Session, err error, exp int) {
@@ -32,12 +32,12 @@ func TestGetSessions(t *testing.T) {
 		}
 	}
 
-	res, err := handler.GetSessions(data.TestPassword, "")
+	res, err := handler.GetSessions(testToken.v, "")
 	assertResult(res, err, 2)
 
-	res, err = handler.GetSessions(data.TestPassword, fxt.Channel.ID)
+	res, err = handler.GetSessions(testToken.v, fxt.Channel.ID)
 	assertResult(res, err, 1)
 
-	res, err = handler.GetSessions(data.TestPassword, util.NewUUID())
+	res, err = handler.GetSessions(testToken.v, util.NewUUID())
 	assertResult(res, err, 0)
 }

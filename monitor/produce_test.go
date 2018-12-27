@@ -53,14 +53,14 @@ func TestQueryLogsAndCreateJobs(t *testing.T) {
 	ethClient.FilterLogsResult = logs
 	ethClient.HeaderByNumberResult = 100
 
-	producers := map[common.Hash]func(l *data.JobEthLog) ([]data.Job, error){
-		logs[0].Topics[0]: func(l *data.JobEthLog) ([]data.Job, error) {
+	producers := map[common.Hash]func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error){
+		logs[0].Topics[0]: func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
 			return []data.Job{
 				randJobForLog(l),
 				randJobForLog(l),
 			}, nil
 		},
-		logs[1].Topics[0]: func(l *data.JobEthLog) ([]data.Job, error) {
+		logs[1].Topics[0]: func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
 			return []data.Job{
 				randJobForLog(l),
 			}, nil
@@ -113,13 +113,13 @@ func TestNoJobCreatedIfAnyProducerFails(t *testing.T) {
 	ethClient.HeaderByNumberResult = 100
 
 	testErr := fmt.Errorf("test err")
-	producers := map[common.Hash]func(l *data.JobEthLog) ([]data.Job, error){
-		logs[0].Topics[0]: func(l *data.JobEthLog) ([]data.Job, error) {
+	producers := map[common.Hash]func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error){
+		logs[0].Topics[0]: func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
 			return []data.Job{
 				randJobForLog(l),
 			}, nil
 		},
-		logs[1].Topics[0]: func(l *data.JobEthLog) ([]data.Job, error) {
+		logs[1].Topics[0]: func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
 			return nil, testErr
 		},
 	}
@@ -142,8 +142,8 @@ func TestNothingToQuery(t *testing.T) {
 	ethClient.FilterLogsResult = []ethtypes.Log{log}
 	ethClient.HeaderByNumberResult = 10
 
-	producers := map[common.Hash]func(l *data.JobEthLog) ([]data.Job, error){
-		log.Topics[0]: func(*data.JobEthLog) ([]data.Job, error) {
+	producers := map[common.Hash]func(l *data.JobEthLog, _ []data.Job) ([]data.Job, error){
+		log.Topics[0]: func(*data.JobEthLog, []data.Job) ([]data.Job, error) {
 			return []data.Job{{}}, nil
 		},
 	}

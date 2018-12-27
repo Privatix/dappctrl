@@ -23,13 +23,11 @@ func (h *Handler) getSessionsConditions(
 }
 
 // GetSessions returns sessions.
-func (h *Handler) GetSessions(
-	password, channel string) ([]data.Session, error) {
+func (h *Handler) GetSessions(tkn, channel string) ([]data.Session, error) {
 	logger := h.logger.Add("method", "GetSessions", "channel", channel)
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	tail, args := h.getSessionsConditions(channel)

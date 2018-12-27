@@ -33,16 +33,16 @@ func TestUsage(t *testing.T) {
 	defer data.DeleteFromTestDB(t, fxt.DB, sess2, channel2, sess1)
 
 	// Test GetOfferingUsage.
-	_, err := handler.GetOfferingUsage("wrong-password", fxt.Offering.ID)
+	_, err := handler.GetOfferingUsage("wrong-token", fxt.Offering.ID)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	ret, err := handler.GetOfferingUsage(data.TestPassword, fxt.Offering.ID)
+	ret, err := handler.GetOfferingUsage(testToken.v, fxt.Offering.ID)
 	assertUsage(uint(sess1.UnitsUsed+sess2.UnitsUsed), ret, err)
 
 	// Test GetProductUsage.
-	_, err = handler.GetProductUsage("wrong-password", fxt.Product.ID)
+	_, err = handler.GetProductUsage("wrong-token", fxt.Product.ID)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	ret, err = handler.GetProductUsage(data.TestPassword, fxt.Product.ID)
+	ret, err = handler.GetProductUsage(testToken.v, fxt.Product.ID)
 	assertUsage(uint(sess1.UnitsUsed+sess2.UnitsUsed), ret, err)
 }

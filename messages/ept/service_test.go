@@ -22,7 +22,7 @@ const (
 var (
 	conf struct {
 		DB        *data.DBConfig
-		StderrLog *log.WriterConfig
+		Log       *log.WriterConfig
 		PayServer *pay.Config
 		EptTest   *eptTestConfig
 		EptMsg    *Config
@@ -118,20 +118,20 @@ func TestMain(m *testing.M) {
 	conf.PayServer = &pay.Config{}
 	conf.EptTest = newEptTestConfig()
 	conf.EptMsg = NewConfig()
-	conf.StderrLog = log.NewWriterConfig()
-
-	util.ReadTestConfig(&conf)
+	conf.Log = log.NewWriterConfig()
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
 	testDB = data.NewTestDB(conf.DB)
+	defer data.CloseDB(testDB)
 
-	l, err := log.NewStderrLogger(conf.StderrLog)
+	var err error
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}
-
-	logger = l
-
-	defer data.CloseDB(testDB)
 
 	os.Exit(m.Run())
 }

@@ -92,10 +92,9 @@ const (
 
 // Message statuses.
 const (
-	MsgUnpublished      = "unpublished"           // Saved but not published.
-	MsgBChainPublishing = "bchain_publishing"     // To blockchain.
-	MsgBChainPublished  = "bchain_published"      // To blockchain.
-	MsgChPublished      = "msg_channel_published" // Published in messaging channel.
+	MsgUnpublished      = "unpublished"       // Saved but not published.
+	MsgBChainPublishing = "bchain_publishing" // To blockchain.
+	MsgBChainPublished  = "bchain_published"  // To blockchain.
 )
 
 // Offering statuses.
@@ -109,10 +108,9 @@ const (
 	OfferRemoved     = "removed"
 )
 
-// Offering somc types.
+// Comminication types.
 const (
-	OfferingSOMCShared uint8 = iota
-	OfferingSOMCTor
+	OfferingSOMCTor uint8 = 1 + iota
 )
 
 // Offering is a service offering.
@@ -149,6 +147,7 @@ type Offering struct {
 	AutoPopUp          *bool           `json:"autoPopUp" reform:"auto_pop_up"`
 	SOMCType           uint8           `json:"somcType" reform:"somc_type"`
 	SOMCData           Base64String    `json:"somcData" reform:"somc_data"`
+	SOMCSuccessPing    *time.Time      `json:"somcSuccessPing" reform:"somc_success_ping"`
 }
 
 // State channel statuses.
@@ -256,7 +255,6 @@ type Endpoint struct {
 	Channel                string       `json:"channel" reform:"channel"`
 	Hash                   HexString    `json:"hash" reform:"hash"`
 	RawMsg                 Base64String `reform:"raw_msg"`
-	Status                 string       `json:"status" reform:"status"`
 	PaymentReceiverAddress *string      `json:"paymentReceiverAddress" reform:"payment_receiver_address"`
 	ServiceEndpointAddress *string      `json:"serviceEndpointAddress" reform:"service_endpoint_address"`
 	Username               *string      `json:"username" reform:"username"`

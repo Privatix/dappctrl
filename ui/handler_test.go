@@ -3,8 +3,11 @@ package ui_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
+
+	"github.com/privatix/dappctrl/client/somc"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -19,17 +22,35 @@ import (
 
 var (
 	conf struct {
-		DB        *data.DBConfig
-		StderrLog *log.WriterConfig
-		Job       *job.Config
-		Proc      *proc.Config
+		DB   *data.DBConfig
+		Log  *log.WriterConfig
+		Job  *job.Config
+		Proc *proc.Config
 	}
 	logger log.Logger
 
-	db      *reform.DB
-	handler *ui.Handler
-	client  *rpc.Client
+	db             *reform.DB
+	handler        *ui.Handler
+	client         *rpc.Client
+	testSOMCClient *somc.TestClient
+	testToken      *dumbToken
 )
+
+type dumbToken struct {
+	v string
+}
+
+// Contract.
+var _ ui.TokenMakeChecker = new(dumbToken)
+
+func (t *dumbToken) Make() (string, error) {
+	t.v = fmt.Sprint(rand.Int())
+	return t.v, nil
+}
+
+func (t *dumbToken) Check(s string) bool {
+	return s == t.v
+}
 
 type fixture struct {
 	*data.TestFixture
@@ -38,10 +59,12 @@ type fixture struct {
 }
 
 func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
+	testToken.Make()
+
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
-	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
+	fxt.Offering.Agent = data.NewTestAccount(testToken.v).EthAddr
 	fxt.Offering.OfferStatus = data.OfferRegistered
-	fxt.Offering.Status = data.MsgChPublished
+	fxt.Offering.Status = data.MsgBChainPublished
 	data.SaveToTestDB(t, db, fxt.Offering)
 
 	hash, err := data.HashPassword(
@@ -92,23 +115,30 @@ func TestMain(m *testing.M) {
 	var err error
 
 	conf.DB = data.NewDBConfig()
-	conf.StderrLog = log.NewWriterConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.Proc = proc.NewConfig()
-	util.ReadTestConfig(&conf)
+
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
+
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
+	if err != nil {
+		panic(err)
+	}
 
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	logger, err = log.NewStderrLogger(conf.StderrLog)
-	if err != nil {
-		panic(err.Error())
-	}
-
 	server := rpc.NewServer()
 	pwdStorage := new(data.PWDStorage)
+	testSOMCClient = somc.NewTestClient()
+	testToken = &dumbToken{}
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
 		data.TestEncryptedKey, data.TestToPrivateKey,
-		data.RoleAgent, nil)
+		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient),
+		testToken)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

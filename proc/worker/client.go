@@ -16,14 +16,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -47,10 +46,6 @@ func (w *Worker) checkDeposit(logger log.Logger, acc *data.Account,
 
 	if deposit > amount.Uint64() {
 		return ErrInsufficientPSCBalance
-	}
-
-	if deposit < data.MinDeposit(offer) {
-		return ErrSmallDeposit
 	}
 
 	return nil
@@ -181,6 +176,10 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 		return err
 	}
 
+	if deposit < data.MinDeposit(offering) {
+		return ErrSmallDeposit
+	}
+
 	offerHash, err := data.HexToHash(offering.Hash)
 	if err != nil {
 		logger.Error(err.Error())
@@ -273,45 +272,28 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 
 	logger = logger.Add("endpointKey", key)
 
+	var endpointMsgSealed []byte
+
 	offering, err := w.offering(logger, ch.Offering)
 	if err != nil {
 		return err
 	}
 
-	var endpointMsgSealed []byte
-	switch offering.SOMCType {
-	case data.OfferingSOMCShared:
-		endpointParams, err := w.somc.GetEndpoint(key)
+	if err == nil {
+		client, err := w.somcClientBuilder.NewClient(offering.SOMCType, offering.SOMCData)
 		if err != nil {
 			logger.Error(err.Error())
 			return ErrGetEndpoint
 		}
-
-		var ep *somc.EndpointParams
-		if err := json.Unmarshal(endpointParams, &ep); err != nil {
+		rawMsg, err := client.Endpoint(key)
+		if err != nil {
 			logger.Error(err.Error())
-			return ErrInternal
+			return ErrGetEndpoint
 		}
-		endpointMsgSealed = ep.Endpoint
-
-	case data.OfferingSOMCTor:
-		if err == nil {
-			hostnameBytes, err := data.ToBytes(offering.SOMCData)
-			if err != nil {
-				logger.Error(err.Error())
-				return ErrGetEndpoint
-			}
-			somcClient := somcserver.NewClient(w.torClient, string(hostnameBytes))
-			rawMsg, err := somcClient.GetEndpoint(key)
-			if err != nil {
-				logger.Error(err.Error())
-				return ErrGetEndpoint
-			}
-			endpointMsgSealed, err = data.ToBytes(rawMsg)
-			if err != nil {
-				logger.Error(err.Error())
-				return ErrGetEndpoint
-			}
+		endpointMsgSealed, err = data.ToBytes(rawMsg)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrGetEndpoint
 		}
 	}
 
@@ -432,7 +414,6 @@ func (w *Worker) ClientEndpointCreate(job *data.Job) error {
 			Channel:                ch.ID,
 			Hash:                   msg.TemplateHash,
 			RawMsg:                 data.FromBytes(jdata.EndpointSealed),
-			Status:                 data.MsgChPublished,
 			PaymentReceiverAddress: raddr,
 			ServiceEndpointAddress: saddr,
 			Username:               pointer.ToString(msg.Username),
@@ -797,17 +778,12 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 		return err
 	}
 
-	deposit := data.MinDeposit(offer)
-	if jdata.Deposit > deposit {
-		deposit = jdata.Deposit
-	}
-
-	if err := w.checkDeposit(logger, acc, offer, deposit); err != nil {
+	if err := w.checkDeposit(logger, acc, offer, jdata.Deposit); err != nil {
 		return err
 	}
 
 	return w.clientPreChannelTopUpSaveTx(logger, job, ch, acc, offer,
-		jdata.GasPrice, new(big.Int).SetUint64(deposit))
+		jdata.GasPrice, new(big.Int).SetUint64(jdata.Deposit))
 }
 
 // ClientAfterChannelTopUp updates deposit of a channel.
@@ -972,7 +948,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 	hash := data.HexFromBytes(logOfferingPopUp.offeringHash.Bytes())
 	err = w.db.FindOneTo(&offering, "hash", hash)
 	if err == sql.ErrNoRows {
-		// New offering. Get from somc.
+		// New offering.
 		return w.clientRetrieveAndSaveOffering(logger, job,
 			ethLog.Block, logOfferingPopUp.somcType,
 			logOfferingPopUp.somcData, logOfferingPopUp.agentAddr,
@@ -993,48 +969,43 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	job *data.Job, block uint64, somcType uint8, somcData data.Base64String,
 	agentAddr common.Address, hash common.Hash, currentSupply uint16) error {
+	logger = logger.Add("job", fmt.Sprintf("%+v", job), "block", block, "somcType",
+		somcType, "somcData", somcData, "agentAddr", agentAddr, "hash", hash,
+		"currentSupply", currentSupply)
 
-	var offering *data.Offering
-	switch somcType {
-	case data.OfferingSOMCShared:
-		offeringsData, err := w.somc.FindOfferings([]data.HexString{
-			data.HexFromBytes(hash.Bytes())})
-		if err != nil {
-			return ErrFindOfferings
+	client, err := w.somcClientBuilder.NewClient(somcType, somcData)
+	if err == somc.ErrUnknownSOMCType {
+		logger.Warn(err.Error())
+		return nil
+	}
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrFindOfferings
+	}
+	hashHex := data.HexFromBytes(hash.Bytes())
+	offeringRawMsg, err := client.Offering(hashHex)
+	if err != nil {
+		// Ignoring errors if did not receive an offering from an agent.
+		logger.Add("offeringHash", hashHex).Warn(
+			"could not find offerings, error: " + err.Error())
+		return ErrFindOfferings
+	}
+	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrFindOfferings
+	}
+	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
+		block, data.HexFromBytes(agentAddr.Bytes()),
+		data.HexFromBytes(hash.Bytes()), job.RelatedID,
+		somcType, somcData)
+	if err != nil {
+		// Ignore all errors except internal.
+		if err != ErrInternal {
+			logger.Warn(err.Error())
+			return nil
 		}
-
-		offering, err = w.fillOfferingFromSOMCReply(logger,
-			job.RelatedID, data.HexFromBytes(agentAddr.Bytes()),
-			block, offeringsData, somcType, somcData)
-		if err != nil {
-			return err
-		}
-	case data.OfferingSOMCTor:
-		hostnameBytes, err := data.ToBytes(somcData)
-		if err != nil {
-			logger.Error(err.Error())
-			return ErrFindOfferings
-		}
-		somcClient := somcserver.NewClient(w.torClient, string(hostnameBytes))
-		hashHex := data.HexFromBytes(hash.Bytes())
-		offeringRawMsg, err := somcClient.GetOffering(hashHex)
-		if err != nil {
-			logger.Add("offeringHash", hashHex).Error(err.Error())
-			return ErrFindOfferings
-		}
-		offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
-		if err != nil {
-			logger.Error(err.Error())
-			return ErrFindOfferings
-		}
-		offering, err = w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
-			block, data.HexFromBytes(agentAddr.Bytes()),
-			data.HexFromBytes(hash.Bytes()), job.RelatedID,
-			somcType, somcData)
-		if err != nil {
-			logger.Error(err.Error())
-			return ErrFindOfferings
-		}
+		return ErrFindOfferings
 	}
 
 	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
@@ -1057,20 +1028,6 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 
 	return nil
-}
-
-func (w *Worker) fillOfferingFromSOMCReply(logger log.Logger,
-	relID string, agentAddr data.HexString, blockNumber uint64,
-	offeringsData []somc.OfferingData,
-	somcType uint8, somcData data.Base64String) (*data.Offering, error) {
-	if len(offeringsData) == 0 {
-		return nil, ErrSOMCNoOfferings
-	}
-
-	offeringData := offeringsData[0]
-
-	return w.fillOfferingFromMsg(logger, offeringData.Offering, blockNumber,
-		agentAddr, offeringData.Hash, relID, somcType, somcData)
 }
 
 func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
@@ -1139,7 +1096,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 		Template:           template.ID,
 		Product:            product.ID,
 		Hash:               hash,
-		Status:             data.MsgChPublished,
+		Status:             data.MsgBChainPublished,
 		OfferStatus:        data.OfferRegistered,
 		BlockNumberUpdated: blockNumber,
 		Agent:              agent,

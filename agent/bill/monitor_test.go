@@ -22,7 +22,7 @@ var (
 		BillingTest  *billingTestConfig
 		DB           *data.DBConfig
 		Job          *job.Config
-		StderrLog    *log.WriterConfig
+		Log          *log.WriterConfig
 		Pc           *proc.Config
 	}
 
@@ -254,13 +254,16 @@ func TestMain(m *testing.M) {
 	conf.AgentMonitor = NewConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Job = job.NewConfig()
-	conf.StderrLog = log.NewWriterConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.Pc = proc.NewConfig()
 	conf.BillingTest = newBillingTestConfig()
 
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
-	logger, err := log.NewStderrLogger(conf.StderrLog)
+	logger, err := log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}

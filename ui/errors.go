@@ -36,6 +36,9 @@ const (
 	ErrNotAllowedForAgent
 	ErrJobNotFound
 	ErrBadServiceEndpointAddress
+	ErrInvalidValueForSetting
+	ErrInconsistentSOMCSwitch
+	ErrSOMCIsNotAvailable
 )
 
 var errMsgs = errors.Messages{
@@ -68,6 +71,9 @@ var errMsgs = errors.Messages{
 	ErrNotAllowedForAgent:        "operation not allowed for agent",
 	ErrJobNotFound:               "job not found",
 	ErrBadServiceEndpointAddress: "bad service endpoint address",
+	ErrInvalidValueForSetting:    "invalid value for setting",
+	ErrInconsistentSOMCSwitch:    "inconsistent somc transport switch",
+	ErrSOMCIsNotAvailable:        "somc is not available",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

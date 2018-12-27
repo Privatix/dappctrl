@@ -4,6 +4,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/util/log"
 )
 
 const settingsCondition = "WHERE permissions > 0"
@@ -21,13 +22,11 @@ type SettingUI struct {
 }
 
 // GetSettings returns settings.
-func (h *Handler) GetSettings(
-	password string) (map[string]SettingUI, error) {
+func (h *Handler) GetSettings(tkn string) (map[string]SettingUI, error) {
 	logger := h.logger.Add("method", "GetSettings")
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	result := make(map[string]SettingUI)
@@ -48,23 +47,28 @@ func (h *Handler) GetSettings(
 }
 
 // UpdateSettings updates settings.
-func (h *Handler) UpdateSettings(password string,
-	items map[string]string) error {
+func (h *Handler) UpdateSettings(tkn string, items map[string]string) error {
 	logger := h.logger.Add("method", "UpdateSettings")
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
-	err = h.db.InTransaction(func(tx *reform.TX) error {
+	err := h.db.InTransaction(func(tx *reform.TX) error {
+		for k, v := range items {
+			if err := h.validateSetting(logger, k, v); err != nil {
+				logger.Add("key", k, "value", v).Error(err.Error())
+				return err
+			}
+		}
+
 		for k, v := range items {
 			logger = logger.Add("key", k, "value", v)
 
 			var settingFromDB data.Setting
 
 			// gets setting from database
-			err = tx.FindByPrimaryKeyTo(&settingFromDB, k)
+			err := tx.FindByPrimaryKeyTo(&settingFromDB, k)
 			if err != nil {
 				logger.Error(err.Error())
 				return ErrInternal
@@ -91,5 +95,10 @@ func (h *Handler) UpdateSettings(password string,
 	if err != nil {
 		return h.catchError(logger, err)
 	}
+	return nil
+}
+
+func (h *Handler) validateSetting(logger log.Logger, k, v string) error {
+	// Run validators here.
 	return nil
 }

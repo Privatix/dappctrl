@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"database/sql"
+
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -15,7 +16,7 @@ import (
 const (
 	activeOfferingCondition = `
 		offer_status in ('registered', 'popped_up')
-			AND status = 'msg_channel_published'
+			AND status = 'bchain_published'
 			AND NOT is_local
 			AND current_supply > 0
 			AND agent NOT IN (SELECT eth_addr FROM accounts)`
@@ -118,10 +119,10 @@ func (h *Handler) catchError(logger log.Logger, err error) error {
 	return ErrInternal
 }
 
-func (h *Handler) uintFromQuery(logger log.Logger, password,
+func (h *Handler) uintFromQuery(logger log.Logger, tkn,
 	query string, arg ...interface{}) (*uint, error) {
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	var queryRet sql.NullInt64

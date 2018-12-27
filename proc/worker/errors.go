@@ -80,6 +80,7 @@ const (
 	ErrPopUpPeriodIsNotOver
 	ErrOfferingDeletePeriodIsNotOver
 	ErrOfferingDeposit
+	ErrTorNoSet
 )
 
 var errMsgs = errors.Messages{
@@ -157,6 +158,7 @@ var errMsgs = errors.Messages{
 	ErrPopUpPeriodIsNotOver:          "popup period is not over, try again later",
 	ErrOfferingDeletePeriodIsNotOver: "remove period is not over, try again later",
 	ErrOfferingDeposit:               "incorrect offering deposit",
+	ErrTorNoSet:                      "hostname of tor hidden service must be provided",
 }
 
 func init() {

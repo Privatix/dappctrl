@@ -19,10 +19,10 @@ func TestGetLastBlockNumber(t *testing.T) {
 		}
 	}
 
-	_, err := handler.GetLastBlockNumber("wrong-password")
+	_, err := handler.GetLastBlockNumber("wrong-token")
 	assertErrEquals(ui.ErrAccessDenied, err)
 
-	_, err = handler.GetLastBlockNumber(data.TestPassword)
+	_, err = handler.GetLastBlockNumber(testToken.v)
 	assertErrEquals(ui.ErrMinConfirmationsNotFound, err)
 
 	// Insert min confirmations setting.
@@ -36,7 +36,7 @@ func TestGetLastBlockNumber(t *testing.T) {
 	data.InsertToTestDB(t, fxt.DB, setting)
 	defer data.DeleteFromTestDB(t, fxt.DB, setting)
 
-	ret, err := handler.GetLastBlockNumber(data.TestPassword)
+	ret, err := handler.GetLastBlockNumber(testToken.v)
 	assertBlockNumber(minConfVal, ret, err)
 
 	// Populate db with test records.
@@ -61,6 +61,6 @@ func TestGetLastBlockNumber(t *testing.T) {
 	data.InsertToTestDB(t, db, job1, job2)
 	defer data.DeleteFromTestDB(t, db, job2, job1)
 
-	ret, err = handler.GetLastBlockNumber(data.TestPassword)
+	ret, err = handler.GetLastBlockNumber(testToken.v)
 	assertBlockNumber(maxBlockStored+minConfVal, ret, err)
 }

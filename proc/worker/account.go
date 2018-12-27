@@ -269,11 +269,33 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 	return nil
 }
 
+func (w *Worker) findOffering(logger log.Logger, job *data.Job,
+	jobType string) (*data.Offering, error) {
+	if w.isJobInvalid(job, jobType, data.JobOffering) {
+		return nil, ErrInvalidJob
+	}
+
+	rec := &data.Offering{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
+	if err != nil {
+		logger.Warn("offering not found, error: " + err.Error())
+		return nil, ErrOfferingNotFound
+	}
+
+	return rec, err
+}
+
 // DecrementCurrentSupply finds offering and decrements its current supply.
 func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
-	offering, err := w.relatedOffering(logger, job, data.JobDecrementCurrentSupply)
+
+	offering, err := w.findOffering(
+		logger, job, data.JobDecrementCurrentSupply)
 	if err != nil {
+		// Ignore errors if the offering is not found in the database.
+		if err == ErrOfferingNotFound {
+			return nil
+		}
 		return err
 	}
 
@@ -291,9 +313,14 @@ func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 // IncrementCurrentSupply finds offering and increments its current supply.
 func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
-	offering, err := w.relatedOffering(logger, job,
-		data.JobIncrementCurrentSupply)
+
+	offering, err := w.findOffering(
+		logger, job, data.JobIncrementCurrentSupply)
 	if err != nil {
+		// Ignore errors if the offering is not found in the database.
+		if err == ErrOfferingNotFound {
+			return nil
+		}
 		return err
 	}
 

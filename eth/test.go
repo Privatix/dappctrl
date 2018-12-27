@@ -227,7 +227,6 @@ func (b *TestEthBackend) TestCalled(t *testing.T, method string,
 			return
 		}
 	}
-	t.Logf("%+v\n", b.CallStack)
 	t.Fatalf("no call of %s from %v with args: %v", method, caller, args)
 }
 

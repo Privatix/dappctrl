@@ -26,7 +26,7 @@ func TestGetEndpoints(t *testing.T) {
 	data.InsertToTestDB(t, db, channel, endpoint)
 	defer data.DeleteFromTestDB(t, db, endpoint, channel)
 
-	_, err := handler.GetEndpoints("wrong-password", "", "")
+	_, err := handler.GetEndpoints("wrong-token", "", "")
 	assertErrEquals(ui.ErrAccessDenied, err)
 
 	assertResult := func(res []data.Endpoint, err error, exp int) {
@@ -50,7 +50,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, v := range testData {
 		res, err := handler.GetEndpoints(
-			data.TestPassword, v.channel, v.template)
+			testToken.v, v.channel, v.template)
 		assertResult(res, err, v.expected)
 	}
 }

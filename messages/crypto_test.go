@@ -17,7 +17,10 @@ var testPassword = "test-password"
 
 func TestMain(m *testing.M) {
 	// Ignore config when all tests run.
-	util.ReadTestConfig(&struct{}{})
+	args := &util.TestArgs{
+		Conf: &struct{}{},
+	}
+	util.ReadTestArgs(args)
 
 	os.Exit(m.Run())
 }

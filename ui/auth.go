@@ -83,7 +83,7 @@ func (h *Handler) UpdatePassword(current, new string) error {
 		return err
 	}
 
-	h.SetPassword(new)
+	h.token.Make()
 
 	return nil
 }
@@ -159,4 +159,21 @@ func passwordHashSetting(hash data.Base64String) *data.Setting {
 		Permissions: data.AccessDenied,
 		Name:        "Password",
 	}
+}
+
+// GetToken returns token if password is correct.
+func (h *Handler) GetToken(password string) (*string, error) {
+	logger := h.logger.Add("method", "GetToken")
+
+	if err := h.checkPassword(logger, password); err != nil {
+		return nil, err
+	}
+
+	v, err := h.token.Make()
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
+	}
+
+	return &v, nil
 }

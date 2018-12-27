@@ -176,19 +176,18 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return ErrGetConsumedUnits
 	}
 
-	lag := int64(consumed)/int64(offer.BillingInterval) -
-		(int64(ch.ReceiptBalance)-int64(offer.SetupPrice))/
-			int64(offer.UnitPrice)
-	if lag <= 0 {
-		return nil
-	}
-
 	amount := consumed*offer.UnitPrice + offer.SetupPrice
 	if amount > ch.TotalDeposit {
 		amount = ch.TotalDeposit
+		go m.postCheque(ch.ID, amount)
+		return nil
 	}
 
-	go m.postCheque(ch.ID, amount)
+	lag := int64(consumed) - (int64(ch.ReceiptBalance)-
+		int64(offer.SetupPrice))/int64(offer.UnitPrice)
+	if lag/int64(offer.BillingInterval) >= 1 {
+		go m.postCheque(ch.ID, amount)
+	}
 
 	return nil
 }
@@ -198,11 +197,11 @@ func (m *Monitor) isToBeTerminated(logger log.Logger,
 
 	if ch.ReceiptBalance != 0 && ch.TotalDeposit != 0 &&
 		ch.ReceiptBalance == ch.TotalDeposit {
-		logger.Debug("channel is complete")
+		logger.Debug("channel reached its max. deposit")
 		return true, nil
 	}
 
-	logger.Debug("channel not complete")
+	logger.Debug("channel max. deposit is not reached")
 
 	reached, err := m.maxInactiveTimeReached(ch, offer)
 	if err != nil {

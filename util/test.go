@@ -9,15 +9,24 @@ import (
 	"testing"
 )
 
+// TestArgs is a test arguments.
+type TestArgs struct {
+	Conf    interface{}
+	Verbose bool
+}
+
 // These are functions for shortening testing boilerplate.
 
-// ReadTestConfig parses command line and reads configuration.
-func ReadTestConfig(conf interface{}) {
+// ReadTestArgs parses command line and reads arguments.
+func ReadTestArgs(args *TestArgs) {
 	fconfig := flag.String(
 		"config", "dappctrl-test.config.json", "Configuration file")
+
+	flag.BoolVar(&args.Verbose, "vv", false, "Verbose log output")
+
 	flag.Parse()
 
-	if err := ReadJSONFile(*fconfig, conf); err != nil {
+	if err := ReadJSONFile(*fconfig, args.Conf); err != nil {
 		log.Fatalf("failed to read configuration: %s\n", err)
 	}
 }

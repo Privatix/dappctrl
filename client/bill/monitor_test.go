@@ -27,7 +27,7 @@ var (
 		ClientBilling *Config
 		DB            *data.DBConfig
 		Job           *job.Config
-		StderrLog     *log.WriterConfig
+		Log           *log.WriterConfig
 		Proc          *proc.Config
 		TestTimeout   uint64
 	}
@@ -68,16 +68,6 @@ func newWaitGroup() *sync.WaitGroup {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	return &wg
-}
-
-func awaitingProcessing(wg *sync.WaitGroup, processErrors chan error) {
-	defer wg.Done()
-
-	select {
-	case <-processErrors:
-	case <-time.After(
-		time.Duration(conf.TestTimeout) * time.Second):
-	}
 }
 
 func awaitingPosting(wg *sync.WaitGroup, postErrors chan error) {
@@ -198,9 +188,6 @@ func TestPayment(t *testing.T) {
 	processErrors := make(chan error)
 	postErrors := make(chan error)
 
-	wg := newWaitGroup()
-	go awaitingProcessing(wg, processErrors)
-
 	mon, ch := newTestMonitor(processErrors, postErrors)
 	defer closeTestMonitor(t, mon, ch)
 
@@ -216,15 +203,7 @@ func TestPayment(t *testing.T) {
 		return err
 	}
 
-	wg.Wait()
-
-	mtx.Lock()
-	if called {
-		t.Fatalf("unexpected payment triggering")
-	}
-	mtx.Unlock()
-
-	wg = newWaitGroup()
+	wg := newWaitGroup()
 	go awaitingPosting(wg, postErrors)
 
 	sess2 := data.NewTestSession(fxt.Channel.ID)
@@ -255,17 +234,19 @@ func TestPayment(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.ClientBilling = NewConfig()
-	conf.StderrLog = log.NewWriterConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.DB = data.NewDBConfig()
 	conf.Proc = proc.NewConfig()
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
-	l, err := log.NewStderrLogger(conf.StderrLog)
+	var err error
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}
-
-	logger = l
 
 	db = data.NewTestDB(conf.DB)
 	queue := job.NewQueue(conf.Job, logger, db, nil)

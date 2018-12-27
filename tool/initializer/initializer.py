@@ -321,17 +321,17 @@ class Init:
     dappctrl_role = None  # the role: agent|client.
 
     def __init__(self):
+        self.old_vers = None  # True if use LXC ond False if Nspawn
+        self.url_dwnld = main_conf['link_download']
         self.uid_dict = dict(userid=str(uuid1()))
         self.bind_port = main_conf['bind_port']
         self.bind_ports = main_conf['bind_ports']
         self.tmp_var = main_conf['tmp_var']
         self.fin_file = main_conf['mark_final']
-        self.url_dwnld = main_conf['link_download']
         self.wait_mess = main_conf['wait_mess']
         self.p_dapctrl_conf = main_conf[
             'dappctrl_conf_json']  # ping [3000,8000,9000]
-        self.p_dapctrl_dev_conf = main_conf['dappctrl_dev_conf_json'].format(
-            main_conf['branch'])
+
         self.p_dapvpn_conf = main_conf['dappvpn_conf_json']
         self.ovpn_conf = main_conf['openvpn_conf']
 
@@ -339,18 +339,6 @@ class Init:
         self.test_path = test['path']
         self.test_sql = test['sql']
         self.test_cmd = test['cmd']
-
-        bld = main_conf['build']
-        self.db_conf = bld['db_conf']
-        self.build_cmd = bld['cmd']
-
-        self.dupp_raw_id = bld['dappctrl_id_raw'].format(main_conf['branch'])
-        self.dappctrl_id = bld['dappctrl_id']
-
-        self.field_name_id = bld['field_name_id']
-        self.dupp_conf_url = bld['conf_link'].format(main_conf['branch'])
-        self.dupp_vpn_templ = bld['templ'].format(main_conf['branch'])
-        self.build_cmd_path = bld['cmd_path']
 
         gui = main_conf['gui']
         self.gui_arch = gui['gui_arch']
@@ -375,9 +363,23 @@ class Init:
         self.dns_conf = dnsmasq['conf']
         self.dns_sect = dnsmasq['section']
         self.dns_disable = dnsmasq['disable']
+        self.init_branch()
 
-    def re_init(self):
-        self.__init__()
+    def init_branch(self):
+        logging.debug('Initial vars')
+        bld = main_conf['build']
+        self.db_conf = bld['db_conf']
+        self.build_cmd = bld['cmd']
+        self.dupp_raw_id = bld['dappctrl_id_raw'].format(main_conf['branch'])
+        self.dappctrl_id = bld['dappctrl_id']
+
+        self.field_name_id = bld['field_name_id']
+        self.dupp_conf_url = bld['conf_link'].format(main_conf['branch'])
+        self.dupp_vpn_templ = bld['templ'].format(main_conf['branch'])
+        self.build_cmd_path = bld['cmd_path']
+
+        self.p_dapctrl_dev_conf = main_conf['dappctrl_dev_conf_json'].format(
+            main_conf['branch'])
 
     def __init_back(self, back):
         self.addr = back['addr']
@@ -1186,8 +1188,8 @@ class Tor(CommonCMD):
     def check_tor_port(self):
         logging.info('Check Tor config')
 
-        self.tor_socks_port = self.check_port(port=self.tor_socks_port,
-                                              auto=True)
+        self.tor_socks_port = int(self.check_port(port=self.tor_socks_port,
+                                              auto=True))
 
         full_comm_p = self.p_contr + self.path_com
         data = self.file_rw(p=full_comm_p + self.p_dapctrl_conf,
@@ -1586,12 +1588,10 @@ class UpdateBynary(CommonCMD):
                     dest = self.p_contr + cont + '/root/go/bin/' + f
                     logging.info('Destination {}'.format(dest))
                     cmd = move_cmd.format(f, dest)
-                    logging.debug('Move binaty cmd: {}'.format(cmd))
+                    logging.debug('Move cmd: {}'.format(cmd))
                     self._sys_call(cmd=cmd)
-                    logging.debug('Chown rule 755 for {}'.format(dest))
-                    self._sys_call(cmd='sudo chmod 755 {}')
-
-                    # chmod(dest, 0755)
+                    logging.debug('Binary chmod 777 for {}'.format(dest))
+                    chmod(dest, 0777)
 
         except BaseException as down:
             logging.error('Download: {}.'.format(down))
@@ -2642,12 +2642,10 @@ class AutoOffer:
                 items = res[1].get('items')
                 logging.debug("items: {}".format(items))
                 if items and isinstance(items, (list, set, tuple)):
-                    status = items[0].get('status')
+                    # status = items[0].get('status')
                     offerStatus = items[0].get('offerStatus')
-                    logging.debug(
-                        'status: {}, offerStatus: {}'.format(status,
-                                                             offerStatus))
-                    if status == 'msg_channel_published' and offerStatus == 'registered':
+                    logging.debug('offerStatus: {}'.format(offerStatus))
+                    if offerStatus == 'registered':
                         logging.debug('Offerings for agent exist.')
                         return True, 'All done'
             logging.debug('Wait')
@@ -3357,7 +3355,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
             if self.in_args['update_bin']:
                 self.dappvpn_route = dappvpn() + '/'
                 self.dappctrl_route = dappctrl() + '/'
-            elif self.in_args['update_back'] or self.in_args['no_gui']:
+            elif self.in_args['update_back'] or self.in_args['no_gui'] or self.in_args['cli']:
                 self.back_route = back()
             elif self.in_args['update_gui']:
                 self.gui_route = gui()
@@ -3543,7 +3541,7 @@ def checker_fabric(inherit_class, old_vers, ver, dist_name):
                     main_conf['branch'], self.in_args['branch']))
 
                 main_conf['branch'] = self.in_args['branch']
-                self.re_init()
+                self.init_branch()
 
             if self.in_args['build']:
                 logging.info('Build mode.')

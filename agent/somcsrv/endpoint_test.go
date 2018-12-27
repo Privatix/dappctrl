@@ -1,9 +1,9 @@
-package somcserver_test
+package somcsrv_test
 
 import (
 	"testing"
 
-	"github.com/privatix/dappctrl/agent/somcserver"
+	"github.com/privatix/dappctrl/agent/somcsrv"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util"
 )
@@ -11,7 +11,7 @@ import (
 func TestGetEndpointMessage(t *testing.T) {
 	// Test channel does not exist.
 	_, err := handler.Endpoint("my-channel-key")
-	util.TestExpectResult(t, "Endpoint", somcserver.ErrChannelNotFound, err)
+	util.TestExpectResult(t, "Endpoint", somcsrv.ErrChannelNotFound, err)
 
 	// Test endpoint exists.
 	fxt := data.NewTestFixture(t, db)
@@ -35,5 +35,5 @@ func TestGetEndpointMessage(t *testing.T) {
 	// Restore record for proper fixture close.
 	defer data.SaveToTestDB(t, db, fxt.Endpoint)
 	_, err = handler.Endpoint(channelKey)
-	util.TestExpectResult(t, "Endpoint", somcserver.ErrEndpointNotFound, err)
+	util.TestExpectResult(t, "Endpoint", somcsrv.ErrEndpointNotFound, err)
 }

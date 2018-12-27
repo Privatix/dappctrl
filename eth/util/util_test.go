@@ -11,12 +11,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	apputil "github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util"
 )
 
 func TestMain(m *testing.M) {
 	// Ignore config flags when run all packages tests.
-	apputil.ReadTestConfig(&struct{}{})
+	args := &util.TestArgs{
+		Conf: &struct{}{},
+	}
+	util.ReadTestArgs(args)
 	os.Exit(m.Run())
 }
 

@@ -29,6 +29,7 @@ func newTestConfig() *testConfig {
 var (
 	conf struct {
 		DB        *data.DBConfig
+		Log       *log.WriterConfig
 		Job       *Config
 		JobTest   *testConfig
 		StderrLog *log.WriterConfig
@@ -266,17 +267,19 @@ func TestSubscribe(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	conf.DB = data.NewDBConfig()
+	conf.Log = log.NewWriterConfig()
 	conf.Job = NewConfig()
 	conf.JobTest = newTestConfig()
-	conf.StderrLog = log.NewWriterConfig()
-	util.ReadTestConfig(&conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
-	l, err := log.NewStderrLogger(conf.StderrLog)
+	var err error
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}
-
-	logger = l
 	db = data.NewTestDB(conf.DB)
 
 	os.Exit(m.Run())

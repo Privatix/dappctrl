@@ -18,6 +18,6 @@ func NewHTTPClient(sock uint) (*http.Client, error) {
 	torTransport := &http.Transport{Proxy: http.ProxyURL(torProxyURL)}
 	return &http.Client{
 		Transport: torTransport,
-		Timeout:   time.Second * 30,
+		Timeout:   time.Second * 10,
 	}, nil
 }

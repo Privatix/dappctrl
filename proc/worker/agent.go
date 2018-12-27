@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
@@ -441,7 +440,6 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		Channel:                channel.ID,
 		Hash:                   data.HexFromBytes(hash),
 		RawMsg:                 data.FromBytes(msgSealed),
-		Status:                 data.MsgUnpublished,
 		ServiceEndpointAddress: pointer.ToString(msg.ServiceEndpointAddress),
 		PaymentReceiverAddress: pointer.ToString(msg.PaymentReceiverAddress),
 		Username:               pointer.ToString(msg.Username),
@@ -477,28 +475,18 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	if offering.SOMCType == data.OfferingSOMCShared {
-		if err := w.addJob(logger, tx, data.JobAgentPreEndpointMsgSOMCPublish,
-			data.JobEndpoint, newEndpoint.ID); err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
 	channel.Password = passwordHash
 	channel.Salt = salt.Uint64()
 
-	if offering.SOMCType == data.OfferingSOMCTor {
-		if offering.BillingType == data.BillingPrepaid ||
-			offering.SetupPrice > 0 {
-			channel.ServiceStatus = data.ServiceSuspended
+	if offering.BillingType == data.BillingPrepaid ||
+		offering.SetupPrice > 0 {
+		channel.ServiceStatus = data.ServiceSuspended
 
-		} else {
-			channel.ServiceStatus = data.ServiceActive
-		}
-		changedTime := time.Now().Add(time.Minute)
-		channel.ServiceChangedTime = &changedTime
+	} else {
+		channel.ServiceStatus = data.ServiceActive
 	}
+	changedTime := time.Now().Add(time.Minute)
+	channel.ServiceChangedTime = &changedTime
 
 	if err = tx.Update(channel); err != nil {
 		logger.Error(err.Error())
@@ -509,79 +497,6 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 	if err = tx.Commit(); err != nil {
 		logger.Error(err.Error())
 		tx.Rollback()
-		return ErrInternal
-	}
-
-	return nil
-}
-
-// AgentPreEndpointMsgSOMCPublish sends msg to somc and creates after job.
-func (w *Worker) AgentPreEndpointMsgSOMCPublish(job *data.Job) error {
-	logger := w.logger.Add("method", "AgentPreEndpointMsgSOMCPublish",
-		"job", job)
-
-	endpoint, err := w.relatedEndpoint(logger,
-		job, data.JobAgentPreEndpointMsgSOMCPublish)
-	if err != nil {
-		return err
-	}
-
-	msg, err := data.ToBytes(endpoint.RawMsg)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	key, err := w.keyFromChannelData(logger, endpoint.Channel)
-	if err != nil {
-		return fmt.Errorf("failed to generate channel key: %v", err)
-	}
-
-	if err = w.somc.PublishEndpoint(key, msg); err != nil {
-		logger.Error(err.Error())
-		return ErrPublishEndpoint
-	}
-
-	endpoint.Status = data.MsgChPublished
-
-	if err = w.db.Update(endpoint); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	return w.addJob(logger, nil, data.JobAgentAfterEndpointMsgSOMCPublish,
-		data.JobChannel, endpoint.Channel)
-}
-
-// AgentAfterEndpointMsgSOMCPublish suspends service if some pre payment expected.
-func (w *Worker) AgentAfterEndpointMsgSOMCPublish(job *data.Job) error {
-	logger := w.logger.Add("method", "AgentAfterEndpointMsgSOMCPublish",
-		"job", job)
-
-	channel, err := w.relatedChannel(logger, job,
-		data.JobAgentAfterEndpointMsgSOMCPublish)
-	if err != nil {
-		return err
-	}
-
-	offering, err := w.offering(logger, channel.Offering)
-	if err != nil {
-		return err
-	}
-
-	if offering.BillingType == data.BillingPrepaid ||
-		offering.SetupPrice > 0 {
-		channel.ServiceStatus = data.ServiceSuspended
-
-	} else {
-		channel.ServiceStatus = data.ServiceActive
-	}
-
-	changedTime := time.Now().Add(time.Minute)
-	channel.ServiceChangedTime = &changedTime
-
-	if err = w.db.Update(channel); err != nil {
-		logger.Error(err.Error())
 		return ErrInternal
 	}
 
@@ -658,18 +573,13 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PSC.RegisterServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(publishData.GasPrice)
 
-	offering.SOMCType = data.OfferingSOMCShared
-	offering.SOMCData = ""
+	if w.torHostName == "" {
+		return ErrTorNoSet
+	}
 
-	useTor, err := data.ReadBoolSetting(w.db.Querier, data.SettingSOMCUseTor)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-	if useTor {
-		offering.SOMCType = data.OfferingSOMCTor
-		offering.SOMCData = w.torHostName
-	}
+	offering.SOMCType = data.OfferingSOMCTor
+	offering.SOMCData = w.torHostName
+
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(common.BytesToHash(offeringHash)),
 		new(big.Int).SetUint64(minDeposit), offering.Supply,
@@ -703,54 +613,16 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
+	ethLog, err := w.ethLog(logger, job)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("ethLog", ethLog)
+
 	offering.Status = data.MsgBChainPublished
 	offering.OfferStatus = data.OfferRegistered
-	if err = w.db.Update(offering); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	ethlog, err := w.ethLog(logger, job)
-	if err != nil {
-		return err
-	}
-
-	logInput, err := extractLogOfferingCreated(logger, ethlog)
-	if err != nil {
-		return err
-	}
-
-	if logInput.somcType == data.OfferingSOMCShared {
-		return w.addJob(logger, nil, data.JobAgentPreOfferingMsgSOMCPublish,
-			data.JobOffering, offering.ID)
-	}
-	return nil
-}
-
-// AgentPreOfferingMsgSOMCPublish publishes to somc and creates after job.
-func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
-	logger := w.logger.Add("method", "AgentPreOfferingMsgSOMCPublish",
-		"job", job)
-	offering, err := w.relatedOffering(logger, job,
-		data.JobAgentPreOfferingMsgSOMCPublish)
-	if err != nil {
-		return err
-	}
-
-	logger = logger.Add("offering", offering)
-
-	packedMsgBytes, err := data.ToBytes(offering.RawMsg)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	if err = w.somc.PublishOffering(packedMsgBytes); err != nil {
-		logger.Error(err.Error())
-		return ErrPublishOffering
-	}
-
-	offering.Status = data.MsgChPublished
+	offering.BlockNumberUpdated = ethLog.Block
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -767,8 +639,27 @@ func (w *Worker) AgentPreOfferingMsgSOMCPublish(job *data.Job) error {
 
 // AgentAfterOfferingDelete set offering status to `remove`
 func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
-	return w.updateRelatedOffering(job, data.JobAgentAfterOfferingDelete,
-		data.OfferRemoved)
+	logger := w.logger.Add(
+		"method", "AgentAfterOfferingDelete", "job", job)
+
+	offering, err := w.relatedOffering(
+		logger, job, data.JobAgentAfterOfferingDelete)
+	if err != nil {
+		return err
+	}
+	offering.OfferStatus = data.OfferRemoved
+
+	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
+		return err
+	}
+
+	agent, err := w.account(logger, offering.Agent)
+	if err != nil {
+		return err
+	}
+
+	return w.addJob(logger, nil,
+		data.JobAccountUpdateBalances, data.JobAccount, agent.ID)
 }
 
 // AgentPreOfferingDelete calls psc remove an offering.

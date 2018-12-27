@@ -15,6 +15,7 @@ import (
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
@@ -24,7 +25,6 @@ import (
 	"github.com/privatix/dappctrl/messages/offer"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
-	"github.com/privatix/dappctrl/somc"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -39,53 +39,39 @@ type testConfig struct {
 	EptMsg    *ept.Config
 	Eth       *eth.Config
 	Job       *job.Config
-	StderrLog *log.WriterConfig
+	Log       *log.WriterConfig
 	PayServer *pay.Config
-	SOMC      *somc.Config
-	SOMCTest  *somc.TestConfig
 	pscAddr   common.Address
 	Country   *country.Config
 }
 
 func newTestConfig() *testConfig {
 	return &testConfig{
-		DB:        data.NewDBConfig(),
-		EptMsg:    ept.NewConfig(),
-		Eth:       eth.NewConfig(),
-		Job:       job.NewConfig(),
-		StderrLog: log.NewWriterConfig(),
-		SOMC:      somc.NewConfig(),
-		SOMCTest:  somc.NewTestConfig(),
-		pscAddr:   common.HexToAddress("0x1"),
-		Country:   country.NewConfig(),
+		DB:      data.NewDBConfig(),
+		EptMsg:  ept.NewConfig(),
+		Eth:     eth.NewConfig(),
+		Job:     job.NewConfig(),
+		Log:     log.NewWriterConfig(),
+		pscAddr: common.HexToAddress("0x1"),
+		Country: country.NewConfig(),
 	}
 }
 
 type workerTest struct {
-	db       *reform.DB
-	ethBack  *eth.TestEthBackend
-	fakeSOMC *somc.FakeSOMC
-	somcConn *somc.Conn
-	worker   *Worker
-	gasConf  *GasConf
+	db      *reform.DB
+	ethBack *eth.TestEthBackend
+	worker  *Worker
+	gasConf *GasConf
 }
 
 var (
-	conf   *testConfig
-	db     *reform.DB
-	logger log.Logger
+	conf       *testConfig
+	db         *reform.DB
+	logger     log.Logger
+	testClient *somc.TestClient
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
-
-	fakeSOMC := somc.NewFakeSOMC(t, conf.SOMC.URL,
-		conf.SOMCTest.ServerStartupDelay)
-
-	somcConn, err := somc.NewConn(conf.SOMC, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
 	ethBack := eth.NewTestEthBackend(conf.pscAddr)
@@ -93,12 +79,12 @@ func newWorkerTest(t *testing.T) *workerTest {
 	pwdStorage := new(data.PWDStorage)
 	pwdStorage.Set(data.TestPassword)
 
-	worker, err := NewWorker(logger, db, somcConn, ethBack,
-		conf.Gas, conf.pscAddr, conf.PayServer.Addr, pwdStorage,
-		conf.Country, data.TestToPrivateKey, conf.EptMsg, "", 0)
+	testClient = somc.NewTestClient()
+
+	worker, err := NewWorker(logger, db, ethBack, conf.Gas, conf.pscAddr,
+		conf.PayServer.Addr, pwdStorage, conf.Country, data.TestToPrivateKey,
+		conf.EptMsg, "testhostname", somc.NewTestClientBuilder(testClient))
 	if err != nil {
-		somcConn.Close()
-		fakeSOMC.Close()
 		panic(err)
 	}
 
@@ -106,28 +92,24 @@ func newWorkerTest(t *testing.T) *workerTest {
 	worker.SetProcessor(proc.NewProcessor(proc.NewConfig(), db, jobQueue))
 
 	return &workerTest{
-		db:       db,
-		ethBack:  ethBack,
-		fakeSOMC: fakeSOMC,
-		somcConn: somcConn,
-		worker:   worker,
-		gasConf:  conf.Gas,
+		db:      db,
+		ethBack: ethBack,
+		worker:  worker,
+		gasConf: conf.Gas,
 	}
 }
 
-func (e *workerTest) close() {
-	e.somcConn.Close()
-	e.fakeSOMC.Close()
-}
+func (e *workerTest) close() {}
 
 func TestMain(m *testing.M) {
 	conf = newTestConfig()
-
-	util.ReadTestConfig(conf)
+	args := &util.TestArgs{
+		Conf: &conf,
+	}
+	util.ReadTestArgs(args)
 
 	var err error
-
-	logger, err = log.NewStderrLogger(conf.StderrLog)
+	logger, err = log.NewTestLogger(conf.Log, args.Verbose)
 	if err != nil {
 		panic(err)
 	}

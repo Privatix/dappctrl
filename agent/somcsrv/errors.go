@@ -1,11 +1,11 @@
-package somcserver
+package somcsrv
 
 import "github.com/privatix/dappctrl/util/errors"
 
 // Errors.
 const (
-	// CRC16("github.com/privatix/dappctrl/agent/somcserver") = 0x9B09
-	ErrInternal errors.Error = 0x9B09<<8 + iota
+	// CRC16("github.com/privatix/dappctrl/agent/somcsrv") = 0x60E6
+	ErrInternal errors.Error = 0x60E6<<8 + iota
 	ErrChannelNotFound
 	ErrEndpointNotFound
 	ErrOfferingNotFound

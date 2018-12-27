@@ -75,25 +75,25 @@ func TestGetEthTransactions(t *testing.T) {
 		defer data.DeleteFromTestDB(t, db, tx)
 	}
 
-	_, err := handler.GetEthTransactions("wrong-password", "", "", 0, 0)
+	_, err := handler.GetEthTransactions("wrong-token", "", "", 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	_, err = handler.GetEthTransactions(data.TestPassword,
+	_, err = handler.GetEthTransactions(testToken.v,
 		ui.AccountAggregatedType, "", 0, 0)
 	assertErrEqual(ui.ErrInternal, err)
 
-	_, err = handler.GetEthTransactions(data.TestPassword,
+	_, err = handler.GetEthTransactions(testToken.v,
 		ui.AccountAggregatedType, util.NewUUID(), 0, 0)
 	assertErrEqual(ui.ErrAccountNotFound, err)
 
 	for _, v := range checkData {
-		res, err := handler.GetEthTransactions(data.TestPassword,
+		res, err := handler.GetEthTransactions(testToken.v,
 			v.relType, v.relID, v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
 
 	// Test accountAggregated type.
-	res, err := handler.GetEthTransactions(data.TestPassword,
+	res, err := handler.GetEthTransactions(testToken.v,
 		ui.AccountAggregatedType, fxt.Account.ID, 0, 0)
 	assertResult(res, err, 2, 2)
 
@@ -105,7 +105,7 @@ func TestGetEthTransactions(t *testing.T) {
 	}
 
 	// Test ordering.
-	res, err = handler.GetEthTransactions(data.TestPassword,
+	res, err = handler.GetEthTransactions(testToken.v,
 		"", "", 0, 0)
 	assertResult(res, err, 3, 3)
 

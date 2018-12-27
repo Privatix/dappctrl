@@ -36,10 +36,6 @@
             "user": "postgres"
         }
     },
-    "DBLog": {
-        "Level": "info",
-        "StackLevel": "error"
-    },
     "EptMsg": {
         "Timeout": 1000
     },
@@ -125,12 +121,10 @@
         "Workers": 0
     },
     "JobHandlerTest": {
-        "ReactionDelay": 10,
-        "SOMCTimeout": 10
+        "ReactionDelay": 10
     },
     "JobHanlderTest": {
-        "ReactionDelay": 10,
-        "SOMCTimeout": 10
+        "ReactionDelay": 10
     },
     "JobTest": {
         "StressJobs": 100
@@ -147,15 +141,9 @@
         "ServerStartupDelay": 10
     },
     "Role": "agent",
-    "SOMC": {
-        "URL": "ws://localhost:8080"
-    },
     "SOMCServer": {
         "Addr": "localhost:5555",
         "TLS": null
-    },
-    "SOMCTest": {
-        "ServerStartupDelay": 10
     },
     "SessionServer": {
         "Addr": "localhost:8000",
@@ -170,14 +158,6 @@
             }
         },
         "ServerStartupDelay": 10
-    },
-    "StderrLog": {
-        "FileMode": 420,
-        "Filename": "/var/log/dappctrl-%Y-%m-%d.log",
-        "Level": "info",
-        "Prefix": "",
-        "StackLevel": "error",
-        "UTC": false
     },
     "TestTimeout": 30,
     "UI": {

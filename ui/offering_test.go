@@ -76,30 +76,30 @@ func TestAcceptOffering(t *testing.T) {
 
 	minDeposit := data.MinDeposit(fxt.Offering)
 
-	_, err := handler.AcceptOffering("wrong-password", fxt.UserAcc.EthAddr,
+	_, err := handler.AcceptOffering("wrong-token", fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword,
+	_, err = handler.AcceptOffering(testToken.v,
 		data.HexString(util.NewUUID()), fxt.Offering.ID,
 		minDeposit, 12345)
 	assertErrEqual(ui.ErrAccountNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
 		util.NewUUID(), minDeposit, 12345)
 	assertErrEqual(ui.ErrOfferingNotFound, err)
 
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit-1, 12345)
 	assertErrEqual(ui.ErrDepositTooSmall, err)
 
 	testSOMCClient.Err = errors.New("test error")
-	_, err = handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(ui.ErrSOMCIsNotAvailable, err)
 
 	testSOMCClient.Err = nil
-	res, err := handler.AcceptOffering(data.TestPassword, fxt.UserAcc.EthAddr,
+	res, err := handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
 		fxt.Offering.ID, minDeposit, 12345)
 	assertErrEqual(nil, err)
 
@@ -160,11 +160,11 @@ func testGetClientOfferings(t *testing.T,
 	highPrice := fxt.Offering.UnitPrice + 10
 
 	_, err := handler.GetClientOfferings(
-		"wrong-password", "", 0, 0, nil, 0, 0)
+		"wrong-token", "", 0, 0, nil, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = handler.GetClientOfferings(
-		data.TestPassword, "", highPrice, lowPrice, nil, 0, 0)
+		testToken.v, "", highPrice, lowPrice, nil, 0, 0)
 	assertErrEqual(ui.ErrBadUnitPriceRange, err)
 
 	other := data.NewTestAccount(data.TestPassword).ID
@@ -189,7 +189,7 @@ func testGetClientOfferings(t *testing.T,
 	}
 
 	for _, v := range testArgs {
-		res, err := handler.GetClientOfferings(data.TestPassword,
+		res, err := handler.GetClientOfferings(testToken.v,
 			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country,
 			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
@@ -265,7 +265,7 @@ func testGetAgentOfferings(t *testing.T,
 		}
 	}
 
-	_, err := handler.GetAgentOfferings("wrong-password", "", "", 0, 0)
+	_, err := handler.GetAgentOfferings("wrong-token", "", "", 0, 0)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	testArgs := []testGetAgentOfferingsArgs{
@@ -280,7 +280,7 @@ func testGetAgentOfferings(t *testing.T,
 	}
 
 	for _, v := range testArgs {
-		res, err := handler.GetAgentOfferings(data.TestPassword,
+		res, err := handler.GetAgentOfferings(testToken.v,
 			v.product, v.offerStatus, v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
@@ -403,7 +403,7 @@ func TestCreateOffering(t *testing.T) {
 	invalidOfferings := invalidOfferingsArray(t, fxt)
 
 	for i, v := range invalidOfferings {
-		_, err := handler.CreateOffering(data.TestPassword, v)
+		_, err := handler.CreateOffering(testToken.v, v)
 		if err == nil {
 			t.Fatalf("offering %d should not be saved", i)
 		}
@@ -412,11 +412,11 @@ func TestCreateOffering(t *testing.T) {
 	offering := data.NewTestOffering(data.HexString(fxt.Account.ID),
 		fxt.Product.ID, fxt.TemplateOffer.ID)
 
-	_, err := handler.CreateOffering("wrong-password", offering)
+	_, err := handler.CreateOffering("wrong-token", offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	for _, item := range []data.Offering{*offering, *offering} {
-		res, err := handler.CreateOffering(data.TestPassword, &item)
+		res, err := handler.CreateOffering(testToken.v, &item)
 		assertMatchErr(nil, err)
 		offering2 := &data.Offering{}
 		err = db.FindByPrimaryKeyTo(offering2, res)
@@ -429,18 +429,18 @@ func TestUpdateOffering(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "UpdateOffering")
 	defer fxt.close()
 
-	err := handler.UpdateOffering("wrong-password", fxt.Offering)
+	err := handler.UpdateOffering("wrong-token", fxt.Offering)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	newOffering := data.NewTestOffering(data.HexString(fxt.Account.ID),
 		fxt.Product.ID, fxt.TemplateOffer.ID)
 
-	err = handler.UpdateOffering(data.TestPassword, newOffering)
+	err = handler.UpdateOffering(testToken.v, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)
 
 	fxt.Offering.Status = data.MsgBChainPublished
 
-	err = handler.UpdateOffering(data.TestPassword, fxt.Offering)
+	err = handler.UpdateOffering(testToken.v, fxt.Offering)
 	assertMatchErr(nil, err)
 
 	savedOffering := &data.Offering{}
@@ -473,7 +473,7 @@ func TestChangeOfferingStatus(t *testing.T) {
 
 	for action, jobType := range ui.OfferingChangeActions {
 		err := handler.ChangeOfferingStatus(
-			data.TestPassword, fxt.Offering.ID, action, 100)
+			testToken.v, fxt.Offering.ID, action, 100)
 		assertMatchErr(nil, err)
 
 		if j == nil || j.Type != jobType ||
@@ -523,10 +523,10 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		defer data.DeleteFromTestDB(t, db, v)
 	}
 
-	_, err := handler.GetClientOfferingsFilterParams("wrong-password")
+	_, err := handler.GetClientOfferingsFilterParams("wrong-token")
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	res, err := handler.GetClientOfferingsFilterParams(data.TestPassword)
+	res, err := handler.GetClientOfferingsFilterParams(testToken.v)
 	assertMatchErr(nil, err)
 
 	if len(res.Countries) != 2 {
@@ -554,10 +554,10 @@ func TestPingOfferings(t *testing.T) {
 	fxt, assertErrorEquals := newTest(t, "PingOfferings")
 	defer fxt.close()
 
-	_, err := handler.PingOfferings("wrong-password", []string{"sdfs"})
+	_, err := handler.PingOfferings("wrong-token", []string{"sdfs"})
 	assertErrorEquals(ui.ErrAccessDenied, err)
 
-	_, err = handler.PingOfferings(data.TestPassword, []string{util.NewUUID()})
+	_, err = handler.PingOfferings(testToken.v, []string{util.NewUUID()})
 	assertErrorEquals(ui.ErrOfferingNotFound, err)
 
 	offering := *fxt.Offering
@@ -565,7 +565,7 @@ func TestPingOfferings(t *testing.T) {
 	offering.Hash = data.HexString("sdfsdf")
 	data.InsertToTestDB(t, fxt.DB, &offering)
 	defer data.DeleteFromTestDB(t, fxt.DB, &offering)
-	ret, err := handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID, offering.ID})
+	ret, err := handler.PingOfferings(testToken.v, []string{fxt.Offering.ID, offering.ID})
 	assertErrorEquals(nil, err)
 	if !ret[fxt.Offering.ID] || !ret[offering.ID] {
 		t.Fatalf("wrong ping result: got %v", ret)
@@ -576,7 +576,7 @@ func TestPingOfferings(t *testing.T) {
 	}
 
 	testSOMCClient.Err = errors.New("test error")
-	ret, err = handler.PingOfferings(data.TestPassword, []string{fxt.Offering.ID})
+	ret, err = handler.PingOfferings(testToken.v, []string{fxt.Offering.ID})
 	assertErrorEquals(nil, err)
 	if ret[fxt.Offering.ID] {
 		t.Fatalf("wrong ping result, got %v", ret)

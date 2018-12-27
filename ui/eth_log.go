@@ -6,11 +6,11 @@ import (
 )
 
 // GetLastBlockNumber returns last known block number.
-func (h *Handler) GetLastBlockNumber(password string) (*uint64, error) {
+func (h *Handler) GetLastBlockNumber(tkn string) (*uint64, error) {
 	logger := h.logger.Add("method", "GetLastBlockNumber")
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	minConfirmations, err := h.minConfirmations(logger)

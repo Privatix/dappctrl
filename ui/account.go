@@ -39,13 +39,11 @@ func (p *AccountParams) prefilledAccount() *data.Account {
 }
 
 // ExportPrivateKey returns a private key in base64 encoding by account id.
-func (h *Handler) ExportPrivateKey(
-	password, account string) ([]byte, error) {
+func (h *Handler) ExportPrivateKey(tkn, account string) ([]byte, error) {
 	logger := h.logger.Add("method", "ExportPrivateKey",
 		"account", account)
-
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	var acc data.Account
@@ -67,11 +65,11 @@ func (h *Handler) ExportPrivateKey(
 }
 
 // GetAccounts returns accounts.
-func (h *Handler) GetAccounts(password string) ([]data.Account, error) {
+func (h *Handler) GetAccounts(tkn string) ([]data.Account, error) {
 	logger := h.logger.Add("method", "GetAccounts")
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	accounts, err := h.selectAllFrom(logger, data.AccountTable, "")
@@ -170,12 +168,11 @@ func (h *Handler) fillAndSaveAccount(logger log.Logger, account *data.Account,
 
 // GenerateAccount generates new private key and creates new account.
 func (h *Handler) GenerateAccount(
-	password string, params *AccountParams) (*string, error) {
+	tkn string, params *AccountParams) (*string, error) {
 	logger := h.logger.Add("method", "GenerateAccount")
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	account := params.prefilledAccount()
@@ -192,12 +189,11 @@ func (h *Handler) GenerateAccount(
 // ImportAccountFromHex imports private key from hex, creates account
 // and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromHex(
-	password string, params *AccountParamsWithHexKey) (*string, error) {
+	tkn string, params *AccountParamsWithHexKey) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromHex")
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	makeECDSAFunc := h.hexPrivateKeyToECDSA(params.PrivateKeyHex)
@@ -215,13 +211,12 @@ func (h *Handler) ImportAccountFromHex(
 // ImportAccountFromJSON imports private key from JSON blob with password,
 // creates account and initiates JobAccountUpdateBalances job.
 func (h *Handler) ImportAccountFromJSON(
-	password string, params *AccountParams, jsonBlob json.RawMessage,
+	tkn string, params *AccountParams, jsonBlob json.RawMessage,
 	jsonKeyStorePassword string) (*string, error) {
 	logger := h.logger.Add("method", "ImportAccountFromJSON")
 
-	err := h.checkPassword(logger, password)
-	if err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	account := params.prefilledAccount()
@@ -241,12 +236,12 @@ func (h *Handler) ImportAccountFromJSON(
 // TransferTokens initiates JobPreAccountAddBalanceApprove
 // or JobPreAccountReturnBalance job depending on the direction of the transfer.
 func (h *Handler) TransferTokens(
-	password, account, destination string, amount, gasPrice uint64) error {
+	tkn, account, destination string, amount, gasPrice uint64) error {
 	logger := h.logger.Add("method", "TransferTokens", "destination",
 		destination, "amount", amount, "gasPrice", gasPrice)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	if amount == 0 {
@@ -286,12 +281,12 @@ func (h *Handler) TransferTokens(
 }
 
 // UpdateBalance initiates JobAccountUpdateBalances job.
-func (h *Handler) UpdateBalance(password, account string) error {
+func (h *Handler) UpdateBalance(tkn, account string) error {
 	logger := h.logger.Add("method", "UpdateBalance",
 		"account", account)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	err := h.findByPrimaryKey(
@@ -311,13 +306,13 @@ func (h *Handler) UpdateBalance(password, account string) error {
 }
 
 // UpdateAccount updates an account.
-func (h *Handler) UpdateAccount(password, account, name string,
+func (h *Handler) UpdateAccount(tkn, account, name string,
 	isDefault, inUse bool) error {
 	logger := h.logger.Add("method", "UpdateAccount",
 		"account", account)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	acc := data.Account{}

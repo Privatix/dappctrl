@@ -63,7 +63,7 @@ func deleteSettings(t *testing.T) {
 
 func testGetSettings(t *testing.T, exp int, err error,
 	checkFunc func(error, error)) {
-	res, err2 := handler.GetSettings(data.TestPassword)
+	res, err2 := handler.GetSettings(testToken.v)
 	checkFunc(err, err2)
 	if res == nil {
 		t.Fatal("a result is nil")
@@ -117,7 +117,7 @@ func TestGetSettings(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "GetSettings")
 	defer fxt.close()
 
-	_, err := handler.GetSettings("wrong-password")
+	_, err := handler.GetSettings("wrong-token")
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	testGetSettings(t, 0, nil, assertMatchErr)
@@ -141,14 +141,14 @@ func TestUpdateSettings(t *testing.T) {
 		update[v.Key] = changedValue
 	}
 
-	err := handler.UpdateSettings("wrong-password", nil)
+	err := handler.UpdateSettings("wrong-token", nil)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
-	err = handler.UpdateSettings(data.TestPassword, update)
+	err = handler.UpdateSettings(testToken.v, update)
 	assertMatchErr(nil, err)
 
 	err = handler.UpdateSettings(
-		data.TestPassword, map[string]string{"1": "2"})
+		testToken.v, map[string]string{"1": "2"})
 	assertMatchErr(ui.ErrInternal, err)
 
 	result := allSettings(t)

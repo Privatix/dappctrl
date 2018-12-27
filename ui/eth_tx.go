@@ -18,13 +18,13 @@ type GetEthTransactionsResult struct {
 }
 
 // GetEthTransactions returns transactions by related object.
-func (h *Handler) GetEthTransactions(password, relType, relID string,
+func (h *Handler) GetEthTransactions(tkn, relType, relID string,
 	offset, limit uint) (*GetEthTransactionsResult, error) {
 	logger := h.logger.Add("method", "GetEthTransactions", "relatedType",
 		relType, "relatedID", relID, "limit", limit, "offset", offset)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	conds := make([]string, 0)

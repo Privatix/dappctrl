@@ -76,12 +76,12 @@ type Usage struct {
 
 // TopUpChannel initiates JobClientPreChannelTopUp job.
 func (h *Handler) TopUpChannel(
-	password, channel string, deposit, gasPrice uint64) error {
+	tkn, channel string, deposit, gasPrice uint64) error {
 	logger := h.logger.Add("method", "TopUpChannel",
 		"channel", channel, "deposit", deposit, "gasPrice", gasPrice)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	ch := &data.Channel{}
@@ -116,12 +116,12 @@ func (h *Handler) topUpChannelJobData(logger log.Logger,
 }
 
 // ChangeChannelStatus updates channel state.
-func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
+func (h *Handler) ChangeChannelStatus(tkn, channel, action string) error {
 	logger := h.logger.Add("method", "ChangeChannelStatus",
 		"channel", channel, "action", action, "userRole", h.userRole)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return err
+	if !h.token.Check(tkn) {
+		return ErrAccessDenied
 	}
 
 	condition := fmt.Sprintf("WHERE id = %s ", h.db.Placeholder(1))
@@ -178,14 +178,14 @@ func (h *Handler) ChangeChannelStatus(password, channel, action string) error {
 }
 
 // GetAgentChannels gets channels for agent.
-func (h *Handler) GetAgentChannels(password string,
+func (h *Handler) GetAgentChannels(tkn string,
 	channelStatus, serviceStatus []string,
 	offset, limit uint) (*GetAgentChannelsResult, error) {
 	logger := h.logger.Add("method", "GetAgentChannels",
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	channels, total, err := h.getChannels(
@@ -199,11 +199,11 @@ func (h *Handler) GetAgentChannels(password string,
 }
 
 // GetChannelUsage returns detailed usage on channel.
-func (h *Handler) GetChannelUsage(password string, id string) (*Usage, error) {
+func (h *Handler) GetChannelUsage(tkn string, id string) (*Usage, error) {
 	logger := h.logger.Add("method", "GetChannelUsage", "channel", id)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	ch := &data.Channel{}
@@ -227,14 +227,14 @@ func (h *Handler) GetChannelUsage(password string, id string) (*Usage, error) {
 }
 
 // GetClientChannels gets client channel information.
-func (h *Handler) GetClientChannels(password string, channelStatus,
+func (h *Handler) GetClientChannels(tkn string, channelStatus,
 	serviceStatus []string, offset,
 	limit uint) (*GetClientChannelsResult, error) {
 	logger := h.logger.Add("method", "GetClientChannels",
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	chs, total, err := h.getChannels(logger, channelStatus, serviceStatus,

@@ -5,12 +5,11 @@ import (
 	"crypto/ecdsa"
 	"testing"
 
-	"github.com/privatix/dappctrl/client/somc"
-
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
@@ -83,7 +82,7 @@ func TestUpdatePassword(t *testing.T) {
 	pwdStorage := new(data.PWDStorage)
 	handler := ui.NewHandler(logger, db, nil, pwdStorage,
 		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil,
-		somc.NewTestClientBuilder(testSOMCClient))
+		somc.NewTestClientBuilder(testSOMCClient), testToken)
 	err := server.RegisterName("ui2", handler)
 	if err != nil {
 		t.Fatal(err)
@@ -112,8 +111,14 @@ func TestUpdatePassword(t *testing.T) {
 
 	newPassword := "new-password"
 
+	oldToken := testToken.v
+
 	assertMatchErr(handler.UpdatePassword(
 		data.TestPassword, newPassword), nil)
+
+	if oldToken == testToken.v {
+		t.Fatalf("token must be reset on password update")
+	}
 
 	db.Reload(fxt.hash)
 	db.Reload(fxt.salt)
@@ -125,4 +130,18 @@ func TestUpdatePassword(t *testing.T) {
 	}
 
 	checkAccountsPKeys(t, accounts, privateKey, newPassword)
+}
+
+func TestGetToken(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "GetToken")
+	defer fxt.close()
+
+	_, err := handler.GetToken("wrong-password")
+	assertMatchErr(ui.ErrAccessDenied, err)
+
+	v, err := handler.GetToken(data.TestPassword)
+	assertMatchErr(nil, err)
+	if v == nil || testToken.v != *v {
+		t.Fatalf("wanted token %v, got %v", testToken.v, v)
+	}
 }

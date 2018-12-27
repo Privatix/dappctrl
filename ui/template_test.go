@@ -13,7 +13,7 @@ import (
 
 func expectedTemplates(t *testing.T, resultsNumber int, tplType string,
 	expected error, checkFunc func(error, error)) {
-	res, err2 := handler.GetTemplates(data.TestPassword, tplType)
+	res, err2 := handler.GetTemplates(testToken.v, tplType)
 	checkFunc(expected, err2)
 
 	if res == nil {
@@ -37,7 +37,7 @@ func expectedTemplates(t *testing.T, resultsNumber int, tplType string,
 func expectedTemplate(t *testing.T, id string, reference *data.Template,
 	expected error, checkFunc func(error, error)) {
 	res, err := handler.GetObject(
-		data.TestPassword, ui.TypeTemplate, id)
+		testToken.v, ui.TypeTemplate, id)
 	checkFunc(expected, err)
 
 	if res == nil {
@@ -76,7 +76,7 @@ func TestGetTemplates(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "GetTemplates")
 	defer fxt.close()
 
-	_, err := handler.GetTemplates("wrong-password", "")
+	_, err := handler.GetTemplates("wrong-token", "")
 	util.TestExpectResult(t, "GetTemplates", ui.ErrAccessDenied, err)
 
 	// Get template by id.
@@ -102,7 +102,7 @@ func TestCreateTemplate(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "GetTemplates")
 	defer fxt.close()
 
-	_, err := handler.CreateTemplate("wrong-password", fxt.TemplateOffer)
+	_, err := handler.CreateTemplate("wrong-token", fxt.TemplateOffer)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	for _, template := range []*data.Template{
@@ -117,7 +117,7 @@ func TestCreateTemplate(t *testing.T) {
 				`{"fake" : "%s"}`, util.NewUUID())),
 		},
 	} {
-		res, err := handler.CreateTemplate(data.TestPassword, template)
+		res, err := handler.CreateTemplate(testToken.v, template)
 		util.TestExpectResult(t, "CreateTemplate", nil, err)
 
 		tpl := &data.Template{}

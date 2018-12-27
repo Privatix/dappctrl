@@ -31,12 +31,12 @@ func (h *Handler) getEndpointsConditions(
 
 // GetEndpoints returns endpoints.
 func (h *Handler) GetEndpoints(
-	password, channel, template string) ([]data.Endpoint, error) {
+	tkn, channel, template string) ([]data.Endpoint, error) {
 	logger := h.logger.Add("method", "GetEndpoints",
 		"channel", channel, "template", template)
 
-	if err := h.checkPassword(logger, password); err != nil {
-		return nil, err
+	if !h.token.Check(tkn) {
+		return nil, ErrAccessDenied
 	}
 
 	tail, args := h.getEndpointsConditions(channel, template)

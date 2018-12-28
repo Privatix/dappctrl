@@ -2,7 +2,7 @@
 # https://help.github.com/articles/about-codeowners/
 
 # notify go-team about changes in go files
-*.go            @furkhat @ababo @dzeckelev
+*.go            @furkhat
 
 # notify drew2a about changes in scripts and settings
 /.github/       @drew2a
@@ -16,4 +16,4 @@
 *.config.json   @kelewind @velopokatun @ubozov @drew2a
 
 # notify js team about jobs changes
-/data/jobs.go   @gonzazoid @Vitold55 @EKorobov
+/data/jobs.go   @gonzazoid @Vitold55 

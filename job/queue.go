@@ -305,7 +305,7 @@ func (q *queue) processWorker(w workerIO) {
 		if err = q.db.FindByPrimaryKeyTo(&job, id); err != nil {
 			break
 		}
-		if job.Status != data.JobActive {
+		if job.Status != data.JobActive || time.Now().Before(job.NotBefore) {
 			continue
 		}
 

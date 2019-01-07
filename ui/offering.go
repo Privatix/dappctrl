@@ -234,7 +234,6 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	tail := fmt.Sprintf("%s %s %s",
 		cond, activeOfferingSorting, offsetLimit)
 
-	logger.Info(tail)
 	result, err := h.selectAllFrom(
 		logger, data.OfferingTable, tail, args...)
 	if err != nil {

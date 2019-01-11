@@ -81,6 +81,7 @@ func (h *Handler) TopUpChannel(
 		"channel", channel, "deposit", deposit, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -121,6 +122,7 @@ func (h *Handler) ChangeChannelStatus(tkn, channel, action string) error {
 		"channel", channel, "action", action, "userRole", h.userRole)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -185,6 +187,7 @@ func (h *Handler) GetAgentChannels(tkn string,
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -203,6 +206,7 @@ func (h *Handler) GetChannelUsage(tkn string, id string) (*Usage, error) {
 	logger := h.logger.Add("method", "GetChannelUsage", "channel", id)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -234,6 +238,7 @@ func (h *Handler) GetClientChannels(tkn string, channelStatus,
 		"channelStatus", channelStatus, "serviceStatus", serviceStatus)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

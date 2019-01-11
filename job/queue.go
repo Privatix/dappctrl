@@ -362,7 +362,9 @@ func (q *queue) processWorker(w workerIO) {
 }
 
 func (q *queue) notify(subKey string, job *data.Job, result error) {
+	logger := q.logger.Add("job", job, "result", result)
 	if subs, ok := q.subs[subKey]; ok {
+		logger.Debug("notifying subscribers for key: " + subKey)
 		for _, v := range subs {
 			go v.subFunc(job, result)
 		}

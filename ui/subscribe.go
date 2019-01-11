@@ -32,6 +32,7 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 		"objectType", objectType, "objectIDs", objectIDs)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

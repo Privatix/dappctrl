@@ -64,6 +64,7 @@ func (h *Handler) AcceptOffering(tkn string, account data.HexString,
 		"deposit", deposit, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -112,6 +113,7 @@ func (h *Handler) ChangeOfferingStatus(
 		"offering", offering, "action", action, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -209,6 +211,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 		"limit", limit)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -291,6 +294,7 @@ func (h *Handler) GetAgentOfferings(tkn, product, status string,
 		"product", product, "status", status)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -406,6 +410,7 @@ func (h *Handler) UpdateOffering(tkn string, offering *data.Offering) error {
 		"method", "UpdateOffering", "offering", offering)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -430,6 +435,7 @@ func (h *Handler) CreateOffering(tkn string,
 		"method", "CreateOffering", "offering", offering)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -501,6 +507,7 @@ func (h *Handler) GetClientOfferingsFilterParams(
 	logger := h.logger.Add("method", "GetClientOfferingsFilterParams")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -522,6 +529,7 @@ func (h *Handler) PingOfferings(tkn string, ids []string) (map[string]bool, erro
 	logger := h.logger.Add("method", "PingOfferings", "ids", ids)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

@@ -49,6 +49,12 @@ A database connection configuration
 |sslmode|string|SSL mode|disable|
 |port|number|postgres port|5432|
 
+#### MaxOpen
+The maximum number of open connections to the database.
+
+#### MaxIddle
+The maximum number of connections in the idle connection pool.
+
 ### DBLog
 Database logger configuration.
 

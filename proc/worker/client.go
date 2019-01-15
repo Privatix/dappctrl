@@ -646,6 +646,11 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 
+	if ch.ChannelStatus == data.ChannelClosedCoop {
+		logger.Warn("channel closed cooperatively")
+		return nil
+	}
+
 	logger = logger.Add("channel", ch)
 
 	agent, err := data.HexToAddress(ch.Agent)

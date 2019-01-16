@@ -80,12 +80,13 @@ func (h *Handler) ConnChange(ctx context.Context,
 			h.handleConnChange(product, logger, ntf, sub, job)
 		}
 	}
-
 	jobTypes := []string{
-		data.JobClientPreServiceUnsuspend,
 		data.JobClientPreServiceSuspend,
+		data.JobClientPreServiceUnsuspend,
 		data.JobClientPreServiceTerminate,
 	}
+
+	// TODO: testing. fix it later.
 	sid := string(sub.ID)
 	if err = h.queue.Subscribe(jobTypes, sid, cb); err != nil {
 		logger.Error(err.Error())

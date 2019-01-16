@@ -13,6 +13,8 @@ import (
 func (h *Handler) SetPassword(password string) error {
 	logger := h.logger.Add("method", "SetPassword")
 
+	logger.Debug("trying to set password")
+
 	if password == "" {
 		logger.Warn("received empty password")
 		return ErrEmptyPassword
@@ -50,6 +52,8 @@ func (h *Handler) UpdatePassword(current, new string) error {
 	if err := h.checkPassword(logger, current); err != nil {
 		return err
 	}
+
+	logger.Debug("updating password")
 
 	if new == "" {
 		logger.Warn("received empty password for update")
@@ -168,6 +172,8 @@ func (h *Handler) GetToken(password string) (*string, error) {
 	if err := h.checkPassword(logger, password); err != nil {
 		return nil, err
 	}
+
+	logger.Debug("making access token")
 
 	v, err := h.token.Make()
 	if err != nil {

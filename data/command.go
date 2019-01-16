@@ -78,7 +78,7 @@ func readFlags(args []string) *cmdFlag {
 }
 
 func initData(connStr string) error {
-	db, err := NewDBFromConnStr(connStr)
+	db, err := newDBFromConnStr(connStr)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func initData(connStr string) error {
 }
 
 func createDatabase(connStr string) error {
-	db, err := NewDBFromConnStr(connStr)
+	db, err := newDBFromConnStr(connStr)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func createDatabase(connStr string) error {
 	// switch to dappctrl database and configurate
 	re = regexp.MustCompile(`(?m)dbname=\w*`)
 	connStr = re.ReplaceAllString(connStr, `dbname=`+separator[8:])
-	conn, err := NewDBFromConnStr(connStr)
+	conn, err := newDBFromConnStr(connStr)
 	if err != nil {
 		return err
 	}

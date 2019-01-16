@@ -205,7 +205,8 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
-		"maxUnitPrice", maxUnitPrice, "countries", countries)
+		"maxUnitPrice", maxUnitPrice, "countries", countries, "offset", offset,
+		"limit", limit)
 
 	if !h.token.Check(tkn) {
 		return nil, ErrAccessDenied
@@ -259,7 +260,7 @@ func (h *Handler) getAgentOfferingsConditions(
 
 	if status != "" {
 		condition := fmt.Sprintf(
-			"offer_status = %s", h.db.Placeholder(index))
+			"status = %s", h.db.Placeholder(index))
 		if conditions == "" {
 			conditions = condition
 		} else {
@@ -373,8 +374,7 @@ func (h *Handler) fillOffering(
 	}
 
 	offering.ID = util.NewUUID()
-	offering.OfferStatus = data.OfferEmpty
-	offering.Status = data.MsgUnpublished
+	offering.Status = data.OfferEmpty
 	offering.Agent = agent.EthAddr
 	offering.BlockNumberUpdated = 1
 	offering.CurrentSupply = offering.Supply
@@ -529,6 +529,7 @@ func (h *Handler) PingOfferings(tkn string, ids []string) (map[string]bool, erro
 	ret := make(map[string]bool)
 
 	wg := new(sync.WaitGroup)
+	wg.Add(len(ids))
 	for _, id := range ids {
 		offering, err := h.findActiveOfferingByID(logger, id)
 		if err != nil {
@@ -549,9 +550,7 @@ func (h *Handler) PingOfferings(tkn string, ids []string) (map[string]bool, erro
 			}
 			wg.Done()
 		}(offering)
-		wg.Add(1)
 	}
-
 	wg.Wait()
 	return ret, nil
 }

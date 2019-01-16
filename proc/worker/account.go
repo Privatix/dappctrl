@@ -59,7 +59,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
 	auth.GasLimit = w.gasConf.PTC.Approve
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 	tx, err := w.ethBack.PTCIncreaseApproval(auth,
@@ -92,7 +92,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
 	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 	tx, err := w.ethBack.PSCAddBalanceERC20(
@@ -163,7 +163,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 	if err != nil {
@@ -264,72 +264,6 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 
 		return w.addJob(logger, nil, data.JobAccountUpdateBalances,
 			data.JobAccount, account.ID)
-	}
-
-	return nil
-}
-
-func (w *Worker) findOffering(logger log.Logger, job *data.Job,
-	jobType string) (*data.Offering, error) {
-	if w.isJobInvalid(job, jobType, data.JobOffering) {
-		return nil, ErrInvalidJob
-	}
-
-	rec := &data.Offering{}
-	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
-	if err != nil {
-		logger.Warn("offering not found, error: " + err.Error())
-		return nil, ErrOfferingNotFound
-	}
-
-	return rec, err
-}
-
-// DecrementCurrentSupply finds offering and decrements its current supply.
-func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
-	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
-
-	offering, err := w.findOffering(
-		logger, job, data.JobDecrementCurrentSupply)
-	if err != nil {
-		// Ignore errors if the offering is not found in the database.
-		if err == ErrOfferingNotFound {
-			return nil
-		}
-		return err
-	}
-
-	offering.CurrentSupply--
-
-	err = data.Save(w.db.Querier, offering)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	return nil
-}
-
-// IncrementCurrentSupply finds offering and increments its current supply.
-func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
-	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
-
-	offering, err := w.findOffering(
-		logger, job, data.JobIncrementCurrentSupply)
-	if err != nil {
-		// Ignore errors if the offering is not found in the database.
-		if err == ErrOfferingNotFound {
-			return nil
-		}
-		return err
-	}
-
-	offering.CurrentSupply++
-
-	err = data.Save(w.db.Querier, offering)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
 	}
 
 	return nil

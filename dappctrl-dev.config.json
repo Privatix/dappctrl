@@ -24,7 +24,9 @@
             "port": "5432",
             "sslmode": "disable",
             "user": "postgres"
-        }
+        },
+        "MaxOpen": 80,
+        "MaxIddle": 10
     },
     "DBLog": {
         "Level": "info",
@@ -209,12 +211,13 @@
         "StackLevel": "error"
     },
     "Role": "agent",
-    "SOMCServer": {
-        "Addr": "localhost:5555",
+    "Sess": {
+        "Addr": "localhost:8000",
+        "AllowedOrigins": ["*"],
         "TLS": null
     },
-    "SessionServer": {
-        "Addr": "localhost:8000",
+    "SOMCServer": {
+        "Addr": "localhost:5555",
         "TLS": null
     },
     "StaticPassword": "",

@@ -12,7 +12,9 @@ import (
 
 // DBConfig is a DB configuration.
 type DBConfig struct {
-	Conn map[string]string
+	Conn     map[string]string
+	MaxOpen  int
+	MaxIddle int
 }
 
 // ConnStr composes a data connection string.
@@ -34,26 +36,39 @@ func NewDBConfig() *DBConfig {
 	}
 }
 
-// NewDBFromConnStr creates a new data connection handle from a given
-// connection string.
-func NewDBFromConnStr(connStr string) (*reform.DB, error) {
+func newReform(conn *sql.DB) *reform.DB {
+	dummy := func(format string, args ...interface{}) {}
+
+	return reform.NewDB(conn,
+		postgresql.Dialect, reform.NewPrintfLogger(dummy))
+}
+
+func dbConnect(connStr string) (*sql.DB, error) {
 	conn, err := sql.Open("postgres", connStr)
 	if err == nil {
 		err = conn.Ping()
 	}
+	return conn, err
+}
+
+func newDBFromConnStr(connStr string) (*reform.DB, error) {
+	conn, err := dbConnect(connStr)
 	if err != nil {
 		return nil, err
 	}
 
-	dummy := func(format string, args ...interface{}) {}
-
-	return reform.NewDB(conn,
-		postgresql.Dialect, reform.NewPrintfLogger(dummy)), nil
+	return newReform(conn), nil
 }
 
 // NewDB creates a new data connection handle.
 func NewDB(conf *DBConfig) (*reform.DB, error) {
-	return NewDBFromConnStr(conf.ConnStr())
+	conn, err := dbConnect(conf.ConnStr())
+	if err != nil {
+		return nil, err
+	}
+	conn.SetMaxOpenConns(conf.MaxOpen)
+	conn.SetMaxIdleConns(conf.MaxIddle)
+	return newReform(conn), nil
 }
 
 // CloseDB closes database connection.

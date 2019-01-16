@@ -54,13 +54,6 @@ CREATE TYPE chan_status AS ENUM (
     'closed_uncoop' -- closed uncooperatively
 );
 
--- Messages statuses.
-CREATE TYPE msg_status AS ENUM (
-    'unpublished', -- saved in DB, but not published
-    'bchain_publishing', -- publishing in blockchain
-    'bchain_published' -- published in blockchain
-);
-
 -- Offering statuses
 CREATE TYPE offer_status AS ENUM (
     'popping_up', -- popping up
@@ -184,8 +177,7 @@ CREATE TABLE offerings (
     hash hash_hex NOT NULL -- offering hash
         CONSTRAINT unique_offering_hash UNIQUE,
 
-    status msg_status NOT NULL, -- message status
-    offer_status offer_status NOT NULL, -- offer status in blockchain
+    status offer_status NOT NULL, -- offer status in blockchain
     block_number_updated bigint
         CONSTRAINT positive_block_number_updated CHECK (offerings.block_number_updated > 0), -- block number, when offering was updated
 

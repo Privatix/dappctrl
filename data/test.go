@@ -177,7 +177,7 @@ func NewTestOffering(agent HexString, product, tpl string) *Offering {
 	fakeMsg := []byte(util.NewUUID())
 	offering := &Offering{
 		ID:                 util.NewUUID(),
-		OfferStatus:        OfferEmpty,
+		Status:             OfferEmpty,
 		BlockNumberUpdated: 1,
 		Template:           tpl,
 		Agent:              agent,
@@ -186,7 +186,6 @@ func NewTestOffering(agent HexString, product, tpl string) *Offering {
 		Product:            product,
 		Supply:             1,
 		CurrentSupply:      1,
-		Status:             MsgUnpublished,
 		UnitType:           UnitSeconds,
 		BillingType:        BillingPostpaid,
 		BillingInterval:    100,

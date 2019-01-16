@@ -727,8 +727,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	// Create expected offering.
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
-	expectedOffering.Status = data.MsgBChainPublished
-	expectedOffering.OfferStatus = data.OfferRegistered
+	expectedOffering.Status = data.OfferRegistered
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
@@ -782,7 +781,6 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 
 	if expectedOffering.Template != created.Template ||
 		expectedOffering.Product != created.Product ||
-		created.Status != data.MsgBChainPublished ||
 		expectedOffering.Agent != created.Agent ||
 		expectedOffering.RawMsg != created.RawMsg ||
 		fxt.Product.Name != created.ServiceName ||
@@ -817,9 +815,9 @@ func TestClientAfterOfferingDelete(t *testing.T) {
 	updated := data.Offering{}
 	env.findTo(t, &updated, fxt.job.RelatedID)
 
-	if updated.OfferStatus != data.OfferRemoved {
+	if updated.Status != data.OfferRemoved {
 		t.Fatalf("expected offering status: %s, got: %s",
-			data.OfferRemoved, updated.OfferStatus)
+			data.OfferRemoved, updated.Status)
 	}
 
 	testCommonErrors(t, env.worker.ClientAfterOfferingDelete, *fxt.job)
@@ -892,8 +890,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	// Create expected offering.
 	expectedOffering := *fxt.Offering
 	expectedOffering.ID = fxt.job.RelatedID
-	expectedOffering.Status = data.MsgBChainPublished
-	expectedOffering.OfferStatus = data.OfferPoppedUp
+	expectedOffering.Status = data.OfferPoppedUp
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
 	msg := offer.OfferingMessage(fxt.Account,
@@ -946,7 +943,6 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 
 	if expectedOffering.Template != created.Template ||
 		expectedOffering.Product != created.Product ||
-		created.Status != data.MsgBChainPublished ||
 		expectedOffering.Agent != created.Agent ||
 		expectedOffering.RawMsg != created.RawMsg ||
 		fxt.Product.Name != created.ServiceName ||

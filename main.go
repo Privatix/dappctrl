@@ -32,7 +32,7 @@ import (
 	"github.com/privatix/dappctrl/proc/worker"
 	"github.com/privatix/dappctrl/report/bugsnag"
 	rlog "github.com/privatix/dappctrl/report/log"
-	"github.com/privatix/dappctrl/sesssrv"
+	"github.com/privatix/dappctrl/sess"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
@@ -65,7 +65,7 @@ type config struct {
 	Proc             *proc.Config
 	Report           *bugsnag.Config
 	Role             string
-	SessionServer    *sesssrv.Config
+	Sess             *rpcsrv.Config
 	SOMCServer       *rpcsrv.Config
 	StaticPassword   string
 	TorHostname      string
@@ -90,7 +90,7 @@ func newConfig() *config {
 		PayServer:     pay.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
-		SessionServer: sesssrv.NewConfig(),
+		Sess:          rpcsrv.NewConfig(),
 		SOMCServer:    rpcsrv.NewConfig(),
 		UI:            rpcsrv.NewConfig(),
 	}
@@ -165,6 +165,21 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 		data.EncryptedKey, data.ToPrivateKey, userRole, processor,
 		somcClientBuilder, ui.NewSimpleToken())
 	if err := server.AddHandler("ui", handler); err != nil {
+		return nil, err
+	}
+
+	return server, nil
+}
+
+func createSessServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
+	countryConf *country.Config, queue job.Queue) (*rpcsrv.Server, error) {
+	server, err := rpcsrv.NewServer(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := sess.NewHandler(logger, db, countryConf, queue)
+	if err := server.AddHandler("sess", handler); err != nil {
 		return nil, err
 	}
 
@@ -305,12 +320,14 @@ func main() {
 		fatal <- uiSrv.ListenAndServe()
 	}()
 
-	sess := sesssrv.NewServer(
-		conf.SessionServer, logger, db, conf.Country, queue)
+	sessSrv, err := createSessServer(
+		conf.Sess, logger, db, conf.Country, queue)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
 	go func() {
-		fatal <- sess.ListenAndServe()
+		fatal <- sessSrv.ListenAndServe()
 	}()
-	defer sess.Close()
 
 	if conf.Role == data.RoleClient {
 		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, pr,

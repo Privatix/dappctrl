@@ -7,11 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/privatix/dappctrl/client/somc"
-
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
+	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
@@ -62,9 +61,8 @@ func newTest(t *testing.T, method string) (*fixture, func(error, error)) {
 	testToken.Make()
 
 	fxt := fixture{TestFixture: data.NewTestFixture(t, db)}
-	fxt.Offering.Agent = data.NewTestAccount(testToken.v).EthAddr
-	fxt.Offering.OfferStatus = data.OfferRegistered
-	fxt.Offering.Status = data.MsgBChainPublished
+	fxt.Offering.Agent = data.NewTestAccount(data.TestPassword).EthAddr
+	fxt.Offering.Status = data.OfferRegistered
 	data.SaveToTestDB(t, db, fxt.Offering)
 
 	hash, err := data.HashPassword(

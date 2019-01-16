@@ -783,8 +783,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
            "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
            "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
            "hash":"157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc",
-           "status":"unpublished",
-           "offerStatus":"empty",
+           "status":"empty",
            "blockNumberUpdated":1,
            "agent":"4638140465c0ee8fc796323971431c30250433b2",
            "rawMsg":"",
@@ -912,7 +911,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
 *Parameters*:
 1. Token (string)
 2. Product id (string)
-3. Offering status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
+3. Status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
 4. Offset (number)
 5. Limit (number)
 
@@ -936,8 +935,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
                 "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
                 "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
                 "hash":"157df064ed3c2b555c0d670c9bcd744d9144915048ce0f61054395d5d98dfc",
-                "status":"unpublished",
-                "offerStatus":"empty",
+                "status":"empty",
                 "blockNumberUpdated":1,
                 "agent":"4638140465c0ee8fc796323971431c30250433b2",
                 "rawMsg":"",
@@ -1019,8 +1017,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                 "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
                 "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
                 "hash":"                                            ",
-                "status":"unpublished",
-                "offerStatus":"empty",
+                "status":"empty",
                 "blockNumberUpdated":1,
                 "agent":"4638140465c0ee8fc796323971431c30250433b2",
                 "rawMsg":"",
@@ -1195,7 +1192,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getOffer
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"unpublished","offerStatus":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000,"minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{},"autoPopUp":true}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000,"minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{},"autoPopUp":true}], "id": 67}' http://localhost:8888/http
 
 // Result
 {

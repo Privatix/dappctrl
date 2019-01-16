@@ -49,7 +49,7 @@ func TestAutoOfferingPopUp(t *testing.T) {
 	// Setting offering.autopopup not initialized.
 	jobs = expectedResult(t, 0, time.Now, period)
 
-	fxt.Offering.OfferStatus = data.OfferRegistered
+	fxt.Offering.Status = data.OfferRegistered
 	fxt.Offering.AutoPopUp = pointer.ToBool(true)
 	data.SaveToTestDB(t, db, fxt.Offering)
 

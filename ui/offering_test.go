@@ -15,7 +15,6 @@ import (
 
 type testOfferingData struct {
 	agent              data.HexString
-	offerStatus        string
 	status             string
 	country            string
 	isLocal            bool
@@ -49,12 +48,11 @@ type testField struct {
 }
 
 type offeringsFilterParamsData struct {
-	country     string
-	offerStatus string
-	status      string
-	setupPrice  uint64
-	unitPrice   uint64
-	minUnits    uint64
+	country    string
+	status     string
+	setupPrice uint64
+	unitPrice  uint64
+	minUnits   uint64
 }
 
 func TestAcceptOffering(t *testing.T) {
@@ -111,14 +109,10 @@ func TestAcceptOffering(t *testing.T) {
 }
 
 func createTestOffering(fxt *fixture, agent data.HexString,
-	offerStatus, status, country string, isLocal bool,
+	status, country string, isLocal bool,
 	blockNumberUpdated uint64, currentSupply uint16) *data.Offering {
 	offering := data.NewTestOffering(
 		agent, fxt.Product.ID, fxt.TemplateOffer.ID)
-	if offerStatus != "" {
-		offering.OfferStatus = offerStatus
-	}
-
 	if status != "" {
 		offering.Status = status
 	}
@@ -138,8 +132,42 @@ func createTestOffering(fxt *fixture, agent data.HexString,
 	return offering
 }
 
-func testGetClientOfferings(t *testing.T,
-	fxt *fixture, assertErrEqual func(error, error), agent data.HexString) {
+func TestGetClientOfferings(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "GetClientOfferings")
+	defer fxt.close()
+
+	other := data.NewTestAccount(data.TestPassword)
+	agent := data.NewTestAccount(data.TestPassword)
+
+	var offerings []reform.Record
+
+	testData := []testOfferingData{
+		{agent.EthAddr, data.OfferRegistered,
+			"US", false, 11, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferRegistered,
+			"SU", false, 11111, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferEmpty,
+			"SU", false, 111, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferEmpty,
+			"", true, 111111, fxt.Offering.CurrentSupply},
+		{agent.EthAddr, data.OfferRegistered,
+			"SU", false, 2, fxt.Offering.CurrentSupply},
+		{other.EthAddr, data.OfferPoppedUp,
+			"US", false, 222, 0},
+	}
+
+	for _, v := range testData {
+		offering := createTestOffering(fxt,
+			v.agent, v.status, v.country,
+			v.isLocal, v.blockNumberUpdated, v.currentSupply)
+		offerings = append(offerings, offering)
+	}
+
+	for _, offering := range offerings {
+		data.InsertToTestDB(t, db, offering)
+	}
+
+	defer data.DeleteFromTestDB(t, db, offerings...)
 
 	assertResult := func(res *ui.GetClientOfferingsResult,
 		err error, exp, total int) {
@@ -148,10 +176,10 @@ func testGetClientOfferings(t *testing.T,
 			t.Fatal("result is empty")
 		}
 		if len(res.Items) != exp {
-			t.Fatalf("wanted: %v, got: %v", exp, len(res.Items))
+			t.Fatalf("wanted items in result: %v, got: %v", exp, len(res.Items))
 		}
 		if res.TotalItems != total {
-			t.Fatalf("wanted: %v, got: %v", total, res.TotalItems)
+			t.Fatalf("wanted total items: %v, got: %v", total, res.TotalItems)
 		}
 	}
 
@@ -167,25 +195,23 @@ func testGetClientOfferings(t *testing.T,
 		testToken.v, "", highPrice, lowPrice, nil, 0, 0)
 	assertErrEqual(ui.ErrBadUnitPriceRange, err)
 
-	other := data.NewTestAccount(data.TestPassword).ID
-
 	testArgs := []testGetClientOfferingsArgs{
 		// Test pagination.
-		{1, "", 0, 0, nil, 0, 1, 3},
-		{2, "", 0, 0, nil, 1, 3, 3},
-		{0, "", 0, 0, nil, 3, 3, 3},
-		// Test by filters.
-		{3, "", 0, 0, nil, 0, 0, 3},
+		{1, "", 0, 0, nil, 0, 1, 4},
+		{2, "", 0, 0, nil, 1, 2, 4},
+		{0, "", 0, 0, nil, 4, 3, 4},
+		// // Test by filters.
+		{4, "", 0, 0, nil, 0, 0, 4},
 		{0, "", 0, lowPrice, nil, 0, 0, 0},
 		{0, "", highPrice, 0, nil, 0, 0, 0},
-		{3, "", lowPrice, price, nil, 0, 0, 3},
-		{3, "", price, highPrice, nil, 0, 0, 3},
-		{3, "", price, price, nil, 0, 0, 3},
+		{4, "", lowPrice, price, nil, 0, 0, 4},
+		{4, "", price, highPrice, nil, 0, 0, 4},
+		{4, "", price, price, nil, 0, 0, 4},
 		{1, "", 0, 0, []string{"US"}, 0, 0, 1},
-		{1, "", 0, 0, []string{"SU"}, 0, 0, 1},
-		{2, "", 0, 0, []string{"SU", "US"}, 0, 0, 2},
-		{0, data.HexString(other), 0, 0, nil, 0, 0, 0},
-		{1, agent, 0, 0, nil, 0, 0, 1},
+		{2, "", 0, 0, []string{"SU"}, 0, 0, 2},
+		{3, "", 0, 0, []string{"SU", "US"}, 0, 0, 3},
+		{0, data.NewTestAccount(data.TestPassword).EthAddr, 0, 0, nil, 0, 0, 0},
+		{2, agent.EthAddr, 0, 0, nil, 0, 0, 2},
 	}
 
 	for _, v := range testArgs {
@@ -194,46 +220,6 @@ func testGetClientOfferings(t *testing.T,
 			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
-}
-
-func TestGetClientOfferings(t *testing.T) {
-	fxt, assertMatchErr := newTest(t, "GetClientOfferings")
-	defer fxt.close()
-
-	other := data.NewTestAccount(data.TestPassword)
-	agent := data.NewTestAccount(data.TestPassword)
-
-	var offerings []reform.Record
-
-	testData := []testOfferingData{
-		{agent.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
-			"US", false, 11, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferRegistered, data.MsgBChainPublished,
-			"SU", false, 11111, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferEmpty, "",
-			"SU", false, 111, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferEmpty, "",
-			"", true, 111111, fxt.Offering.CurrentSupply},
-		{agent.EthAddr, data.OfferRegistered, "",
-			"SU", false, 2, fxt.Offering.CurrentSupply},
-		{other.EthAddr, data.OfferPoppedUp, data.MsgBChainPublished,
-			"US", false, 222, 0},
-	}
-
-	for _, v := range testData {
-		offering := createTestOffering(fxt,
-			v.agent, v.offerStatus, v.status, v.country,
-			v.isLocal, v.blockNumberUpdated, v.currentSupply)
-		offerings = append(offerings, offering)
-	}
-
-	for _, offering := range offerings {
-		data.InsertToTestDB(t, db, offering)
-	}
-
-	defer data.DeleteFromTestDB(t, db, offerings...)
-
-	testGetClientOfferings(t, fxt, assertMatchErr, agent.EthAddr)
 }
 
 func testGetAgentOfferings(t *testing.T,
@@ -303,19 +289,19 @@ func TestGetAgentOfferings(t *testing.T) {
 	defer data.DeleteFromTestDB(t, fxt.DB, acc1, acc2)
 
 	testData := []testOfferingData{
-		{fxt.Account.EthAddr, data.OfferRegistered, "", "",
+		{fxt.Account.EthAddr, data.OfferRegistered, "",
 			false, 1, fxt.Offering.CurrentSupply},
-		{fxt.Account.EthAddr, data.OfferEmpty, "", "",
+		{fxt.Account.EthAddr, data.OfferEmpty, "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{acc1.EthAddr, data.OfferRegistering, "", "",
+		{acc1.EthAddr, data.OfferRegistering, "",
 			false, 2, fxt.Offering.CurrentSupply},
-		{acc2.EthAddr, data.OfferRegistered, "", "",
+		{acc2.EthAddr, data.OfferRegistered, "",
 			false, 2, fxt.Offering.CurrentSupply},
 	}
 
 	for _, v := range testData {
 		offering := createTestOffering(fxt,
-			v.agent, v.offerStatus, v.status, v.country,
+			v.agent, v.status, v.country,
 			v.isLocal, v.blockNumberUpdated, v.currentSupply)
 		offerings = append(offerings, offering)
 	}
@@ -438,8 +424,6 @@ func TestUpdateOffering(t *testing.T) {
 	err = handler.UpdateOffering(testToken.v, newOffering)
 	assertMatchErr(ui.ErrOfferingNotFound, err)
 
-	fxt.Offering.Status = data.MsgBChainPublished
-
 	err = handler.UpdateOffering(testToken.v, fxt.Offering)
 	assertMatchErr(nil, err)
 
@@ -447,10 +431,6 @@ func TestUpdateOffering(t *testing.T) {
 	err = db.FindByPrimaryKeyTo(savedOffering, fxt.Offering.ID)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if savedOffering.Status != data.MsgBChainPublished {
-		t.Fatal("offering not updated")
 	}
 }
 
@@ -493,12 +473,12 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 	c2 := "CD"
 
 	testData := []*offeringsFilterParamsData{
-		{c1, data.OfferRegistered, data.MsgBChainPublished, 1, 1, 1},
-		{c1, data.OfferRegistered, data.MsgBChainPublished, 2, 2, 2},
-		{c2, data.OfferRegistered, data.MsgBChainPublished, 10, 10, 10},
+		{c1, data.OfferRegistered, 1, 1, 1},
+		{c1, data.OfferRegistered, 2, 2, 2},
+		{c2, data.OfferRegistered, 10, 10, 10},
 		// Ignored offerings.
-		{"YY", data.OfferEmpty, data.MsgBChainPublished, 20, 20, 20},
-		{"", data.OfferRegistered, data.MsgBChainPublished, 20, 20, 20},
+		{"YY", data.OfferEmpty, 20, 20, 20},
+		{"", data.OfferRegistered, 20, 20, 20},
 	}
 
 	var offerings []*data.Offering
@@ -507,7 +487,6 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		offering := data.NewTestOffering(data.HexString(agent.ID),
 			fxt.Product.ID, fxt.TemplateOffer.ID)
 		offering.Country = v.country
-		offering.OfferStatus = v.offerStatus
 		offering.Status = v.status
 		offering.SetupPrice = v.setupPrice
 		offering.UnitPrice = v.unitPrice

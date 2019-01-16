@@ -319,7 +319,7 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 		return ErrInternal
 	}
 
-	auth := bind.NewKeyedTransactor(accKey)
+	auth := w.newKeyedTransactor(logger, agent.EthAddr, accKey)
 	auth.GasLimit = w.gasConf.PSC.CooperativeClose
 
 	tx, err := w.ethBack.CooperativeClose(auth, agentAddr,
@@ -362,7 +362,7 @@ func (w *Worker) agentUpdateServiceStatus(logger log.Logger, job *data.Job,
 	return channel, nil
 }
 
-// AgentPreEndpointMsgCreate prepares endpoint message to be sent to client.
+// AgentPreEndpointMsgCreate prepares endpoint message.
 func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 	logger := w.logger.Add("method", "AgentPreEndpointMsgCreate", "job", job)
 
@@ -546,7 +546,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(agentKey)
+	auth := w.newKeyedTransactor(logger, agent.EthAddr, agentKey)
 
 	pscBalance, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 
@@ -590,8 +590,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return ErrPSCRegisterOffering
 	}
 
-	offering.Status = data.MsgBChainPublishing
-	offering.OfferStatus = data.OfferRegistering
+	offering.Status = data.OfferRegistering
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal
@@ -620,8 +619,7 @@ func (w *Worker) AgentAfterOfferingMsgBCPublish(job *data.Job) error {
 
 	logger = logger.Add("ethLog", ethLog)
 
-	offering.Status = data.MsgBChainPublished
-	offering.OfferStatus = data.OfferRegistered
+	offering.Status = data.OfferRegistered
 	offering.BlockNumberUpdated = ethLog.Block
 	if err = w.db.Update(offering); err != nil {
 		logger.Error(err.Error())
@@ -647,7 +645,7 @@ func (w *Worker) AgentAfterOfferingDelete(job *data.Job) error {
 	if err != nil {
 		return err
 	}
-	offering.OfferStatus = data.OfferRemoved
+	offering.Status = data.OfferRemoved
 
 	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
 		return err
@@ -672,8 +670,8 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	if offering.OfferStatus != data.OfferRegistered &&
-		offering.OfferStatus != data.OfferPoppedUp {
+	if offering.Status != data.OfferRegistered &&
+		offering.Status != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 
@@ -699,7 +697,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth := w.newKeyedTransactor(logger, offering.Agent, key)
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
@@ -710,7 +708,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return ErrPSCRemoveOffering
 	}
 
-	offering.OfferStatus = data.OfferRemoving
+	offering.Status = data.OfferRemoving
 	if err := w.saveRecord(logger, w.db.Querier,
 		offering); err != nil {
 		return err
@@ -801,8 +799,8 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 
 	logger = logger.Add("offering", offering.ID)
 
-	if offering.OfferStatus != data.OfferRegistered &&
-		offering.OfferStatus != data.OfferPoppedUp {
+	if offering.Status != data.OfferRegistered &&
+		offering.Status != data.OfferPoppedUp {
 		return ErrOfferNotRegistered
 	}
 
@@ -833,7 +831,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth := w.newKeyedTransactor(logger, offering.Agent, key)
 	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
@@ -845,7 +843,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return ErrPSCPopUpOffering
 	}
 
-	offering.OfferStatus = data.OfferPoppingUp
+	offering.Status = data.OfferPoppingUp
 	if err := w.saveRecord(logger, w.db.Querier, offering); err != nil {
 		return err
 	}
@@ -881,7 +879,7 @@ func (w *Worker) AgentAfterOfferingPopUp(job *data.Job) error {
 	}
 
 	offering.BlockNumberUpdated = ethLog.Block
-	offering.OfferStatus = data.OfferPoppedUp
+	offering.Status = data.OfferPoppedUp
 
 	return w.saveRecord(logger, w.db.Querier, &offering)
 }

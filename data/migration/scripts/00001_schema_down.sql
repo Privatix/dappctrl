@@ -20,7 +20,6 @@ DROP TYPE job_status;
 DROP TYPE job_creator;
 DROP TYPE tx_status;
 DROP TYPE offer_status;
-DROP TYPE msg_status;
 DROP TYPE chan_status;
 DROP TYPE svc_status;
 DROP DOMAIN eth_addr;

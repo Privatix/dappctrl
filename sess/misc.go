@@ -1,10 +1,9 @@
 package sess
 
 import (
-	"gopkg.in/reform.v1"
-
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/util/log"
+	reform "gopkg.in/reform.v1"
 )
 
 func (h *Handler) checkProductPassword(
@@ -52,7 +51,7 @@ func (h *Handler) findCurrentSession(
 		ORDER BY started DESC
 		LIMIT 1`, channel); err != nil {
 		if err == reform.ErrNoRows {
-			logger.Warn(err.Error())
+			logger.Warn("failed to find current session: " + err.Error())
 			return nil, ErrSessionNotFound
 		}
 		logger.Error(err.Error())

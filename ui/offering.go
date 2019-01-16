@@ -208,8 +208,6 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 		"maxUnitPrice", maxUnitPrice, "countries", countries, "offset", offset,
 		"limit", limit)
 
-	logger.Info("running")
-
 	if !h.token.Check(tkn) {
 		return nil, ErrAccessDenied
 	}

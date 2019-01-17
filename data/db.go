@@ -51,7 +51,8 @@ func dbConnect(connStr string) (*sql.DB, error) {
 	return conn, err
 }
 
-func newDBFromConnStr(connStr string) (*reform.DB, error) {
+// NewDBFromConnStr connects to db and returns db instance.
+func NewDBFromConnStr(connStr string) (*reform.DB, error) {
 	conn, err := dbConnect(connStr)
 	if err != nil {
 		return nil, err

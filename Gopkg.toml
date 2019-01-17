@@ -2,7 +2,7 @@ ignored = ["github.com/satori/go.uuid", "github.com/rjeczalik/notify"]
 
 [[constraint]]
   name = "github.com/ethereum/go-ethereum"
-  version = "1.8.12"
+  version = "<=1.8.20"
 
 # TODO(maxim): After 8b9ca13da6e1cae14cc48442d6a4944484235013 commit, do not build on Windows.
 [[constraint]]

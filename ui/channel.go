@@ -198,32 +198,57 @@ func (h *Handler) GetAgentChannels(tkn string,
 	return &GetAgentChannelsResult{channels, total}, err
 }
 
-// GetChannelUsage returns detailed usage on channel.
-func (h *Handler) GetChannelUsage(tkn string, id string) (*Usage, error) {
-	logger := h.logger.Add("method", "GetChannelUsage", "channel", id)
+// GetChannelsUsage returns detailed usage on channels.
+func (h *Handler) GetChannelsUsage(tkn string, ids []string) ([]*Usage, error) {
+	logger := h.logger.Add("method", "GetChannelsUsage", "objectType", "channel", "objectIDs", ids)
 
 	if !h.token.Check(tkn) {
 		return nil, ErrAccessDenied
 	}
 
-	ch := &data.Channel{}
-	if err := h.findByPrimaryKey(logger,
-		ErrChannelNotFound, ch, id); err != nil {
-		return nil, err
+	channelsIds := make([]interface{}, len(ids))
+	for i, v := range ids {
+		channelsIds[i] = v
 	}
-
-	offering := &data.Offering{}
-	if err := h.findByPrimaryKey(logger,
-		ErrOfferingNotFound, offering, ch.Offering); err != nil {
-		return nil, err
-	}
-
-	sessions, err := h.getChannelSessions(logger, ch.ID)
+	result, err := h.findAllFrom(logger, data.ChannelTable, "id", channelsIds...)
 	if err != nil {
 		return nil, err
 	}
 
-	return newUsage(ch, offering, sessions), nil
+	channels := make([]*data.Channel, len(result))
+	offeringIds := make([]interface{}, len(result))
+
+	for k, v := range result {
+		channels[k] = v.(*data.Channel)
+		offeringIds[k] = channels[k].Offering
+	}
+
+	offeringsResult, err := h.findAllFrom(logger, data.OfferingTable, "id", offeringIds...)
+	if err != nil {
+		return nil, err
+	}
+
+	offerings := make([]*data.Offering, len(offeringsResult))
+	for k, v := range offeringsResult {
+		offerings[k] = v.(*data.Offering)
+	}
+
+	sessions, err := h.getChannelsSessions(logger, channelsIds)
+	if err != nil {
+		return nil, err
+	}
+
+	usage := make([]*Usage, len(channels))
+	for k, channel := range channels {
+		offering := data.FilterOfferings(&offerings, func(offer *data.Offering) bool { return channel.Offering == (*offer).ID })
+		if len(offering) != 1 {
+			return nil, ErrOfferingNotFound
+		}
+		channelSessions := data.FilterSessions(&sessions, func(session *data.Session) bool { return channel.ID == (*session).Channel })
+		usage[k] = newUsage(channel, offering[0], channelSessions)
+	}
+	return usage, nil
+
 }
 
 // GetClientChannels gets client channel information.
@@ -389,6 +414,21 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 func (h *Handler) getChannelSessions(logger log.Logger, channel string) ([]*data.Session, error) {
 	sess, err := h.findAllFrom(logger, data.SessionTable,
 		"channel", channel)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []*data.Session
+	for _, v := range sess {
+		sessions = append(sessions, v.(*data.Session))
+	}
+	return sessions, nil
+}
+
+func (h *Handler) getChannelsSessions(logger log.Logger, channnelsIds []interface{}) ([]*data.Session, error) {
+
+	sess, err := h.findAllFrom(logger, data.SessionTable, "channel", channnelsIds...)
+
 	if err != nil {
 		return nil, err
 	}

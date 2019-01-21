@@ -251,7 +251,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 }
 
 func (h *Handler) getAgentOfferingsConditions(
-	product, status string) (conditions string, args []interface{}) {
+	product string, statuses []string) (conditions string, args []interface{}) {
 	index := 1
 
 	if product != "" {
@@ -261,16 +261,20 @@ func (h *Handler) getAgentOfferingsConditions(
 		index++
 	}
 
-	if status != "" {
+	if len(statuses) != 0 {
+		cleaned := make([]string, len(statuses))
+		for i, v := range statuses {
+			cleaned[i] = strings.Replace(v, "'", "", -1)
+		}
 		condition := fmt.Sprintf(
-			"status = %s", h.db.Placeholder(index))
+			"status IN ( '%s' )", strings.Join(cleaned, "', '"))
+
 		if conditions == "" {
 			conditions = condition
 		} else {
 			conditions = fmt.Sprintf(
 				"%s AND %s", conditions, condition)
 		}
-		args = append(args, status)
 	}
 
 	condition := `
@@ -288,17 +292,17 @@ func (h *Handler) getAgentOfferingsConditions(
 }
 
 // GetAgentOfferings returns active offerings available for a agent.
-func (h *Handler) GetAgentOfferings(tkn, product, status string,
+func (h *Handler) GetAgentOfferings(tkn, product string, statuses []string,
 	offset, limit uint) (*GetAgentOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetAgentOfferings",
-		"product", product, "status", status)
+		"product", product, "status", statuses)
 
 	if !h.token.Check(tkn) {
 		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
-	conditions, args := h.getAgentOfferingsConditions(product, status)
+	conditions, args := h.getAgentOfferingsConditions(product, statuses)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), conditions, args)

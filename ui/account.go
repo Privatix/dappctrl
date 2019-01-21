@@ -43,6 +43,7 @@ func (h *Handler) ExportPrivateKey(tkn, account string) ([]byte, error) {
 	logger := h.logger.Add("method", "ExportPrivateKey",
 		"account", account)
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -69,6 +70,7 @@ func (h *Handler) GetAccounts(tkn string) ([]data.Account, error) {
 	logger := h.logger.Add("method", "GetAccounts")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -172,6 +174,7 @@ func (h *Handler) GenerateAccount(
 	logger := h.logger.Add("method", "GenerateAccount")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -193,6 +196,7 @@ func (h *Handler) ImportAccountFromHex(
 	logger := h.logger.Add("method", "ImportAccountFromHex")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -216,6 +220,7 @@ func (h *Handler) ImportAccountFromJSON(
 	logger := h.logger.Add("method", "ImportAccountFromJSON")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -241,6 +246,7 @@ func (h *Handler) TransferTokens(
 		destination, "amount", amount, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -286,6 +292,7 @@ func (h *Handler) UpdateBalance(tkn, account string) error {
 		"account", account)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -312,6 +319,7 @@ func (h *Handler) UpdateAccount(tkn, account, name string,
 		"account", account)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 

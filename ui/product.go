@@ -11,6 +11,7 @@ func (h *Handler) CreateProduct(tkn string,
 	logger := h.logger.Add("method", "CreateProduct", "product", product)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -32,6 +33,7 @@ func (h *Handler) UpdateProduct(tkn string, product data.Product) error {
 	logger := h.logger.Add("method", "UpdateProduct", "product", product)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -74,6 +76,7 @@ func (h *Handler) GetProducts(tkn string) ([]data.Product, error) {
 	logger := h.logger.Add("method", "GetProducts")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

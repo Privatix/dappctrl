@@ -139,6 +139,7 @@ func (h *Handler) GetLogs(tkn string, levels []string, searchText,
 		dateTo, "offset", offset, "limit", limit)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

@@ -24,6 +24,7 @@ func (h *Handler) GetEthTransactions(tkn, relType, relID string,
 		relType, "relatedID", relID, "limit", limit, "offset", offset)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

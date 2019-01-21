@@ -17,6 +17,7 @@ func (h *Handler) GetTemplates(tkn, tplType string) ([]data.Template, error) {
 		"method", "GetTemplates", "type", tplType)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -66,6 +67,7 @@ func (h *Handler) CreateTemplate(
 		"template", template)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

@@ -36,6 +36,7 @@ func (h *Handler) GetEndpoints(
 		"channel", channel, "template", template)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

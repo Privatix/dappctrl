@@ -2,6 +2,9 @@
 BEGIN TRANSACTION;
 
 INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('system.gui', '{}', 0, '', 'GUI settings');
+
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.min.confirmations',
         '1',
         2,

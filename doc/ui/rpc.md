@@ -1670,6 +1670,66 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateSe
 </details>
 
 
+### Settings GUI
+
+#### GetGUISettings
+
+*Method*:   `getGUISettings`
+
+*Description*: Get GUI settings.
+
+
+*Parameters*:
+1. Token (string)
+
+*Result*: js object.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getGUISettings", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {"foo": "bar"}
+}
+```
+</details>
+</details>
+
+#### SetGUISettings
+
+*Method*:   `setGUISettings`
+
+*Description*: Set GUI settings.
+
+
+*Parameters*:
+1. Token (string)
+2. JS object.
+
+*Result*: None.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_setGUISettings", "params": ["qwert", {"foo": "bar"}], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": null
+}
+```
+</details>
+</details>
+
+
 ### Templates
 
 #### Create Template

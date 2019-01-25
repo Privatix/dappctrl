@@ -101,7 +101,7 @@ Exit code:
 """
 
 main_conf = dict(
-    i_version='0.2.8',
+    i_version='0.2.9',
     bind_port=False,
     bind_ports=[5555],
     log_path='/var/log/initializer.log',
@@ -1499,6 +1499,10 @@ class Params(DB):
                                     json_r=True)
             if not raw_data:
                 self._rolback(23)
+
+            if servs == 'common':
+                raw_data = self._add_updown_path(raw_data)
+
             # "localhost:7505"
             logging.debug('dapp {} conf: {}'.format(servs, raw_data))
             delim = ':'
@@ -1523,6 +1527,17 @@ class Params(DB):
                          data=raw_data,
                          w=True,
                          json_r=True)
+
+    def _add_updown_path(self, raw_data):
+        # Edit dappvpn.config.json and add up/down script path
+        # up/down script path - /etc/openvpn/update-resolv-conf
+        up_down = '/etc/openvpn/update-resolv-conf'
+        oVpn = raw_data.get('OpenVPN')
+        if oVpn:
+            oVpn['UpScript'], oVpn['DownScript'] = up_down, up_down
+        return raw_data
+
+
 
     def _run_dapp_cmd(self):
         # generate two conf in path:

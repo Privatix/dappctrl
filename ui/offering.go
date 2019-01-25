@@ -261,17 +261,17 @@ func (h *Handler) getAgentOfferingsConditions(
 		index++
 	}
 
-    if length := len(statuses); length != 0 {
+	if length := len(statuses); length != 0 {
 
-        placeholders := h.db.Placeholders(index, length)
+		placeholders := h.db.Placeholders(index, length)
 
 		condition := fmt.Sprintf(
 			"status IN ( %s )", strings.Join(placeholders, ", "))
-        for _, v := range statuses {
-		    args = append(args, v)
-        }
+		for _, v := range statuses {
+			args = append(args, v)
+		}
 
-        index += length
+		index += length
 
 		if conditions == "" {
 			conditions = condition

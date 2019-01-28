@@ -911,7 +911,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
 *Parameters*:
 1. Token (string)
 2. Product id (string)
-3. Status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
+3. Status (array of strings, each of which can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
 4. Offset (number)
 5. Limit (number)
 
@@ -921,7 +921,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "empty", 0, 1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", ["empty"], 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {

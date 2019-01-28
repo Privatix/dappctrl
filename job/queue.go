@@ -71,8 +71,8 @@ type Queue interface {
 	Add(tx *reform.TX, j *data.Job) error
 	Process() error
 	Close()
-	Subscribe(relatedIDs []string, subID string, subFunc SubFunc) error
-	Unsubscribe(relatedIDs []string, subID string) error
+	Subscribe(subKeys []string, subID string, subFunc SubFunc) error
+	Unsubscribe(subKeys []string, subID string) error
 }
 
 type queue struct {
@@ -361,6 +361,16 @@ func (q *queue) processWorker(w workerIO) {
 	w.result <- err
 }
 
+func (q *queue) notify(subKey string, job *data.Job, result error) {
+	logger := q.logger.Add("job", job, "result", result)
+	if subs, ok := q.subs[subKey]; ok {
+		logger.Debug("notifying subscribers for key: " + subKey)
+		for _, v := range subs {
+			go v.subFunc(job, result)
+		}
+	}
+}
+
 func (q *queue) saveJobAndNotify(job *data.Job,
 	logger log.Logger, result error) error {
 	if err := q.db.Save(job); err != nil {
@@ -371,11 +381,8 @@ func (q *queue) saveJobAndNotify(job *data.Job,
 	q.subsMtx.RLock()
 	defer q.subsMtx.RUnlock()
 
-	if subs, ok := q.subs[job.RelatedID]; ok {
-		for _, v := range subs {
-			go v.subFunc(job, result)
-		}
-	}
+	q.notify(job.RelatedID, job, result)
+	q.notify(job.Type, job, result)
 
 	return nil
 }
@@ -466,8 +473,8 @@ func AddWithDelay(q Queue, tx *reform.TX,
 // SubFunc is a job result notification callback.
 type SubFunc func(job *data.Job, result error)
 
-func (q *queue) subscribe(relatedID, subID string, subFunc SubFunc) error {
-	if subs, ok := q.subs[relatedID]; ok {
+func (q *queue) subscribe(subKey, subID string, subFunc SubFunc) error {
+	if subs, ok := q.subs[subKey]; ok {
 		for _, v := range subs {
 			if v.subID == subID {
 				return ErrSubscriptionExists
@@ -475,23 +482,23 @@ func (q *queue) subscribe(relatedID, subID string, subFunc SubFunc) error {
 		}
 	}
 
-	q.subs[relatedID] = append(q.subs[relatedID], subEntry{subID, subFunc})
+	q.subs[subKey] = append(q.subs[subKey], subEntry{subID, subFunc})
 
 	return nil
 }
 
-// Subscribe adds a subscription to job result notifications for given ids of
-// related objects. SubID is used to distinguish between different
-// subscriptions to a same related object.
+// Subscribe adds a subscription to job result notifications for given keys.
+// Each subscription key can be be a job type or a job related id. SubID is
+// used to distinguish between different subscriptions.
 func (q *queue) Subscribe(
-	relatedIDs []string, subID string, subFunc SubFunc) error {
+	subKeys []string, subID string, subFunc SubFunc) error {
 	q.subsMtx.Lock()
 	defer q.subsMtx.Unlock()
 
-	for i, v := range relatedIDs {
+	for i, v := range subKeys {
 		if err := q.subscribe(v, subID, subFunc); err != nil {
 			for j := 0; j < i; j++ {
-				q.unsubscribe(relatedIDs[j], subID)
+				q.unsubscribe(subKeys[j], subID)
 			}
 			return err
 		}
@@ -500,8 +507,8 @@ func (q *queue) Subscribe(
 	return nil
 }
 
-func (q *queue) unsubscribe(relatedID, subID string) error {
-	if subs, ok := q.subs[relatedID]; ok {
+func (q *queue) unsubscribe(subKey, subID string) error {
+	if subs, ok := q.subs[subKey]; ok {
 		for i, v := range subs {
 			if v.subID != subID {
 				continue
@@ -509,9 +516,9 @@ func (q *queue) unsubscribe(relatedID, subID string) error {
 
 			subs := append(subs[:i], subs[i+1:]...)
 			if subs != nil {
-				q.subs[relatedID] = subs
+				q.subs[subKey] = subs
 			} else {
-				delete(q.subs, relatedID)
+				delete(q.subs, subKey)
 			}
 
 			return nil
@@ -524,12 +531,12 @@ func (q *queue) unsubscribe(relatedID, subID string) error {
 // Unsubscribe removes a subscription from job result notifications for given
 // ids of related objects. SubID is used to distinguish between different
 // subscriptions to a same related object.
-func (q *queue) Unsubscribe(relatedIDs []string, subID string) error {
+func (q *queue) Unsubscribe(subKeys []string, subID string) error {
 	q.subsMtx.Lock()
 	defer q.subsMtx.Unlock()
 
 	var err error
-	for _, v := range relatedIDs {
+	for _, v := range subKeys {
 		if err2 := q.unsubscribe(v, subID); err == nil {
 			err = err2
 		}

@@ -10,6 +10,7 @@ func (h *Handler) GetLastBlockNumber(tkn string) (*uint64, error) {
 	logger := h.logger.Add("method", "GetLastBlockNumber")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

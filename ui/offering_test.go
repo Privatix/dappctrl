@@ -23,12 +23,12 @@ type testOfferingData struct {
 }
 
 type testGetAgentOfferingsArgs struct {
-	exp         int
-	product     string
-	offerStatus string
-	offset      uint
-	limit       uint
-	total       int
+	exp           int
+	product       string
+	offerStatuses []string
+	offset        uint
+	limit         uint
+	total         int
 }
 
 type testGetClientOfferingsArgs struct {
@@ -251,23 +251,23 @@ func testGetAgentOfferings(t *testing.T,
 		}
 	}
 
-	_, err := handler.GetAgentOfferings("wrong-token", "", "", 0, 0)
+	_, err := handler.GetAgentOfferings("wrong-token", "", []string{}, 0, 0)
 	assertMatchErr(ui.ErrAccessDenied, err)
 
 	testArgs := []testGetAgentOfferingsArgs{
 		// Test pagination.
-		{1, "", "", 0, 1, 2},
-		{1, "", "", 1, 0, 2},
-		{0, "", "", 2, 0, 2},
+		{1, "", []string{}, 0, 1, 2},
+		{1, "", []string{}, 1, 0, 2},
+		{0, "", []string{}, 2, 0, 2},
 		// Test by filters.
-		{2, "", "", 0, 0, 2},
-		{2, fxt.Product.ID, "", 0, 0, 2},
-		{1, "", data.OfferEmpty, 0, 0, 1},
+		{2, "", []string{}, 0, 0, 2},
+		{2, fxt.Product.ID, []string{}, 0, 0, 2},
+		{1, "", []string{data.OfferEmpty}, 0, 0, 1},
 	}
 
 	for _, v := range testArgs {
 		res, err := handler.GetAgentOfferings(testToken.v,
-			v.product, v.offerStatus, v.offset, v.limit)
+			v.product, v.offerStatuses, v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
 }

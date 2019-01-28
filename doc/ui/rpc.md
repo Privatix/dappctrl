@@ -911,7 +911,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
 *Parameters*:
 1. Token (string)
 2. Product id (string)
-3. Status (string, can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
+3. Status (array of strings, each of which can be `empty`, `registering`, `registered`, `popping_up`, `popped_up`, `removing` or `removed`)
 4. Offset (number)
 5. Limit (number)
 
@@ -921,7 +921,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOf
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "empty", 0, 1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgentOfferings", "params": ["qwert", "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", ["empty"], 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -1670,6 +1670,66 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateSe
 </details>
 
 
+### Settings GUI
+
+#### GetGUISettings
+
+*Method*:   `getGUISettings`
+
+*Description*: Get GUI settings.
+
+
+*Parameters*:
+1. Token (string)
+
+*Result*: js object.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getGUISettings", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": {"foo": "bar"}
+}
+```
+</details>
+</details>
+
+#### SetGUISettings
+
+*Method*:   `setGUISettings`
+
+*Description*: Set GUI settings.
+
+
+*Parameters*:
+1. Token (string)
+2. JS object.
+
+*Result*: None.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_setGUISettings", "params": ["qwert", {"foo": "bar"}], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": null
+}
+```
+</details>
+</details>
+
+
 ### Templates
 
 #### Create Template
@@ -1870,7 +1930,8 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRo
 *Parameters*:
 1. Token (string)
 2. Type (string, can be `offering`, `channel`, `endpoint` or `account`)
-3. Object ids (array of strings)
+3. Subscription keys (each key can be a related object id or a job type, array
+of strings)
 
 *Notification result (object)*:
 - `object` (object) - changed object

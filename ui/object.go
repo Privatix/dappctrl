@@ -52,6 +52,7 @@ func (h *Handler) GetObject(
 		"type", objectType, "id", id)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -94,6 +95,7 @@ func (h *Handler) GetObjectByHash(
 		"type", objectType, "hash", hash)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

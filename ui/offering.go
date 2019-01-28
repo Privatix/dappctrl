@@ -64,6 +64,7 @@ func (h *Handler) AcceptOffering(tkn string, account data.HexString,
 		"deposit", deposit, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -112,6 +113,7 @@ func (h *Handler) ChangeOfferingStatus(
 		"offering", offering, "action", action, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -209,6 +211,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 		"limit", limit)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -248,7 +251,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 }
 
 func (h *Handler) getAgentOfferingsConditions(
-	product, status string) (conditions string, args []interface{}) {
+	product string, statuses []string) (conditions string, args []interface{}) {
 	index := 1
 
 	if product != "" {
@@ -258,16 +261,24 @@ func (h *Handler) getAgentOfferingsConditions(
 		index++
 	}
 
-	if status != "" {
+	if length := len(statuses); length != 0 {
+
+		placeholders := h.db.Placeholders(index, length)
+
 		condition := fmt.Sprintf(
-			"status = %s", h.db.Placeholder(index))
+			"status IN ( %s )", strings.Join(placeholders, ", "))
+		for _, v := range statuses {
+			args = append(args, v)
+		}
+
+		index += length
+
 		if conditions == "" {
 			conditions = condition
 		} else {
 			conditions = fmt.Sprintf(
 				"%s AND %s", conditions, condition)
 		}
-		args = append(args, status)
 	}
 
 	condition := `
@@ -285,16 +296,17 @@ func (h *Handler) getAgentOfferingsConditions(
 }
 
 // GetAgentOfferings returns active offerings available for a agent.
-func (h *Handler) GetAgentOfferings(tkn, product, status string,
+func (h *Handler) GetAgentOfferings(tkn, product string, statuses []string,
 	offset, limit uint) (*GetAgentOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetAgentOfferings",
-		"product", product, "status", status)
+		"product", product, "status", statuses)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
-	conditions, args := h.getAgentOfferingsConditions(product, status)
+	conditions, args := h.getAgentOfferingsConditions(product, statuses)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), conditions, args)
@@ -406,6 +418,7 @@ func (h *Handler) UpdateOffering(tkn string, offering *data.Offering) error {
 		"method", "UpdateOffering", "offering", offering)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 
@@ -430,6 +443,7 @@ func (h *Handler) CreateOffering(tkn string,
 		"method", "CreateOffering", "offering", offering)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -501,6 +515,7 @@ func (h *Handler) GetClientOfferingsFilterParams(
 	logger := h.logger.Add("method", "GetClientOfferingsFilterParams")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -522,6 +537,7 @@ func (h *Handler) PingOfferings(tkn string, ids []string) (map[string]bool, erro
 	logger := h.logger.Add("method", "PingOfferings", "ids", ids)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

@@ -254,7 +254,7 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage,
 	end := 0
 	for _, channel := range channels {
 
-		var offering *data.Offering = nil
+		var offering *data.Offering
 		for _, v := range offerings {
 			if channel.Offering == v.ID {
 				offering = v

@@ -1529,6 +1529,7 @@ class Params(DB):
                          json_r=True)
 
     def _add_updown_path(self, raw_data):
+        logging.debug('Add up/down script')
         # Edit dappvpn.config.json and add up/down script path
         # up/down script path - /etc/openvpn/update-resolv-conf
         up_down = '/etc/openvpn/update-resolv-conf'
@@ -2846,10 +2847,10 @@ class AutoOffer:
                 items = res[1].get('items')
                 logging.debug("items: {}".format(items))
                 if items and isinstance(items, (list, set, tuple)):
-                    # status = items[0].get('status')
-                    offerStatus = items[0].get('offerStatus')
-                    logging.debug('offerStatus: {}'.format(offerStatus))
-                    if offerStatus == 'registered':
+                    status = items[0].get('status')
+                    # offerStatus = items[0].get('offerStatus')
+                    logging.debug('Offer status: {}'.format(status))
+                    if status == 'registered':
                         logging.debug('Offerings for agent exist.')
                         return True, 'All done'
             logging.debug('Wait')

@@ -202,7 +202,7 @@ func (h *Handler) GetAgentChannels(tkn string,
 }
 
 // GetChannelsUsage returns detailed usage on channels.
-func (h *Handler) GetChannelsUsage(tkn string, ids []string) ([]*Usage, error) {
+func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage, error) {
 	logger := h.logger.Add("method", "GetChannelsUsage", "objectType", "channel", "objectIDs", ids)
 
 	if !h.token.Check(tkn) {
@@ -210,19 +210,26 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) ([]*Usage, error) {
 		return nil, ErrAccessDenied
 	}
 
-	channelsIds := make([]interface{}, len(ids))
-	for i, v := range ids {
+	uniqueIds := removeDuplicates(ids)
+	idsCount := len(uniqueIds)
+	channelsIds := make([]interface{}, idsCount)
+	for i, v := range uniqueIds {
 		channelsIds[i] = v
 	}
-	result, err := h.findAllFrom(logger, data.ChannelTable, "id", channelsIds...)
+
+	placeholders := h.db.Placeholders(1, idsCount)
+	tail := fmt.Sprintf("WHERE id IN ( %s ) ORDER BY id DESC", strings.Join(placeholders, ", "))
+	selectedChannels, err := h.selectAllFrom(logger, data.ChannelTable, tail, channelsIds...)
+
 	if err != nil {
 		return nil, err
 	}
 
-	channels := make([]*data.Channel, len(result))
-	offeringIds := make([]interface{}, len(result))
+	channelsCount := len(selectedChannels)
+	channels := make([]*data.Channel, channelsCount)
+	offeringIds := make([]interface{}, channelsCount)
 
-	for k, v := range result {
+	for k, v := range selectedChannels {
 		channels[k] = v.(*data.Channel)
 		offeringIds[k] = channels[k].Offering
 	}
@@ -242,15 +249,41 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) ([]*Usage, error) {
 		return nil, err
 	}
 
-	usage := make([]*Usage, len(channels))
-	for k, channel := range channels {
-		offering := data.FilterOfferings(&offerings, func(offer *data.Offering) bool { return channel.Offering == (*offer).ID })
-		if len(offering) != 1 {
+	usage := make(map[string]*Usage)
+	start := 0
+	end := 0
+	for _, channel := range channels {
+
+		var offering *data.Offering = nil
+		for _, v := range offerings {
+			if channel.Offering == v.ID {
+				offering = v
+				break
+			}
+		}
+
+		if offering == nil {
 			return nil, ErrOfferingNotFound
 		}
-		channelSessions := data.FilterSessions(&sessions, func(session *data.Session) bool { return channel.ID == (*session).Channel })
-		usage[k] = newUsage(channel, offering[0], channelSessions)
+
+		for ; end < len(sessions); end++ {
+			if sessions[end].Channel != channel.ID {
+				break
+			}
+		}
+
+		var channelSessions []*data.Session
+
+		if end == start {
+			channelSessions = []*data.Session{}
+		} else {
+			channelSessions = sessions[start:end]
+		}
+
+		usage[channel.ID] = newUsage(channel, offering, channelSessions)
+		start = end
 	}
+
 	return usage, nil
 
 }
@@ -355,6 +388,23 @@ func newUsage(channel *data.Channel, offering *data.Offering,
 	return result
 }
 
+func removeDuplicates(elements []string) []string {
+
+	encountered := map[string]bool{}
+	result := []string{}
+
+	for v := range elements {
+		if encountered[elements[v]] == true {
+		} else {
+			encountered[elements[v]] = true
+			result = append(result, elements[v])
+		}
+	}
+
+	return result
+
+}
+
 func (h *Handler) createClientChannelResult(logger log.Logger,
 	channel *data.Channel) (result *ClientChannelInfo, err error) {
 	result = &ClientChannelInfo{}
@@ -430,9 +480,11 @@ func (h *Handler) getChannelSessions(logger log.Logger, channel string) ([]*data
 	return sessions, nil
 }
 
-func (h *Handler) getChannelsSessions(logger log.Logger, channnelsIds []interface{}) ([]*data.Session, error) {
+func (h *Handler) getChannelsSessions(logger log.Logger, channelsIds []interface{}) ([]*data.Session, error) {
 
-	sess, err := h.findAllFrom(logger, data.SessionTable, "channel", channnelsIds...)
+	placeholders := h.db.Placeholders(1, len(channelsIds))
+	tail := fmt.Sprintf("WHERE channel IN ( %s ) ORDER BY channel DESC", strings.Join(placeholders, ", "))
+	sess, err := h.selectAllFrom(logger, data.SessionTable, tail, channelsIds...)
 
 	if err != nil {
 		return nil, err

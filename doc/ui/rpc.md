@@ -615,7 +615,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 1. Token (string)
 2. Channels ids (array of `string`s)
 
-*Result*:   []Usage (array of `ui.Usage` objects)
+*Result*:   {[key: string]: Usage} (object as `key => value` map where key is any of channels id and value is `ui.Usage` object)
 
 <details><summary>Example</summary>
     
@@ -627,13 +627,13 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChann
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": [{
+    "result": { "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0" : {
                     "current":400,
                     "maxUsage":454,
                     "unitName":"MB",
                     "unitType":"units",
                     "cost":8811
-                }]
+                }}
 }
 ```
 </details>

@@ -11,17 +11,15 @@ echo
 echo dep ensure
 echo
 
-cd "${DAPPCTRL_DIR}" && dep ensure -v
+cd "${DAPPCTRL_DIR}"
+rm -f Gopkg.lock
+dep ensure -v
 
-echo
-echo go get
-echo
-
-go get -d -v ${DAPPCTRL}/...
-go get -u -v gopkg.in/reform.v1/reform
-go get -u -v github.com/rakyll/statik
-go get -u -v github.com/pressly/goose/cmd/goose
-go get -v github.com/ethereum/go-ethereum/cmd/abigen
+cd "${DAPPCTRL_DIR}/vendor/gopkg.in/reform.v1/reform" && go install .
+cd "${DAPPCTRL_DIR}/vendor/github.com/rakyll/statik" && go install .
+cd "${DAPPCTRL_DIR}/vendor/github.com/pressly/goose/cmd/goose" && go install .
+cd "${DAPPCTRL_DIR}/vendor/github.com/ethereum/go-ethereum/cmd/abigen" && go install .
+cd "${DAPPCTRL_DIR}"
 
 echo
 echo go generate

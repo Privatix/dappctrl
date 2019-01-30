@@ -230,6 +230,7 @@ func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string
 		ret[usage.channel] = &usage.Usage
 	}
 
+    fmt.Printf("Usage: %v\n", ret)
 	return ret, nil
 }
 
@@ -243,14 +244,14 @@ func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
 		`SELECT
 		    channels.id,
 		    (channels.total_deposit - offerings.setup_price) / offerings.unit_price,
-		    SUM(sessions.seconds_consumed),
-		    SUM(sessions.units_used),
+		    SUM(COALESCE(sessions.seconds_consumed, 0)),
+		    SUM(COALESCE(sessions.units_used, 0)),
 		    offerings.unit_price,
 		    offerings.unit_name,
 		    offerings.unit_type
-	      FROM sessions
-	        INNER JOIN channels ON sessions.channel=channels.id
-		    INNER JOIN offerings ON channels.offering=offerings.id
+	      FROM channels
+	        LEFT JOIN sessions ON channels.id=sessions.channel
+		    LEFT JOIN offerings ON channels.offering=offerings.id
 	     WHERE channels.id IN ( %s )
 		 GROUP BY channels.id, offerings.id`,
 		strings.Join(h.db.Placeholders(1, len(ids)), ","))
@@ -302,7 +303,7 @@ func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
 			},
 		})
 	}
-
+    fmt.Printf("Usage: %v\n", ret)
 	return ret, nil
 }
 

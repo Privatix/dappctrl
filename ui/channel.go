@@ -202,7 +202,7 @@ func (h *Handler) GetAgentChannels(tkn string,
 }
 
 // GetChannelsUsage returns detailed usage on channels.
-func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage, error) {
+func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]Usage, error) {
 	logger := h.logger.Add("method", "GetChannelsUsage", "objectType", "channel", "objectIDs", ids)
 
 	if !h.token.Check(tkn) {
@@ -213,8 +213,8 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage,
 	return h.getChannelsUsages(logger, ids)
 }
 
-func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]*Usage, error) {
-	ret := make(map[string]*Usage)
+func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]Usage, error) {
+	ret := make(map[string]Usage)
 
 	usages, err := h.queryChannelsUsages(ids)
 	if err != nil {
@@ -222,12 +222,8 @@ func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string
 		return nil, ErrInternal
 	}
 
-	for _, id := range ids {
-		ret[id] = nil
-	}
-
 	for _, usage := range usages {
-		ret[usage.channel] = &usage.Usage
+		ret[usage.channel] = usage.Usage
 	}
 
 	return ret, nil
@@ -243,14 +239,14 @@ func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
 		`SELECT
 		    channels.id,
 		    (channels.total_deposit - offerings.setup_price) / offerings.unit_price,
-		    SUM(sessions.seconds_consumed),
-		    SUM(sessions.units_used),
+		    SUM(COALESCE(sessions.seconds_consumed, 0)),
+		    SUM(COALESCE(sessions.units_used, 0)),
 		    offerings.unit_price,
 		    offerings.unit_name,
 		    offerings.unit_type
-	      FROM sessions
-	        INNER JOIN channels ON sessions.channel=channels.id
-		    INNER JOIN offerings ON channels.offering=offerings.id
+	      FROM channels
+	        LEFT JOIN sessions ON channels.id=sessions.channel
+		    LEFT JOIN offerings ON channels.offering=offerings.id
 	     WHERE channels.id IN ( %s )
 		 GROUP BY channels.id, offerings.id`,
 		strings.Join(h.db.Placeholders(1, len(ids)), ","))

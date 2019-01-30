@@ -226,7 +226,6 @@ func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string
 		ret[usage.channel] = usage.Usage
 	}
 
-	fmt.Printf("Usage: %v\n", ret)
 	return ret, nil
 }
 
@@ -299,7 +298,7 @@ func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
 			},
 		})
 	}
-	fmt.Printf("Usage: %v\n", ret)
+
 	return ret, nil
 }
 

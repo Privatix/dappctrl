@@ -489,11 +489,11 @@ func TestGetChannelsUsage(t *testing.T) {
 	assertErrEqual(nil, err)
 
 	if ret == nil || len(ret) != 1 ||
-		ret[0].Current != expectedCurrentUsage ||
-		ret[0].MaxUsage != expectedMaxUsage ||
-		ret[0].UnitName != offering.UnitName ||
-		ret[0].UnitType != offering.UnitType ||
-		ret[0].Cost != expectedCost {
+		ret[channel.ID].Current != expectedCurrentUsage ||
+		ret[channel.ID].MaxUsage != expectedMaxUsage ||
+		ret[channel.ID].UnitName != offering.UnitName ||
+		ret[channel.ID].UnitType != offering.UnitType ||
+		ret[channel.ID].Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}
 
@@ -508,11 +508,11 @@ func TestGetChannelsUsage(t *testing.T) {
 	assertErrEqual(nil, err)
 
 	if ret == nil || len(ret) != 1 ||
-		ret[0].Current != expectedCurrentUsage ||
-		ret[0].MaxUsage != expectedMaxUsage ||
-		ret[0].UnitName != offering.UnitName ||
-		ret[0].UnitType != offering.UnitType ||
-		ret[0].Cost != expectedCost {
+		ret[channel.ID].Current != expectedCurrentUsage ||
+		ret[channel.ID].MaxUsage != expectedMaxUsage ||
+		ret[channel.ID].UnitName != offering.UnitName ||
+		ret[channel.ID].UnitType != offering.UnitType ||
+		ret[channel.ID].Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}
 }

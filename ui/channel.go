@@ -210,82 +210,100 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage,
 		return nil, ErrAccessDenied
 	}
 
-	uniqueIds := removeDuplicates(ids)
-	idsCount := len(uniqueIds)
-	channelsIds := make([]interface{}, idsCount)
-	for i, v := range uniqueIds {
-		channelsIds[i] = v
+	return h.getChannelsUsages(logger, ids)
+}
+
+func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]*Usage, error) {
+	ret := make(map[string]*Usage)
+
+	usages, err := h.queryChannelsUsages(ids)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
-	placeholders := h.db.Placeholders(1, idsCount)
-	tail := fmt.Sprintf("WHERE id IN ( %s ) ORDER BY id DESC", strings.Join(placeholders, ", "))
-	selectedChannels, err := h.selectAllFrom(logger, data.ChannelTable, tail, channelsIds...)
+	for _, id := range ids {
+		ret[id] = nil
+	}
 
+	for _, usage := range usages {
+		ret[usage.channel] = &usage.Usage
+	}
+
+	return ret, nil
+}
+
+type channelUsage struct {
+	Usage
+	channel string
+}
+
+func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
+	query := fmt.Sprintf(
+		`SELECT
+		    channels.id,
+		    (channels.total_deposit - offerings.setup_price) / offerings.unit_price,
+		    SUM(sessions.seconds_consumed),
+		    SUM(sessions.units_used),
+		    offerings.unit_price,
+		    offerings.unit_name,
+		    offerings.unit_type
+	      FROM sessions
+	        INNER JOIN channels ON sessions.channel=channels.id
+		    INNER JOIN offerings ON channels.offering=offerings.id
+	     WHERE channels.id IN ( %s )
+		 GROUP BY channels.id, offerings.id`,
+		strings.Join(h.db.Placeholders(1, len(ids)), ","))
+
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	channelsCount := len(selectedChannels)
-	channels := make([]*data.Channel, channelsCount)
-	offeringIds := make([]interface{}, channelsCount)
+	defer rows.Close()
 
-	for k, v := range selectedChannels {
-		channels[k] = v.(*data.Channel)
-		offeringIds[k] = channels[k].Offering
-	}
+	var (
+		id           string
+		maxUsage     uint64
+		totalSeconds uint64
+		totalUnits   uint64
+		unitPrice    uint64
+		unitName     string
+		unitType     string
+	)
 
-	offeringsResult, err := h.findAllFrom(logger, data.OfferingTable, "id", offeringIds...)
-	if err != nil {
-		return nil, err
-	}
+	ret := make([]channelUsage, 0)
 
-	offerings := make([]*data.Offering, len(offeringsResult))
-	for k, v := range offeringsResult {
-		offerings[k] = v.(*data.Offering)
-	}
-
-	sessions, err := h.getChannelsSessions(logger, channelsIds)
-	if err != nil {
-		return nil, err
-	}
-
-	usage := make(map[string]*Usage)
-	start := 0
-	end := 0
-	for _, channel := range channels {
-
-		var offering *data.Offering
-		for _, v := range offerings {
-			if channel.Offering == v.ID {
-				offering = v
-				break
-			}
+	for rows.Next() {
+		err = rows.Scan(&id, &maxUsage, &totalSeconds, &totalUnits, &unitPrice,
+			&unitName, &unitType)
+		if err != nil {
+			return nil, err
 		}
 
-		if offering == nil {
-			return nil, ErrOfferingNotFound
+		units := totalUnits
+		if unitType == data.UnitSeconds {
+			units = totalSeconds
 		}
 
-		for ; end < len(sessions); end++ {
-			if sessions[end].Channel != channel.ID {
-				break
-			}
-		}
-
-		var channelSessions []*data.Session
-
-		if end == start {
-			channelSessions = []*data.Session{}
-		} else {
-			channelSessions = sessions[start:end]
-		}
-
-		usage[channel.ID] = newUsage(channel, offering, channelSessions)
-		start = end
+		ret = append(ret, channelUsage{
+			channel: id,
+			Usage: Usage{
+				Cost:     units * unitPrice,
+				Current:  units,
+				MaxUsage: maxUsage,
+				UnitName: unitName,
+				UnitType: unitType,
+			},
+		})
 	}
 
-	return usage, nil
-
+	return ret, nil
 }
 
 // GetClientChannels gets client channel information.
@@ -388,23 +406,6 @@ func newUsage(channel *data.Channel, offering *data.Offering,
 	return result
 }
 
-func removeDuplicates(elements []string) []string {
-
-	encountered := map[string]bool{}
-	result := []string{}
-
-	for v := range elements {
-		if encountered[elements[v]] == true {
-		} else {
-			encountered[elements[v]] = true
-			result = append(result, elements[v])
-		}
-	}
-
-	return result
-
-}
-
 func (h *Handler) createClientChannelResult(logger log.Logger,
 	channel *data.Channel) (result *ClientChannelInfo, err error) {
 	result = &ClientChannelInfo{}
@@ -469,23 +470,6 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 func (h *Handler) getChannelSessions(logger log.Logger, channel string) ([]*data.Session, error) {
 	sess, err := h.findAllFrom(logger, data.SessionTable,
 		"channel", channel)
-	if err != nil {
-		return nil, err
-	}
-
-	var sessions []*data.Session
-	for _, v := range sess {
-		sessions = append(sessions, v.(*data.Session))
-	}
-	return sessions, nil
-}
-
-func (h *Handler) getChannelsSessions(logger log.Logger, channelsIds []interface{}) ([]*data.Session, error) {
-
-	placeholders := h.db.Placeholders(1, len(channelsIds))
-	tail := fmt.Sprintf("WHERE channel IN ( %s ) ORDER BY channel DESC", strings.Join(placeholders, ", "))
-	sess, err := h.selectAllFrom(logger, data.SessionTable, tail, channelsIds...)
-
 	if err != nil {
 		return nil, err
 	}

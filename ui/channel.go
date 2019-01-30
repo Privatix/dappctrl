@@ -202,7 +202,7 @@ func (h *Handler) GetAgentChannels(tkn string,
 }
 
 // GetChannelsUsage returns detailed usage on channels.
-func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage, error) {
+func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]Usage, error) {
 	logger := h.logger.Add("method", "GetChannelsUsage", "objectType", "channel", "objectIDs", ids)
 
 	if !h.token.Check(tkn) {
@@ -213,8 +213,8 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage,
 	return h.getChannelsUsages(logger, ids)
 }
 
-func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]*Usage, error) {
-	ret := make(map[string]*Usage)
+func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]Usage, error) {
+	ret := make(map[string]Usage)
 
 	usages, err := h.queryChannelsUsages(ids)
 	if err != nil {
@@ -222,15 +222,11 @@ func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string
 		return nil, ErrInternal
 	}
 
-	for _, id := range ids {
-		ret[id] = nil
-	}
-
 	for _, usage := range usages {
-		ret[usage.channel] = &usage.Usage
+		ret[usage.channel] = usage.Usage
 	}
 
-    fmt.Printf("Usage: %v\n", ret)
+	fmt.Printf("Usage: %v\n", ret)
 	return ret, nil
 }
 
@@ -303,7 +299,7 @@ func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
 			},
 		})
 	}
-    fmt.Printf("Usage: %v\n", ret)
+	fmt.Printf("Usage: %v\n", ret)
 	return ret, nil
 }
 

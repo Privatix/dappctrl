@@ -453,8 +453,8 @@ func checkClientChannelUsage(
 	}
 }
 
-func TestGetChannelUsage(t *testing.T) {
-	fxt, assertErrEqual := newTest(t, "GetChannelUsage")
+func TestGetChannelsUsage(t *testing.T) {
+	fxt, assertErrEqual := newTest(t, "GetChannelsUsage")
 	defer fxt.close()
 
 	// Prepare common test state.
@@ -474,7 +474,7 @@ func TestGetChannelUsage(t *testing.T) {
 	data.InsertToTestDB(t, fxt.DB, sess1, sess2)
 	defer data.DeleteFromTestDB(t, fxt.DB, sess2, sess1)
 
-	_, err := handler.GetChannelUsage("wrong-token", channel.ID)
+	_, err := handler.GetChannelsUsage("wrong-token", []string{channel.ID})
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	// Test for scalar unit type.
@@ -485,14 +485,15 @@ func TestGetChannelUsage(t *testing.T) {
 	offering.UnitType = data.UnitScalar
 	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
 
-	ret, err := handler.GetChannelUsage(testToken.v, channel.ID)
+	ret, err := handler.GetChannelsUsage(testToken.v, []string{channel.ID})
 	assertErrEqual(nil, err)
 
-	if ret == nil || ret.Current != expectedCurrentUsage ||
-		ret.MaxUsage != expectedMaxUsage ||
-		ret.UnitName != offering.UnitName ||
-		ret.UnitType != offering.UnitType ||
-		ret.Cost != expectedCost {
+	if ret == nil || len(ret) != 1 ||
+		ret[channel.ID].Current != expectedCurrentUsage ||
+		ret[channel.ID].MaxUsage != expectedMaxUsage ||
+		ret[channel.ID].UnitName != offering.UnitName ||
+		ret[channel.ID].UnitType != offering.UnitType ||
+		ret[channel.ID].Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}
 
@@ -503,14 +504,15 @@ func TestGetChannelUsage(t *testing.T) {
 	expectedCurrentUsage = sess1.SecondsConsumed + sess2.SecondsConsumed
 	offering.UnitType = data.UnitSeconds
 	data.SaveToTestDB(t, fxt.DB, sess1, sess2, offering)
-	ret, err = handler.GetChannelUsage(testToken.v, channel.ID)
+	ret, err = handler.GetChannelsUsage(testToken.v, []string{channel.ID})
 	assertErrEqual(nil, err)
 
-	if ret == nil || ret.Current != expectedCurrentUsage ||
-		ret.MaxUsage != expectedMaxUsage ||
-		ret.UnitName != offering.UnitName ||
-		ret.UnitType != offering.UnitType ||
-		ret.Cost != expectedCost {
+	if ret == nil || len(ret) != 1 ||
+		ret[channel.ID].Current != expectedCurrentUsage ||
+		ret[channel.ID].MaxUsage != expectedMaxUsage ||
+		ret[channel.ID].UnitName != offering.UnitName ||
+		ret[channel.ID].UnitType != offering.UnitType ||
+		ret[channel.ID].Cost != expectedCost {
 		t.Fatal("wrong channel usage")
 	}
 }

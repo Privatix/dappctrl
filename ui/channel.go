@@ -201,33 +201,109 @@ func (h *Handler) GetAgentChannels(tkn string,
 	return &GetAgentChannelsResult{channels, total}, err
 }
 
-// GetChannelUsage returns detailed usage on channel.
-func (h *Handler) GetChannelUsage(tkn string, id string) (*Usage, error) {
-	logger := h.logger.Add("method", "GetChannelUsage", "channel", id)
+// GetChannelsUsage returns detailed usage on channels.
+func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]*Usage, error) {
+	logger := h.logger.Add("method", "GetChannelsUsage", "objectType", "channel", "objectIDs", ids)
 
 	if !h.token.Check(tkn) {
 		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
-	ch := &data.Channel{}
-	if err := h.findByPrimaryKey(logger,
-		ErrChannelNotFound, ch, id); err != nil {
-		return nil, err
+	return h.getChannelsUsages(logger, ids)
+}
+
+func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]*Usage, error) {
+	ret := make(map[string]*Usage)
+
+	usages, err := h.queryChannelsUsages(ids)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrInternal
 	}
 
-	offering := &data.Offering{}
-	if err := h.findByPrimaryKey(logger,
-		ErrOfferingNotFound, offering, ch.Offering); err != nil {
-		return nil, err
+	for _, id := range ids {
+		ret[id] = nil
 	}
 
-	sessions, err := h.getChannelSessions(logger, ch.ID)
+	for _, usage := range usages {
+		ret[usage.channel] = &usage.Usage
+	}
+
+	return ret, nil
+}
+
+type channelUsage struct {
+	Usage
+	channel string
+}
+
+func (h *Handler) queryChannelsUsages(ids []string) ([]channelUsage, error) {
+	query := fmt.Sprintf(
+		`SELECT
+		    channels.id,
+		    (channels.total_deposit - offerings.setup_price) / offerings.unit_price,
+		    SUM(sessions.seconds_consumed),
+		    SUM(sessions.units_used),
+		    offerings.unit_price,
+		    offerings.unit_name,
+		    offerings.unit_type
+	      FROM sessions
+	        INNER JOIN channels ON sessions.channel=channels.id
+		    INNER JOIN offerings ON channels.offering=offerings.id
+	     WHERE channels.id IN ( %s )
+		 GROUP BY channels.id, offerings.id`,
+		strings.Join(h.db.Placeholders(1, len(ids)), ","))
+
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	return newUsage(ch, offering, sessions), nil
+	defer rows.Close()
+
+	var (
+		id           string
+		maxUsage     uint64
+		totalSeconds uint64
+		totalUnits   uint64
+		unitPrice    uint64
+		unitName     string
+		unitType     string
+	)
+
+	ret := make([]channelUsage, 0)
+
+	for rows.Next() {
+		err = rows.Scan(&id, &maxUsage, &totalSeconds, &totalUnits, &unitPrice,
+			&unitName, &unitType)
+		if err != nil {
+			return nil, err
+		}
+
+		units := totalUnits
+		if unitType == data.UnitSeconds {
+			units = totalSeconds
+		}
+
+		ret = append(ret, channelUsage{
+			channel: id,
+			Usage: Usage{
+				Cost:     units * unitPrice,
+				Current:  units,
+				MaxUsage: maxUsage,
+				UnitName: unitName,
+				UnitType: unitType,
+			},
+		})
+	}
+
+	return ret, nil
 }
 
 // GetClientChannels gets client channel information.

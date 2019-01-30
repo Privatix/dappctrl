@@ -604,36 +604,36 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
 
 </details>
 
-#### Get Channel Usage
+#### Get Channels Usage
 
-*Method*: `getChannelUsage`
+*Method*: `getChannelsUsage`
 
-*Description*: Returns detailed usage of a channel.
+*Description*: Returns detailed usage of channels.
 
 
 *Parameters*: 
 1. Token (string)
-2. Channel id (string)
+2. Channels ids (array of `string`s)
 
-*Result*:   Usage (object)
+*Result*:   {[key: string]: Usage} (object as `key => value` map where key is any of channels id and value is `ui.Usage` object)
 
 <details><summary>Example</summary>
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChannelUsage", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getChannelsUsage", "params": ["qwert", ["e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"]], "id": 67}' http://localhost:8888/http
 
 // Result
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": {
+    "result": { "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0" : {
                     "current":400,
                     "maxUsage":454,
                     "unitName":"MB",
                     "unitType":"units",
                     "cost":8811
-                }
+                }}
 }
 ```
 </details>

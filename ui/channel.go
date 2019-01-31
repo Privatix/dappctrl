@@ -216,6 +216,11 @@ func (h *Handler) GetChannelsUsage(tkn string, ids []string) (map[string]Usage, 
 func (h *Handler) getChannelsUsages(logger log.Logger, ids []string) (map[string]Usage, error) {
 	ret := make(map[string]Usage)
 
+	if len(ids) == 0 {
+		logger.Warn("no channels ids given")
+		return ret, nil
+	}
+
 	usages, err := h.queryChannelsUsages(ids)
 	if err != nil {
 		logger.Error(err.Error())

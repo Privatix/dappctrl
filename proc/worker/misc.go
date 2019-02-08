@@ -281,37 +281,3 @@ func (w *Worker) saveRecord(logger log.Logger,
 	}
 	return nil
 }
-
-func (w *Worker) newKeyedTransactor(logger log.Logger, accAddr data.HexString,
-	key *ecdsa.PrivateKey) *bind.TransactOpts {
-	auth := bind.NewKeyedTransactor(key)
-	var nonce sql.NullInt64
-	err := w.db.QueryRow(`
-	SELECT MAX(nonce)
-	 FROM eth_txs
-	 WHERE addr_from=$1`, accAddr).Scan(&nonce)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			logger.Warn(err.Error())
-		}
-		return auth
-	}
-
-	addr, err := data.HexToAddress(accAddr)
-	if err != nil {
-		logger.Warn(err.Error())
-		return auth
-	}
-
-	pendingNonce, err := w.ethBack.PendingNonceAt(context.Background(), addr)
-	if err != nil {
-		logger.Warn(err.Error())
-		return auth
-	}
-
-	if nonce.Valid && uint64(nonce.Int64) >= pendingNonce {
-		auth.Nonce = big.NewInt(nonce.Int64 + 1)
-	}
-
-	return auth
-}

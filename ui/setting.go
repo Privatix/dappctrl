@@ -26,6 +26,7 @@ func (h *Handler) GetSettings(tkn string) (map[string]SettingUI, error) {
 	logger := h.logger.Add("method", "GetSettings")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 
@@ -51,6 +52,7 @@ func (h *Handler) UpdateSettings(tkn string, items map[string]string) error {
 	logger := h.logger.Add("method", "UpdateSettings")
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return ErrAccessDenied
 	}
 

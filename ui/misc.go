@@ -121,6 +121,7 @@ func (h *Handler) catchError(logger log.Logger, err error) error {
 func (h *Handler) uintFromQuery(logger log.Logger, tkn,
 	query string, arg ...interface{}) (*uint, error) {
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

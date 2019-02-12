@@ -27,6 +27,7 @@ func (h *Handler) GetSessions(tkn, channel string) ([]data.Session, error) {
 	logger := h.logger.Add("method", "GetSessions", "channel", channel)
 
 	if !h.token.Check(tkn) {
+		logger.Warn("access denied")
 		return nil, ErrAccessDenied
 	}
 

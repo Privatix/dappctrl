@@ -59,7 +59,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PTC.Approve
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 	tx, err := w.ethBack.PTCIncreaseApproval(auth,
@@ -92,7 +92,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 	tx, err := w.ethBack.PSCAddBalanceERC20(
@@ -163,7 +163,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	auth := bind.NewKeyedTransactor(key)
 
 	amount, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 	if err != nil {

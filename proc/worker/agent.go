@@ -319,7 +319,7 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 		return ErrInternal
 	}
 
-	auth := w.newKeyedTransactor(logger, agent.EthAddr, accKey)
+	auth := bind.NewKeyedTransactor(accKey)
 	auth.GasLimit = w.gasConf.PSC.CooperativeClose
 
 	tx, err := w.ethBack.CooperativeClose(auth, agentAddr,
@@ -546,7 +546,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, agent.EthAddr, agentKey)
+	auth := bind.NewKeyedTransactor(agentKey)
 
 	pscBalance, err := w.ethBack.PSCBalanceOf(&bind.CallOpts{}, auth.From)
 
@@ -697,7 +697,7 @@ func (w *Worker) AgentPreOfferingDelete(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, offering.Agent, key)
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.RemoveServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 
@@ -831,7 +831,7 @@ func (w *Worker) AgentPreOfferingPopUp(job *data.Job) error {
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, offering.Agent, key)
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.PopupServiceOffering
 	auth.GasPrice = new(big.Int).SetUint64(jobDate.GasPrice)
 

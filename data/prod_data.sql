@@ -2,6 +2,12 @@
 BEGIN TRANSACTION;
 
 INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('system.gui', '{}', 0, '', 'GUI settings');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('updateDismissVersion', '', 2, '', 'Update dismiss version');
+
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.min.confirmations',
         '1',
         2,
@@ -66,7 +72,7 @@ VALUES ('eth.event.lastProcessedBlock',
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('system.version.db',
-        '0.19.0',
+        '0.20.0',
         1,
         'Version of database.',
         'db version');

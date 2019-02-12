@@ -21,6 +21,7 @@ const (
 	SettingsPeriodChallange   = "psc.periods.challenge"
 	SettingsPeriodPopUp       = "psc.periods.popup"
 	SettingsPeriodRemove      = "psc.periods.remove"
+	SettingGUI                = "system.gui"
 )
 
 // ReadSetting reads value of a given setting.

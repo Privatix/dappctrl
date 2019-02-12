@@ -103,7 +103,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 		return err
 	}
 
-	auth := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.CreateChannel
 	auth.GasPrice = gasPrice
 	tx, err := w.ethBack.PSCCreateChannel(auth,
@@ -620,7 +620,7 @@ func (w *Worker) settle(ctx context.Context, logger log.Logger,
 		return nil, err
 	}
 
-	opts := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	opts := bind.NewKeyedTransactor(key)
 	opts.Context = ctx
 
 	tx, err := w.ethBack.PSCSettle(opts, agent, block, hash)
@@ -734,7 +734,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	opts := bind.NewKeyedTransactor(key)
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
@@ -813,7 +813,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	opts := w.newKeyedTransactor(logger, acc.EthAddr, key)
+	opts := bind.NewKeyedTransactor(key)
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)

@@ -101,7 +101,7 @@ Exit code:
 """
 
 main_conf = dict(
-    i_version='0.2.9',
+    i_version='0.2.10',
     bind_port=False,
     bind_ports=[5555],
     log_path='/var/log/initializer.log',
@@ -251,6 +251,7 @@ main_conf = dict(
     gui={
         'gui_arch': 'dappctrlgui.tar.xz',
         'gui_path': '/opt/privatix/gui/',
+        'gui_dapp': '/home/{}/.config/dappctrlgui',
         'link_dev_gui': 'dappctrlgui/',
         'icon_name': 'privatix-dappgui.desktop',
         'icon_sh': 'privatix-dappgui.sh',
@@ -353,6 +354,7 @@ class Init:
         gui = main_conf['gui']
         self.gui_arch = gui['gui_arch']
         self.gui_path = gui['gui_path']
+        self.gui_dapp = gui['gui_dapp']
         self.gui_version = gui['version']
         self.gui_icon_sh = gui['icon_sh']
         self.dappctrlgui = gui['dappctrlgui']
@@ -2833,7 +2835,7 @@ class AutoOffer:
             'params': [
                 self.token,
                 self.product_id,
-                'registered',
+                ['registered'],
                 0,
                 1
             ],
@@ -3841,6 +3843,7 @@ def checker_fabric(inherit_class, old, v, dist):
                 self.clear_contr()
                 self.del_pid()
                 self._clear_dir(self.gui_path)
+                self._clear_dir(self.gui_dapp.format(environ['SUDO_USER']))
                 try:
                     if not self.old_vers:
                         for unit in (self.unit_f_com, self.unit_f_vpn):

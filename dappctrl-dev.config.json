@@ -188,6 +188,13 @@
     "Looper": {
         "AutoOfferingPopUpTimeout": 3600000
     },
+    "NAT": {
+        "CheckTimeout": 1000,
+        "MapTimeout": 1200000,
+        "MapUpdateInterval": 900000,
+        "Mechanism": "any",
+        "SoapRequestTimeout": 3000
+    },
     "PayAddress": "http://0.0.0.0:9000/v1/pmtChannel/pay",
     "PayServer": {
         "Addr": "0.0.0.0:9000",
@@ -217,7 +224,7 @@
         "TLS": null
     },
     "SOMCServer": {
-        "Addr": "localhost:5555",
+        "Addr": "0.0.0.0:5555",
         "TLS": null
     },
     "StaticPassword": "",

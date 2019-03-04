@@ -256,17 +256,7 @@ func externalPorts(conf *config) ([]uint16, error) {
 		return nil, err
 	}
 
-	_, somcPortStr, err := net.SplitHostPort(conf.SOMCServer.Addr)
-	if err != nil {
-		return nil, err
-	}
-
-	somcPort, err := strconv.Atoi(somcPortStr)
-	if err != nil {
-		return nil, err
-	}
-
-	result := []uint16{uint16(payPort), uint16(somcPort)}
+	result := []uint16{uint16(payPort)}
 
 	return result, nil
 }

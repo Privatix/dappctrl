@@ -23,7 +23,6 @@ import (
 	"github.com/privatix/dappctrl/messages"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/messages/offer"
-	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
@@ -341,21 +340,20 @@ func (w *Worker) extractEndpointMessage(logger log.Logger,
 		return nil, ErrDecryptEndpointMsg
 	}
 
-	schema, err := statik.ReadFile(statik.EndpointJSONSchema)
-	if err != nil {
-		logger.Error(err.Error())
-		return nil, ErrInternal
-	}
-
-	if !util.ValidateJSON(schema, mdata) {
-		return nil, ErrInvalidEndpoint
-	}
-
 	var msg ept.Message
 	err = json.Unmarshal(mdata, &msg)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrInternal
+	}
+
+	tpl, err := w.templateByHash(logger, msg.TemplateHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if !util.ValidateJSON(tpl.Raw, mdata) {
+		return nil, ErrInvalidEndpoint
 	}
 
 	return &msg, nil

@@ -6,11 +6,6 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
-// File paths.
-const (
-	EndpointJSONSchema = "/templates/ept.json"
-)
-
 // ReadFile reads a file content from the embedded filesystem.
 func ReadFile(name string) ([]byte, error) {
 	fs, err := fs.New()

@@ -590,7 +590,7 @@ func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
 func (w *Worker) assertCanSettle(ctx context.Context, logger log.Logger,
 	client, agent common.Address, block uint32,
 	hash [common.HashLength]byte) error {
-	_, _, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
+	_, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
 		&bind.CallOpts{}, client, agent, block, hash)
 	if err != nil {
 		logger.Error(err.Error())

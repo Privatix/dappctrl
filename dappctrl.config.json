@@ -38,7 +38,7 @@
     "Eth": {
         "CheckTimeout": 20000,
         "Contract": {
-            "PSCAddrHex": "0x46c9b0367f6d1e582c5f977d40ae02751e0993ff",
+            "PSCAddrHex": "0xcbba2a082862ec37e7d279b9296e6f35f171f44b",
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
         },
         "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",

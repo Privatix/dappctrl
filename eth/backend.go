@@ -46,8 +46,7 @@ type Backend interface {
 	PSCGetChannelInfo(opts *bind.CallOpts,
 		client common.Address, agent common.Address,
 		blockNumber uint32,
-		hash [common.HashLength]byte) ([common.HashLength]byte,
-		*big.Int, uint32, *big.Int, error)
+		hash [common.HashLength]byte) (*big.Int, uint32, *big.Int, error)
 
 	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
 
@@ -382,8 +381,7 @@ func (b *backendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 func (b *backendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 	client common.Address, agent common.Address,
 	blockNumber uint32,
-	hash [common.HashLength]byte) ([common.HashLength]byte,
-	*big.Int, uint32, *big.Int, error) {
+	hash [common.HashLength]byte) (*big.Int, uint32, *big.Int, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 

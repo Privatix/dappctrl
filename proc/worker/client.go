@@ -590,7 +590,7 @@ func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
 func (w *Worker) assertCanSettle(ctx context.Context, logger log.Logger,
 	client, agent common.Address, block uint32,
 	hash [common.HashLength]byte) error {
-	_, _, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
+	_, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
 		&bind.CallOpts{}, client, agent, block, hash)
 	if err != nil {
 		logger.Error(err.Error())
@@ -637,6 +637,16 @@ func (w *Worker) settle(ctx context.Context, logger log.Logger,
 func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 	logger := w.logger.Add("method", "ClientPreUncooperativeClose",
 		"job", job)
+
+	// If cooperative close was created for this channel, skip this job.
+	err := w.db.SelectOneTo(&data.Job{},
+		"WHERE related_id=$1 AND related_type=$2 AND type=$3",
+		job.RelatedID, job.RelatedType, data.JobClientAfterCooperativeClose)
+	if err == nil {
+		job.Status = data.JobCanceled
+		w.db.Save(job)
+		return nil
+	}
 
 	ch, err := w.relatedChannel(logger, job,
 		data.JobClientPreUncooperativeClose)

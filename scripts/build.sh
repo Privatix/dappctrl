@@ -31,6 +31,11 @@ go generate -x ${DAPPCTRL}/...
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
 GIT_RELEASE=$(git tag -l --points-at HEAD)
+# if $GIT_RELEASE is zero:
+GIT_RELEASE=${GIT_RELEASE:-$(git rev-parse --abbrev-ref HEAD | grep -o "[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}")}
+
+echo GIT_COMMIT=${GIT_COMMIT}
+echo GIT_RELEASE=${GIT_RELEASE}
 
 export GIT_COMMIT
 export GIT_RELEASE

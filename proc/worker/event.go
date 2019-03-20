@@ -51,27 +51,27 @@ var (
 )
 
 func init() {
-	abiUint32, err := abi.NewType("uint32")
+	abiUint32, err := abi.NewType("uint32", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	abiUint192, err := abi.NewType("uint192")
+	abiUint192, err := abi.NewType("uint192", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	abiUint16, err := abi.NewType("uint16")
+	abiUint16, err := abi.NewType("uint16", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	abiUint8, err := abi.NewType("uint8")
+	abiUint8, err := abi.NewType("uint8", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	abiString, err := abi.NewType("string")
+	abiString, err := abi.NewType("string", nil)
 	if err != nil {
 		panic(err)
 	}

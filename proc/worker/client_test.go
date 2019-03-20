@@ -196,7 +196,7 @@ func testClientEndpointCreate(t *testing.T,
 	conf.Country.Field = testCountryField
 
 	msg := ept.Message{
-		TemplateHash:           "test-hash",
+		TemplateHash:           fxt.TemplateAccess.Hash,
 		Username:               util.NewUUID(),
 		Password:               "test-password",
 		PaymentReceiverAddress: "1.2.3.4:5678",

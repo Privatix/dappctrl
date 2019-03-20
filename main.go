@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
 	"github.com/privatix/dappctrl/monitor"
+	"github.com/privatix/dappctrl/nat"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/proc/handlers"
@@ -60,6 +63,7 @@ type config struct {
 	Gas              *worker.GasConf
 	Job              *job.Config
 	Looper           *looper.Config
+	NAT              *nat.Config
 	PayServer        *pay.Config
 	PayAddress       string
 	Proc             *proc.Config
@@ -87,6 +91,7 @@ func newConfig() *config {
 		Eth:           eth.NewConfig(),
 		FileLog:       log.NewFileConfig(),
 		Job:           job.NewConfig(),
+		NAT:           nat.NewConfig(),
 		PayServer:     pay.NewConfig(),
 		Proc:          proc.NewConfig(),
 		Report:        bugsnag.NewConfig(),
@@ -240,6 +245,22 @@ func newAgentSOMCServer(conf *rpcsrv.Config, db *reform.DB,
 	return server, nil
 }
 
+func externalPorts(conf *config) ([]uint16, error) {
+	_, payPortStr, err := net.SplitHostPort(conf.PayServer.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	payPort, err := strconv.Atoi(payPortStr)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []uint16{uint16(payPort)}
+
+	return result, nil
+}
+
 func main() {
 	if err := data.ExecuteCommand(os.Args[1:]); err != nil {
 		panic(fmt.Sprintf("failed to execute command: %s", err))
@@ -370,6 +391,13 @@ func main() {
 		go func() {
 			fatal <- amon.Run()
 		}()
+
+		ports, err := externalPorts(conf)
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+
+		nat.Run(ctx, conf.NAT, logger, ports)
 	}
 
 	err = <-fatal

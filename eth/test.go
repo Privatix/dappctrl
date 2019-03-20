@@ -194,11 +194,10 @@ func (b *TestEthBackend) PSCReturnBalanceERC20(opts *bind.TransactOpts,
 func (b *TestEthBackend) PSCGetChannelInfo(opts *bind.CallOpts,
 	client common.Address, agent common.Address,
 	blockNumber uint32,
-	hash [common.HashLength]byte) ([common.HashLength]byte,
-	*big.Int, uint32, *big.Int, error) {
+	hash [common.HashLength]byte) (*big.Int, uint32, *big.Int, error) {
 	settleBlock, _ := b.LatestBlockNumber(context.Background())
 
-	return [32]byte{}, nil, uint32(settleBlock.Uint64()), nil, nil
+	return nil, uint32(settleBlock.Uint64()), nil, nil
 }
 
 // SetTransaction mocks return value for GetTransactionByHash.

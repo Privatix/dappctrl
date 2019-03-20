@@ -3,9 +3,11 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -87,4 +89,16 @@ func Caller() string {
 // SingleTimeFormat converts time to a string in a single format.
 func SingleTimeFormat(tm time.Time) string {
 	return tm.Format(timeFormat)
+}
+
+// CheckConnection connects to the specified host on the specified port.
+// If the connection is successful then return true.
+func CheckConnection(network, ip string, port int, timeout time.Duration) bool {
+	conn, _ := net.DialTimeout(network,
+		net.JoinHostPort(ip, strconv.Itoa(port)), timeout)
+	if conn != nil {
+		conn.Close()
+		return true
+	}
+	return false
 }

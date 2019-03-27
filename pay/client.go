@@ -3,7 +3,6 @@ package pay
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -55,8 +54,8 @@ func newPayload(db *reform.DB, channel string, pscAddr data.HexString,
 		return nil, err
 	}
 
-	hash := eth.BalanceProofHash(pscAddrParsed,
-		agentAddr, ch.Block, offerHash, new(big.Int).SetUint64(amount))
+	hash := eth.BalanceProofHash(pscAddrParsed, agentAddr, ch.Block, offerHash,
+		uint64(amount))
 
 	key, err := data.ToPrivateKey(client.PrivateKey, pass)
 	if err != nil {

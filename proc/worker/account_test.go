@@ -94,7 +94,7 @@ func TestPreAccountAddBalance(t *testing.T) {
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	env.ethBack.TestCalled(t, "PSCAddBalanceERC20", agentAddr,
-		env.gasConf.PSC.AddBalanceERC20, big.NewInt(transferAmount))
+		env.gasConf.PSC.AddBalanceERC20, uint64(transferAmount))
 
 	// Test eth transaction was recorded.
 	env.deleteEthTx(t, fixture.job.ID)
@@ -117,7 +117,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 		Amount: uint64(amount),
 	})
 
-	env.ethBack.BalancePSC = big.NewInt(amount)
+	env.ethBack.BalancePSC = uint64(amount)
 	env.ethBack.BalanceEth = big.NewInt(999999)
 
 	runJob(t, env.worker.PreAccountReturnBalance, fixture.job)
@@ -128,7 +128,7 @@ func TestPreAccountReturnBalance(t *testing.T) {
 	env.ethBack.TestCalled(t, "PSCBalanceOf", noCallerAddr, 0, agentAddr)
 
 	env.ethBack.TestCalled(t, "PSCReturnBalanceERC20", agentAddr,
-		env.gasConf.PSC.ReturnBalanceERC20, big.NewInt(amount))
+		env.gasConf.PSC.ReturnBalanceERC20, uint64(amount))
 
 	// Test eth transaction was recorded.
 	env.deleteEthTx(t, fixture.job.ID)
@@ -162,7 +162,7 @@ func testAccountBalancesUpdate(t *testing.T, env *workerTest,
 
 	env.ethBack.BalanceEth = big.NewInt(2)
 	env.ethBack.BalancePTC = big.NewInt(100)
-	env.ethBack.BalancePSC = big.NewInt(200)
+	env.ethBack.BalancePSC = 200
 
 	runJob(t, worker, fixture.job)
 

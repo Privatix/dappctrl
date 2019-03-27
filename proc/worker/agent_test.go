@@ -293,7 +293,7 @@ func testCooperativeCloseCalled(t *testing.T, env *workerTest,
 
 	offeringHash := data.TestToHash(t, fixture.Offering.Hash)
 
-	balance := new(big.Int).SetUint64(fixture.Channel.ReceiptBalance)
+	balance := uint64(fixture.Channel.ReceiptBalance)
 
 	balanceMsgSig := data.TestToBytes(t, *fixture.Channel.ReceiptSignature)
 
@@ -382,8 +382,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 
 	minDeposit := data.MinDeposit(fixture.Offering)
 
-	env.ethBack.BalancePSC = new(big.Int).SetUint64(minDeposit*
-		uint64(fixture.Offering.Supply) + 1)
+	env.ethBack.BalancePSC = minDeposit*uint64(fixture.Offering.Supply) + 1
 	env.ethBack.BalanceEth = big.NewInt(99999)
 
 	runJob(t, env.worker.AgentPreOfferingMsgBCPublish, fixture.job)
@@ -403,7 +402,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	env.ethBack.TestCalled(t, "RegisterServiceOffering", agentAddr,
 		env.gasConf.PSC.RegisterServiceOffering,
 		[common.HashLength]byte(offeringHash),
-		new(big.Int).SetUint64(minDeposit), offering.Supply,
+		minDeposit, offering.Supply,
 		data.OfferingSOMCTor, data.FromBytes([]byte("testhostname")))
 
 	offering = &data.Offering{}

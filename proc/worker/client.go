@@ -43,7 +43,7 @@ func (w *Worker) checkDeposit(logger log.Logger, acc *data.Account,
 		return ErrPSCReturnBalance
 	}
 
-	if deposit > amount.Uint64() {
+	if deposit > amount {
 		return ErrInsufficientPSCBalance
 	}
 
@@ -105,8 +105,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.CreateChannel
 	auth.GasPrice = gasPrice
-	tx, err := w.ethBack.PSCCreateChannel(auth,
-		agentAddr, offerHash, new(big.Int).SetUint64(deposit))
+	tx, err := w.ethBack.PSCCreateChannel(auth, agentAddr, offerHash, uint64(deposit))
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())
@@ -721,7 +720,7 @@ type ClientPreChannelTopUpData struct {
 
 func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 	ch *data.Channel, acc *data.Account, offer *data.Offering,
-	gasPrice uint64, deposit *big.Int) error {
+	gasPrice uint64, deposit uint64) error {
 	agent, err := data.HexToAddress(ch.Agent)
 	if err != nil {
 		logger.Error(err.Error())
@@ -796,7 +795,7 @@ func (w *Worker) ClientPreChannelTopUp(job *data.Job) error {
 	}
 
 	return w.clientPreChannelTopUpSaveTx(logger, job, ch, acc, offer,
-		jdata.GasPrice, new(big.Int).SetUint64(jdata.Deposit))
+		jdata.GasPrice, uint64(jdata.Deposit))
 }
 
 // ClientAfterChannelTopUp updates deposit of a channel.
@@ -838,7 +837,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 	}
 
 	tx, err := w.ethBack.PSCUncooperativeClose(opts, agent, ch.Block,
-		offerHash, new(big.Int).SetUint64(ch.ReceiptBalance))
+		offerHash, uint64(ch.ReceiptBalance))
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCUncooperativeClose
@@ -1028,7 +1027,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		return ErrInternal
 	}
 
-	if minDeposit.Uint64() != data.MinDeposit(offering) {
+	if minDeposit != data.MinDeposit(offering) {
 		return ErrOfferingDeposit
 	}
 

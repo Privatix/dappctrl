@@ -34,6 +34,7 @@ GIT_RELEASE=$(git tag -l --points-at HEAD)
 # if $GIT_RELEASE is zero:
 GIT_RELEASE=${GIT_RELEASE:-$(git rev-parse --abbrev-ref HEAD | grep -o "[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}")}
 
+echo
 echo GIT_COMMIT=${GIT_COMMIT}
 echo GIT_RELEASE=${GIT_RELEASE}
 

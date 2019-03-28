@@ -141,11 +141,14 @@ func (h *Handler) UpdateSession(product, productPassword, clientKey string,
 	clientStop := !prod.IsServer && stopSession
 
 	if clientStop {
-		var status string
+		if ch.ServiceStatus == data.ServiceTerminated {
+			logger.Warn("already terminated channel")
+			return nil
+		}
+
+		status := data.ServiceSuspended
 		if ch.ServiceStatus == data.ServiceTerminating {
 			status = data.ServiceTerminated
-		} else {
-			status = data.ServiceSuspended
 		}
 
 		err := job.AddWithData(h.queue, nil,

@@ -586,27 +586,23 @@ func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
 	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
-func (w *Worker) assertCanSettle(ctx context.Context, logger log.Logger,
+func (w *Worker) blocksTillChallangeEnd(ctx context.Context, logger log.Logger,
 	client, agent common.Address, block uint32,
-	hash [common.HashLength]byte) error {
+	hash [common.HashLength]byte) (int64, error) {
 	_, settleBlock, _, err := w.ethBack.PSCGetChannelInfo(
 		&bind.CallOpts{}, client, agent, block, hash)
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrPSCGetChannelInfo
+		return 0, ErrPSCGetChannelInfo
 	}
 
 	curr, err := w.ethBack.LatestBlockNumber(ctx)
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrEthLatestBlockNumber
+		return 0, ErrEthLatestBlockNumber
 	}
 
-	if curr.Uint64() < uint64(settleBlock) {
-		return ErrChallengePeriodIsNotOver
-	}
-
-	return nil
+	return int64(settleBlock) - curr.Int64(), nil
 }
 
 func (w *Worker) settle(ctx context.Context, logger log.Logger,
@@ -691,9 +687,15 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = w.assertCanSettle(ctx, logger, client, agent, ch.Block, offerHash)
+	blocks, err := w.blocksTillChallangeEnd(ctx, logger, client, agent, ch.Block, offerHash)
 	if err != nil {
 		return err
+	}
+	if blocks > 0 {
+		job.NotBefore = time.Now().Add(eth.BlockDuration * time.Duration(blocks))
+		w.db.Save(job)
+		w.logger.Add("blocksTillChallangeEnd", blocks).Error("in challange period")
+		return ErrChallengePeriodIsNotOver
 	}
 
 	tx, err := w.settle(ctx, logger, acc, agent, ch.Block, offerHash)

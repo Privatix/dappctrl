@@ -1,23 +1,14 @@
 #!/usr/bin/env bash
-DAPPCTRL=github.com/privatix/dappctrl
 
-echo ${DAPPCTRL_DIR:=${GOPATH}/src/${DAPPCTRL}}
+MY_PATH="`dirname \"$0\"`" # relative bash file path
+DAPPCTRL="`( cd \"$MY_PATH/..\" && pwd )`"  # absolutized and normalized dappctrl path
 
-if [ ! -f "${GOPATH}"/bin/dep ]; then
-    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-fi
-
-echo
-echo dep ensure
-echo
-
-cd "${DAPPCTRL_DIR}" && dep ensure -v
+echo ${DAPPCTRL}
 
 echo
 echo go get
 echo
 
-go get -d -v ${DAPPCTRL}/...
 go get -u -v gopkg.in/reform.v1/reform
 go get -u -v github.com/rakyll/statik
 go get -u -v github.com/pressly/goose/cmd/goose

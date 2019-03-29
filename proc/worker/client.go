@@ -692,9 +692,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 	if blocks > 0 {
-		job.NotBefore = time.Now().Add(eth.BlockDuration * time.Duration(blocks))
-		w.db.Save(job)
-		w.logger.Add("blocksTillChallangeEnd", blocks).Error("in challange period")
+		logger.Warn("blocksTillChallangeEnd", blocks).Error("in challange period")
 		return ErrChallengePeriodIsNotOver
 	}
 

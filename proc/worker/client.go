@@ -692,7 +692,7 @@ func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {
 		return err
 	}
 	if blocks > 0 {
-		logger.Warn("blocksTillChallangeEnd", blocks).Error("in challange period")
+		logger.Add("blocksTillChallangeEnd", blocks).Warn("in challange period")
 		return ErrChallengePeriodIsNotOver
 	}
 

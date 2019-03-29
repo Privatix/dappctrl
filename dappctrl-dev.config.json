@@ -149,7 +149,7 @@
                 "TryPeriod": 20000
             },
             "clientPreUncooperativeClose": {
-                "FirstStartDelay": 7500000,
+                "FirstStartDelay": 300000,
                 "TryLimit": 200,
                 "TryPeriod": 180000
             },

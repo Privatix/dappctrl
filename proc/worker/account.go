@@ -95,8 +95,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 	auth := bind.NewKeyedTransactor(key)
 	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
-	tx, err := w.ethBack.PSCAddBalanceERC20(
-		auth, new(big.Int).SetUint64(jobData.Amount))
+	tx, err := w.ethBack.PSCAddBalanceERC20(auth, uint64(jobData.Amount))
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCAddBalance
@@ -171,7 +170,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return ErrPSCReturnBalance
 	}
 
-	if amount.Uint64() < uint64(jobData.Amount) {
+	if amount < uint64(jobData.Amount) {
 		return ErrInsufficientPSCBalance
 	}
 
@@ -189,8 +188,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PSC.ReturnBalanceERC20
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 
-	tx, err := w.ethBack.PSCReturnBalanceERC20(auth,
-		new(big.Int).SetUint64(jobData.Amount))
+	tx, err := w.ethBack.PSCReturnBalanceERC20(auth, uint64(jobData.Amount))
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,
 			"GasPrice", auth.GasPrice).Error(err.Error())

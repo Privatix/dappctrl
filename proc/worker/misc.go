@@ -169,13 +169,11 @@ func (w *Worker) updateBalances(logger log.Logger,
 
 	acc.PTCBalance = amount.Uint64()
 
-	amount, err = w.ethBack.PSCBalanceOf(&bind.CallOpts{}, agentAddr)
+	acc.PSCBalance, err = w.ethBack.PSCBalanceOf(&bind.CallOpts{}, agentAddr)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPSCRetrieveBalance
 	}
-
-	acc.PSCBalance = amount.Uint64()
 
 	amount, err = w.ethBalance(logger, agentAddr)
 	if err != nil {

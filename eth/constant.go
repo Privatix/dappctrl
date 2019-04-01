@@ -9,14 +9,14 @@ import (
 // Logs hexes.
 var (
 	// PSC logs.
-	ServiceChannelCreated            = common.HexToHash("78ef868cbadb8c73fc1170b8a09d99704c4cdf400c9c94534811b0ae60b8913a")
-	ServiceChannelToppedUp           = common.HexToHash("a3b2cd532a9050531ecc674928d7704894707ede1a436bfbee86b96b83f2a5ce")
-	ServiceChannelCloseRequested     = common.HexToHash("b40564b1d36572b2942ad7cfc5a5a967f3ef08c82163a910dee760c5b629a32e")
-	ServiceOfferingCreated           = common.HexToHash("b275d5e4029fb6389cc956ff4b5cb6ca1daa8f79b7032514dfc1c0ba99d9bd92")
+	ServiceChannelCreated            = common.HexToHash("7699dfbb1101aec58b1cfb4a4f5375947c99cb4c645112290d1cb77fc286edc1")
+	ServiceChannelToppedUp           = common.HexToHash("d3020c549112ceb2d0f806cd3366f47df57bc519c46133b84ce2cdad970c22a3")
+	ServiceChannelCloseRequested     = common.HexToHash("e4007f6ff086417a4031cdcff1a975882379b19e1ed3547292e131f3c525bcab")
+	ServiceOfferingCreated           = common.HexToHash("a8c40ba917b58ddcfe866c5b52d417e5e425c459c3b7333bf3b1164e32ddb939")
 	ServiceOfferingDeleted           = common.HexToHash("c3013cd9dd5c33b95a9cc1bc076481c9a6a1970be6d7f1ed33adafad6e57d3d6")
-	ServiceOfferingPopedUp           = common.HexToHash("12d17decebc969bcbfa8d54560cf882c7873b599dfe467aa80db3096a308edca")
-	ServiceCooperativeChannelClose   = common.HexToHash("b488ea0f49970f556cf18e57588e78dcc1d3fd45c71130aa5099a79e8b06c8e7")
-	ServiceUnCooperativeChannelClose = common.HexToHash("7418f9b30b6de272d9d54ee6822f674042c58cea183b76d5d4e7b3c933a158f6")
+	ServiceOfferingPopedUp           = common.HexToHash("7c6ee8c3412a9ecfd989aa18d379f84f73b718366934885e21e9a399b719c53a")
+	ServiceCooperativeChannelClose   = common.HexToHash("4a06175bd19aba21163e3c08e7ac80151fad270655624167c5ee9e41b48a58e0")
+	ServiceUnCooperativeChannelClose = common.HexToHash("d633584c5931ade1a274b7ce309d985207494d074d1afd2f2da5275bb645e3dc")
 
 	// PTC logs.
 	TokenApproval = common.HexToHash("8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925")

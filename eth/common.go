@@ -1,8 +1,6 @@
 package eth
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -11,9 +9,9 @@ import (
 
 // BalanceClosingHash computes balance message hash.
 func BalanceClosingHash(clientAddr, pscAddr common.Address, block uint32,
-	offeringHash common.Hash, balance *big.Int) []byte {
+	offeringHash common.Hash, balance uint64) []byte {
 	blockBytes := data.Uint32ToBytes(block)
-	balancePutU192 := data.Uint192ToBytes(balance)
+	balanceBytes := data.Uint64ToBytes(balance)
 	return crypto.Keccak256(
 		[]byte("\x19Ethereum Signed Message:\n32"),
 		crypto.Keccak256(
@@ -21,7 +19,7 @@ func BalanceClosingHash(clientAddr, pscAddr common.Address, block uint32,
 			clientAddr.Bytes(),
 			blockBytes[:],
 			offeringHash.Bytes(),
-			balancePutU192[:],
+			balanceBytes[:],
 			pscAddr.Bytes(),
 		),
 	)
@@ -29,9 +27,9 @@ func BalanceClosingHash(clientAddr, pscAddr common.Address, block uint32,
 
 // BalanceProofHash implementes hash as in psc contract.
 func BalanceProofHash(pscAddr, agentAddr common.Address, block uint32,
-	offeringHash common.Hash, balance *big.Int) []byte {
+	offeringHash common.Hash, balance uint64) []byte {
 	blockBytes := data.Uint32ToBytes(block)
-	balancePutU192 := data.Uint192ToBytes(balance)
+	balanceBytes := data.Uint64ToBytes(balance)
 	return crypto.Keccak256(
 		[]byte("\x19Ethereum Signed Message:\n32"),
 		crypto.Keccak256(
@@ -39,7 +37,7 @@ func BalanceProofHash(pscAddr, agentAddr common.Address, block uint32,
 			agentAddr.Bytes(),
 			blockBytes[:],
 			offeringHash.Bytes(),
-			balancePutU192[:],
+			balanceBytes[:],
 			pscAddr.Bytes(),
 		),
 	)

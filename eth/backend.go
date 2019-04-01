@@ -28,44 +28,44 @@ type Backend interface {
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
 
 	CooperativeClose(*bind.TransactOpts, common.Address, uint32,
-		[common.HashLength]byte, *big.Int, []byte, []byte) (*types.Transaction, error)
+		[common.HashLength]byte, uint64, []byte, []byte) (*types.Transaction, error)
 
 	GetTransactionByHash(context.Context, common.Hash) (*types.Transaction, bool, error)
 
 	RegisterServiceOffering(*bind.TransactOpts, [common.HashLength]byte,
-		*big.Int, uint16, uint8, data.Base64String) (*types.Transaction, error)
+		uint64, uint16, uint8, data.Base64String) (*types.Transaction, error)
 
 	PTCBalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
 
 	PTCIncreaseApproval(*bind.TransactOpts, common.Address, *big.Int) (*types.Transaction, error)
 
-	PSCBalanceOf(*bind.CallOpts, common.Address) (*big.Int, error)
+	PSCBalanceOf(*bind.CallOpts, common.Address) (uint64, error)
 
-	PSCAddBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
+	PSCAddBalanceERC20(*bind.TransactOpts, uint64) (*types.Transaction, error)
 
 	PSCGetChannelInfo(opts *bind.CallOpts,
 		client common.Address, agent common.Address,
 		blockNumber uint32,
-		hash [common.HashLength]byte) (*big.Int, uint32, *big.Int, error)
+		hash [common.HashLength]byte) (uint64, uint32, uint64, error)
 
-	PSCReturnBalanceERC20(*bind.TransactOpts, *big.Int) (*types.Transaction, error)
+	PSCReturnBalanceERC20(*bind.TransactOpts, uint64) (*types.Transaction, error)
 
 	PSCGetOfferingInfo(opts *bind.CallOpts,
 		hash [common.HashLength]byte) (agentAddr common.Address,
-		minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
+		minDeposit uint64, maxSupply uint16, currentSupply uint16,
 		updateBlockNumber uint32, active bool, err error)
 
 	PSCCreateChannel(opts *bind.TransactOpts,
 		agent common.Address, hash [common.HashLength]byte,
-		deposit *big.Int) (*types.Transaction, error)
+		deposit uint64) (*types.Transaction, error)
 
 	PSCTopUpChannel(opts *bind.TransactOpts, agent common.Address,
 		blockNumber uint32, hash [common.HashLength]byte,
-		deposit *big.Int) (*types.Transaction, error)
+		deposit uint64) (*types.Transaction, error)
 
 	PSCUncooperativeClose(opts *bind.TransactOpts, agent common.Address,
 		blockNumber uint32, hash [common.HashLength]byte,
-		balance *big.Int) (*types.Transaction, error)
+		balance uint64) (*types.Transaction, error)
 
 	EthBalanceAt(context.Context, common.Address) (*big.Int, error)
 
@@ -250,7 +250,7 @@ func (b *backendInstance) EstimateGas(
 // CooperativeClose calls cooperativeClose method of Privatix service contract.
 func (b *backendInstance) CooperativeClose(opts *bind.TransactOpts,
 	agent common.Address, block uint32, offeringHash [common.HashLength]byte,
-	balance *big.Int, balanceSig, closingSig []byte) (*types.Transaction, error) {
+	balance uint64, balanceSig, closingSig []byte) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -281,7 +281,7 @@ func (b *backendInstance) GetTransactionByHash(ctx context.Context,
 // service contract.
 func (b *backendInstance) RegisterServiceOffering(opts *bind.TransactOpts,
 	offeringHash [common.HashLength]byte,
-	minDeposit *big.Int, maxSupply uint16,
+	minDeposit uint64, maxSupply uint16,
 	somcType uint8, somcData data.Base64String) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
@@ -329,7 +329,7 @@ func (b *backendInstance) PTCIncreaseApproval(opts *bind.TransactOpts,
 
 // PSCBalanceOf calls balanceOf method of Privatix service contract.
 func (b *backendInstance) PSCBalanceOf(opts *bind.CallOpts,
-	owner common.Address) (*big.Int, error) {
+	owner common.Address) (uint64, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -344,7 +344,7 @@ func (b *backendInstance) PSCBalanceOf(opts *bind.CallOpts,
 
 // PSCAddBalanceERC20 calls addBalanceERC20 of Privatix service contract.
 func (b *backendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
-	amount *big.Int) (*types.Transaction, error) {
+	amount uint64) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -360,7 +360,7 @@ func (b *backendInstance) PSCAddBalanceERC20(opts *bind.TransactOpts,
 // PSCGetOfferingInfo calls getOfferingInfo of Privatix service contract.
 func (b *backendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 	hash [common.HashLength]byte) (agentAddr common.Address,
-	minDeposit *big.Int, maxSupply uint16, currentSupply uint16,
+	minDeposit uint64, maxSupply uint16, currentSupply uint16,
 	updateBlockNumber uint32, active bool, err error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
@@ -381,7 +381,7 @@ func (b *backendInstance) PSCGetOfferingInfo(opts *bind.CallOpts,
 func (b *backendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 	client common.Address, agent common.Address,
 	blockNumber uint32,
-	hash [common.HashLength]byte) (*big.Int, uint32, *big.Int, error) {
+	hash [common.HashLength]byte) (uint64, uint32, uint64, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -392,7 +392,7 @@ func (b *backendInstance) PSCGetChannelInfo(opts *bind.CallOpts,
 // PSCCreateChannel calls createChannel method of Privatix service contract.
 func (b *backendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 	agent common.Address, hash [common.HashLength]byte,
-	deposit *big.Int) (*types.Transaction, error) {
+	deposit uint64) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -408,7 +408,7 @@ func (b *backendInstance) PSCCreateChannel(opts *bind.TransactOpts,
 // PSCTopUpChannel calls topUpChannel method of Privatix service contract.
 func (b *backendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
 	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
-	deposit *big.Int) (*types.Transaction, error) {
+	deposit uint64) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -425,7 +425,7 @@ func (b *backendInstance) PSCTopUpChannel(opts *bind.TransactOpts,
 // contract.
 func (b *backendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
 	agent common.Address, blockNumber uint32, hash [common.HashLength]byte,
-	balance *big.Int) (*types.Transaction, error) {
+	balance uint64) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 
@@ -443,7 +443,7 @@ func (b *backendInstance) PSCUncooperativeClose(opts *bind.TransactOpts,
 // PSCReturnBalanceERC20 calls returnBalanceERC20 method of Privatix service
 // contract.
 func (b *backendInstance) PSCReturnBalanceERC20(opts *bind.TransactOpts,
-	amount *big.Int) (*types.Transaction, error) {
+	amount uint64) (*types.Transaction, error) {
 	ctx2, cancel := b.addTimeout(opts.Context)
 	defer cancel()
 

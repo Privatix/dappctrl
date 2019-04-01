@@ -286,7 +286,7 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 		return ErrParseEthAddr
 	}
 
-	balance := new(big.Int).SetUint64(channel.ReceiptBalance)
+	balance := uint64(channel.ReceiptBalance)
 	block := uint32(channel.Block)
 
 	closingHash := eth.BalanceClosingHash(clientAddr, w.pscAddr, block,
@@ -556,7 +556,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 	}
 
 	totalDeposit := minDeposit * uint64(offering.Supply)
-	if pscBalance.Uint64() < totalDeposit {
+	if uint64(pscBalance) < totalDeposit {
 		return ErrInsufficientPSCBalance
 	}
 
@@ -582,7 +582,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 
 	tx, err := w.ethBack.RegisterServiceOffering(auth,
 		[common.HashLength]byte(common.BytesToHash(offeringHash)),
-		new(big.Int).SetUint64(minDeposit), offering.Supply,
+		uint64(minDeposit), offering.Supply,
 		offering.SOMCType, offering.SOMCData)
 	if err != nil {
 		logger.Add("GasLimit", auth.GasLimit,

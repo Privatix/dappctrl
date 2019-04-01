@@ -1,7 +1,6 @@
 ._.*
 .DS_Store
 
-*_reform.go
 *_gen.go
 .vscode
 .idea/*

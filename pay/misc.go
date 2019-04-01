@@ -1,7 +1,6 @@
 package pay
 
 import (
-	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -127,7 +126,7 @@ func (s *Server) verifySignature(logger log.Logger,
 	}
 
 	hash := eth.BalanceProofHash(pscAddr, agentAddr, pld.OpenBlockNumber,
-		offeringHash, new(big.Int).SetUint64(pld.Balance))
+		offeringHash, uint64(pld.Balance))
 
 	if !crypto.VerifySignature(pub, hash, sig[:len(sig)-1]) {
 		s.RespondError(logger, w, &srv.Error{

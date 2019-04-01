@@ -91,6 +91,13 @@ func Uint32ToBytes(x uint32) [4]byte {
 	return xBytes
 }
 
+// Uint64ToBytes using big endian.
+func Uint64ToBytes(x uint64) [8]byte {
+	var xBytes [8]byte
+	binary.BigEndian.PutUint64(xBytes[:], x)
+	return xBytes
+}
+
 // Uint192ToBytes using big endian with leading zeros.
 func Uint192ToBytes(x *big.Int) [24]byte {
 	var ret [24]byte

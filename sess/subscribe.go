@@ -11,8 +11,9 @@ import (
 
 // Adapter connection statuses.
 const (
-	ConnStart = "start"
-	ConnStop  = "stop"
+	ConnCreate = "create"
+	ConnStart  = "start"
+	ConnStop   = "stop"
 )
 
 // ConnChangeResult is an ConnChange notification result.
@@ -44,8 +45,11 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 	}
 
 	status := ConnStop
-	if job.Type == data.JobClientPreServiceUnsuspend {
+	if job.Type == data.JobClientPreServiceUnsuspend || job.Type == data.JobAgentPreServiceUnsuspend {
 		status = ConnStart
+	}
+	if job.Type == data.JobClientAfterChannelCreate || job.Type == data.JobAgentAfterChannelCreate {
+		status = ConnCreate
 	}
 
 	if offer.Product == product {
@@ -81,8 +85,13 @@ func (h *Handler) ConnChange(ctx context.Context,
 		}
 	}
 	jobTypes := []string{
+		data.JobAgentAfterChannelCreate,
+		data.JobClientAfterChannelCreate,
+		data.JobAgentPreServiceSuspend,
 		data.JobClientPreServiceSuspend,
+		data.JobAgentPreServiceUnsuspend,
 		data.JobClientPreServiceUnsuspend,
+		data.JobAgentPreServiceTerminate,
 		data.JobClientPreServiceTerminate,
 	}
 

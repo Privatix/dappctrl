@@ -1899,8 +1899,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
 
 *Description*: Get user role.
 
-*Parameters*:
-1. Token (string)
+*Parameters*: None.
 
 *Result (string)*: user role, can be `agent` or `client`.
 
@@ -1908,7 +1907,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
     
 ```js
 // Request
-curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRole", "params": ["qwert"], "id": 67}' http://localhost:8888/http
+curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRole", "id": 67}' http://localhost:8888/http
 
 // Result
 {

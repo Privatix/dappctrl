@@ -8,7 +8,7 @@ require (
 	github.com/bugsnag/bugsnag-go v0.0.0-20181016233232-c0f14af66db6
 	github.com/bugsnag/panicwrap v1.2.0
 	github.com/deckarep/golang-set v1.7.1
-	github.com/ethereum/go-ethereum v1.8.23
+	github.com/ethereum/go-ethereum v1.8.27
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-stack/stack v1.8.0
 	github.com/gofrs/uuid v3.2.0+incompatible

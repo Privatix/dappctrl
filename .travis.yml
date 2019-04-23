@@ -22,8 +22,8 @@ before_script:
 script:
     - ${TRAVIS_BUILD_DIR}/scripts/test.sh
 
-#
-#notifications:
-#    slack:
-#        rooms:
-#            - privatix:ntmw2wh4PAHoodqtMc95KFDt#dapp-tech
+
+notifications:
+    slack:
+        rooms:
+            - privatix:ntmw2wh4PAHoodqtMc95KFDt#dapp-tech

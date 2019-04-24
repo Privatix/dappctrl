@@ -3,7 +3,6 @@ package monitor_test
 import (
 	"bytes"
 	"encoding/json"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -87,7 +86,7 @@ func TestJobsProducers(t *testing.T) {
 					clientHash,
 					offeringHash,
 				},
-				Data: packEventData(t, "LogChannelToppedUp", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogChannelToppedUp", fxt.Channel.Block, uint64(0)),
 			},
 			agentProduced: []data.Job{
 				{
@@ -112,7 +111,7 @@ func TestJobsProducers(t *testing.T) {
 					clientHash,
 					offeringHash,
 				},
-				Data: packEventData(t, "LogChannelCloseRequested", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogChannelCloseRequested", fxt.Channel.Block, uint64(0)),
 			},
 			agentProduced: []data.Job{
 				{
@@ -206,7 +205,7 @@ func TestJobsProducers(t *testing.T) {
 					clientHash,
 					offeringHash,
 				},
-				Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 			},
 			agentProduced: []data.Job{
 				{
@@ -236,7 +235,7 @@ func TestJobsProducers(t *testing.T) {
 					clientHash,
 					offeringHash,
 				},
-				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 			},
 			agentProduced: []data.Job{
 				{
@@ -379,7 +378,7 @@ func TestJobsProducers(t *testing.T) {
 					randHash(),
 					offeringHash,
 				},
-				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 			},
 			ret: []data.Job{
 				{
@@ -397,7 +396,7 @@ func TestJobsProducers(t *testing.T) {
 					randHash(),
 					offeringHash,
 				},
-				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 			},
 			ret: []data.Job{
 				{
@@ -425,7 +424,7 @@ func TestJobsProducers(t *testing.T) {
 			randHash2,
 			offeringHash,
 		},
-		Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+		Data: packEventData(t, "LogUnCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 	}})
 	uncoopIncrementJob := &data.Job{
 		ID:          util.NewUUID(),
@@ -445,7 +444,7 @@ func TestJobsProducers(t *testing.T) {
 			randHash2,
 			offeringHash,
 		},
-		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, new(big.Int)),
+		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 	}, nil, nil)
 }
 

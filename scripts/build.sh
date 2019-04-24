@@ -36,10 +36,10 @@ echo
 echo go install
 echo
 
+echo $GOPATH/bin/dappctrl
 go install -ldflags "-X main.Commit=$GIT_COMMIT -X main.Version=$GIT_RELEASE" \
     -tags=notest ${DAPPCTRL} || exit 1
 
-echo $GOPATH/bin/dappctrl
 
 echo
 echo done

@@ -29,17 +29,20 @@ func setChannelServiceStatus(t *testing.T,
 }
 
 var connChangeEvents = []struct{ t, s string }{
-	{data.JobClientPreServiceSuspend, data.ServiceSuspended},     // ignored
-	{data.JobClientPreServiceSuspend, data.ServiceSuspending},    // ok
-	{data.JobClientPreServiceUnsuspend, data.ServiceActive},      // ignored
-	{data.JobClientPreServiceUnsuspend, data.ServiceActivating},  // ok
-	{data.JobClientPreServiceTerminate, data.ServiceTerminated},  // ignored
-	{data.JobClientPreServiceTerminate, data.ServiceTerminating}, // ok
+	{data.JobClientPreServiceSuspend, data.ServiceSuspended},
+	{data.JobClientPreServiceSuspend, data.ServiceSuspending},
+	{data.JobClientPreServiceUnsuspend, data.ServiceActive},
+	{data.JobClientPreServiceUnsuspend, data.ServiceActivating},
+	{data.JobClientPreServiceTerminate, data.ServiceTerminated},
+	{data.JobClientPreServiceTerminate, data.ServiceTerminating},
 }
 
 var connChangeStatuses = []string{
 	sess.ConnStop,
+	sess.ConnStop,
 	sess.ConnStart,
+	sess.ConnStart,
+	sess.ConnStop,
 	sess.ConnStop,
 }
 
@@ -99,12 +102,12 @@ func TestConnChange(t *testing.T) {
 		fxt.Product.ID, data.TestPassword, ch)
 	util.TestExpectResult(t, "ConnChange", nil, err)
 
-	for i, v := range connChangeStatuses {
+	for _, v := range connChangeStatuses {
 		ret := <-ch
 		if ret.Channel != fxt.Channel.ID || ret.Status != v {
-			t.Fatalf("wrong data for notification %d", i)
+			t.Fatalf("wanted channel: %s status: %s, got channel: %s status: %s",
+				fxt.Channel.ID, v, ret.Channel, ret.Status)
 		}
-
 	}
 
 	sub.Unsubscribe()

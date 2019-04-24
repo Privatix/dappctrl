@@ -12,12 +12,14 @@ addons:
 env:
     global:
         - GO111MODULE=on
+        - CONNECTION_STRING="host=localhost sslmode=disable user=postgres port=5432"
 
 install:
     - ${TRAVIS_BUILD_DIR}/scripts/build.sh
 
 before_script:
-    - ${TRAVIS_BUILD_DIR}/scripts/create_database.sh
+    - dappctrl db-create -conn "${CONNECTION_STRING} dbname=postgres"
+    - dappctrl db-migrate -conn "${CONNECTION_STRING} dbname=dappctrl"
 
 script:
     - ${TRAVIS_BUILD_DIR}/scripts/test.sh

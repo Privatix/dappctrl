@@ -1012,7 +1012,12 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		data.HexFromBytes(hash.Bytes()), job.RelatedID,
 		somcType, somcData)
 	if err != nil {
-		// Ignore all errors except internal.
+		if err == ErrTemplateByHashNotFound {
+			job.Status = data.JobCanceled
+			w.db.Save(job)
+			return nil
+		}
+		// Ignore all other errors except internal.
 		if err != ErrInternal {
 			logger.Warn(err.Error())
 			return nil

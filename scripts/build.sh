@@ -36,6 +36,10 @@ echo
 echo go install
 echo
 
+if [[ ! -d "${GOPATH}/bin/" ]]; then
+    mkdir "${GOPATH}/bin/" || exit 1
+fi
+
 echo $GOPATH/bin/dappctrl
 go install -ldflags "-X main.Commit=$GIT_COMMIT -X main.Version=$GIT_RELEASE" \
     -tags=notest ${DAPPCTRL} || exit 1

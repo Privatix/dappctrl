@@ -9,6 +9,8 @@ echo
 echo go get
 echo
 
+cd "${DAPPCTRL}"
+
 go get -u -v gopkg.in/reform.v1/reform
 go get -u -v github.com/rakyll/statik
 go get -u -v github.com/pressly/goose/cmd/goose

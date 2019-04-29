@@ -13,9 +13,9 @@
         "RequestTimeout": 2500
     },
     "Country": {
-        "Field": "country_code",
+        "Field": "country",
         "Timeout": 30000,
-        "URLTemplate": "https://ipleak.net/json/{{ip}}"
+        "URLTemplate": "https://ipinfo.io/{{ip}}/json"
     },
     "DB": {
         "Conn": {

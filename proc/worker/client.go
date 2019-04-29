@@ -295,7 +295,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		}
 	}
 
-	err = w.addJobWithData(logger, nil, data.JobClientEndpointRestore,
+	err = w.addJobWithData(logger, nil, data.JobClientEndpointGet,
 		data.JobChannel, ch.ID, &data.JobEndpointCreateData{EndpointSealed: endpointMsgSealed})
 	if err != nil {
 		return err
@@ -358,14 +358,14 @@ func (w *Worker) extractEndpointMessage(logger log.Logger,
 	return &msg, nil
 }
 
-// ClientEndpointCreate decodes endpoint message, saves it in the DB and
+// ClientEndpointGet decodes endpoint message, saves it in the DB and
 // triggers product configuration.
-func (w *Worker) ClientEndpointCreate(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientEndpointCreate",
+func (w *Worker) ClientEndpointGet(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientEndpointGet",
 		"job", job)
 
 	ch, err := w.relatedChannel(logger, job,
-		data.JobClientEndpointRestore)
+		data.JobClientEndpointGet)
 	if err != nil {
 		return err
 	}

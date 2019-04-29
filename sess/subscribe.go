@@ -42,7 +42,7 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 	if job.Type == data.JobClientPreServiceUnsuspend || job.Type == data.JobAgentPreServiceUnsuspend {
 		status = ConnStart
 	}
-	if job.Type == data.JobClientEndpointRestore || job.Type == data.JobAgentPreEndpointMsgCreate {
+	if job.Type == data.JobClientEndpointGet || job.Type == data.JobAgentPreEndpointMsgCreate {
 		status = ConnCreate
 	}
 
@@ -80,7 +80,7 @@ func (h *Handler) ConnChange(ctx context.Context,
 	}
 	jobTypes := []string{
 		data.JobAgentPreEndpointMsgCreate,
-		data.JobClientEndpointRestore,
+		data.JobClientEndpointGet,
 		data.JobAgentPreServiceSuspend,
 		data.JobClientPreServiceSuspend,
 		data.JobAgentPreServiceUnsuspend,

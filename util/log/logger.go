@@ -119,7 +119,7 @@ func (l *LoggerBase) Log(lvl Level, msg string) {
 	}
 
 	if lvl == Fatal {
-		panic("fatal log event")
+		panic("fatal log event: " + msg)
 	}
 }
 

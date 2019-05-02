@@ -254,6 +254,20 @@ func TestClientEndpointGet(t *testing.T) {
 	}
 }
 
+func TestClientServiceTerminatedIfPending(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	fxt := env.newTestFixture(t, data.JobClientServiceTerminatedIfPending,
+		data.JobChannel)
+	defer fxt.close()
+
+	fxt.Channel.ServiceStatus = data.ServicePending
+	fxt.DB.Save(fxt.Channel)
+
+	runJob(t, env.worker.ClientServiceTerminatedIfPending, fxt.job)
+}
+
 func TestClientPreChannelTopUp(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()

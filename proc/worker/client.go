@@ -295,19 +295,27 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		}
 	}
 
-	err = w.addJobWithData(logger, nil, data.JobClientEndpointGet,
-		data.JobChannel, ch.ID, &data.JobEndpointCreateData{EndpointSealed: endpointMsgSealed})
-	if err != nil {
-		return err
-	}
+	return w.db.InTransaction(func(tx *reform.TX) error {
+		err = w.addJobWithData(logger, tx, data.JobClientEndpointGet,
+			data.JobChannel, ch.ID, &data.JobEndpointCreateData{EndpointSealed: endpointMsgSealed})
+		if err != nil {
+			return err
+		}
 
-	client, err := w.account(logger, ch.Client)
-	if err != nil {
-		return err
-	}
+		err = w.addJob(logger, tx, data.JobClientServiceTerminatedIfPending,
+			data.JobChannel, ch.ID)
+		if err != nil {
+			return err
+		}
 
-	return w.addJob(logger, nil,
-		data.JobAccountUpdateBalances, data.JobAccount, client.ID)
+		client, err := w.account(logger, ch.Client)
+		if err != nil {
+			return err
+		}
+
+		return w.addJob(logger, tx,
+			data.JobAccountUpdateBalances, data.JobAccount, client.ID)
+	})
 }
 
 func (w *Worker) extractEndpointMessage(logger log.Logger,
@@ -436,6 +444,25 @@ func (w *Worker) ClientEndpointGet(job *data.Job) error {
 
 		return nil
 	})
+}
+
+// ClientServiceTerminatedIfPending sets service status to terminated if it still pending.
+func (w *Worker) ClientServiceTerminatedIfPending(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientServiceTerminatedIfPending",
+	"job", job)
+	ch, err := w.relatedChannel(logger, job, data.JobClientServiceTerminatedIfPending)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("channel", ch)
+
+	if ch.ServiceStatus == data.ServicePending {
+		ch.ServiceStatus = data.ServiceTerminated
+		return w.db.Save(ch)
+	}
+
+	return nil
 }
 
 // ClientAfterUncooperativeClose changed channel status

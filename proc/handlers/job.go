@@ -31,7 +31,7 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobClientAfterOfferingPopUp:             worker.ClientAfterOfferingPopUp,
 		data.JobClientPreChannelCreate:               worker.ClientPreChannelCreate,
 		data.JobClientAfterChannelCreate:             worker.ClientAfterChannelCreate,
-		data.JobClientEndpointGet:                worker.ClientEndpointGet,
+		data.JobClientEndpointGet:                    worker.ClientEndpointGet,
 		data.JobClientAfterUncooperativeClose:        worker.ClientAfterUncooperativeClose,
 		data.JobClientAfterCooperativeClose:          worker.ClientAfterCooperativeClose,
 		data.JobClientPreUncooperativeClose:          worker.ClientPreUncooperativeClose,

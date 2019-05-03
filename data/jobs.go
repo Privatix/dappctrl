@@ -40,7 +40,7 @@ const (
 	JobClientPreServiceSuspend              = "clientPreServiceSuspend"
 	JobClientPreServiceUnsuspend            = "clientPreServiceUnsuspend"
 	JobClientPreServiceTerminate            = "clientPreServiceTerminate"
-	JobClientEndpointGet                    = "clientEndpointRestore"
+	JobClientEndpointGet                    = "clientEndpointGet"
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"

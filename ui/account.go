@@ -337,5 +337,22 @@ func (h *Handler) UpdateAccount(tkn, account, name string,
 	acc.IsDefault = isDefault
 	acc.InUse = inUse
 
+	if isDefault {
+		err := h.db.InTransaction(func(tx *reform.TX) error {
+			_, err = tx.Exec(`UPDATE accounts
+			  					SET is_default=false`)
+			if err != nil {
+				return err
+			}
+
+			return update(logger, tx.Querier, &acc)
+		})
+		if err != nil && err != ErrInternal {
+			logger.Error(err.Error())
+			err = ErrInternal
+		}
+		return err
+	}
+
 	return update(logger, h.db.Querier, &acc)
 }

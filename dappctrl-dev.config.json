@@ -133,6 +133,10 @@
                 "TryLimit": 10,
                 "TryPeriod": 60000
             },
+            "clientEndpointGet": {
+                "TryLimit": 6,
+                "TryPeriod": 10000
+            },
             "clientPreChannelCreate": {
                 "Duplicated": true,
                 "TryLimit": 3,

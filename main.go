@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/pkg/profile"
 	"gopkg.in/reform.v1"
 
 	abill "github.com/privatix/dappctrl/agent/bill"
@@ -67,6 +68,7 @@ type config struct {
 	PayServer        *pay.Config
 	PayAddress       string
 	Proc             *proc.Config
+	Profiling        bool
 	Report           *bugsnag.Config
 	Role             string
 	Sess             *rpcsrv.Config
@@ -94,6 +96,7 @@ func newConfig() *config {
 		NAT:           nat.NewConfig(),
 		PayServer:     pay.NewConfig(),
 		Proc:          proc.NewConfig(),
+		Profiling:     false,
 		Report:        bugsnag.NewConfig(),
 		Sess:          rpcsrv.NewConfig(),
 		SOMCServer:    rpcsrv.NewConfig(),
@@ -271,6 +274,12 @@ func main() {
 
 	conf := newConfig()
 	readFlags(conf)
+
+	if conf.Profiling {
+		defer profile.Start(profile.TraceProfile).Stop()
+		defer profile.Start(profile.MemProfile).Stop()
+		defer profile.Start(profile.CPUProfile).Stop()
+	}
 
 	db, err := data.NewDB(conf.DB)
 	if err != nil {

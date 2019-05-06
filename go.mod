@@ -23,6 +23,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/profile v1.3.0
 	github.com/pressly/goose v2.6.0+incompatible
 	github.com/rakyll/statik v0.1.6
 	github.com/rdegges/go-ipify v0.0.0-20150526035502-2d94a6a86c40

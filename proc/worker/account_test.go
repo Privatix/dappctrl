@@ -207,7 +207,7 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 	defer fixture.close()
 
 	block := fixture.Channel.Block
-	addedDeposit := big.NewInt(1)
+	addedDeposit := uint64(1)
 
 	eventData, err := logChannelTopUpDataArguments.Pack(block, addedDeposit)
 	if err != nil {
@@ -248,7 +248,7 @@ func testAfterChannelTopUp(t *testing.T, agent bool) {
 	env.findTo(t, channel, fixture.Channel.ID)
 
 	diff := channel.TotalDeposit - fixture.Channel.TotalDeposit
-	if diff != addedDeposit.Uint64() {
+	if diff != addedDeposit {
 		t.Fatal("total deposit not updated")
 	}
 

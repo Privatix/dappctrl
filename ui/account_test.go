@@ -368,7 +368,7 @@ func TestUpdateAccount(t *testing.T) {
 	defer fxt.DB.Delete(acc)
 
 	for _, td := range []struct {
-		acc        *data.Account
+		acc       *data.Account
 		name      string
 		isDefault bool
 		inUse     bool

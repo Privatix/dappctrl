@@ -120,6 +120,7 @@
                 "TryPeriod": 20000
             },
             "clientAfterChannelCreate": {
+                "FirstStartDelay": 3000,
                 "TryLimit": 10,
                 "TryPeriod": 30000
             },

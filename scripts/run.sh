@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-DAPPCTRL=github.com/privatix/dappctrl
-DAPPCTRL_DIR=$HOME/go/src/${DAPPCTRL}
+
+MY_PATH="`dirname \"$0\"`" # relative bash file path
+DAPPCTRL_DIR="`( cd \"$MY_PATH/..\" && pwd )`"  # absolutized and normalized dappctrl path
 
 dappctrl -config="${DAPPCTRL_DIR}/dappctrl.config.local.json"

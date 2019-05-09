@@ -10,13 +10,8 @@ import (
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/pay"
-	"github.com/privatix/dappctrl/statik"
 	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
-)
-
-const (
-	eptTempFile = "/templates/ept.json"
 )
 
 var (
@@ -47,7 +42,7 @@ type eptTestConfig struct {
 }
 
 func newFixture(t *testing.T) *testFixture {
-	temp := newTemplate(t)
+	temp := data.NewTestTemplate(data.TemplateAccess)
 	prod := newProduct(t, temp.ID)
 	offer := newOffer(prod.ID, temp.ID)
 	ch := newChan(offer.ID)
@@ -60,18 +55,6 @@ func newFixture(t *testing.T) *testFixture {
 		offer:    offer,
 		ch:       ch,
 	}
-}
-
-func newTemplate(t *testing.T) *data.Template {
-	schema, err := statik.ReadFile(eptTempFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	temp := data.NewTestTemplate(data.TemplateOffer)
-	temp.Raw = schema
-
-	return temp
 }
 
 func (f *testFixture) clean() {

@@ -173,13 +173,13 @@ func sealMessage(t *testing.T, env *workerTest,
 	return sealed
 }
 
-func testClientEndpointCreate(t *testing.T,
+func testClientEndpointGet(t *testing.T,
 	countryFromAgent, resultCountry, wantedCountryStatus string) {
 	env := newWorkerTest(t)
 	defer env.close()
 
 	fxt := env.newTestFixture(t,
-		data.JobClientEndpointRestore, data.JobChannel)
+		data.JobClientEndpointGet, data.JobChannel)
 	defer fxt.close()
 
 	swapAgentWithClient(t, fxt)
@@ -208,7 +208,7 @@ func testClientEndpointCreate(t *testing.T,
 	sealed := sealMessage(t, env, fxt, &msg)
 
 	setJobData(t, fxt.DB, fxt.job, &data.JobEndpointCreateData{EndpointSealed: sealed})
-	runJob(t, env.worker.ClientEndpointCreate, fxt.job)
+	runJob(t, env.worker.ClientEndpointGet, fxt.job)
 
 	var endp data.Endpoint
 	data.SelectOneFromTestDBTo(t, db, &endp,
@@ -234,21 +234,21 @@ func testClientEndpointCreate(t *testing.T,
 	}
 }
 
-type ClientEndpointCreateTestData struct {
+type ClientEndpointGetTestData struct {
 	countryFromAgent    string
 	resultCountry       string
 	wantedCountryStatus string
 }
 
-func TestClientEndpointCreate(t *testing.T) {
-	testData := []*ClientEndpointCreateTestData{
+func TestClientEndpointGet(t *testing.T) {
+	testData := []*ClientEndpointGetTestData{
 		{"YY", "YY", data.CountryStatusValid},
 		{"YY", "FF", data.CountryStatusInvalid},
 		{"YY", "Y", data.CountryStatusUnknown},
 	}
 
 	for _, v := range testData {
-		testClientEndpointCreate(t, v.countryFromAgent,
+		testClientEndpointGet(t, v.countryFromAgent,
 			v.resultCountry, v.wantedCountryStatus)
 
 	}

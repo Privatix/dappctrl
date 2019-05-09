@@ -10,10 +10,10 @@
 *.md            @drew2a
 
 # notify devops team about changes in docs
-/doc/           @kelewind
+/doc/           @SHarrySeldon
 
 # notify devops team about changes in *.config.json
-*.config.json   @kelewind @ubozov @drew2a
+*.config.json   @SHarrySeldon @drew2a
 
 # notify js team about jobs changes
-/data/jobs.go   @gonzazoid @Vitold55 
+/data/jobs.go   @gonzazoid

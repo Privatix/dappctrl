@@ -1,8 +1,9 @@
 import os
 import re
 import subprocess
+import sys
 
-_dappctrl_folder_path = os.path.expanduser("~") + '/go/src/github.com/privatix/dappctrl'
+_dappctrl_folder_path = sys.argv[1]
 
 _git_branch_name_command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
 _git_add_all_command = ['git', 'add', '-A']

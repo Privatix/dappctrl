@@ -295,7 +295,7 @@ func (w *Worker) ClientAfterChannelCreate(job *data.Job) error {
 		}
 	}
 
-	err = w.addJobWithData(logger, nil, data.JobClientEndpointRestore,
+	err = w.addJobWithData(logger, nil, data.JobClientEndpointGet,
 		data.JobChannel, ch.ID, &data.JobEndpointCreateData{EndpointSealed: endpointMsgSealed})
 	if err != nil {
 		return err
@@ -358,14 +358,14 @@ func (w *Worker) extractEndpointMessage(logger log.Logger,
 	return &msg, nil
 }
 
-// ClientEndpointCreate decodes endpoint message, saves it in the DB and
+// ClientEndpointGet decodes endpoint message, saves it in the DB and
 // triggers product configuration.
-func (w *Worker) ClientEndpointCreate(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientEndpointCreate",
+func (w *Worker) ClientEndpointGet(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientEndpointGet",
 		"job", job)
 
 	ch, err := w.relatedChannel(logger, job,
-		data.JobClientEndpointRestore)
+		data.JobClientEndpointGet)
 	if err != nil {
 		return err
 	}
@@ -1012,7 +1012,12 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		data.HexFromBytes(hash.Bytes()), job.RelatedID,
 		somcType, somcData)
 	if err != nil {
-		// Ignore all errors except internal.
+		if err == ErrTemplateByHashNotFound {
+			job.Status = data.JobCanceled
+			w.db.Save(job)
+			return nil
+		}
+		// Ignore all other errors except internal.
 		if err != ErrInternal {
 			logger.Warn(err.Error())
 			return nil

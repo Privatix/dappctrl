@@ -11,8 +11,9 @@ import (
 
 // Adapter connection statuses.
 const (
-	ConnStart = "start"
-	ConnStop  = "stop"
+	ConnCreate = "create"
+	ConnStart  = "start"
+	ConnStop   = "stop"
 )
 
 // ConnChangeResult is an ConnChange notification result.
@@ -30,12 +31,6 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 		return
 	}
 
-	if ch.ServiceStatus != data.ServiceActivating &&
-		ch.ServiceStatus != data.ServiceSuspending &&
-		ch.ServiceStatus != data.ServiceTerminating {
-		return
-	}
-
 	var offer data.Offering
 	err = data.FindByPrimaryKeyTo(h.db.Querier, &offer, ch.Offering)
 	if err != nil {
@@ -44,8 +39,11 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 	}
 
 	status := ConnStop
-	if job.Type == data.JobClientPreServiceUnsuspend {
+	if job.Type == data.JobClientPreServiceUnsuspend || job.Type == data.JobAgentPreServiceUnsuspend {
 		status = ConnStart
+	}
+	if job.Type == data.JobClientEndpointGet || job.Type == data.JobAgentPreEndpointMsgCreate {
+		status = ConnCreate
 	}
 
 	if offer.Product == product {
@@ -81,8 +79,13 @@ func (h *Handler) ConnChange(ctx context.Context,
 		}
 	}
 	jobTypes := []string{
+		data.JobAgentPreEndpointMsgCreate,
+		data.JobClientEndpointGet,
+		data.JobAgentPreServiceSuspend,
 		data.JobClientPreServiceSuspend,
+		data.JobAgentPreServiceUnsuspend,
 		data.JobClientPreServiceUnsuspend,
+		data.JobAgentPreServiceTerminate,
 		data.JobClientPreServiceTerminate,
 	}
 

@@ -106,11 +106,6 @@
             "agentAfterOfferingPopUp": {
                 "Duplicated": true
             },
-            "agentPreOfferingMsgSOMCPublish": {
-                "FirstStartDelay": 30000,
-                "TryLimit": 10,
-                "TryPeriod": 60000
-            },
             "agentPreOfferingPopUp": {
                 "Duplicated": true
             },
@@ -125,13 +120,17 @@
                 "TryPeriod": 20000
             },
             "clientAfterChannelCreate": {
-                "FirstStartDelay": 25000,
+                "FirstStartDelay": 3000,
                 "TryLimit": 10,
                 "TryPeriod": 30000
             },
             "clientAfterOfferingMsgBCPublish": {
                 "TryLimit": 10,
                 "TryPeriod": 60000
+            },
+            "clientEndpointGet": {
+                "TryLimit": 6,
+                "TryPeriod": 10000
             },
             "clientPreChannelCreate": {
                 "Duplicated": true,

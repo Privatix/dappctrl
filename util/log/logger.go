@@ -4,6 +4,9 @@ import (
 	"runtime/debug"
 )
 
+// Panic with this so multi logger can recover and complete all sub fatal calls.
+const fatalLog = "fatal log event"
+
 // Level is a log event severity.
 type Level string
 
@@ -119,7 +122,7 @@ func (l *LoggerBase) Log(lvl Level, msg string) {
 	}
 
 	if lvl == Fatal {
-		panic("fatal log event: " + msg)
+		panic("fatal log event")
 	}
 }
 

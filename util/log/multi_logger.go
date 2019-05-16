@@ -17,7 +17,17 @@ func (l multiLogger) Add(vars ...interface{}) Logger {
 
 func (l multiLogger) Log(lvl Level, msg string) {
 	for _, v := range l {
-		v.Log(lvl, msg)
+		func(v Logger) {
+			defer func() {
+				if p := recover(); p != nil && p != fatalLog {
+					panic(p)
+				}
+			}()
+			v.Log(lvl, msg)
+		}(v)
+	}
+	if lvl == Fatal {
+		panic(msg)
 	}
 }
 

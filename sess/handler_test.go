@@ -39,11 +39,11 @@ func newTestCountryConfig() *country.Config {
 }
 
 func newTestFixture(t *testing.T) *data.TestFixture {
+	t.Helper()
+
 	fixture := data.NewTestFixture(t, db)
 	fixture.Channel.ServiceStatus = data.ServiceActive
-	if err := db.Update(fixture.Channel); err != nil {
-		t.Fatal(err)
-	}
+	data.SaveToTestDB(t, fixture.DB, fixture.Channel)
 	return fixture
 }
 

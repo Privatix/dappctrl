@@ -566,26 +566,6 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
-func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientCompleteServiceTransition",
-		"job", job)
-
-	ch, err := w.relatedChannel(
-		logger, job, data.JobClientCompleteServiceTransition)
-	if err != nil {
-		return err
-	}
-
-	logger = logger.Add("channel", ch)
-
-	err = w.unmarshalDataTo(logger, job.Data, &ch.ServiceStatus)
-	if err != nil {
-		return err
-	}
-
-	return w.saveRecord(logger, w.db.Querier, ch)
-}
-
 func (w *Worker) blocksTillChallangeEnd(ctx context.Context, logger log.Logger,
 	client, agent common.Address, block uint32,
 	hash [common.HashLength]byte) (int64, error) {

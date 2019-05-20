@@ -342,13 +342,22 @@ func (w *Worker) agentUpdateServiceStatus(logger log.Logger, job *data.Job,
 		return nil, err
 	}
 
+	channelIsActive := channel.ServiceStatus == data.ServiceActive
 	switch jobType {
 	case data.JobAgentPreServiceSuspend:
-		channel.ServiceStatus = data.ServiceSuspended
+		if channelIsActive {
+			channel.ServiceStatus = data.ServiceSuspending
+		} else {
+			channel.ServiceStatus = data.ServiceSuspended
+		}
 	case data.JobAgentPreServiceTerminate:
-		channel.ServiceStatus = data.ServiceTerminated
+		if channelIsActive {
+			channel.ServiceStatus = data.ServiceTerminating
+		} else {
+			channel.ServiceStatus = data.ServiceTerminated
+		}
 	case data.JobAgentPreServiceUnsuspend:
-		channel.ServiceStatus = data.ServiceActive
+		channel.ServiceStatus = data.ServiceActivating
 	}
 
 	changedTime := time.Now()
@@ -480,10 +489,10 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 
 	if offering.BillingType == data.BillingPrepaid ||
 		offering.SetupPrice > 0 {
-		channel.ServiceStatus = data.ServiceSuspended
+		channel.ServiceStatus = data.ServiceSuspending
 
 	} else {
-		channel.ServiceStatus = data.ServiceActive
+		channel.ServiceStatus = data.ServiceActivating
 	}
 	changedTime := time.Now().Add(time.Minute)
 	channel.ServiceChangedTime = &changedTime

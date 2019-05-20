@@ -248,7 +248,7 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 		return ErrEthLogChannelMismatch
 	}
 
-	channel.TotalDeposit += logInput.addedDeposit.Uint64()
+	channel.TotalDeposit += logInput.addedDeposit
 	if err = w.db.Update(channel); err != nil {
 		logger.Error(err.Error())
 		return ErrInternal

@@ -70,6 +70,10 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
+	if logChannelCreated.deposit < data.MinDeposit(offering) {
+		return ErrSmallDeposit
+	}
+
 	offering.CurrentSupply--
 	if err := tx.Update(offering); err != nil {
 		logger.Error(err.Error())
@@ -80,7 +84,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		ID:            job.RelatedID,
 		Client:        data.HexFromBytes(logChannelCreated.clientAddr.Bytes()),
 		Agent:         data.HexFromBytes(logChannelCreated.agentAddr.Bytes()),
-		TotalDeposit:  logChannelCreated.deposit.Uint64(),
+		TotalDeposit:  logChannelCreated.deposit,
 		ChannelStatus: data.ChannelActive,
 		ServiceStatus: data.ServicePending,
 		Offering:      offering.ID,

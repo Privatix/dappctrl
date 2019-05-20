@@ -38,8 +38,8 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.ethBack.SetTransaction(t, auth, nil)
 
 	// Create related eth log record.
-	var deposit int64 = 100
-	logData, err := logChannelCreatedDataArguments.Pack(big.NewInt(deposit))
+	deposit := data.MinDeposit(fixture.Offering)
+	logData, err := logChannelCreatedDataArguments.Pack(deposit)
 	if err != nil {
 		t.Fatal(err)
 	}

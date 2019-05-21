@@ -44,7 +44,6 @@ const (
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
-	JobClientCompleteServiceTransition      = "completeServiceTransition"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
@@ -66,6 +65,7 @@ const (
 	JobPreAccountReturnBalance              = "preAccountReturnBalance"
 	JobAfterAccountReturnBalance            = "afterAccountReturnBalance"
 	JobAccountUpdateBalances                = "accountUpdateBalances"
+	JobCompleteServiceTransition            = "completeServiceTransition"
 	JobDecrementCurrentSupply               = "decrementCurrentSupply"
 	JobIncrementCurrentSupply               = "incrementCurrentSupply"
 )

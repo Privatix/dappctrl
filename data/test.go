@@ -46,6 +46,7 @@ func TestToPrivateKey(
 
 // TestToBytes returns binary representation of base64 encoded string or fails.
 func TestToBytes(t *testing.T, s Base64String) []byte {
+	t.Helper()
 	b, err := base64.URLEncoding.DecodeString(strings.TrimSpace(string(s)))
 	if err != nil {
 		t.Fatal("failed to decode: ", err)
@@ -55,6 +56,7 @@ func TestToBytes(t *testing.T, s Base64String) []byte {
 
 // TestToHash decodes to hash or fails.
 func TestToHash(t *testing.T, h HexString) common.Hash {
+	t.Helper()
 	ret, err := HexToHash(h)
 	if err != nil {
 		t.Fatal("failed to make hash: ", err)
@@ -64,6 +66,7 @@ func TestToHash(t *testing.T, h HexString) common.Hash {
 
 // TestToAddress decodes to address or fails.
 func TestToAddress(t *testing.T, addr HexString) common.Address {
+	t.Helper()
 	ret, err := HexToAddress(addr)
 	if err != nil {
 		t.Fatal("failed to make addr")
@@ -262,6 +265,7 @@ func NewTestJob(jobType, createdBy, relType string) *Job {
 
 // BeginTestTX begins a test transaction.
 func BeginTestTX(t *testing.T, db *reform.DB) *reform.TX {
+	t.Helper()
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatalf("failed to begin transaction: %s", err)
@@ -271,6 +275,7 @@ func BeginTestTX(t *testing.T, db *reform.DB) *reform.TX {
 
 // CommitTestTX commits a test transaction.
 func CommitTestTX(t *testing.T, tx *reform.TX) {
+	t.Helper()
 	if err := tx.Commit(); err != nil {
 		t.Fatalf("failed to commit transaction: %s", err)
 	}
@@ -278,6 +283,7 @@ func CommitTestTX(t *testing.T, tx *reform.TX) {
 
 // RollbackTestTX rollbacks a test transaction.
 func RollbackTestTX(t *testing.T, tx *reform.TX) {
+	t.Helper()
 	if err := tx.Rollback(); err != nil {
 		t.Fatalf("failed to rollback transaction: %s", err)
 	}
@@ -286,6 +292,7 @@ func RollbackTestTX(t *testing.T, tx *reform.TX) {
 // FindInTestDB selects a record from test DB.
 func FindInTestDB(t *testing.T, db *reform.DB,
 	str reform.Struct, column string, arg interface{}) {
+	t.Helper()
 	if err := db.FindOneTo(str, column, arg); err != nil {
 		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
 	}
@@ -294,6 +301,7 @@ func FindInTestDB(t *testing.T, db *reform.DB,
 // SelectOneFromTestDBTo selects a record from test DB using a given query tail.
 func SelectOneFromTestDBTo(t *testing.T, db *reform.DB,
 	str reform.Struct, tail string, args ...interface{}) {
+	t.Helper()
 	if err := db.SelectOneTo(str, tail, args...); err != nil {
 		t.Fatalf("failed to find %T: %v (%s)", str, err, util.Caller())
 	}
@@ -301,6 +309,7 @@ func SelectOneFromTestDBTo(t *testing.T, db *reform.DB,
 
 // InsertToTestDB inserts rows to test DB.
 func InsertToTestDB(t *testing.T, db *reform.DB, rows ...reform.Struct) {
+	t.Helper()
 	tx := BeginTestTX(t, db)
 	for _, v := range rows {
 		if err := tx.Insert(v); err != nil {
@@ -314,6 +323,7 @@ func InsertToTestDB(t *testing.T, db *reform.DB, rows ...reform.Struct) {
 
 // SaveToTestDB saves records to test DB.
 func SaveToTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	t.Helper()
 	tx := BeginTestTX(t, db)
 	for _, v := range recs {
 		if err := tx.Save(v); err != nil {
@@ -327,6 +337,7 @@ func SaveToTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 
 // DeleteFromTestDB deletes records from test DB.
 func DeleteFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	t.Helper()
 	tx := BeginTestTX(t, db)
 	for _, v := range recs {
 		if err := tx.Delete(v); err != nil {
@@ -340,6 +351,7 @@ func DeleteFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 
 // ReloadFromTestDB reloads records from test DB.
 func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
+	t.Helper()
 	for _, v := range recs {
 		if err := db.Reload(v); err != nil {
 			t.Fatalf("failed to reload %T: %v (%s)", v, err,
@@ -350,6 +362,7 @@ func ReloadFromTestDB(t *testing.T, db *reform.DB, recs ...reform.Record) {
 
 // CleanTestDB deletes all records from all test DB tables.
 func CleanTestDB(t *testing.T, db *reform.DB) {
+	t.Helper()
 	tx := BeginTestTX(t, db)
 	for _, v := range []reform.View{EthTxTable, JobTable,
 		EndpointTable, SessionTable, ChannelTable, OfferingTable,
@@ -365,6 +378,7 @@ func CleanTestDB(t *testing.T, db *reform.DB) {
 
 // CleanTestTable deletes all records from a given DB table.
 func CleanTestTable(t *testing.T, db *reform.DB, tbl reform.View) {
+	t.Helper()
 	if _, err := db.DeleteFrom(tbl, ""); err != nil {
 		t.Fatalf("failed to clean %T table: %s", tbl, err)
 	}
@@ -392,6 +406,7 @@ const (
 
 // NewTestFixture creates a new test fixture.
 func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
+	t.Helper()
 	prod := NewTestProduct()
 	acc := NewTestAccount(TestPassword)
 	userAcc := NewTestAccount(TestPassword)
@@ -430,6 +445,7 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 // NewEthTestFixture creates a new ethereum test fixture.
 func NewEthTestFixture(t *testing.T, db *reform.DB,
 	account *truffle.TestAccount) *TestFixture {
+	t.Helper()
 	prod := NewTestProduct()
 	acc := NewEthTestAccount(TestPassword, account)
 	userAcc := NewTestAccount(TestPassword)

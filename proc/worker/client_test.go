@@ -677,39 +677,6 @@ func TestClientPreServiceUnsuspend(t *testing.T) {
 	}
 }
 
-func TestClientCompleteServiceTransition(t *testing.T) {
-	env := newWorkerTest(t)
-	defer env.close()
-
-	fxt := env.newTestFixture(t,
-		data.JobClientPreServiceUnsuspend, data.JobChannel)
-	defer fxt.Close()
-
-	fxt.job.Type = data.JobClientCompleteServiceTransition
-
-	transitions := map[string]string{
-		data.ServiceActivating:  data.ServiceActive,
-		data.ServiceSuspending:  data.ServiceSuspended,
-		data.ServiceTerminating: data.ServiceTerminated,
-	}
-
-	for k, v := range transitions {
-		fxt.Channel.ServiceStatus = k
-		env.updateInTestDB(t, fxt.Channel)
-
-		setJobData(t, db, fxt.job, v)
-		runJob(t, env.worker.ClientCompleteServiceTransition, fxt.job)
-
-		var ch data.Channel
-		env.findTo(t, &ch, fxt.Channel.ID)
-
-		if ch.ServiceStatus != v {
-			t.Fatalf("expected %s service status, but got %s",
-				v, ch.ServiceStatus)
-		}
-	}
-}
-
 func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	env := newWorkerTest(t)
 	defer env.close()

@@ -11,9 +11,8 @@ import (
 
 // Adapter connection statuses.
 const (
-	ConnCreate = "create"
-	ConnStart  = "start"
-	ConnStop   = "stop"
+	ConnStart = "start"
+	ConnStop  = "stop"
 )
 
 // ConnChangeResult is an ConnChange notification result.
@@ -31,26 +30,32 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 		return
 	}
 
+	s := ch.ServiceStatus
+	if s != data.ServiceActivating && s != data.ServiceSuspending && s != data.ServiceTerminating {
+		return
+	}
+
 	var offer data.Offering
 	err = data.FindByPrimaryKeyTo(h.db.Querier, &offer, ch.Offering)
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
-
-	status := ConnStop
-	if job.Type == data.JobClientPreServiceUnsuspend || job.Type == data.JobAgentPreServiceUnsuspend {
-		status = ConnStart
-	}
-	if job.Type == data.JobClientEndpointGet || job.Type == data.JobAgentPreEndpointMsgCreate {
-		status = ConnCreate
+	if offer.Product != product {
+		return
 	}
 
-	if offer.Product == product {
-		err = ntf.Notify(sub.ID, &ConnChangeResult{ch.ID, status})
-		if err != nil {
-			logger.Warn(err.Error())
-		}
+	status := ConnStart
+	if job.Type == data.JobClientPreServiceSuspend ||
+		job.Type == data.JobAgentPreServiceSuspend ||
+		job.Type == data.JobClientPreServiceTerminate ||
+		job.Type == data.JobAgentPreServiceTerminate {
+		status = ConnStop
+	}
+
+	err = ntf.Notify(sub.ID, &ConnChangeResult{ch.ID, status})
+	if err != nil {
+		logger.Warn(err.Error())
 	}
 }
 
@@ -80,7 +85,6 @@ func (h *Handler) ConnChange(ctx context.Context,
 	}
 	jobTypes := []string{
 		data.JobAgentPreEndpointMsgCreate,
-		data.JobClientEndpointGet,
 		data.JobAgentPreServiceSuspend,
 		data.JobClientPreServiceSuspend,
 		data.JobAgentPreServiceUnsuspend,

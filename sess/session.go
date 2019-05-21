@@ -91,7 +91,7 @@ func (h *Handler) StartSession(product, productPassword,
 
 		if ch.ServiceStatus == data.ServiceActivating {
 			err := job.AddWithData(h.queue, tx,
-				data.JobClientCompleteServiceTransition,
+				data.JobCompleteServiceTransition,
 				data.JobChannel, ch.ID, data.JobSessionServer,
 				data.ServiceActive)
 			if err != nil && err != job.ErrDuplicatedJob {
@@ -152,7 +152,7 @@ func (h *Handler) UpdateSession(product, productPassword, clientKey string,
 		}
 
 		err := job.AddWithData(h.queue, nil,
-			data.JobClientCompleteServiceTransition,
+			data.JobCompleteServiceTransition,
 			data.JobChannel, ch.ID, data.JobSessionServer,
 			status)
 		if err != nil && err != job.ErrDuplicatedJob {

@@ -3,9 +3,9 @@ package sess_test
 import (
 	"context"
 	"errors"
-	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"gopkg.in/reform.v1"
 
@@ -34,14 +34,13 @@ func TestConnChange(t *testing.T) {
 		fxt := newTestFixture(t)
 		defer fxt.Close()
 
-		var mu sync.Mutex
-		callMethods := make([]int, 0)
+		callMethods := make(chan int)
 
-		client, _ := newClient(job.QueueMock(func(method int, _ *reform.TX,
+		client := newClient(job.QueueMock(func(method int, _ *reform.TX,
 			_ *data.Job, _ []string, _ string, _ job.SubFunc) error {
-			mu.Lock()
-			defer mu.Unlock()
-			callMethods = append(callMethods, method)
+			go func() {
+				callMethods <- method
+			}()
 			return nil
 		}))
 
@@ -51,9 +50,23 @@ func TestConnChange(t *testing.T) {
 		util.TestExpectResult(t, "ConnChange", nil, err)
 
 		sub.Unsubscribe()
-		want := []int{job.MockSubscribe, job.MockUnsubscribe}
-		if !reflect.DeepEqual(callMethods, want) {
-			t.Fatalf("callMethods=%v, want %v", callMethods, want)
+		var got1, got2 int
+
+		select {
+		case got1 = <-callMethods:
+		case <-time.After(time.Second):
+			t.Fatal("Timeout")
+		}
+		select {
+		case got2 = <-callMethods:
+		case <-time.After(time.Second):
+			t.Fatal("Timeout")
+		}
+		if got1 != job.MockSubscribe {
+			t.Fatalf("callMethod=%d, want=%d", got1, job.MockSubscribe)
+		}
+		if got2 != job.MockUnsubscribe {
+			t.Fatalf("callMethod=%d, want=%d", got2, job.MockUnsubscribe)
 		}
 	})
 
@@ -71,7 +84,7 @@ func TestConnChange(t *testing.T) {
 			RelatedID: fxt.Channel.ID,
 		}
 
-		client, _ := newClient(job.QueueMock(func(method int, tx *reform.TX,
+		client := newClient(job.QueueMock(func(method int, tx *reform.TX,
 			j2 *data.Job, jobTypes []string, subID string,
 			subFunc job.SubFunc) error {
 			mtx.Lock()

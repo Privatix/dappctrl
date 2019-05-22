@@ -15,7 +15,7 @@ func Recover(db *reform.DB) error {
 	return nil
 }
 
-// recoverServiceStatuses updates service_status for client channels:
+// recoverServiceStatuses updates service_status for client and agent channels:
 // activating, active and suspending becomes suspended, while terminating
 // becomes terminated.
 func recoverServiceStatuses(db *reform.DB) error {
@@ -25,7 +25,6 @@ func recoverServiceStatuses(db *reform.DB) error {
 		  FROM offerings, products
 		 WHERE offering = offerings.id
 		          AND product = products.id
-		          AND NOT is_server
 		          AND service_status %s`
 
 	query := fmt.Sprintf(format, ServiceSuspended,

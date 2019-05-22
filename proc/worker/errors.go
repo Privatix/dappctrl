@@ -59,7 +59,7 @@ const (
 	ErrGeneratePasswordHash
 	ErrPublishEndpoint
 	ErrPublishOffering
-	ErrFindOfferings
+	ErrFetchOffering
 	ErrSOMCNoOfferings
 	ErrOfferNotRegistered
 	ErrOfferNotCorrespondToTemplate
@@ -137,7 +137,7 @@ var errMsgs = errors.Messages{
 	ErrGeneratePasswordHash:          "failed to generate password hash",
 	ErrPublishEndpoint:               "could not publish endpoint message",
 	ErrPublishOffering:               "could not publish an offering",
-	ErrFindOfferings:                 "could not find offerings",
+	ErrFetchOffering:                 "could not fetch offerings",
 	ErrSOMCNoOfferings:               "no offering returned from somc",
 	ErrOfferNotRegistered:            "offering is not registered",
 	ErrOfferNotCorrespondToTemplate:  "offer not correspond to template",

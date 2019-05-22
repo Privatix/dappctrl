@@ -47,14 +47,14 @@ func newTestFixture(t *testing.T) *data.TestFixture {
 	return fixture
 }
 
-func newClient(queue job.Queue) (*rpc.Client, *sess.Handler) {
+func newClient(queue job.Queue) *rpc.Client {
 	server := rpc.NewServer()
 	handler = sess.NewHandler(log.NewMultiLogger(),
 		db, newTestCountryConfig(), queue)
 	if err := server.RegisterName("sess", handler); err != nil {
 		panic(err)
 	}
-	return rpc.DialInProc(server), handler
+	return rpc.DialInProc(server)
 }
 
 func TestMain(m *testing.M) {
@@ -64,7 +64,7 @@ func TestMain(m *testing.M) {
 	db = data.NewTestDB(conf.DB)
 	defer data.CloseDB(db)
 
-	client, handler = newClient(job.NewDummyQueueMock())
+	client = newClient(job.NewDummyQueueMock())
 	defer client.Close()
 
 	os.Exit(m.Run())

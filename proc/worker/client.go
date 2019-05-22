@@ -972,20 +972,20 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 	hashHex := data.HexFromBytes(hash.Bytes())
 	offeringRawMsg, err := client.Offering(hashHex)
 	if err != nil {
 		// Ignoring errors if did not receive an offering from an agent.
 		logger.Add("offeringHash", hashHex).Warn(
-			"could not find offerings, error: " + err.Error())
-		return ErrFindOfferings
+			"could not fetch offerings, error: " + err.Error())
+		return ErrFetchOffering
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
 		block, data.HexFromBytes(agentAddr.Bytes()),
@@ -1002,7 +1002,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 			logger.Warn(err.Error())
 			return nil
 		}
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 
 	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(

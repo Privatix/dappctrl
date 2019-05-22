@@ -40,6 +40,11 @@ func (c *Client) GetEndpoint(key string) (*data.Endpoint, error) {
 	return &endpoint, nil
 }
 
+// ServiceReady sends signal that service is ready.
+func (c *Client) ServiceReady(key string) error {
+	return c.callSess(nil, "serviceReady", key)
+}
+
 // AuthClient verifies user credentials.
 func (c *Client) AuthClient(user, pass string) error {
 	return c.callSess(nil, "authClient", user, pass)
@@ -58,8 +63,13 @@ func (c *Client) StartSession(trustedIP, key string, port uint16) (*data.Offerin
 }
 
 // UpdateSession updates session.
-func (c *Client) UpdateSession(key string, units uint64, stopSession bool) error {
-	return c.callSess(nil, "updateSession", key, units, stopSession)
+func (c *Client) UpdateSession(key string, units uint64) error {
+	return c.callSess(nil, "updateSession", key, units)
+}
+
+// StopSession updates session.
+func (c *Client) StopSession(key string) error {
+	return c.callSess(nil, "stopSession", key)
 }
 
 // SetProductConfig sets product config.

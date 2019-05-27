@@ -44,7 +44,7 @@ type ClientChannelInfo struct {
 	Client       string         `json:"client"`
 	Offering     string         `json:"offering"`
 	OfferingHash data.HexString `json:"offeringHash"`
-	Deposit      uint64         `json:"deposit"`
+	TotalDeposit uint64         `json:"totalDeposit"`
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
@@ -460,7 +460,7 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 
 	result.Offering = channel.Offering
 	result.OfferingHash = offering.Hash
-	result.Deposit = channel.TotalDeposit
+	result.TotalDeposit = channel.TotalDeposit
 	result.ChStat = createChanStatusBlock(channel, offering)
 	result.Job = createJobBlock(job2)
 	result.Usage = newUsage(channel, offering, sessions)

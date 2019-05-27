@@ -358,8 +358,8 @@ func checkClientChannel(t *testing.T, resp *ui.ClientChannelInfo,
 			resp.OfferingHash)
 	}
 
-	if ch.TotalDeposit != resp.Deposit {
-		t.Fatalf("expected %d, got: %d", ch.TotalDeposit, resp.Deposit)
+	if ch.TotalDeposit != resp.TotalDeposit {
+		t.Fatalf("expected %d, got: %d", ch.TotalDeposit, resp.TotalDeposit)
 	}
 }
 

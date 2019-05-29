@@ -379,9 +379,8 @@ func checkClientChannelStatus(t *testing.T, resp *ui.ClientChannelInfo,
 		t.Fatal("invalid serviceChangedTime field")
 	}
 
-	expectedTime := util.SingleTimeFormat(*ch.ServiceChangedTime)
-	if expectedTime != *resp.ChStat.LastChanged {
-		t.Fatalf("expected %s, got: %s", expectedTime,
+	if *ch.ServiceChangedTime != *resp.ChStat.LastChanged {
+		t.Fatalf("expected %s, got: %s", *ch.ServiceChangedTime,
 			*resp.ChStat.LastChanged)
 	}
 
@@ -405,9 +404,8 @@ func checkClientChannelJob(
 		t.Fatalf("expected %s, got: %s", job.Status, resp.Job.Status)
 	}
 
-	if util.SingleTimeFormat(job.CreatedAt) != resp.Job.CreatedAt {
-		t.Fatalf("expected %s, got: %s",
-			util.SingleTimeFormat(job.CreatedAt), resp.Job.CreatedAt)
+	if job.CreatedAt != resp.Job.CreatedAt {
+		t.Fatalf("expected %s, got: %s", job.CreatedAt, resp.Job.CreatedAt)
 	}
 }
 

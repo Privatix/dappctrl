@@ -10,10 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
-
-const timeFormat = "2006-01-02T15:04:05.999Z"
 
 // ReadJSONFile reads and parses a JSON file filling a given data instance.
 func ReadJSONFile(name string, data interface{}) error {
@@ -84,11 +82,6 @@ func Caller() string {
 	}
 
 	return fmt.Sprintf("%s:%d", rel, line)
-}
-
-// SingleTimeFormat converts time to a string in a single format.
-func SingleTimeFormat(tm time.Time) string {
-	return tm.Format(timeFormat)
 }
 
 // CheckConnection connects to the specified host on the specified port.

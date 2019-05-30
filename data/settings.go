@@ -9,19 +9,22 @@ import (
 
 // Setting keys.
 const (
-	SettingAppVersion         = "system.version.app"
-	SettingBlockLimit         = "eth.event.blocklimit"
-	SettingDefaultGasPrice    = "eth.default.gasprice"
-	SettingFreshBlocks        = "eth.event.freshblocks"
-	SettingOfferingAutoPopUp  = "offering.autopopup"
-	SettingLastProcessedBlock = "eth.event.lastProcessedBlock"
-	SettingMinConfirmations   = "eth.min.confirmations"
-	SettingPasswordHash       = "system.password"
-	SettingPasswordSalt       = "system.salt"
-	SettingsPeriodChallange   = "psc.periods.challenge"
-	SettingsPeriodPopUp       = "psc.periods.popup"
-	SettingsPeriodRemove      = "psc.periods.remove"
-	SettingGUI                = "system.gui"
+	SettingAppVersion                       = "system.version.app"
+	SettingBlockLimit                       = "eth.event.blocklimit"
+	SettingDefaultGasPrice                  = "eth.default.gasprice"
+	SettingFreshBlocks                      = "eth.event.freshblocks"
+	SettingOfferingAutoPopUp                = "offering.autopopup"
+	SettingLastProcessedBlock               = "eth.event.lastProcessedBlock"
+	SettingMinConfirmations                 = "eth.min.confirmations"
+	SettingPasswordHash                     = "system.password"
+	SettingPasswordSalt                     = "system.salt"
+	SettingsPeriodChallange                 = "psc.periods.challenge"
+	SettingsPeriodPopUp                     = "psc.periods.popup"
+	SettingsPeriodRemove                    = "psc.periods.remove"
+	SettingGUI                              = "system.gui"
+	SettingClientMinDeposit                 = "client.min.deposit"
+	SettingClientAutoincreaseDepositPercent = "client.deposit.autoincrease.percent"
+	SettingAutoincreaseDeposit              = "client.autoincrease.deposit"
 )
 
 // ReadSetting reads value of a given setting.

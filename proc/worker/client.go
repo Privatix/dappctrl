@@ -167,14 +167,14 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 
 	deposit := jdata.Deposit
 	if jdata.Deposit == 0 {
-		deposit = data.ComputeDeposit(offering, offering.MinUnits)
+		deposit = data.ComputePrice(offering, offering.MinUnits)
 	}
 
 	if err := w.checkDeposit(logger, acc, offering, deposit); err != nil {
 		return err
 	}
 
-	if deposit < data.ComputeDeposit(offering, offering.MinUnits) {
+	if deposit < data.ComputePrice(offering, offering.MinUnits) {
 		return ErrSmallDeposit
 	}
 
@@ -1012,7 +1012,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		return ErrInternal
 	}
 
-	if minDeposit != data.ComputeDeposit(offering, offering.MinUnits) {
+	if minDeposit != data.ComputePrice(offering, offering.MinUnits) {
 		return ErrOfferingDeposit
 	}
 

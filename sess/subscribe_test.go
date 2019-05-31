@@ -49,6 +49,7 @@ func TestConnChange(t *testing.T) {
 			fxt.Product.ID, data.TestPassword)
 		util.TestExpectResult(t, "ConnChange", nil, err)
 
+		time.Sleep(time.Millisecond)
 		sub.Unsubscribe()
 		var got1, got2 int
 

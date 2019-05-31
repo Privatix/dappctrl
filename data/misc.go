@@ -215,7 +215,7 @@ func ChannelKey(client, agent HexString, block uint32,
 		common.BytesToHash(hash).Bytes()), nil
 }
 
-// ComputeDeposit calculates deposit required for offering to given units.
-func ComputeDeposit(offering *Offering, units uint64) uint64 {
+// ComputePrice calculates price for units of offering.
+func ComputePrice(offering *Offering, units uint64) uint64 {
 	return units*offering.UnitPrice + offering.SetupPrice
 }

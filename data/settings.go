@@ -23,8 +23,8 @@ const (
 	SettingsPeriodRemove                    = "psc.periods.remove"
 	SettingGUI                              = "system.gui"
 	SettingClientMinDeposit                 = "client.min.deposit"
-	SettingClientAutoincreaseDepositPercent = "client.deposit.autoincrease.percent"
-	SettingAutoincreaseDeposit              = "client.autoincrease.deposit"
+	SettingClientAutoincreaseDepositPercent = "client.autoincrease.percent"
+	SettingClientAutoincreaseDeposit        = "client.autoincrease.deposit"
 )
 
 // ReadSetting reads value of a given setting.
@@ -54,6 +54,21 @@ func ReadUintSetting(db *reform.Querier, key string) (uint, error) {
 	}
 
 	return uint(val2), nil
+}
+
+// ReadUint64Setting reads value of a given uint setting.
+func ReadUint64Setting(db *reform.Querier, key string) (uint64, error) {
+	val, err := ReadSetting(db, key)
+	if err != nil {
+		return 0, err
+	}
+
+	val2, err := strconv.ParseUint(val, 10, 64)
+	if err != nil {
+		return 0, newSettingParseError(key, err)
+	}
+
+	return uint64(val2), nil
 }
 
 // ReadBoolSetting reads value of a given bool setting.

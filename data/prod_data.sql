@@ -9,7 +9,7 @@ VALUES ('updateDismissVersion', '', 2, '', 'Update dismiss version');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.min.confirmations',
-        '4',
+        '1',
         2,
         'have value (stored as string) that is null or integer and' ||
         ' represents how many ethereum blocks should be mined after' ||
@@ -114,12 +114,12 @@ VALUES('client.min.deposit',
         'Min deposit');
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES('client.deposit.autoincrease.percent',
+VALUES('client.autoincrease.percent',
        '60',
         2,
         'This setting specifies when to increase deposit. Increase deposit,' ||
-        ' when current usage is equal to this percent of total used units.',
-        'Deposit autoincrease after using %');
+        ' when current usage is bigger or equal to this percent of total used units.',
+        'Top up after using %');
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES('client.autoincrease.deposit',

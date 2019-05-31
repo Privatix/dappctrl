@@ -70,7 +70,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	if logChannelCreated.deposit < data.ComputeDeposit(offering, offering.MinUnits) {
+	if logChannelCreated.deposit < data.ComputePrice(offering, offering.MinUnits) {
 		return ErrSmallDeposit
 	}
 
@@ -526,7 +526,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	minDeposit := data.ComputeDeposit(offering, offering.MinUnits)
+	minDeposit := data.ComputePrice(offering, offering.MinUnits)
 
 	agent, err := w.account(logger, offering.Agent)
 	if err != nil {

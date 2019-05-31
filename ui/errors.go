@@ -21,6 +21,7 @@ const (
 	ErrProductNotFound
 	ErrInvalidTemplateType
 	ErrMalformedTemplate
+	ErrDepositTooSmall
 	ErrBadUnitPriceRange
 	ErrBadUnitType
 	ErrBillingType
@@ -52,6 +53,7 @@ var errMsgs = errors.Messages{
 	ErrMinConfirmationsNotFound:  "min confirmations setting not found",
 	ErrOfferingNotFound:          "offering not found",
 	ErrBadObjectType:             "bad object type",
+	ErrDepositTooSmall:           "deposit is too small",
 	ErrBadUnitPriceRange:         "bad unit price range",
 	ErrBadUnitType:               "bad unit type",
 	ErrBillingType:               "bad billing type",

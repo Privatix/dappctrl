@@ -72,33 +72,26 @@ func TestAcceptOffering(t *testing.T) {
 		return nil
 	}))
 
-	minDeposit := data.MinDeposit(fxt.Offering)
-
 	_, err := handler.AcceptOffering("wrong-token", fxt.UserAcc.EthAddr,
-		fxt.Offering.ID, minDeposit, 12345)
+		fxt.Offering.ID, 12345)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = handler.AcceptOffering(testToken.v,
-		data.HexString(util.NewUUID()), fxt.Offering.ID,
-		minDeposit, 12345)
+		data.HexString(util.NewUUID()), fxt.Offering.ID, 12345)
 	assertErrEqual(ui.ErrAccountNotFound, err)
 
 	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
-		util.NewUUID(), minDeposit, 12345)
+		util.NewUUID(), 12345)
 	assertErrEqual(ui.ErrOfferingNotFound, err)
-
-	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
-		fxt.Offering.ID, minDeposit-1, 12345)
-	assertErrEqual(ui.ErrDepositTooSmall, err)
 
 	testSOMCClient.Err = errors.New("test error")
 	_, err = handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
-		fxt.Offering.ID, minDeposit, 12345)
+		fxt.Offering.ID, 12345)
 	assertErrEqual(ui.ErrSOMCIsNotAvailable, err)
 
 	testSOMCClient.Err = nil
 	res, err := handler.AcceptOffering(testToken.v, fxt.UserAcc.EthAddr,
-		fxt.Offering.ID, minDeposit, 12345)
+		fxt.Offering.ID, 12345)
 	assertErrEqual(nil, err)
 
 	if res == nil || j == nil || j.RelatedType != data.JobChannel ||

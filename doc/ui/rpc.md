@@ -823,7 +823,6 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
 1. Token (string)
 2. Account ethereum address (string)
 3. Offering id (string)
-4. Deposit of tokens (number)
 5. Gas price (number)
 
 *Result (string)*: id of channel to be created.
@@ -832,7 +831,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_acceptOffering", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 300000000, 10000], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_acceptOffering", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0", 10000], "id": 67}' http://localhost:8888/http
 
 // Result
 {

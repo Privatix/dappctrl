@@ -38,7 +38,7 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.ethBack.SetTransaction(t, auth, nil)
 
 	// Create related eth log record.
-	deposit := data.MinDeposit(fixture.Offering)
+	deposit := data.ComputeDeposit(fixture.Offering, fixture.Offering.MinUnits)
 	logData, err := logChannelCreatedDataArguments.Pack(deposit)
 	if err != nil {
 		t.Fatal(err)
@@ -395,7 +395,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	fixture.Product.Country = &country
 	env.updateInTestDB(t, fixture.Product)
 
-	minDeposit := data.MinDeposit(fixture.Offering)
+	minDeposit := data.ComputeDeposit(fixture.Offering, fixture.Offering.MinUnits)
 
 	env.ethBack.BalancePSC = minDeposit*uint64(fixture.Offering.Supply) + 1
 	env.ethBack.BalanceEth = big.NewInt(99999)

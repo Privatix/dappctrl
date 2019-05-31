@@ -46,7 +46,7 @@ func TestClientPreChannelCreate(t *testing.T) {
 		Offering: fxt.Offering.ID,
 	})
 
-	minDeposit := data.MinDeposit(fxt.Offering)
+	minDeposit := data.ComputeDeposit(fxt.Offering, fxt.Offering.MinUnits)
 	env.ethBack.BalancePSC = minDeposit - 1
 	util.TestExpectResult(t, "Job run", ErrInsufficientPSCBalance,
 		env.worker.ClientPreChannelCreate(fxt.job))
@@ -712,7 +712,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
 	env.ethBack.OfferMaxSupply = expectedOffering.Supply
-	env.ethBack.OfferMinDeposit = data.MinDeposit(&expectedOffering)
+	env.ethBack.OfferMinDeposit = data.ComputeDeposit(&expectedOffering, fxt.Offering.MinUnits)
 
 	// Create eth log records used by job.
 	logData, err := logOfferingCreatedDataArguments.Pack(expectedOffering.Supply,
@@ -874,7 +874,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	env.ethBack.OfferingIsActive = true
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
 	env.ethBack.OfferMaxSupply = expectedOffering.Supply
-	env.ethBack.OfferMinDeposit = data.MinDeposit(&expectedOffering)
+	env.ethBack.OfferMinDeposit = data.ComputeDeposit(&expectedOffering, fxt.Offering.MinUnits)
 
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)

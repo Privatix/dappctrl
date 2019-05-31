@@ -183,6 +183,8 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return nil
 	}
 
+	// TODO: Check for deposit autoincrease.
+
 	lag := int64(consumed) - (int64(ch.ReceiptBalance)-
 		int64(offer.SetupPrice))/int64(offer.UnitPrice)
 	if lag/int64(offer.BillingInterval) >= 1 {

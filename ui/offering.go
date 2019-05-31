@@ -58,10 +58,9 @@ type GetClientOfferingsFilterParamsResult struct {
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
 func (h *Handler) AcceptOffering(tkn string, account data.HexString,
-	offering string, deposit, gasPrice uint64) (*string, error) {
+	offering string, gasPrice uint64) (*string, error) {
 	logger := h.logger.Add("method", "AcceptOffering",
-		"account", account, "offering", offering,
-		"deposit", deposit, "gasPrice", gasPrice)
+		"account", account, "offering", offering, "gasPrice", gasPrice)
 
 	if !h.token.Check(tkn) {
 		logger.Warn("access denied")
@@ -79,14 +78,8 @@ func (h *Handler) AcceptOffering(tkn string, account data.HexString,
 		return nil, err
 	}
 
-	minDeposit := data.MinDeposit(offer)
-
-	if deposit == 0 {
-		deposit = minDeposit
-	} else if deposit < minDeposit {
-		logger.Error(ErrDepositTooSmall.Error())
-		return nil, ErrDepositTooSmall
-	}
+	depositSetting, _ := data.GetUint64Setting(h.db, data.SettingClientMinDeposit)
+	deposit := computeDeposit(offer, depositSetting)
 
 	if err := h.pingOffering(logger, offer); err != nil {
 		return nil, err
@@ -102,6 +95,20 @@ func (h *Handler) AcceptOffering(tkn string, account data.HexString,
 	}
 
 	return &rid, nil
+}
+
+func computeDeposit(offering *data.Offering, configuredMinDeposit uint64) uint64 {
+	minDep := data.ComputeDeposit(offering, offering.MinUnits)
+	if configuredMinDeposit > minDep {
+		minDep = configuredMinDeposit
+	}
+	if offering.MaxUnit != nil {
+		maxDep := data.ComputeDeposit(offering, *offering.MaxUnit)
+		if maxDep < minDep {
+			return maxDep
+		}
+	}
+	return minDep
 }
 
 // ChangeOfferingStatus initiates JobAgentPreOfferingMsgBCPublish,

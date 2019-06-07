@@ -130,7 +130,7 @@
         "StressJobs": 100
     },
     "Log": {
-        "Level": "info",
+        "Level": "debug",
         "LogPath": ""
     },
     "PayServer": {

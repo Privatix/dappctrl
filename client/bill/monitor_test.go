@@ -3,6 +3,7 @@
 package bill
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -35,12 +36,32 @@ var (
 	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
+	queue  job.Queue
 	pws    *pwStore
+
+	autoincreaseEnabled = &data.Setting{
+		Key:         data.SettingClientAutoincreaseDeposit,
+		Value:       "false",
+		Permissions: data.ReadWrite,
+		Name:        data.SettingClientAutoincreaseDeposit,
+	}
+	autoincreaseAt = &data.Setting{
+		Key:         data.SettingClientAutoincreaseDepositPercent,
+		Value:       "60",
+		Permissions: data.ReadWrite,
+		Name:        data.SettingClientAutoincreaseDepositPercent,
+	}
+	defaultGasPrice = &data.Setting{
+		Key:         data.SettingDefaultGasPrice,
+		Value:       "10",
+		Permissions: data.ReadWrite,
+		Name:        "default gas price",
+	}
 )
 
 func newTestMonitor(
 	processErrChan, postErrChan chan error) (*Monitor, chan error) {
-	mon := NewMonitor(conf.ClientBilling, logger, db, pr,
+	mon := NewMonitor(conf.ClientBilling, logger, db, pr, queue,
 		"test-psc-address", pws)
 	mon.processErrors = processErrChan
 	mon.postChequeErrors = postErrChan
@@ -98,6 +119,9 @@ func awaitingGoodPosting(wg *sync.WaitGroup, postErrors chan error) {
 func TestTerminateInactiveChannel(t *testing.T) {
 	fxt := newFixture(t, db)
 	defer fxt.Close()
+	// Insert settings for proper work of monitor
+	data.InsertToTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
+	defer data.DeleteFromTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
 
 	fxt.Channel.TotalDeposit = 10
 	oneSec := uint64(1)
@@ -109,21 +133,49 @@ func TestTerminateInactiveChannel(t *testing.T) {
 	data.SaveToTestDB(t, db, fxt.Channel, fxt.Offering, session)
 	defer data.DeleteFromTestDB(t, db, session)
 	time.Sleep(time.Second)
-	testTerminateJobCreated(t, fxt.Channel.ID)
+	runMonitorAndExpectJobs(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
 func TestTerminateCompletedChannel(t *testing.T) {
 	fxt := newFixture(t, db)
 	defer fxt.Close()
+	// Insert settings for proper work of monitor
+	data.InsertToTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
+	defer data.DeleteFromTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
 
 	fxt.Channel.TotalDeposit = 10
 	fxt.Channel.ReceiptBalance = 10
 	data.SaveToTestDB(t, db, fxt.Channel)
 
-	testTerminateJobCreated(t, fxt.Channel.ID)
+	runMonitorAndExpectJobs(t, fxt.Channel.ID, data.JobClientPreServiceTerminate)
 }
 
-func testTerminateJobCreated(t *testing.T, channelID string) {
+func TestAutoIncreaseDeposit(t *testing.T) {
+	fxt := newFixture(t, db)
+	defer fxt.Close()
+
+	autoincrease := *autoincreaseEnabled
+	autoincrease.Value = "true"
+	fxt.Channel.TotalDeposit = fxt.Offering.MinUnits*fxt.Offering.UnitPrice + fxt.Offering.SetupPrice
+	fxt.Channel.ReceiptBalance = uint64(float64(fxt.Channel.TotalDeposit) * 0.7)
+	s := data.NewTestSession(fxt.Channel.ID)
+	s.LastUsageTime = time.Now()
+	// 70% used, need to auto increase
+	s.UnitsUsed = uint64(float64(fxt.Offering.MinUnits) * 0.7)
+	data.InsertToTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, defaultGasPrice, s)
+	defer data.DeleteFromTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, defaultGasPrice, s)
+	data.SaveToTestDB(t, fxt.DB, fxt.Channel)
+
+	job := runMonitorAndExpectJobs(t, fxt.Channel.ID, data.JobClientPreChannelTopUp)
+	var jdata data.JobTopUpChannelData
+	json.Unmarshal(job.Data, &jdata)
+	// Increase deposit twice, eg deposit equals to channels current total deposit.
+	if got, exp := jdata.Deposit, fxt.Channel.TotalDeposit; got != exp {
+		t.Fatalf("deposit=%d, want %d", got, exp)
+	}
+}
+
+func runMonitorAndExpectJobs(t *testing.T, channelID, jType string) *data.Job {
 	processSig := make(chan error)
 
 	wg := sync.WaitGroup{}
@@ -153,9 +205,17 @@ func testTerminateJobCreated(t *testing.T, channelID string) {
 	}
 	defer data.DeleteFromTestDB(t, db, recs...)
 
-	if len(jobs) != 1 {
-		t.Fatalf("expected 1 job, but found %d", len(jobs))
+	var ret *data.Job
+	for _, v := range jobs {
+		if v.(*data.Job).Type == jType {
+			ret = v.(*data.Job)
+		}
 	}
+
+	if ret == nil {
+		t.Fatalf("job %s not created", jType)
+	}
+	return ret
 }
 
 func expectBalance(t *testing.T, fxt *data.TestFixture, expected uint64) {
@@ -169,6 +229,9 @@ func expectBalance(t *testing.T, fxt *data.TestFixture, expected uint64) {
 func TestPayment(t *testing.T) {
 	fxt := newFixture(t, db)
 	defer fxt.Close()
+	// Insert settings for proper work of monitor
+	data.InsertToTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
+	defer data.DeleteFromTestDB(t, fxt.DB, autoincreaseEnabled, autoincreaseAt)
 
 	fxt.Offering.UnitPrice = 1
 	fxt.Offering.SetupPrice = 2
@@ -249,7 +312,7 @@ func TestMain(m *testing.M) {
 	}
 
 	db = data.NewTestDB(conf.DB)
-	queue := job.NewQueue(conf.Job, logger, db, nil)
+	queue = job.NewQueue(conf.Job, logger, db, nil)
 	pr = proc.NewProcessor(conf.Proc, db, queue)
 	pws = &pwStore{}
 

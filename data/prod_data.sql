@@ -105,4 +105,27 @@ VALUES('psc.periods.remove',
        'Number of blocks to be mined from last offering update in blockchain to remove offering',
        'Remove period');
 
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('client.min.deposit',
+       '0',
+        2,
+        'This value will override min. deposit proposed by Agent' ||
+        ' in auto-increase mode, if greater than proposed. ',
+        'Min deposit');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('client.autoincrease.percent',
+       '60',
+        2,
+        'This setting specifies when to increase deposit. Increase deposit,' ||
+        ' when current usage is bigger or equal to this percent of total used units.',
+        'Top up after using %');
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES('client.autoincrease.deposit',
+       'true',
+        2,
+        'Enable or disable auto-increase mode. Only for client.',
+        'Client auto increase deposit');
+
 END TRANSACTION;

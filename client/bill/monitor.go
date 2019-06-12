@@ -227,7 +227,7 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 				GasPrice: gasPrice,
 				Deposit:  ch.TotalDeposit,
 			})
-		if err != nil {
+		if err != nil && err != job.ErrDuplicatedJob {
 			return err
 		}
 		m.lastAutoIncrease = time.Now()

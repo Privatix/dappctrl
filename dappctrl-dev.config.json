@@ -199,6 +199,7 @@
         "Addr": "0.0.0.0:9000",
         "TLS": null
     },
+    "Profiling": false,
     "Report": {
         "ExcludedPackages": [
             "github.com/privatix/dappctrl/tool/dappinst",

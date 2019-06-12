@@ -15,14 +15,14 @@ type logChannelTopUpInput struct {
 	clientAddr   common.Address
 	offeringHash common.Hash
 	openBlockNum uint32
-	addedDeposit *big.Int
+	addedDeposit uint64
 }
 
 type logChannelCreatedInput struct {
 	agentAddr    common.Address
 	clientAddr   common.Address
 	offeringHash common.Hash
-	deposit      *big.Int
+	deposit      uint64
 }
 
 type logOfferingCreatedInput struct {
@@ -37,7 +37,7 @@ type logOfferingCreatedInput struct {
 type logOfferingPopUpInput struct {
 	agentAddr     common.Address
 	offeringHash  common.Hash
-	minDeposit    *big.Int
+	minDeposit    uint64
 	currentSupply uint16
 	somcType      uint8
 	somcData      data.Base64String
@@ -56,7 +56,7 @@ func init() {
 		panic(err)
 	}
 
-	abiUint192, err := abi.NewType("uint192", nil)
+	abiUint64, err := abi.NewType("uint64", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -81,13 +81,13 @@ func init() {
 			Type: abiUint32,
 		},
 		{
-			Type: abiUint192,
+			Type: abiUint64,
 		},
 	}
 
 	logChannelCreatedDataArguments = abi.Arguments{
 		{
-			Type: abiUint192,
+			Type: abiUint64,
 		},
 	}
 
@@ -133,7 +133,7 @@ func extractLogChannelToppedUp(
 		return nil, ErrParseEthLog
 	}
 
-	addedDeposit, ok := dataUnpacked[1].(*big.Int)
+	addedDeposit, ok := dataUnpacked[1].(uint64)
 	if !ok {
 		return nil, ErrParseEthLog
 	}
@@ -167,7 +167,7 @@ func extractLogChannelCreated(logger log.Logger,
 		return nil, ErrWrongLogNonIndexedArgsNumber
 	}
 
-	deposit, ok := dataUnpacked[0].(*big.Int)
+	deposit, ok := dataUnpacked[0].(uint64)
 	if !ok {
 		return nil, ErrParseEthLog
 	}
@@ -266,7 +266,7 @@ func extractLogOfferingPopUp(logger log.Logger,
 
 	agentAddr := common.BytesToAddress(log.Topics[1].Bytes())
 	offeringHash := log.Topics[2]
-	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes())
+	minDeposit := new(big.Int).SetBytes(log.Topics[3].Bytes()).Uint64()
 
 	return &logOfferingPopUpInput{
 		agentAddr:     agentAddr,

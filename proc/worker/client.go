@@ -167,14 +167,14 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 
 	deposit := jdata.Deposit
 	if jdata.Deposit == 0 {
-		deposit = data.MinDeposit(offering)
+		deposit = data.ComputePrice(offering, offering.MinUnits)
 	}
 
 	if err := w.checkDeposit(logger, acc, offering, deposit); err != nil {
 		return err
 	}
 
-	if deposit < data.MinDeposit(offering) {
+	if deposit < data.ComputePrice(offering, offering.MinUnits) {
 		return ErrSmallDeposit
 	}
 
@@ -563,26 +563,6 @@ func (w *Worker) ClientPreServiceUnsuspend(job *data.Job) error {
 	ch.ServiceStatus = data.ServiceActivating
 	changedTime := time.Now()
 	ch.ServiceChangedTime = &changedTime
-	return w.saveRecord(logger, w.db.Querier, ch)
-}
-
-func (w *Worker) ClientCompleteServiceTransition(job *data.Job) error {
-	logger := w.logger.Add("method", "ClientCompleteServiceTransition",
-		"job", job)
-
-	ch, err := w.relatedChannel(
-		logger, job, data.JobClientCompleteServiceTransition)
-	if err != nil {
-		return err
-	}
-
-	logger = logger.Add("channel", ch)
-
-	err = w.unmarshalDataTo(logger, job.Data, &ch.ServiceStatus)
-	if err != nil {
-		return err
-	}
-
 	return w.saveRecord(logger, w.db.Querier, ch)
 }
 
@@ -992,20 +972,20 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 	hashHex := data.HexFromBytes(hash.Bytes())
 	offeringRawMsg, err := client.Offering(hashHex)
 	if err != nil {
 		// Ignoring errors if did not receive an offering from an agent.
 		logger.Add("offeringHash", hashHex).Warn(
-			"could not find offerings, error: " + err.Error())
-		return ErrFindOfferings
+			"could not fetch offerings, error: " + err.Error())
+		return ErrFetchOffering
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
 	if err != nil {
 		logger.Error(err.Error())
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
 		block, data.HexFromBytes(agentAddr.Bytes()),
@@ -1022,7 +1002,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 			logger.Warn(err.Error())
 			return nil
 		}
-		return ErrFindOfferings
+		return ErrFetchOffering
 	}
 
 	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
@@ -1032,7 +1012,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		return ErrInternal
 	}
 
-	if minDeposit != data.MinDeposit(offering) {
+	if minDeposit != data.ComputePrice(offering, offering.MinUnits) {
 		return ErrOfferingDeposit
 	}
 

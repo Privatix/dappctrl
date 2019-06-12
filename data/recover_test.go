@@ -34,12 +34,9 @@ func TestRecoverServiceStatuses(t *testing.T) {
 
 			ReloadFromTestDB(t, db, fxt.Channel)
 
-			same := fxt.Channel.ServiceStatus == v
-			susp := fxt.Channel.ServiceStatus == ServiceSuspended
-			if (fxt.Product.IsServer && !same) ||
-				(!fxt.Product.IsServer && !susp) {
-				t.Error("unexpected service status: ",
-					fxt.Channel.ServiceStatus)
+			if fxt.Channel.ServiceStatus != ServiceSuspended {
+				t.Errorf("ServiceStatus=%s, want %s", fxt.Channel.ServiceStatus,
+					ServiceSuspended)
 			}
 		}
 
@@ -51,12 +48,9 @@ func TestRecoverServiceStatuses(t *testing.T) {
 
 		ReloadFromTestDB(t, db, fxt.Channel)
 
-		same := fxt.Channel.ServiceStatus == ServiceTerminating
-		term := fxt.Channel.ServiceStatus == ServiceTerminated
-		if (fxt.Product.IsServer && !same) ||
-			(!fxt.Product.IsServer && !term) {
-			t.Error("unexpected service status: ",
-				fxt.Channel.ServiceStatus)
+		if fxt.Channel.ServiceStatus != ServiceTerminated {
+			t.Errorf("ServiceStatus=%s, want %s",
+				fxt.Channel.ServiceStatus, ServiceTerminated)
 		}
 
 		fxt.Product.IsServer = true

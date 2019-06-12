@@ -60,13 +60,14 @@ func NewMonitor(interval uint64, db *reform.DB,
 func (m *Monitor) Run() error {
 	m.logger.Info("Billing monitor started")
 
-	for {
+	tick := time.NewTicker(time.Duration(m.interval) * time.Millisecond)
+	defer tick.Stop()
+	for range tick.C {
 		if err := m.processRound(); err != nil {
 			return err
 		}
-
-		time.Sleep(time.Duration(m.interval) * time.Millisecond)
 	}
+	return nil
 }
 
 /* TODO: uncomment when timebased billing will be implemented

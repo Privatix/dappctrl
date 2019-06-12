@@ -38,8 +38,8 @@ func TestAgentAfterChannelCreate(t *testing.T) {
 	env.ethBack.SetTransaction(t, auth, nil)
 
 	// Create related eth log record.
-	var deposit int64 = 100
-	logData, err := logChannelCreatedDataArguments.Pack(big.NewInt(deposit))
+	deposit := data.ComputePrice(fixture.Offering, fixture.Offering.MinUnits)
+	logData, err := logChannelCreatedDataArguments.Pack(deposit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,8 +233,13 @@ func TestAgentPreServiceSuspend(t *testing.T) {
 	defer fixture.close()
 
 	runJob(t, env.worker.AgentPreServiceSuspend, fixture.job)
-
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceSuspended)
+
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, fixture.DB, fixture.Channel)
+
+	runJob(t, env.worker.AgentPreServiceSuspend, fixture.job)
+	testServiceStatusChanged(t, fixture.job, env, data.ServiceSuspending)
 
 	testCommonErrors(t, env.worker.AgentPreServiceSuspend, *fixture.job)
 }
@@ -252,7 +257,7 @@ func TestAgentPreServiceUnsuspend(t *testing.T) {
 
 	runJob(t, env.worker.AgentPreServiceUnsuspend, fixture.job)
 
-	testServiceStatusChanged(t, fixture.job, env, data.ServiceActive)
+	testServiceStatusChanged(t, fixture.job, env, data.ServiceActivating)
 
 	testCommonErrors(t, env.worker.AgentPreServiceUnsuspend, *fixture.job)
 }
@@ -271,6 +276,16 @@ func testAgentPreServiceTerminate(t *testing.T, receiptBalance uint64) {
 	runJob(t, env.worker.AgentPreServiceTerminate, fixture.job)
 
 	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminated)
+
+	if receiptBalance > 0 {
+		testCooperativeCloseCalled(t, env, fixture)
+	}
+
+	fixture.Channel.ServiceStatus = data.ServiceActive
+	data.SaveToTestDB(t, fixture.DB, fixture.Channel)
+
+	runJob(t, env.worker.AgentPreServiceTerminate, fixture.job)
+	testServiceStatusChanged(t, fixture.job, env, data.ServiceTerminating)
 
 	if receiptBalance > 0 {
 		testCooperativeCloseCalled(t, env, fixture)
@@ -380,7 +395,7 @@ func TestAgentPreOfferingMsgBCPublish(t *testing.T) {
 	fixture.Product.Country = &country
 	env.updateInTestDB(t, fixture.Product)
 
-	minDeposit := data.MinDeposit(fixture.Offering)
+	minDeposit := data.ComputePrice(fixture.Offering, fixture.Offering.MinUnits)
 
 	env.ethBack.BalancePSC = minDeposit*uint64(fixture.Offering.Supply) + 1
 	env.ethBack.BalanceEth = big.NewInt(99999)

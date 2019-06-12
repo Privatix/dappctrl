@@ -10,6 +10,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/util/log"
@@ -42,6 +43,7 @@ type Monitor struct {
 	logger log.Logger
 	db     *reform.DB
 	pr     *proc.Processor
+	queue  job.Queue
 	psc    string
 	pw     data.PWDGetter
 	post   postChequeFunc // Is overrided in unit-tests.
@@ -54,19 +56,30 @@ type Monitor struct {
 	// The channel is only needed for tests.
 	// It allows to get a result of a posting of cheques.
 	postChequeErrors chan error
+	// Auto increase deposit enabled/disabled. Read from settings table.
+	autoIncrease bool
+	// lockAutoIncreaseDuration is a duration before next auto increase.
+	lockAutoIncreaseDuration time.Duration
+	// lastAutoIncreaes is when last auto increase has been made.
+	lastAutoIncrease time.Time
+	// Auto increase deposit when used percent of all available traffic.
+	// Read from settings table.
+	autoIncreaseAtRate float64
 }
 
 // NewMonitor creates a new client billing monitor.
 func NewMonitor(conf *Config, logger log.Logger, db *reform.DB,
-	pr *proc.Processor, pscAddr string, pw data.PWDGetter) *Monitor {
+	pr *proc.Processor, queue job.Queue, pscAddr string, pw data.PWDGetter) *Monitor {
 	return &Monitor{
-		conf:   conf,
-		logger: logger.Add("type", "client/bill.Monitor"),
-		db:     db,
-		pr:     pr,
-		psc:    pscAddr,
-		pw:     pw,
-		post:   pay.PostCheque,
+		conf:                     conf,
+		logger:                   logger.Add("type", "client/bill.Monitor"),
+		db:                       db,
+		pr:                       pr,
+		queue:                    queue,
+		psc:                      pscAddr,
+		pw:                       pw,
+		post:                     pay.PostCheque,
+		lockAutoIncreaseDuration: 2 * time.Minute,
 	}
 }
 
@@ -102,8 +115,13 @@ L:
 			break L
 		}
 
+		if err := m.readSettings(); err != nil {
+			m.logger.Error(err.Error())
+			break L
+		}
+
 		for _, v := range chans {
-			err := m.processChannel(v.(*data.Channel))
+			err = m.processChannel(v.(*data.Channel))
 
 			select {
 			case m.processErrors <- err:
@@ -137,6 +155,19 @@ func (m *Monitor) Close() {
 		m.exit <- struct{}{}
 		<-m.exited
 	}
+}
+
+func (m *Monitor) readSettings() (err error) {
+	m.autoIncrease, err = data.ReadBoolSetting(m.db.Querier, data.SettingClientAutoincreaseDeposit)
+	if err != nil {
+		return err
+	}
+	percent, err := data.ReadUintSetting(m.db.Querier, data.SettingClientAutoincreaseDepositPercent)
+	if err != nil {
+		return err
+	}
+	m.autoIncreaseAtRate = float64(percent) / 100
+	return nil
 }
 
 func (m *Monitor) processChannel(ch *data.Channel) error {
@@ -176,11 +207,30 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return ErrGetConsumedUnits
 	}
 
-	amount := consumed*offer.UnitPrice + offer.SetupPrice
+	amount := data.ComputePrice(&offer, consumed)
 	if amount > ch.TotalDeposit {
 		amount = ch.TotalDeposit
 		go m.postCheque(ch.ID, amount)
 		return nil
+	}
+
+	// Check to auto increase deposit.
+	autoincreaseAfter := uint64(float64(ch.TotalDeposit) * m.autoIncreaseAtRate)
+	if m.autoIncrease && amount >= autoincreaseAfter && time.Now().Sub(m.lastAutoIncrease) > m.lockAutoIncreaseDuration {
+		gasPrice, err := data.ReadUint64Setting(m.db.Querier, data.SettingDefaultGasPrice)
+		if err != nil {
+			return err
+		}
+		err = job.AddWithData(m.queue, nil, data.JobClientPreChannelTopUp,
+			data.JobChannel, ch.ID, data.JobBillingChecker,
+			&data.JobTopUpChannelData{
+				GasPrice: gasPrice,
+				Deposit:  ch.TotalDeposit,
+			})
+		if err != nil && err != job.ErrDuplicatedJob {
+			return err
+		}
+		m.lastAutoIncrease = time.Now()
 	}
 
 	lag := int64(consumed) - (int64(ch.ReceiptBalance)-

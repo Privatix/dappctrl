@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
@@ -16,106 +15,143 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
-func subscribeConnChange(client *rpc.Client, product, password string,
-	ch chan *sess.ConnChangeResult) (*rpc.ClientSubscription, error) {
-	return client.Subscribe(context.Background(),
-		"sess", ch, "connChange", product, password)
-}
-
-func setChannelServiceStatus(t *testing.T,
-	fxt *data.TestFixture, status string) {
-	fxt.Channel.ServiceStatus = status
-	data.SaveToTestDB(t, db, fxt.Channel)
-}
-
-var connChangeEvents = []struct{ t, s string }{
-	{data.JobClientPreServiceSuspend, data.ServiceSuspended},
-	{data.JobClientPreServiceSuspend, data.ServiceSuspending},
-	{data.JobClientPreServiceUnsuspend, data.ServiceActive},
-	{data.JobClientPreServiceUnsuspend, data.ServiceActivating},
-	{data.JobClientPreServiceTerminate, data.ServiceTerminated},
-	{data.JobClientPreServiceTerminate, data.ServiceTerminating},
-}
-
-var connChangeStatuses = []string{
-	sess.ConnStop,
-	sess.ConnStop,
-	sess.ConnStart,
-	sess.ConnStart,
-	sess.ConnStop,
-	sess.ConnStop,
-}
-
 func TestConnChange(t *testing.T) {
-	fxt := newTestFixture(t)
-	defer fxt.Close()
+	t.Run("ErrAccessDenied", func(t *testing.T) {
+		fxt := newTestFixture(t)
+		defer fxt.Close()
 
-	setChannelServiceStatus(t, fxt, data.ServicePending)
+		ch := make(chan *sess.ConnChangeResult)
+		_, err := client.Subscribe(context.Background(),
+			"sess", ch, "connChange", "bad-product", data.TestPassword)
+		util.TestExpectResult(t, "ConnChange", sess.ErrAccessDenied, err)
 
-	unsubscribed := false
-	mtx := sync.Mutex{}
+		_, err = client.Subscribe(context.Background(),
+			"sess", ch, "connChange", fxt.Product.ID, "bad-password")
+		util.TestExpectResult(t, "ConnChange", sess.ErrAccessDenied, err)
+	})
 
-	j := &data.Job{
-		Type:      data.JobClientPreServiceUnsuspend,
-		RelatedID: fxt.Channel.ID,
-	}
+	t.Run("SubscribeAndUnsubscribe", func(t *testing.T) {
+		fxt := newTestFixture(t)
+		defer fxt.Close()
 
-	client, _ := newClient(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, jobTypes []string, subID string,
-		subFunc job.SubFunc) error {
-		mtx.Lock()
-		defer mtx.Unlock()
+		callMethods := make(chan int)
 
-		switch method {
-		case job.MockSubscribe:
+		client := newClient(job.QueueMock(func(method int, _ *reform.TX,
+			_ *data.Job, _ []string, _ string, _ job.SubFunc) error {
 			go func() {
-				time.Sleep(time.Millisecond)
-
-				subFunc(j, errors.New("some error")) // ignored
-
-				for _, cs := range connChangeEvents {
-					j.Type = cs.t
-					setChannelServiceStatus(t, fxt, cs.s)
-					subFunc(j, nil)
-				}
+				callMethods <- method
 			}()
-		case job.MockUnsubscribe:
-			unsubscribed = true
-		default:
-			t.Fatal("unexpected queue call")
+			return nil
+		}))
+
+		ch := make(chan *sess.ConnChangeResult)
+		sub, err := client.Subscribe(context.Background(), "sess", ch, "connChange",
+			fxt.Product.ID, data.TestPassword)
+		util.TestExpectResult(t, "ConnChange", nil, err)
+
+		time.Sleep(time.Millisecond)
+		sub.Unsubscribe()
+		var got1, got2 int
+
+		select {
+		case got1 = <-callMethods:
+		case <-time.After(time.Second):
+			t.Fatal("Timeout")
+		}
+		select {
+		case got2 = <-callMethods:
+		case <-time.After(time.Second):
+			t.Fatal("Timeout")
+		}
+		if got1 != job.MockSubscribe {
+			t.Fatalf("callMethod=%d, want=%d", got1, job.MockSubscribe)
+		}
+		if got2 != job.MockUnsubscribe {
+			t.Fatalf("callMethod=%d, want=%d", got2, job.MockUnsubscribe)
+		}
+	})
+
+	t.Run("Jobs", func(t *testing.T) {
+		fxt := newTestFixture(t)
+		defer fxt.Close()
+
+		fxt.Channel.ServiceStatus = data.ServicePending
+		data.SaveToTestDB(t, db, fxt.Channel)
+
+		mtx := sync.Mutex{}
+
+		j := &data.Job{
+			Type:      data.JobClientPreServiceUnsuspend,
+			RelatedID: fxt.Channel.ID,
 		}
 
-		return nil
-	}))
+		client := newClient(job.QueueMock(func(method int, tx *reform.TX,
+			j2 *data.Job, jobTypes []string, subID string,
+			subFunc job.SubFunc) error {
+			mtx.Lock()
+			defer mtx.Unlock()
 
-	ch := make(chan *sess.ConnChangeResult)
+			switch method {
+			case job.MockSubscribe:
+				go func() {
+					subFunc(j, errors.New("some error")) // ignored
 
-	_, err := subscribeConnChange(client,
-		"bad-channel", data.TestPassword, ch)
-	util.TestExpectResult(t, "ConnChange", sess.ErrAccessDenied, err)
+					for _, cs := range []struct{ t, s string }{
+						// Client jobs.
+						{data.JobClientEndpointGet, data.ServiceSuspended},      // ignored.
+						{data.JobClientEndpointGet, data.ServicePending},        // ignored.
+						{data.JobClientPreServiceUnsuspend, data.ServiceActive}, // ignored.
+						{data.JobClientPreServiceUnsuspend, data.ServiceActivating},
+						{data.JobClientPreServiceSuspend, data.ServiceSuspended}, // ignored.
+						{data.JobClientPreServiceSuspend, data.ServiceSuspending},
+						{data.JobClientPreServiceTerminate, data.ServiceTerminated}, // ignored.
+						{data.JobClientPreServiceTerminate, data.ServiceTerminating},
+						// Agent jobs.
+						{data.JobAgentPreEndpointMsgCreate, data.ServiceActive}, // ignored
+						{data.JobAgentPreEndpointMsgCreate, data.ServiceActivating},
+						{data.JobAgentPreEndpointMsgCreate, data.ServiceSuspended}, // ignored.
+						{data.JobAgentPreServiceUnsuspend, data.ServiceActive},     // ignored.
+						{data.JobAgentPreServiceUnsuspend, data.ServiceActivating},
+						{data.JobAgentPreServiceSuspend, data.ServiceSuspended}, // ignored.
+						{data.JobAgentPreServiceSuspend, data.ServiceSuspending},
+						{data.JobAgentPreServiceTerminate, data.ServiceTerminated}, // ignored.
+						{data.JobAgentPreServiceTerminate, data.ServiceTerminating},
+					} {
+						j.Type = cs.t
+						fxt.Channel.ServiceStatus = cs.s
+						data.SaveToTestDB(t, db, fxt.Channel)
+						subFunc(j, nil)
+					}
+				}()
+			case job.MockUnsubscribe:
+			default:
+				t.Fatal("unexpected queue call")
+			}
 
-	_, err = subscribeConnChange(client,
-		fxt.Product.ID, "bad-password", ch)
-	util.TestExpectResult(t, "ConnChange", sess.ErrAccessDenied, err)
+			return nil
+		}))
 
-	sub, err := subscribeConnChange(client,
-		fxt.Product.ID, data.TestPassword, ch)
-	util.TestExpectResult(t, "ConnChange", nil, err)
+		ch := make(chan *sess.ConnChangeResult)
+		sub, err := client.Subscribe(context.Background(),
+			"sess", ch, "connChange", fxt.Product.ID, data.TestPassword)
+		util.TestExpectResult(t, "ConnChange", nil, err)
+		defer sub.Unsubscribe()
 
-	for _, v := range connChangeStatuses {
-		ret := <-ch
-		if ret.Channel != fxt.Channel.ID || ret.Status != v {
-			t.Fatalf("wanted channel: %s status: %s, got channel: %s status: %s",
-				fxt.Channel.ID, v, ret.Channel, ret.Status)
+		for i, wantStatus := range []string{
+			// Client job statuses.
+			sess.ConnStart,
+			sess.ConnStop,
+			sess.ConnStop,
+			// Agent job statuses.
+			sess.ConnStart,
+			sess.ConnStart,
+			sess.ConnStop,
+			sess.ConnStop,
+		} {
+			ret := <-ch
+			if ret.Channel != fxt.Channel.ID || ret.Status != wantStatus {
+				t.Fatalf("ConnChange(#%d)=%s, want %s", i, ret.Status, wantStatus)
+			}
 		}
-	}
-
-	sub.Unsubscribe()
-	time.Sleep(time.Millisecond)
-
-	mtx.Lock()
-	defer mtx.Unlock()
-	if !unsubscribed {
-		t.Fatal("didn't unsubscribe")
-	}
+	})
 }

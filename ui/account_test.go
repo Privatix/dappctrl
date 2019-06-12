@@ -363,36 +363,48 @@ func TestUpdateAccount(t *testing.T) {
 		"wrong-token", fxt.Account.ID, "", false, false)
 	assertMatchErr(ui.ErrAccessDenied, res)
 
-	oldName := fxt.Account.Name
-	newName := util.NewUUID()[:30]
+	acc := data.NewTestAccount(data.TestPassword)
+	fxt.DB.Insert(acc)
+	defer fxt.DB.Delete(acc)
 
-	type testStruct struct {
+	for _, td := range []struct {
+		acc       *data.Account
 		name      string
-		expName   string
 		isDefault bool
 		inUse     bool
-	}
-
-	testData := []*testStruct{
-		{"", oldName, false, false},
-		{newName, newName, true, true},
-	}
-
-	for _, td := range testData {
+	}{
+		{
+			acc:       fxt.Account,
+			name:      "newname",
+			isDefault: true,
+			inUse:     true,
+		},
+		{
+			acc:       acc,
+			name:      acc.Name,
+			isDefault: true,
+			inUse:     true,
+		},
+	} {
 		res = handler.UpdateAccount(testToken.v,
-			fxt.Account.ID, td.name, td.isDefault, td.inUse)
+			td.acc.ID, td.name, td.isDefault, td.inUse)
 		assertMatchErr(nil, res)
 
-		db.Reload(fxt.Account)
+		db.Reload(td.acc)
 
-		if fxt.Account.Name != td.expName {
+		if td.acc.Name != td.name {
 			t.Fatalf("expected account name: %s, got: %s",
-				td.expName, fxt.Account.Name)
+				td.name, td.acc.Name)
 		}
 
-		if fxt.Account.InUse != td.inUse ||
-			fxt.Account.IsDefault != td.isDefault {
+		if td.acc.InUse != td.inUse ||
+			td.acc.IsDefault != td.isDefault {
 			t.Fatal("failed to update account status")
 		}
+	}
+
+	ret, _ := fxt.DB.SelectAllFrom(data.AccountTable, "WHERE is_default")
+	if len(ret) != 1 {
+		t.Fatal("only 1 account allowed to be default")
 	}
 }

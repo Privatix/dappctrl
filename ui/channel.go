@@ -3,12 +3,10 @@ package ui
 import (
 	"fmt"
 	"strings"
-
-	"github.com/AlekSi/pointer"
+	"time"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/job"
-	"github.com/privatix/dappctrl/util"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -44,7 +42,7 @@ type ClientChannelInfo struct {
 	Client       string         `json:"client"`
 	Offering     string         `json:"offering"`
 	OfferingHash data.HexString `json:"offeringHash"`
-	Deposit      uint64         `json:"deposit"`
+	TotalDeposit uint64         `json:"totalDeposit"`
 
 	ChStat chanStatusBlock `json:"channelStatus"`
 	Job    jobBlock        `json:"job"`
@@ -52,17 +50,17 @@ type ClientChannelInfo struct {
 }
 
 type chanStatusBlock struct {
-	ServiceStatus   string  `json:"serviceStatus"`
-	ChannelStatus   string  `json:"channelStatus"`
-	LastChanged     *string `json:"lastChanged"`
-	MaxInactiveTime uint64  `json:"maxInactiveTime"`
+	ServiceStatus   string     `json:"serviceStatus"`
+	ChannelStatus   string     `json:"channelStatus"`
+	LastChanged     *time.Time `json:"lastChanged"`
+	MaxInactiveTime uint64     `json:"maxInactiveTime"`
 }
 
 type jobBlock struct {
-	ID        string `json:"id"`
-	Type      string `json:"jobtype"`
-	Status    string `json:"status"`
-	CreatedAt string `json:"createdAt"`
+	ID        string    `json:"id"`
+	Type      string    `json:"jobtype"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // Usage accamulated usage from sessions.
@@ -361,8 +359,7 @@ func createChanStatusBlock(channel *data.Channel,
 	result.ChannelStatus = channel.ChannelStatus
 	result.ServiceStatus = channel.ServiceStatus
 	if channel.ServiceChangedTime != nil {
-		result.LastChanged = pointer.ToString(
-			util.SingleTimeFormat(*channel.ServiceChangedTime))
+		result.LastChanged = channel.ServiceChangedTime
 	}
 	result.MaxInactiveTime = offering.MaxInactiveTimeSec
 
@@ -373,7 +370,7 @@ func createJobBlock(job2 *data.Job) (result jobBlock) {
 	result.ID = job2.ID
 	result.Type = job2.Type
 	result.Status = job2.Status
-	result.CreatedAt = util.SingleTimeFormat(job2.CreatedAt)
+	result.CreatedAt = job2.CreatedAt
 
 	return result
 }
@@ -460,7 +457,7 @@ func (h *Handler) createClientChannelResult(logger log.Logger,
 
 	result.Offering = channel.Offering
 	result.OfferingHash = offering.Hash
-	result.Deposit = channel.TotalDeposit
+	result.TotalDeposit = channel.TotalDeposit
 	result.ChStat = createChanStatusBlock(channel, offering)
 	result.Job = createJobBlock(job2)
 	result.Usage = newUsage(channel, offering, sessions)

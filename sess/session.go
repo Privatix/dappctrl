@@ -11,6 +11,35 @@ import (
 	"github.com/privatix/dappctrl/util"
 )
 
+// ServiceReady signals that service is ready to recieve connections. For agents only.
+func (h *Handler) ServiceReady(product, productPassword, clientKey string) error {
+	logger := h.logger.Add("method", "ServiceReady", "product", product,
+		"clientKey", clientKey)
+
+	logger.Info("session service ready request")
+
+	prod, err := h.checkProductPassword(logger, product, productPassword)
+	if err != nil {
+		return err
+	}
+
+	ch, err := h.findClientChannel(logger, prod, clientKey, true)
+	if err != nil {
+		return err
+	}
+
+	if ch.ServiceStatus == data.ServiceActivating {
+		err := job.AddWithData(h.queue, nil,
+			data.JobCompleteServiceTransition,
+			data.JobChannel, ch.ID, data.JobSessionServer,
+			data.ServiceActive)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // AuthClient verifies password for a given client key.
 func (h *Handler) AuthClient(product, productPassword,
 	clientKey, clientPassword string) error {
@@ -27,6 +56,10 @@ func (h *Handler) AuthClient(product, productPassword,
 	ch, err := h.findClientChannel(logger, prod, clientKey, false)
 	if err != nil {
 		return err
+	}
+
+	if ch.ServiceStatus != data.ServiceActive && ch.ServiceStatus != data.ServiceActivating {
+		return ErrNonActiveChannel
 	}
 
 	err = data.ValidatePassword(
@@ -91,7 +124,7 @@ func (h *Handler) StartSession(product, productPassword,
 
 		if ch.ServiceStatus == data.ServiceActivating {
 			err := job.AddWithData(h.queue, tx,
-				data.JobClientCompleteServiceTransition,
+				data.JobCompleteServiceTransition,
 				data.JobChannel, ch.ID, data.JobSessionServer,
 				data.ServiceActive)
 			if err != nil && err != job.ErrDuplicatedJob {
@@ -109,18 +142,13 @@ func (h *Handler) StartSession(product, productPassword,
 	return &offer, nil
 }
 
-// UpdateSession updates and optionally stops the current client session.
+// UpdateSession updates current client session.
 func (h *Handler) UpdateSession(product, productPassword, clientKey string,
-	units uint64, stopSession bool) error {
+	units uint64) error {
 	logger := h.logger.Add("method", "UpdateSession", "product", product,
-		"clientKey", clientKey, "units", units,
-		"stopSession", stopSession)
+		"clientKey", clientKey, "units", units)
 
-	if stopSession {
-		logger.Info("session stop request")
-	} else {
-		logger.Info("session update request")
-	}
+	logger.Info("session update request")
 
 	prod, err := h.checkProductPassword(logger, product, productPassword)
 	if err != nil {
@@ -138,36 +166,8 @@ func (h *Handler) UpdateSession(product, productPassword, clientKey string,
 		return ErrNonActiveChannel
 	}
 
-	clientStop := !prod.IsServer && stopSession
-
-	if clientStop {
-		if ch.ServiceStatus == data.ServiceTerminated {
-			logger.Warn("already terminated channel")
-			return nil
-		}
-
-		status := data.ServiceSuspended
-		if ch.ServiceStatus == data.ServiceTerminating {
-			status = data.ServiceTerminated
-		}
-
-		err := job.AddWithData(h.queue, nil,
-			data.JobClientCompleteServiceTransition,
-			data.JobChannel, ch.ID, data.JobSessionServer,
-			status)
-		if err != nil && err != job.ErrDuplicatedJob {
-			logger.Error(err.Error())
-			return err
-		}
-	}
-
 	sess, err := h.findCurrentSession(logger, ch.ID)
 	if err != nil {
-		// Client adapter can signal failure immediately, when no
-		// session is yet created.
-		if err == ErrSessionNotFound && clientStop {
-			return nil
-		}
 		return err
 	}
 	logger = logger.Add("session", sess)
@@ -187,9 +187,6 @@ func (h *Handler) UpdateSession(product, productPassword, clientKey string,
 	}
 
 	sess.LastUsageTime = time.Now()
-	if stopSession {
-		sess.Stopped = pointer.ToTime(sess.LastUsageTime)
-	}
 
 	logger.Info("updating session")
 
@@ -199,4 +196,61 @@ func (h *Handler) UpdateSession(product, productPassword, clientKey string,
 	}
 
 	return nil
+}
+
+// StopSession stops current client session.
+func (h *Handler) StopSession(product, productPassword, clientKey string) error {
+	logger := h.logger.Add("method", "StopSession", "product", product,
+		"clientKey", clientKey)
+
+	logger.Info("session stop request")
+
+	prod, err := h.checkProductPassword(logger, product, productPassword)
+	if err != nil {
+		return err
+	}
+
+	ch, err := h.findClientChannel(logger, prod, clientKey, true)
+	if err != nil {
+		return err
+	}
+
+	if ch.ServiceStatus == data.ServiceTerminated {
+		logger.Warn("already terminated channel")
+		return nil
+	}
+
+	status := data.ServiceSuspended
+	if ch.ServiceStatus == data.ServiceTerminating {
+		status = data.ServiceTerminated
+	}
+
+	err = job.AddWithData(h.queue, nil,
+		data.JobCompleteServiceTransition,
+		data.JobChannel, ch.ID, data.JobSessionServer,
+		status)
+	if err != nil && err != job.ErrDuplicatedJob {
+		logger.Error(err.Error())
+		return err
+	}
+
+	sess, err := h.findCurrentSession(logger, ch.ID)
+	if err != nil {
+		logger.Warn("Session not found")
+		return nil
+	}
+	logger = logger.Add("session", sess)
+
+	sess.LastUsageTime = time.Now()
+	sess.Stopped = pointer.ToTime(sess.LastUsageTime)
+
+	logger.Info("stopping session")
+
+	if err := h.db.Save(sess); err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
+
 }

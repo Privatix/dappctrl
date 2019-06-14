@@ -23,9 +23,14 @@ echo
 go generate -x ${DAPPCTRL}/...
 
 GIT_COMMIT=$(git rev-list -1 HEAD | head -n 1)
-GIT_RELEASE=$(git tag -l --points-at HEAD | head -n 1)
-# if $GIT_RELEASE is zero:
-GIT_RELEASE=${GIT_RELEASE:-$(git rev-parse --abbrev-ref HEAD | grep -o "[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}")}
+
+if [ -z ${VERSION_TO_SET_IN_BUILDER} ]; then
+    GIT_RELEASE=$(git tag -l --points-at HEAD | head -n 1)
+    # if $GIT_RELEASE is zero:
+    GIT_RELEASE=${GIT_RELEASE:-$(git rev-parse --abbrev-ref HEAD | grep -o "[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}")}
+else
+    GIT_RELEASE=${VERSION_TO_SET_IN_BUILDER}
+fi
 
 echo
 echo GIT_COMMIT=${GIT_COMMIT}

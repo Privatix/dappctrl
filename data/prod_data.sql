@@ -155,27 +155,6 @@ END $$;
 
 DO $$
 DECLARE
-        cur_key varchar := 'system.version.db';
-BEGIN
-        IF NOT EXISTS 
-                (SELECT  1
-                        FROM    settings
-                        WHERE   key=cur_key)
-        THEN
-                INSERT INTO settings (key, value, permissions, description, name)
-                        VALUES (cur_key,
-                                '0.23.1',
-                                1,
-                                'Version of database.',
-                                'db version');
-        ELSE
-                UPDATE settings set value='0.23.1' WHERE key=cur_key;
-        END IF;
-END $$;
-
-
-DO $$
-DECLARE
         cur_key varchar := 'offering.autopopup';
 BEGIN
         IF NOT EXISTS 

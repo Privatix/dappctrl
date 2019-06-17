@@ -21,6 +21,8 @@ BEGIN
                         ' are considered non reliable. These last blocks' ||
                         ' will not be used to fetch events or transactions.',
                         'ethereum confirmation blocks');
+        ELSE
+                UPDATE settings set value='1' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -41,6 +43,8 @@ BEGIN
                         ' If eth.event.freshblocks is null or zero then all events' ||
                         ' will be downloaded.',
                         'last events blocks');
+        ELSE
+                UPDATE settings set value='11520' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -62,6 +66,8 @@ BEGIN
                         ' querying ethereum JSON RPC. If eth.event.blocklimit is null' ||
                         ' or zero then no pagination is used, which is not recommended.',
                         'maximum events blocks');
+        ELSE
+                UPDATE settings set value='500' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -80,6 +86,8 @@ BEGIN
                         2,
                         'Allow error reporting to send logs to Privatix.',
                         'error reporting');
+        ELSE
+                UPDATE settings set value='true' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -98,6 +106,8 @@ BEGIN
                         2,
                         'Default GAS price for transactions.',
                         'default gas price');
+        ELSE
+                UPDATE settings set value='20000000000' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -117,6 +127,8 @@ BEGIN
                         'We temporarily limit total token deposits in a channel to 300' ||
                         ' PRIX. This is just for the bug bounty release, as a safety measure.',
                         'maximum deposit');
+        ELSE
+                UPDATE settings set value='30000000000' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -134,7 +146,9 @@ BEGIN
                                 '0',
                                 1,
                                 'Last block number in blockchain stores last proccessed block.',
-                                'last processed block');        
+                                'last processed block');
+        ELSE
+                UPDATE settings set value='0' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -150,10 +164,12 @@ BEGIN
         THEN
                 INSERT INTO settings (key, value, permissions, description, name)
                         VALUES (cur_key,
-                                '0.19.0',
+                                '0.23.1',
                                 1,
                                 'Version of database.',
-                                'db version');        
+                                'db version');
+        ELSE
+                UPDATE settings set value='0.23.1' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -172,7 +188,9 @@ BEGIN
                                 'true',
                                 2,
                                 'Allow offerings to pop up automatically.',
-                                'offering autopopup');        
+                                'offering autopopup');
+        ELSE
+                UPDATE settings set value='true' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -191,7 +209,9 @@ BEGIN
                         '5000',
                         1,
                         'Number of blocks to be mined to finish uncooperative channel close',
-                        'Challenge period');        
+                        'Challenge period');
+        ELSE
+                UPDATE settings set value='5000' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -210,7 +230,9 @@ BEGIN
                         '500',
                         1,
                         'Number of blocks to be mined to repeatedly pop up an offering',
-                        'Popup period');        
+                        'Popup period');
+        ELSE
+                UPDATE settings set value='500' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -229,7 +251,9 @@ BEGIN
                         '100',
                         1,
                         'Number of blocks to be mined from last offering update in blockchain to remove offering',
-                        'Remove period');        
+                        'Remove period');
+        ELSE
+                UPDATE settings set value='100' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -249,7 +273,9 @@ BEGIN
                         2,
                         'This value will override min. deposit proposed by Agent' ||
                         ' in auto-increase mode, if greater than proposed. ',
-                        'Min deposit');   
+                        'Min deposit');
+        ELSE
+                UPDATE settings set value='0' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -268,7 +294,9 @@ BEGIN
                         2,
                         'This setting specifies when to increase deposit. Increase deposit,' ||
                         ' when current usage is bigger or equal to this percent of total used units.',
-                        'Top up after using %');  
+                        'Top up after using %');
+        ELSE
+                UPDATE settings set value='60' WHERE key=cur_key;
         END IF;
 END $$;
 
@@ -283,10 +311,12 @@ BEGIN
         THEN
                 INSERT INTO settings (key, value, permissions, description, name)
                 VALUES(cur_key,
-                'true',
+                        'true',
                         2,
                         'Enable or disable auto-increase mode. Only for client.',
                         'Client auto increase deposit');
+        ELSE
+                UPDATE settings set value='true' WHERE key=cur_key;
   
         END IF;
 END $$;

@@ -1,5 +1,42 @@
 DO $$
 DECLARE
+        cur_key varchar := 'system.gui';
+BEGIN
+        IF NOT EXISTS 
+                (SELECT  1
+                        FROM    settings
+                        WHERE   key=cur_key)
+        THEN
+                INSERT INTO settings (key, value, permissions, description, name)
+                VALUES (cur_key,
+                        '{}',
+                        0,
+                        '',
+                        'GUI settings');
+        END IF;
+END $$;
+
+-- TODO(furkhat) Remove updateDismissVersion when front-end migrates completely to use `system.gui`
+DO $$
+DECLARE
+        cur_key varchar := 'updateDismissVersion';
+BEGIN
+        IF NOT EXISTS 
+                (SELECT  1
+                        FROM    settings
+                        WHERE   key=cur_key)
+        THEN
+                INSERT INTO settings (key, value, permissions, description, name)
+                VALUES (cur_key,
+                        '',
+                        2,
+                        '',
+                        'Update dismiss version');
+        END IF;
+END $$;
+
+DO $$
+DECLARE
         cur_key varchar := 'eth.min.confirmations';
 BEGIN
         IF NOT EXISTS 

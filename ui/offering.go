@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -42,10 +43,16 @@ type GetAgentOfferingsResult struct {
 	TotalItems int             `json:"totalItems"`
 }
 
+// GetClientOfferingsResultItem is items of GetClientOfferingsResult.
+type GetClientOfferingsResultItem struct {
+	Offering data.Offering `json:"offering"`
+	Rating   uint64        `json:"rating"`
+}
+
 // GetClientOfferingsResult is result of GetClientOfferings method.
 type GetClientOfferingsResult struct {
-	Items      []data.Offering `json:"items"`
-	TotalItems int             `json:"totalItems"`
+	Items      []GetClientOfferingsResultItem `json:"items"`
+	TotalItems int                            `json:"totalItems"`
 }
 
 // GetClientOfferingsFilterParamsResult is result of
@@ -256,13 +263,25 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 		return nil, err
 	}
 
-	offerings := make([]data.Offering, len(result))
-
+	items := make([]GetClientOfferingsResultItem, len(result))
+	ratings := make(map[data.HexString]uint64)
 	for k, v := range result {
-		offerings[k] = *v.(*data.Offering)
+		items[k].Offering = *v.(*data.Offering)
+		if val, ok := ratings[items[k].Offering.Agent]; ok {
+			items[k].Rating = val
+		} else {
+			var rating data.Rating
+			if err := h.db.FindByPrimaryKeyTo(&rating, items[k].Offering.Agent); err != nil {
+				if err != sql.ErrNoRows {
+					logger.Error(err.Error())
+					return nil, ErrInternal
+				}
+			}
+			items[k].Rating = rating.Val
+		}
 	}
 
-	return &GetClientOfferingsResult{offerings, count}, nil
+	return &GetClientOfferingsResult{items, count}, nil
 }
 
 func (h *Handler) getAgentOfferingsConditions(

@@ -25,6 +25,7 @@ const (
 	SettingClientMinDeposit                 = "client.min.deposit"
 	SettingClientAutoincreaseDepositPercent = "client.autoincrease.percent"
 	SettingClientAutoincreaseDeposit        = "client.autoincrease.deposit"
+	SettingRatingRankingSteps               = "rating.ranking.steps"
 )
 
 // ReadSetting reads value of a given setting.

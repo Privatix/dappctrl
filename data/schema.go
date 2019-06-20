@@ -315,3 +315,27 @@ type LogEvent struct {
 	Context json.RawMessage `json:"context" reform:"context"`
 	Stack   *string         `json:"stack" reform:"stack"`
 }
+
+// Closing types. (Closings are used in rating calculation).
+const (
+	ClosingCoop   = "coop"
+	ClosingUncoop = "uncoop"
+)
+
+// Closing is a channels closings from blockchain. Records are used in rating calculation.
+//reform:closings
+type Closing struct {
+	ID      string    `reform:"id,pk" json:"id"`
+	Type    string    `reform:"type" json:"type"`
+	Agent   HexString `reform:"agent" json:"agent"`
+	Client  HexString `reform:"client" json:"client"`
+	Balance uint64    `reform:"balance" json:"balance"`
+	Block   uint32    `reform:"block" json:"block"`
+}
+
+// Rating is a rating of an account.
+//reform:ratings
+type Rating struct {
+	EthAddr HexString `reform:"eth_addr,pk" json:"eth_addr"`
+	Val     uint64    `reform:"val" json:"val"`
+}

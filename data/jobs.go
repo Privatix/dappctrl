@@ -44,6 +44,7 @@ const (
 	JobClientAfterOfferingMsgBCPublish      = "clientAfterOfferingMsgBCPublish"
 	JobClientAfterOfferingPopUp             = "clientAfterOfferingPopUp"
 	JobClientAfterOfferingDelete            = "clientAfterOfferingDelete"
+	JobClientRecordClosing                  = "clientRecordClosing"
 	JobAgentAfterChannelCreate              = "agentAfterChannelCreate"
 	JobAgentAfterChannelTopUp               = "agentAfterChannelTopUp"
 	JobAgentAfterUncooperativeCloseRequest  = "agentAfterUncooperativeCloseRequest"
@@ -109,4 +110,11 @@ type JobCreateChannelData struct {
 // JobEndpointCreateData is a data for client endpoint create job.
 type JobEndpointCreateData struct {
 	EndpointSealed []byte
+}
+
+// JobRecordClosingData is a data for client record closing job.
+type JobRecordClosingData struct {
+	Rec *Closing
+	// UpdateRating is whether to update rating or not.
+	UpdateRatings bool
 }

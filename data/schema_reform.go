@@ -1868,6 +1868,242 @@ var (
 	_ fmt.Stringer  = (*LogEvent)(nil)
 )
 
+type closingTableType struct {
+	s parse.StructInfo
+	z []interface{}
+}
+
+// Schema returns a schema name in SQL database ("").
+func (v *closingTableType) Schema() string {
+	return v.s.SQLSchema
+}
+
+// Name returns a view or table name in SQL database ("closings").
+func (v *closingTableType) Name() string {
+	return v.s.SQLName
+}
+
+// Columns returns a new slice of column names for that view or table in SQL database.
+func (v *closingTableType) Columns() []string {
+	return []string{"id", "type", "agent", "client", "balance", "block"}
+}
+
+// NewStruct makes a new struct for that view or table.
+func (v *closingTableType) NewStruct() reform.Struct {
+	return new(Closing)
+}
+
+// NewRecord makes a new record for that table.
+func (v *closingTableType) NewRecord() reform.Record {
+	return new(Closing)
+}
+
+// PKColumnIndex returns an index of primary key column for that table in SQL database.
+func (v *closingTableType) PKColumnIndex() uint {
+	return uint(v.s.PKFieldIndex)
+}
+
+// ClosingTable represents closings view or table in SQL database.
+var ClosingTable = &closingTableType{
+	s: parse.StructInfo{Type: "Closing", SQLSchema: "", SQLName: "closings", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Type", Type: "string", Column: "type"}, {Name: "Agent", Type: "HexString", Column: "agent"}, {Name: "Client", Type: "HexString", Column: "client"}, {Name: "Balance", Type: "uint64", Column: "balance"}, {Name: "Block", Type: "uint32", Column: "block"}}, PKFieldIndex: 0},
+	z: new(Closing).Values(),
+}
+
+// String returns a string representation of this struct or record.
+func (s Closing) String() string {
+	res := make([]string, 6)
+	res[0] = "ID: " + reform.Inspect(s.ID, true)
+	res[1] = "Type: " + reform.Inspect(s.Type, true)
+	res[2] = "Agent: " + reform.Inspect(s.Agent, true)
+	res[3] = "Client: " + reform.Inspect(s.Client, true)
+	res[4] = "Balance: " + reform.Inspect(s.Balance, true)
+	res[5] = "Block: " + reform.Inspect(s.Block, true)
+	return strings.Join(res, ", ")
+}
+
+// Values returns a slice of struct or record field values.
+// Returned interface{} values are never untyped nils.
+func (s *Closing) Values() []interface{} {
+	return []interface{}{
+		s.ID,
+		s.Type,
+		s.Agent,
+		s.Client,
+		s.Balance,
+		s.Block,
+	}
+}
+
+// Pointers returns a slice of pointers to struct or record fields.
+// Returned interface{} values are never untyped nils.
+func (s *Closing) Pointers() []interface{} {
+	return []interface{}{
+		&s.ID,
+		&s.Type,
+		&s.Agent,
+		&s.Client,
+		&s.Balance,
+		&s.Block,
+	}
+}
+
+// View returns View object for that struct.
+func (s *Closing) View() reform.View {
+	return ClosingTable
+}
+
+// Table returns Table object for that record.
+func (s *Closing) Table() reform.Table {
+	return ClosingTable
+}
+
+// PKValue returns a value of primary key for that record.
+// Returned interface{} value is never untyped nil.
+func (s *Closing) PKValue() interface{} {
+	return s.ID
+}
+
+// PKPointer returns a pointer to primary key field for that record.
+// Returned interface{} value is never untyped nil.
+func (s *Closing) PKPointer() interface{} {
+	return &s.ID
+}
+
+// HasPK returns true if record has non-zero primary key set, false otherwise.
+func (s *Closing) HasPK() bool {
+	return s.ID != ClosingTable.z[ClosingTable.s.PKFieldIndex]
+}
+
+// SetPK sets record primary key.
+func (s *Closing) SetPK(pk interface{}) {
+	if i64, ok := pk.(int64); ok {
+		s.ID = string(i64)
+	} else {
+		s.ID = pk.(string)
+	}
+}
+
+// check interfaces
+var (
+	_ reform.View   = ClosingTable
+	_ reform.Struct = (*Closing)(nil)
+	_ reform.Table  = ClosingTable
+	_ reform.Record = (*Closing)(nil)
+	_ fmt.Stringer  = (*Closing)(nil)
+)
+
+type ratingTableType struct {
+	s parse.StructInfo
+	z []interface{}
+}
+
+// Schema returns a schema name in SQL database ("").
+func (v *ratingTableType) Schema() string {
+	return v.s.SQLSchema
+}
+
+// Name returns a view or table name in SQL database ("ratings").
+func (v *ratingTableType) Name() string {
+	return v.s.SQLName
+}
+
+// Columns returns a new slice of column names for that view or table in SQL database.
+func (v *ratingTableType) Columns() []string {
+	return []string{"eth_addr", "val"}
+}
+
+// NewStruct makes a new struct for that view or table.
+func (v *ratingTableType) NewStruct() reform.Struct {
+	return new(Rating)
+}
+
+// NewRecord makes a new record for that table.
+func (v *ratingTableType) NewRecord() reform.Record {
+	return new(Rating)
+}
+
+// PKColumnIndex returns an index of primary key column for that table in SQL database.
+func (v *ratingTableType) PKColumnIndex() uint {
+	return uint(v.s.PKFieldIndex)
+}
+
+// RatingTable represents ratings view or table in SQL database.
+var RatingTable = &ratingTableType{
+	s: parse.StructInfo{Type: "Rating", SQLSchema: "", SQLName: "ratings", Fields: []parse.FieldInfo{{Name: "EthAddr", Type: "HexString", Column: "eth_addr"}, {Name: "Val", Type: "uint64", Column: "val"}}, PKFieldIndex: 0},
+	z: new(Rating).Values(),
+}
+
+// String returns a string representation of this struct or record.
+func (s Rating) String() string {
+	res := make([]string, 2)
+	res[0] = "EthAddr: " + reform.Inspect(s.EthAddr, true)
+	res[1] = "Val: " + reform.Inspect(s.Val, true)
+	return strings.Join(res, ", ")
+}
+
+// Values returns a slice of struct or record field values.
+// Returned interface{} values are never untyped nils.
+func (s *Rating) Values() []interface{} {
+	return []interface{}{
+		s.EthAddr,
+		s.Val,
+	}
+}
+
+// Pointers returns a slice of pointers to struct or record fields.
+// Returned interface{} values are never untyped nils.
+func (s *Rating) Pointers() []interface{} {
+	return []interface{}{
+		&s.EthAddr,
+		&s.Val,
+	}
+}
+
+// View returns View object for that struct.
+func (s *Rating) View() reform.View {
+	return RatingTable
+}
+
+// Table returns Table object for that record.
+func (s *Rating) Table() reform.Table {
+	return RatingTable
+}
+
+// PKValue returns a value of primary key for that record.
+// Returned interface{} value is never untyped nil.
+func (s *Rating) PKValue() interface{} {
+	return s.EthAddr
+}
+
+// PKPointer returns a pointer to primary key field for that record.
+// Returned interface{} value is never untyped nil.
+func (s *Rating) PKPointer() interface{} {
+	return &s.EthAddr
+}
+
+// HasPK returns true if record has non-zero primary key set, false otherwise.
+func (s *Rating) HasPK() bool {
+	return s.EthAddr != RatingTable.z[RatingTable.s.PKFieldIndex]
+}
+
+// SetPK sets record primary key.
+func (s *Rating) SetPK(pk interface{}) {
+	if i64, ok := pk.(int64); ok {
+		s.EthAddr = HexString(i64)
+	} else {
+		s.EthAddr = pk.(HexString)
+	}
+}
+
+// check interfaces
+var (
+	_ reform.View   = RatingTable
+	_ reform.Struct = (*Rating)(nil)
+	_ reform.Table  = RatingTable
+	_ reform.Record = (*Rating)(nil)
+	_ fmt.Stringer  = (*Rating)(nil)
+)
+
 func init() {
 	parse.AssertUpToDate(&AccountTable.s, new(Account))
 	parse.AssertUpToDate(&UserTable.s, new(User))
@@ -1883,4 +2119,6 @@ func init() {
 	parse.AssertUpToDate(&JobTable.s, new(Job))
 	parse.AssertUpToDate(&EthTxTable.s, new(EthTx))
 	parse.AssertUpToDate(&LogEventView.s, new(LogEvent))
+	parse.AssertUpToDate(&ClosingTable.s, new(Closing))
+	parse.AssertUpToDate(&RatingTable.s, new(Rating))
 }

@@ -875,7 +875,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 	env.ethBack.OfferCurrentSupply = expectedOffering.CurrentSupply
 	env.ethBack.OfferMaxSupply = expectedOffering.Supply
 	env.ethBack.OfferMinDeposit = data.ComputePrice(&expectedOffering, expectedOffering.MinUnits)
- 
+
 	// Create eth log records used by job.
 	agentAddr := data.TestToAddress(t, fxt.Account.EthAddr)
 	topics := data.LogTopics{
@@ -926,5 +926,95 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		expectedOffering.FreeUnits != created.FreeUnits ||
 		!bytes.Equal(expectedOffering.AdditionalParams, created.AdditionalParams) {
 		t.Fatal("wrong offering created")
+	}
+}
+
+func TestClientRecordClosing(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+
+	agentAddr := data.NewTestAccount(data.TestPassword).EthAddr
+	clientAddr := data.NewTestAccount(data.TestPassword).EthAddr
+
+	// Test rating recalculate not requested.
+	jdata := &data.JobRecordClosingData{
+		Rec: &data.Closing{
+			ID:      util.NewUUID(),
+			Type:    data.ClosingCoop,
+			Agent:   agentAddr,
+			Client:  clientAddr,
+			Balance: 100,
+			Block:   1,
+		},
+		UpdateRatings: false,
+	}
+	job := data.NewTestJob(data.JobClientRecordClosing, data.JobBCMonitor, data.JobChannel)
+	job.RelatedID = util.NewUUID()
+	env.insertToTestDB(t, job)
+	defer env.deleteFromTestDB(t, job)
+
+	setJobData(t, env.db, job, jdata)
+
+	runJob(t, env.worker.ClientRecordClosing, job)
+
+	if _, err := env.db.FindByPrimaryKeyFrom(data.ClosingTable, jdata.Rec.ID); err != nil {
+		t.Fatalf("failed to find closing in database: %v", err)
+	}
+	// clean up
+	rec := *jdata.Rec
+	defer env.deleteFromTestDB(t, &rec)
+
+	// Test rating recalculation requested.
+	jdata.UpdateRatings = true
+	job2 := data.NewTestJob(data.JobClientRecordClosing, data.JobBCMonitor, data.JobChannel)
+	job2.RelatedID = util.NewUUID()
+	env.insertToTestDB(t, job2)
+	defer env.deleteFromTestDB(t, job2)
+
+	// Insert one more closing of different type between same client and agent
+	// to include in rating.
+	jdata.Rec.ID = util.NewUUID()
+	jdata.Rec.Type = data.ClosingUncoop
+	setJobData(t, env.db, job2, jdata)
+
+	// Set test current block number.
+	env.ethBack.BlockNumber = new(big.Int).SetInt64(10)
+
+	// Set fresh blocks number.
+	// Set rating steps.
+	setting2 := &data.Setting{
+		Key:   data.SettingFreshBlocks,
+		Value: "100",
+		Name:  "Fresh blocks",
+	}
+	setting3 := &data.Setting{
+		Key:   data.SettingRatingRankingSteps,
+		Value: "30",
+		Name:  "Rating ranking steps",
+	}
+
+	env.insertToTestDB(t, setting2, setting3)
+	defer env.deleteFromTestDB(t, setting2, setting3)
+
+	runJob(t, env.worker.ClientRecordClosing, job2)
+	// clean up closings.
+	env.deleteFromTestDB(t, jdata.Rec)
+
+	// Test ratings.
+	ratings, err := env.db.SelectAllFrom(data.RatingTable, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ratings) != 2 {
+		t.Fatalf("want 2 ratings, got: %v", len(ratings))
+	}
+	for _, r := range ratings {
+		v := r.(*data.Rating)
+		if v.Val == 0 {
+			t.Fatalf("want non-zerro rating, got: %v", err)
+		}
+		if err := env.db.Delete(v); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

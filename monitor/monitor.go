@@ -31,6 +31,7 @@ type Config struct {
 	EthCallTimeout uint   // In milliseconds.
 	InitialBlocks  uint64 // In Ethereum blocks.
 	QueryPause     uint   // In milliseconds.
+	RateAfter      uint   // Number of ethereum channel close events to initiate rating calculation after.
 }
 
 // NewConfig creates a default blockchain monitor configuration.
@@ -39,6 +40,7 @@ func NewConfig() *Config {
 		EthCallTimeout: 60000,
 		InitialBlocks:  5760, // Is equivalent to 24 hours.
 		QueryPause:     6000,
+		RateAfter:      10,
 	}
 }
 
@@ -62,6 +64,9 @@ type Monitor struct {
 	queryPause          time.Duration
 	getFilterLogQueries queriesBuilderFunc
 	jobsProducers       JobsProducers
+
+	closingsCount uint // When equals to rateAfter, ratings should be recalculated.
+	rateAfter     uint
 }
 
 // NewMonitor creates new blockchain monitor.
@@ -91,6 +96,7 @@ func NewMonitor(conf *Config, c Client, db *reform.DB, l log.Logger, psc,
 		ptcABI:         ptcABI,
 		pscAddr:        psc,
 		queryPause:     queryPause,
+		rateAfter:      conf.RateAfter,
 	}
 
 	m.initLastProcessedBlock(role, conf.InitialBlocks)

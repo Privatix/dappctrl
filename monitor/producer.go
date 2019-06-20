@@ -132,6 +132,12 @@ func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog, producingJo
 		return nil, err
 	}
 
+	rateJob, err := m.rateJob(l, data.ClosingCoop)
+	if err != nil {
+		return nil, err
+	}
+	jobs = append(jobs, rateJob)
+
 	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
 	if err != nil {
 		return nil, err
@@ -156,8 +162,13 @@ func (m *Monitor) clientOnUnCooperativeChannelClose(l *data.JobEthLog, producing
 		return nil, err
 	}
 
-	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
+	rateJob, err := m.rateJob(l, data.ClosingCoop)
+	if err != nil {
+		return nil, err
+	}
+	jobs = append(jobs, rateJob)
 
+	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +332,51 @@ func (m *Monitor) produceCommon(l *data.JobEthLog, rid, rtype, jtype string) ([]
 			Type:        jtype,
 		},
 	}, nil
+}
+
+func (m *Monitor) rateJob(l *data.JobEthLog, closingType string) (data.Job, error) {
+	// Find cooperative closing channel block number.
+	inputs := m.pscABI.Events[logCooperativeChannelClose].Inputs
+	if closingType == data.ClosingUncoop {
+		inputs = m.pscABI.Events[logUnCooperativeChannelClose].Inputs
+	}
+	args, err := inputs.UnpackValues(l.Data)
+	if err != nil {
+		m.logger.Error(err.Error())
+		return data.Job{}, ErrInternal
+	}
+	jdata, err := json.Marshal(&data.JobRecordClosingData{
+		Rec: &data.Closing{
+			ID:      util.NewUUID(),
+			Type:    closingType,
+			Agent:   data.HexFromBytes(common.BytesToAddress(l.Topics[1].Bytes()).Bytes()),
+			Client:  data.HexFromBytes(common.BytesToAddress(l.Topics[2].Bytes()).Bytes()),
+			Balance: args[1].(uint64),
+			Block:   args[0].(uint32),
+		},
+		UpdateRatings: m.updateRating(),
+	})
+	if err != nil {
+		m.logger.Error(err.Error())
+		return data.Job{}, ErrInternal
+	}
+	return data.Job{
+		Data:        jdata,
+		RelatedID:   util.NewUUID(),
+		RelatedType: data.JobChannel,
+		Type:        data.JobClientRecordClosing,
+	}, nil
+}
+
+// updateRating called on channel closing event.
+// Returns true if monitor received rateAfter closings after last ratings calculation.
+func (m *Monitor) updateRating() bool {
+	m.closingsCount++
+	if m.closingsCount >= m.rateAfter {
+		m.closingsCount = 0
+		return true
+	}
+	return false
 }
 
 // getOpenBlockNumber extracts the Open_block_number field of a given

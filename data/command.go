@@ -21,7 +21,7 @@ type cmdFlag struct {
 // ExecuteCommand executes commands to manage database
 // db-create - command to create database
 // db-migrate - command to execute migration scripts
-// db-init-data - command to initialize database by default values
+// db-load-data - command to initialize database by default values
 // db-version - command to print the version of the database schema.
 func ExecuteCommand(args []string) error {
 	if len(args) == 0 {
@@ -42,9 +42,9 @@ func ExecuteCommand(args []string) error {
 			panic("failed to run migration: " + err.Error())
 		}
 		os.Exit(0)
-	case "db-init-data":
+	case "db-load-data":
 		f := readFlags(args)
-		if err := initData(f.connection); err != nil {
+		if err := loadProdData(f.connection); err != nil {
 			panic("failed to init database: " + err.Error())
 		}
 		os.Exit(0)
@@ -77,7 +77,7 @@ func readFlags(args []string) *cmdFlag {
 	}
 }
 
-func initData(connStr string) error {
+func loadProdData(connStr string) error {
 	db, err := NewDBFromConnStr(connStr)
 	if err != nil {
 		return err
@@ -89,15 +89,9 @@ func initData(connStr string) error {
 		return err
 	}
 
-	statements := strings.Split(string(file), ";")
 	return db.InTransaction(func(tx *reform.TX) error {
-		for _, query := range statements {
-			if strings.HasSuffix(strings.ToLower(query), "transaction") {
-				continue
-			}
-			if _, err = tx.Exec(query); err != nil {
-				return err
-			}
+		if _, err = tx.Exec(string(file)); err != nil {
+			return err
 		}
 		return nil
 	})

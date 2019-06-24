@@ -13,4 +13,4 @@ echo Connection string: "${connection_string}"
 
 dappctrl db-create -conn "${connection_string} dbname=postgres"
 dappctrl db-migrate -conn "${connection_string} dbname=dappctrl"
-dappctrl db-init-data -conn "${connection_string} dbname=dappctrl"
+dappctrl db-load-data -conn "${connection_string} dbname=dappctrl"

@@ -75,40 +75,26 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", {"isDefault": true, "name": "my_acc"}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAccounts", "params": ["qwert"], "id": 67}' http://localhost:8888/http
 
 // Result
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": [
-        {
-            "id":"3bc66565-9a8b-4b42-846d-0ae414065445",
-            "ethAddr":"9a343bb33373428dc72d4abfab4c4a3be3765bec",
-            "isDefault":false,
-            "inUse":false,
-            "name":"my_acc",
-            "ptcBalance":0,
-            "pscBalance":0,
-            "ethBalance":0,
-            "lastBalanceCheck":null
-        }
-    ]
-}
-```
-</details>
-
-<details><summary>Example 2</summary>
-    
-```js
-// Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", {"isDefault": true, "name": "my_acc"}], "id": 67}' http://localhost:8888/http
-
-// Result
-{
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": []
+    "result": 
+                [
+                       {
+                               "ethAddr": "9486205adc7147ae551804c97c5bbb723ec7b826", 
+                               "name": "main", 
+                               "inUse": true, 
+                               "ptcBalance": 1000000000, 
+                               "lastBalanceCheck": "2019-06-19T17:11:57.227578+03:00", 
+                               "ethBalance": 50000000000000000, 
+                               "pscBalance": 0, 
+                               "id": "eec83276-bc94-4dc4-b04f-cc5e5173a6fb", 
+                               "isDefault": true
+                       }
+                ]
 }
 ```
 </details>

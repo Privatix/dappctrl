@@ -38,10 +38,10 @@
     "Eth": {
         "CheckTimeout": 20000,
         "Contract": {
-            "PSCAddrHex": "0xf8177f8e242e48afc545a776f5c90ea9d7902839",
-            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
+            "PSCAddrHex": "0x0619ed1187ecad8d089269ce6c21ef12c8c0b72d",
+            "PTCAddrHex": "0x3adfc4999f77d04c8341bac5f3a76f58dff5b37a"
         },
-        "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
+        "GethURL": "https://mainnet.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
         "HTTPClient": {
             "DialTimeout": 10000,
             "IdleConnTimeout": 60000,

@@ -231,7 +231,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateAc
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateBalance", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"], "id": 67}' http://localhost:8888/http
 
 // Result
 {

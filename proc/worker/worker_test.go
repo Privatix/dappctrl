@@ -72,6 +72,8 @@ var (
 )
 
 func newWorkerTest(t *testing.T) *workerTest {
+	t.Helper()
+
 	jobQueue := job.NewQueue(conf.Job, logger, db, nil)
 
 	ethBack := eth.NewTestEthBackend(conf.pscAddr)
@@ -121,10 +123,12 @@ func TestMain(m *testing.M) {
 }
 
 func (e *workerTest) insertToTestDB(t *testing.T, recs ...reform.Struct) {
+	t.Helper()
 	data.InsertToTestDB(t, e.db, recs...)
 }
 
 func (e *workerTest) deleteFromTestDB(t *testing.T, recs ...reform.Record) {
+	t.Helper()
 	data.DeleteFromTestDB(t, e.db, recs...)
 }
 
@@ -232,6 +236,7 @@ func (f *workerTestFixture) close() {
 }
 
 func setJobData(t *testing.T, db *reform.DB, job *data.Job, d interface{}) {
+	t.Helper()
 	b, err := json.Marshal(d)
 	if err != nil {
 		t.Fatal(err)

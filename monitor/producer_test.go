@@ -221,6 +221,10 @@ func TestJobsProducers(t *testing.T) {
 					Type:        data.JobClientAfterUncooperativeClose,
 				},
 				{
+					RelatedType: data.JobChannel,
+					Type:        data.JobClientRecordClosing,
+				},
+				{
 					RelatedID:   fxt.Offering.ID,
 					RelatedType: data.JobOffering,
 					Type:        data.JobIncrementCurrentSupply,
@@ -249,6 +253,10 @@ func TestJobsProducers(t *testing.T) {
 					RelatedID:   fxt.Channel.ID,
 					RelatedType: data.JobChannel,
 					Type:        data.JobClientAfterCooperativeClose,
+				},
+				{
+					RelatedType: data.JobChannel,
+					Type:        data.JobClientRecordClosing,
 				},
 				{
 					RelatedID:   fxt.Offering.ID,
@@ -382,6 +390,10 @@ func TestJobsProducers(t *testing.T) {
 			},
 			ret: []data.Job{
 				{
+					RelatedType: data.JobChannel,
+					Type:        data.JobClientRecordClosing,
+				},
+				{
 					RelatedID:   producingJobs[0].RelatedID,
 					RelatedType: data.JobOffering,
 					Type:        data.JobIncrementCurrentSupply,
@@ -399,6 +411,10 @@ func TestJobsProducers(t *testing.T) {
 				Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
 			},
 			ret: []data.Job{
+				{
+					RelatedType: data.JobChannel,
+					Type:        data.JobClientRecordClosing,
+				},
 				{
 					RelatedID:   producingJobs[0].RelatedID,
 					RelatedType: data.JobOffering,
@@ -445,11 +461,16 @@ func TestJobsProducers(t *testing.T) {
 			offeringHash,
 		},
 		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
-	}, nil, nil)
+	}, nil, []data.Job{{
+		RelatedType: data.JobChannel,
+		Type:        data.JobClientRecordClosing,
+	}})
 }
 
 func testProducedJobs(t *testing.T, producers monitor.JobsProducers,
 	l *data.JobEthLog, alreadyProducedJobs, jobs []data.Job) {
+	t.Helper()
+
 	produced, err := producers[l.Topics[0]](l, alreadyProducedJobs)
 	util.TestExpectResult(t, "produceFunc", nil, err)
 	if len(jobs) != len(produced) {
@@ -457,10 +478,18 @@ func testProducedJobs(t *testing.T, producers monitor.JobsProducers,
 			len(produced))
 	}
 	for i, job := range produced {
+		if jobs[i].Type == data.JobClientRecordClosing {
+			if jobs[i].RelatedType != job.RelatedType ||
+				jobs[i].Type != job.Type {
+				t.Fatal("wrong job produced ", job)
+			}
+			continue
+		}
+
 		if (jobs[i].RelatedID != "" && jobs[i].RelatedID !=
 			job.RelatedID) || jobs[i].RelatedType !=
 			job.RelatedType || jobs[i].Type != job.Type {
-			t.Fatal("wrong job produced ", job)
+			t.Fatal("wrong job produced ", jobs[i].Type)
 		}
 		jData, _ := json.Marshal(&data.JobData{EthLog: l})
 		if !bytes.Equal(jData, job.Data) {

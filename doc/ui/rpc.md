@@ -75,40 +75,26 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generate
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", {"isDefault": true, "name": "my_acc"}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAccounts", "params": ["qwert"], "id": 67}' http://localhost:8888/http
 
 // Result
 {
     "id": 67,
     "jsonrpc": "2.0",
-    "result": [
-        {
-            "id":"3bc66565-9a8b-4b42-846d-0ae414065445",
-            "ethAddr":"9a343bb33373428dc72d4abfab4c4a3be3765bec",
-            "isDefault":false,
-            "inUse":false,
-            "name":"my_acc",
-            "ptcBalance":0,
-            "pscBalance":0,
-            "ethBalance":0,
-            "lastBalanceCheck":null
-        }
-    ]
-}
-```
-</details>
-
-<details><summary>Example 2</summary>
-    
-```js
-// Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", {"isDefault": true, "name": "my_acc"}], "id": 67}' http://localhost:8888/http
-
-// Result
-{
-    "id": 67,
-    "jsonrpc": "2.0",
-    "result": []
+    "result": 
+                [
+                       {
+                               "ethAddr": "9486205adc7147ae551804c97c5bbb723ec7b826", 
+                               "name": "main", 
+                               "inUse": true, 
+                               "ptcBalance": 1000000000, 
+                               "lastBalanceCheck": "2019-06-19T17:11:57.227578+03:00", 
+                               "ethBalance": 50000000000000000, 
+                               "pscBalance": 0, 
+                               "id": "eec83276-bc94-4dc4-b04f-cc5e5173a6fb", 
+                               "isDefault": true
+                       }
+                ]
 }
 ```
 </details>
@@ -245,7 +231,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateAc
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_generateAccount", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateBalance", "params": ["qwert", "e66d8abd-c5e4-4ced-b9c3-fc3d61a911d0"], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -1012,34 +998,37 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
     "result":{
         "items":[
             {
-                "id":"687f26ab-5c62-4b05-8225-12e102a99450",
-                "isLocal":false,
-                "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
-                "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
-                "hash":"                                            ",
-                "status":"empty",
-                "blockNumberUpdated":1,
-                "agent":"4638140465c0ee8fc796323971431c30250433b2",
-                "rawMsg":"",
-                "serviceName":"my service",
-                "description":"my service description",
-                "country":"KG",
-                "supply":3,
-                "currentSupply":3,
-                "unitName":"",
-                "unitType":"units",
-                "billingType":"postpaid",
-                "setupPrice":0,
-                "unitPrice":100000,
-                "minUnits":100,
-                "maxUnit":null,
-                "billingInterval":1800,
-                "maxBillingUnitLag":1800,
-                "maxSuspendTime":1800,
-                "maxInactiveTimeSec":null,
-                "freeUnits":0,
-                "additionalParams":{},
-                "autoPopUp":null
+                "offering": {
+                    "id":"687f26ab-5c62-4b05-8225-12e102a99450",
+                    "isLocal":false,
+                    "template":"efc61769-96c8-4c0d-b50a-e4d11fc30523",
+                    "product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532",
+                    "hash":"                                            ",
+                    "status":"empty",
+                    "blockNumberUpdated":1,
+                    "agent":"4638140465c0ee8fc796323971431c30250433b2",
+                    "rawMsg":"",
+                    "serviceName":"my service",
+                    "description":"my service description",
+                    "country":"KG",
+                    "supply":3,
+                    "currentSupply":3,
+                    "unitName":"",
+                    "unitType":"units",
+                    "billingType":"postpaid",
+                    "setupPrice":0,
+                    "unitPrice":100000,
+                    "minUnits":100,
+                    "maxUnit":null,
+                    "billingInterval":1800,
+                    "maxBillingUnitLag":1800,
+                    "maxSuspendTime":1800,
+                    "maxInactiveTimeSec":null,
+                    "freeUnits":0,
+                    "additionalParams":{},
+                    "autoPopUp":null
+                },
+                "rating": 123
             }
         ],
         "totalItems":10

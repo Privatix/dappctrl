@@ -1163,3 +1163,158 @@ func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 
 	return nil
 }
+
+// ClientRecordClosing records new closing and schedules rating recalculation if
+// specified.
+func (w *Worker) ClientRecordClosing(job *data.Job) error {
+	logger := w.logger.Add("method", "ClientRecordClosing")
+	var jdata data.JobRecordClosingData
+	if err := w.unmarshalDataTo(logger, job.Data, &jdata); err != nil {
+		return err
+	}
+
+	// Do not insert same closing twise.
+	if _, err := w.db.SelectOneFrom(
+		data.ClosingTable,
+		"WHERE agent=$1 AND client=$2 AND block=$3 AND type=$4",
+		jdata.Rec.Agent, jdata.Rec.Client, jdata.Rec.Block, jdata.Rec.Type); err != nil {
+		if err == sql.ErrNoRows {
+			if err := w.db.Insert(jdata.Rec); err != nil {
+				return err
+			}
+		} else if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+	}
+
+	if jdata.UpdateRatings {
+		return w.updateRatings(logger)
+	}
+
+	return nil
+}
+
+// See worker.updateRatings for usage.
+type closingEvent struct {
+	Agent  data.HexString `reform:"agent"`
+	Client data.HexString `reform:"client"`
+	Type   string         `reform:"type"`
+	Cost   uint64         `reform:"cost"`
+}
+
+func (w *Worker) updateRatings(logger log.Logger) error {
+	rankSteps, err := data.ReadUint64Setting(w.db.Querier, data.SettingRatingRankingSteps)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to read number of ranking steps: %v", err))
+		return ErrInternal
+	}
+
+	events, err := w.closingEvents(logger)
+	if err != nil {
+		return err
+	}
+
+	eventsByAddress := make(map[data.HexString][]closingEvent)
+	for _, event := range events {
+		eventsByAddress[event.Agent] = append(eventsByAddress[event.Agent], event)
+		eventsByAddress[event.Client] = append(eventsByAddress[event.Client], event)
+	}
+
+	rating := make(map[data.HexString]uint64)
+	for addr, events := range eventsByAddress {
+		// Addresses with only 1 event considered to be dangling and are excluded from the rating calculation.
+		if len(events) <= 1 {
+			continue
+		}
+		rating[addr] = getQualityRate(events)
+	}
+
+	from := rating
+	to := make(map[data.HexString]uint64)
+	for ; rankSteps > 0; rankSteps-- {
+		for addr, links := range eventsByAddress {
+			var addrRating uint64
+			for _, link := range links {
+				linkedTo := link.Agent
+				if addr == linkedTo {
+					linkedTo = link.Client
+				}
+				addrRating += from[linkedTo] / uint64(len(eventsByAddress[linkedTo]))
+			}
+			to[addr] = addrRating
+		}
+		rating = to
+		from, to = to, from
+	}
+
+	return w.db.InTransaction(func(tx *reform.TX) error {
+		if _, err := tx.Exec("DELETE FROM ratings"); err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
+		for addr, val := range rating {
+			_, err := tx.Exec(`INSERT INTO ratings(eth_addr, val)
+							VALUES ($1, $2)`, addr, val)
+			if err != nil {
+				logger.Error("could not save rating: " + err.Error())
+				return ErrInternal
+			}
+		}
+
+		return nil
+	})
+}
+
+func (w *Worker) closingEvents(logger log.Logger) ([]closingEvent, error) {
+	latestBlock, err := w.ethBack.LatestBlockNumber(context.Background())
+	if err != nil {
+		logger.Error("could not get latest block number: " + err.Error())
+		return nil, ErrInternal
+	}
+
+	freshNum, err := data.GetUint64Setting(w.db, data.SettingFreshBlocks)
+	if err != nil {
+		logger.Error(fmt.Sprintf("could not read `%s` setting: %v", data.SettingFreshBlocks, err))
+		return nil, ErrInternal
+	}
+
+	query := `SELECT agent, client, type, SUM(cost) as cost
+				FROM (SELECT agent, client, type, (balance * block / $1) as cost
+						FROM closings
+					   WHERE block >= $2) AS temp
+			   GROUP BY agent, client, type`
+	rows, err := w.db.Query(query, latestBlock.Int64(), latestBlock.Int64()-int64(freshNum))
+	if err != nil {
+		logger.Error("could not select closings: " + err.Error())
+		return nil, ErrInternal
+	}
+
+	events := make([]closingEvent, 0)
+	for rows.Next() {
+		var event closingEvent
+		if err := rows.Scan(&event.Agent, &event.Client, &event.Type, &event.Cost); err != nil {
+			logger.Error("failed to scan closing event: " + err.Error())
+			return nil, ErrInternal
+		}
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+func getQualityRate(events []closingEvent) uint64 {
+	var success, total float64
+	for _, event := range events {
+		total += float64(event.Cost)
+		if event.Type == data.ClosingCoop {
+			success += float64(event.Cost)
+		}
+	}
+	// Avoid devision by zerro.
+	if total == 0 {
+		return 0
+	}
+
+	return uint64(success / total * 10e9)
+}

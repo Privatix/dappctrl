@@ -36,7 +36,8 @@ func HexToBytes(s HexString) ([]byte, error) {
 
 // HexFromBytes returns the hex encoding of src.
 func HexFromBytes(src []byte) HexString {
-	return HexString(hex.EncodeToString(src))
+	s := hex.EncodeToString(src)
+	return HexString(s)
 }
 
 // ToBytes returns the bytes represented by the base64 string s.

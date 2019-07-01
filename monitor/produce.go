@@ -77,10 +77,10 @@ func (m *Monitor) queryLogsAndCreateJobs(
 
 			err = m.queue.Add(tx, &job)
 			if err != nil {
-				log := data.JobData{}
-				json.Unmarshal(job.Data, &log)
+				var jdata map[string]interface{}
+				json.Unmarshal(job.Data, &jdata)
 				logger.Add("job", job,
-					"jobEthLog", *log.EthLog).Error(err.Error())
+					"JobData", jdata).Error(err.Error())
 				return err
 			}
 		}

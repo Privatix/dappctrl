@@ -97,7 +97,7 @@ DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('offering.autopopup',
-        'true',
+        'false',
         2,
         'Allow offerings to pop up automatically.',
         'offering autopopup')

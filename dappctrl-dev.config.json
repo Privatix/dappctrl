@@ -185,7 +185,7 @@
         "Workers": 0
     },
     "Looper": {
-        "AutoOfferingPopUpTimeout": 3600000
+        "AutoOfferingPopUpTimeout": 172800000
     },
     "NAT": {
         "CheckTimeout": 1000,

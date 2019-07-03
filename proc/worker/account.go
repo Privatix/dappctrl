@@ -24,7 +24,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 
 	jobData, err := w.balanceData(logger, job)
 	if err != nil {
-		return fmt.Errorf("failed to parse job data: %v", err)
+		return err
 	}
 
 	addr, err := data.HexToAddress(acc.EthAddr)
@@ -33,24 +33,41 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return ErrParseEthAddr
 	}
 
+	ethBalance, err := w.ethBalance(logger, addr)
+	if err != nil {
+		return err
+	}
+
+	allowance, err := w.ethBack.PTCAllowance(&bind.CallOpts{}, addr, w.pscAddr)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrPTCRetrieveAllowance
+	}
+
+	if allowance >= jobData.Amount {
+		// Has enough. Skip increase approval and create add balance job.
+		err := w.addJobWithData(logger, nil, data.JobPreAccountAddBalance, job.RelatedType, job.RelatedID, jobData)
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrAddJob
+		}
+
+		return nil
+	}
+
+	// Not enough allowance, increasing approval.
 	amount, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPTCRetrieveBalance
 	}
 
-	if amount.Uint64() < uint64(jobData.Amount) {
+	if amount.Uint64() < jobData.Amount-allowance {
 		return ErrInsufficientPTCBalance
 	}
 
-	ethBalance, err := w.ethBalance(logger, addr)
-	if err != nil {
-		return err
-	}
-
-	wantedEthBalance := w.gasConf.PTC.Approve * jobData.GasPrice
-
-	if wantedEthBalance > ethBalance.Uint64() {
+	// Check can pay gas for both transactions in a flow (IncreaseApproval and AddBalanceERC20).
+	if wanted := w.gasConf.PTC.Approve*jobData.GasPrice + w.gasConf.PSC.AddBalanceERC20*jobData.GasPrice; wanted > ethBalance.Uint64() {
 		return ErrInsufficientEthBalance
 	}
 
@@ -63,7 +80,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 	auth.GasLimit = w.gasConf.PTC.Approve
 	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
 	tx, err := w.ethBack.PTCIncreaseApproval(auth,
-		w.pscAddr, new(big.Int).SetUint64(jobData.Amount))
+		w.pscAddr, new(big.Int).SetUint64(jobData.Amount-allowance))
 	if err != nil {
 		logger.Error(err.Error())
 		return ErrPTCIncreaseApproval
@@ -73,11 +90,11 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
-// PreAccountAddBalance adds balance to psc.
-func (w *Worker) PreAccountAddBalance(job *data.Job) error {
-	logger := w.logger.Add("method", "PreAccountAddBalance", "job", job)
+// AfterAccountAddBalanceApprove creates add balance job.
+func (w *Worker) AfterAccountAddBalanceApprove(job *data.Job) error {
+	logger := w.logger.Add("method", "AfterAccountAddBalanceApprove", "job", job)
 
-	acc, err := w.relatedAccount(logger, job, data.JobPreAccountAddBalance)
+	acc, err := w.relatedAccount(logger, job, data.JobAfterAccountAddBalanceApprove)
 	if err != nil {
 		return err
 	}
@@ -87,22 +104,8 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return err
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	auth := bind.NewKeyedTransactor(key)
-	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
-	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
-	tx, err := w.ethBack.PSCAddBalanceERC20(auth, uint64(jobData.Amount))
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrPSCAddBalance
-	}
-
-	return w.saveEthTX(logger, job, tx, "PSCAddBalanceERC20", job.RelatedType,
-		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
+	return w.addJobWithData(logger, nil, data.JobPreAccountAddBalance,
+		job.RelatedType, acc.ID, jobData)
 }
 
 func (w *Worker) approvedBalanceData(logger log.Logger,
@@ -127,6 +130,65 @@ func (w *Worker) approvedBalanceData(logger log.Logger,
 	}
 
 	return w.balanceData(logger, &approveJob)
+}
+
+// PreAccountAddBalance  adds balance to psc.
+func (w *Worker) PreAccountAddBalance(job *data.Job) error {
+	logger := w.logger.Add("method", "PreAccountAddBalance", "job", job)
+
+	acc, err := w.relatedAccount(logger, job, data.JobPreAccountAddBalance)
+	if err != nil {
+		return err
+	}
+
+	logger = logger.Add("account", acc)
+
+	jobData, err := w.balanceData(logger, job)
+	if err != nil {
+		return err
+	}
+
+	addr, err := data.HexToAddress(acc.EthAddr)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrParseEthAddr
+	}
+
+	amount, err := w.ethBack.PTCBalanceOf(&bind.CallOpts{}, addr)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrPTCRetrieveBalance
+	}
+
+	if jobData.Amount > amount.Uint64() {
+		return ErrInsufficientPTCBalance
+	}
+
+	ethBalance, err := w.ethBalance(logger, addr)
+	if err != nil {
+		return err
+	}
+
+	if wanted := w.gasConf.PSC.AddBalanceERC20 * jobData.GasPrice; wanted > ethBalance.Uint64() {
+		return ErrInsufficientEthBalance
+	}
+
+	key, err := w.key(logger, acc.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	auth := bind.NewKeyedTransactor(key)
+	auth.GasLimit = w.gasConf.PSC.AddBalanceERC20
+	auth.GasPrice = new(big.Int).SetUint64(jobData.GasPrice)
+	tx, err := w.ethBack.PSCAddBalanceERC20(auth, jobData.Amount)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrPSCAddBalance
+	}
+
+	return w.saveEthTX(logger, job, tx, "PSCAddBalanceERC20", job.RelatedType,
+		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }
 
 // AfterAccountAddBalance updates psc and ptc balance of an account.

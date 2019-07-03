@@ -8,16 +8,20 @@ require (
 	github.com/bugsnag/bugsnag-go v0.0.0-20181016233232-c0f14af66db6
 	github.com/bugsnag/panicwrap v1.2.0
 	github.com/deckarep/golang-set v1.7.1
+	github.com/denisenkom/go-mssqldb v0.0.0-20190515213511-eb9f6a1743f3 // indirect
+	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/ethereum/go-ethereum v1.8.27
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-stack/stack v1.8.0
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
 	github.com/google/uuid v1.1.0
+	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/huin/goupnp v1.0.0
 	github.com/jackpal/go-nat-pmp v1.0.1
 	github.com/jpillora/backoff v0.0.0-20170918002102-8eab2debe79d
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leekchan/timeutil v0.0.0-20150802142658-28917288c48d
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
@@ -31,14 +35,17 @@ require (
 	github.com/rs/cors v1.6.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/sethvargo/go-password v0.1.2
+	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/syndtr/goleveldb v0.0.0-20181128100959-b001fa50d6b2
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415
 	github.com/xeipuuv/gojsonschema v1.1.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20190123085648-057139ce5d2b
-	golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3
-	golang.org/x/text v0.3.0
+	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb // indirect
+	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/reform.v1 v1.3.3
+	syreclabs.com/go/faker v1.1.0 // indirect
 )

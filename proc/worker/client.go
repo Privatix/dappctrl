@@ -605,8 +605,8 @@ func (w *Worker) settle(ctx context.Context, logger log.Logger,
 	return tx, nil
 }
 
-// ClientPreUncooperativeClose waiting for until the challenge
-// period is over. Then deletes the channel and settles
+// ClientPreUncooperativeClose waits for the challenge
+// period then deletes the channel and settles
 // by transferring the balance to the Agent and the rest
 // of the deposit back to the Client.
 func (w *Worker) ClientPreUncooperativeClose(job *data.Job) error {

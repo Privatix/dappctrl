@@ -22,7 +22,7 @@ INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.min.confirmations',
         '1',
         2,
-        'have value (stored as string) that is null or integer and' ||
+        'Have value (stored as string) that is null or integer and' ||
         ' represents how many ethereum blocks should be mined after' ||
         ' block where transaction of interest exists. As there is non' ||
         ' zero probability of attack where some last blocks can be' ||
@@ -39,7 +39,7 @@ INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.freshblocks',
         '11520',
         2,
-        'defines number of latest ethereum blocks to retrieve.' ||
+        'Defines number of latest ethereum blocks to retrieve.' ||
         ' If eth.event.freshblocks is null or zero then all events' ||
         ' will be downloaded.',
         'last events blocks')
@@ -50,7 +50,7 @@ INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.blocklimit',
         '500',
         2,
-        'maximum number of ethereum blocks that is used to scan' ||
+        'Maximum number of ethereum blocks that is used to scan' ||
         ' for new events. It is used as pagination mechanism while' ||
         ' querying ethereum JSON RPC. If eth.event.blocklimit is null' ||
         ' or zero then no pagination is used, which is not recommended.',

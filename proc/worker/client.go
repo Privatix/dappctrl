@@ -1227,7 +1227,7 @@ func (w *Worker) updateRatings(logger log.Logger) error {
 		if len(events) <= 1 {
 			continue
 		}
-		rating[addr] = getQualityRate(events)
+		rating[addr] = getInitialRate(events)
 	}
 
 	from := rating
@@ -1303,18 +1303,20 @@ func (w *Worker) closingEvents(logger log.Logger) ([]closingEvent, error) {
 	return events, nil
 }
 
-func getQualityRate(events []closingEvent) uint64 {
-	var success, total float64
-	for _, event := range events {
-		total += float64(event.Cost)
-		if event.Type == data.ClosingCoop {
-			success += float64(event.Cost)
-		}
-	}
-	// Avoid devision by zerro.
-	if total == 0 {
+func getInitialRate(events []closingEvent) uint64 {
+	if len(events) == 0 {
 		return 0
 	}
 
-	return uint64(success / total * 10e9)
+	var amount float64
+	var nCoop float64
+	for _, event := range events {
+		amount += float64(event.Cost)
+		if event.Type == data.ClosingCoop {
+			nCoop++
+		}
+	}
+
+	// geometric_progression_sum * ratio_of_coops_over_uncoops
+	return uint64((2*amount - 2*amount/float64(uint(2)<<(uint(len(events))-1))) * nCoop / float64(len(events)))
 }

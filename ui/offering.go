@@ -61,6 +61,7 @@ type GetClientOfferingsFilterParamsResult struct {
 	Countries []string `json:"countries"`
 	MinPrice  uint64   `json:"minPrice"`
 	MaxPrice  uint64   `json:"maxPrice"`
+	MaxRating uint64   `json:"maxRating"`
 }
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
@@ -543,6 +544,16 @@ func (h *Handler) offeringsMinMaxPrice(
 	return min, max, nil
 }
 
+func (h *Handler) maxRating(logger log.Logger) (uint64, error) {
+	query := `SELECT COALESCE(MAX(val), 0) FROM ratings`
+	var ret uint64
+	if err := h.db.QueryRow(query).Scan(&ret); err != nil {
+		logger.Error(err.Error())
+		return 0, err
+	}
+	return ret, nil
+}
+
 // GetClientOfferingsFilterParams returns offerings filter parameters for client.
 func (h *Handler) GetClientOfferingsFilterParams(
 	tkn string) (*GetClientOfferingsFilterParamsResult, error) {
@@ -563,7 +574,12 @@ func (h *Handler) GetClientOfferingsFilterParams(
 		return nil, err
 	}
 
-	return &GetClientOfferingsFilterParamsResult{countries, min, max}, nil
+	maxRating, err := h.maxRating(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetClientOfferingsFilterParamsResult{countries, min, max, maxRating}, nil
 }
 
 // PingOfferings given offerings ids pings each of them and returns result of the test.

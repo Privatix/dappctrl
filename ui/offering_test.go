@@ -501,6 +501,14 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		defer data.DeleteFromTestDB(t, db, v)
 	}
 
+	var maxRating uint64 = 100
+	r := &data.Rating{
+		EthAddr: fxt.UserAcc.EthAddr,
+		Val:     maxRating,
+	}
+	data.InsertToTestDB(t, fxt.DB, r)
+	defer data.DeleteFromTestDB(t, fxt.DB, r)
+
 	_, err := handler.GetClientOfferingsFilterParams("wrong-token")
 	assertMatchErr(ui.ErrAccessDenied, err)
 
@@ -525,6 +533,10 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 
 	if res.MaxPrice != max {
 		t.Fatalf("wanted: %v, got: %v", max, res.MaxPrice)
+	}
+
+	if res.MaxRating != maxRating {
+		t.Fatalf("wanted max rating: %v, got: %v", maxRating, res.MaxRating)
 	}
 }
 

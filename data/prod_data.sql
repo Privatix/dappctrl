@@ -60,7 +60,7 @@ DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('error.sendremote',
-        'true',
+        'false',
         2,
         'Allow error reporting to send logs to Privatix.',
         'error reporting')

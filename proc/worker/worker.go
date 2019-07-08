@@ -24,21 +24,17 @@ type GasConf struct {
 		Approve uint64
 	}
 	PSC struct {
-		AddBalanceERC20                uint64
-		RegisterServiceOffering        uint64
-		CreateChannel                  uint64
-		CooperativeClose               uint64
-		ReturnBalanceERC20             uint64
-		SetNetworkFee                  uint64
-		UncooperativeClose             uint64
-		Settle                         uint64
-		TopUp                          uint64
-		GetChannelInfo                 uint64
-		PublishServiceOfferingEndpoint uint64
-		GetKey                         uint64
-		BalanceOf                      uint64
-		PopupServiceOffering           uint64
-		RemoveServiceOffering          uint64
+		AddBalanceERC20         uint64
+		RegisterServiceOffering uint64
+		CreateChannel           uint64
+		CooperativeClose        uint64
+		ReturnBalanceERC20      uint64
+		SetNetworkFee           uint64
+		UncooperativeClose      uint64
+		Settle                  uint64
+		TopUp                   uint64
+		PopupServiceOffering    uint64
+		RemoveServiceOffering   uint64
 	}
 }
 

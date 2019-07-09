@@ -57,20 +57,19 @@
     },
     "Gas": {
         "PSC": {
-            "AddBalanceERC20": 50818,
+            "AddBalanceERC20": 37905,
             "CooperativeClose": 99070,
             "CreateChannel": 75446,
             "PopupServiceOffering": 42579,
             "RegisterServiceOffering": 112941,
             "RemoveServiceOffering": 25841,
             "ReturnBalanceERC20": 48300,
-            "SetNetworkFee": 100000,
             "Settle": 54290,
             "TopUp": 45836,
             "UncooperativeClose": 72964
         },
         "PTC": {
-            "Approve": 37905
+            "Approve": 50818
         }
     },
     "Job": {

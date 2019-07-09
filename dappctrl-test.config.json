@@ -57,7 +57,7 @@
     },
     "Gas": {
         "PSC": {
-            "AddBalanceERC20": 100000,
+            "AddBalanceERC20": 97937,
             "CooperativeClose": 99070,
             "CreateChannel": 75446,
             "PopupServiceOffering": 42579,

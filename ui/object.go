@@ -78,7 +78,7 @@ func (h *Handler) GetObject(
 }
 
 func (h *Handler) insertObject(object reform.Struct) error {
-	logger := h.logger.Add("method", "insertObject", "object", object)
+	logger := h.logger.Add("method", "insertObject")
 
 	if err := h.db.Insert(object); err != nil {
 		logger.Error(err.Error())

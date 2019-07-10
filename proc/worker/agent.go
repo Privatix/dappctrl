@@ -44,7 +44,7 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("client", client)
+	logger = logger.Add("client", client.EthAddr)
 
 	tx, err := w.db.Begin()
 	if err != nil {
@@ -412,7 +412,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("client", client)
+	logger = logger.Add("client", client.EthAddr)
 
 	clientPub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
@@ -425,7 +425,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("agent", agent)
+	logger = logger.Add("agent", agent.EthAddr)
 
 	agentKey, err := w.key(logger, agent.PrivateKey)
 	if err != nil {

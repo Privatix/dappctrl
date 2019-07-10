@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/privatix/dappctrl/data"
 )
 

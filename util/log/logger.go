@@ -2,8 +2,6 @@ package log
 
 import (
 	"runtime/debug"
-
-	"github.com/privatix/dappctrl/data"
 )
 
 // Panic with this so multi logger can recover and complete all sub fatal calls.
@@ -96,14 +94,7 @@ func (l *LoggerBase) Add(vars ...interface{}) Logger {
 		if !ok {
 			panic("non-string variable name")
 		}
-		v := vars[i*2+1]
-		if acc, ok := v.(*data.Account); ok {
-			tmp = *acc
-			tmp.PrivateKey = ""
-			ctx[name] = &tmp
-		} else {
-			ctx[name] = v
-		}
+		ctx[name] = vars[i*2+1]
 	}
 
 	return &LoggerBase{conf: l.conf, log: l.log, ctx: ctx}

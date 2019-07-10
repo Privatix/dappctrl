@@ -20,7 +20,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("account", acc)
+	logger = logger.Add("account", acc.EthAddr)
 
 	jobData, err := w.balanceData(logger, job)
 	if err != nil {
@@ -141,7 +141,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("account", acc)
+	logger = logger.Add("account", acc.EthAddr)
 
 	jobData, err := w.balanceData(logger, job)
 	if err != nil {

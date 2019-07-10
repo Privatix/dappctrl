@@ -697,6 +697,7 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	expectedOffering.Status = data.OfferRegistered
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
+	expectedOffering.IPType = data.OfferingResidential
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)

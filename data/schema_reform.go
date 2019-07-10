@@ -541,7 +541,7 @@ func (v *offeringTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *offeringTableType) Columns() []string {
-	return []string{"id", "is_local", "tpl", "product", "hash", "status", "block_number_updated", "agent", "raw_msg", "service_name", "description", "country", "supply", "current_supply", "unit_name", "unit_type", "billing_type", "setup_price", "unit_price", "min_units", "max_unit", "billing_interval", "max_billing_unit_lag", "max_suspended_time", "max_inactive_time_sec", "free_units", "additional_params", "auto_pop_up", "somc_type", "somc_data", "somc_success_ping"}
+	return []string{"id", "is_local", "ip_type", "tpl", "product", "hash", "status", "block_number_updated", "agent", "raw_msg", "service_name", "description", "country", "supply", "current_supply", "unit_name", "unit_type", "billing_type", "setup_price", "unit_price", "min_units", "max_unit", "billing_interval", "max_billing_unit_lag", "max_suspended_time", "max_inactive_time_sec", "free_units", "additional_params", "auto_pop_up", "somc_type", "somc_data", "somc_success_ping"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -561,44 +561,45 @@ func (v *offeringTableType) PKColumnIndex() uint {
 
 // OfferingTable represents offerings view or table in SQL database.
 var OfferingTable = &offeringTableType{
-	s: parse.StructInfo{Type: "Offering", SQLSchema: "", SQLName: "offerings", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "IsLocal", Type: "bool", Column: "is_local"}, {Name: "Template", Type: "string", Column: "tpl"}, {Name: "Product", Type: "string", Column: "product"}, {Name: "Hash", Type: "HexString", Column: "hash"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "BlockNumberUpdated", Type: "uint64", Column: "block_number_updated"}, {Name: "Agent", Type: "HexString", Column: "agent"}, {Name: "RawMsg", Type: "Base64String", Column: "raw_msg"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "Description", Type: "*string", Column: "description"}, {Name: "Country", Type: "string", Column: "country"}, {Name: "Supply", Type: "uint16", Column: "supply"}, {Name: "CurrentSupply", Type: "uint16", Column: "current_supply"}, {Name: "UnitName", Type: "string", Column: "unit_name"}, {Name: "UnitType", Type: "string", Column: "unit_type"}, {Name: "BillingType", Type: "string", Column: "billing_type"}, {Name: "SetupPrice", Type: "uint64", Column: "setup_price"}, {Name: "UnitPrice", Type: "uint64", Column: "unit_price"}, {Name: "MinUnits", Type: "uint64", Column: "min_units"}, {Name: "MaxUnit", Type: "*uint64", Column: "max_unit"}, {Name: "BillingInterval", Type: "uint", Column: "billing_interval"}, {Name: "MaxBillingUnitLag", Type: "uint", Column: "max_billing_unit_lag"}, {Name: "MaxSuspendTime", Type: "uint", Column: "max_suspended_time"}, {Name: "MaxInactiveTimeSec", Type: "uint64", Column: "max_inactive_time_sec"}, {Name: "FreeUnits", Type: "uint8", Column: "free_units"}, {Name: "AdditionalParams", Type: "json.RawMessage", Column: "additional_params"}, {Name: "AutoPopUp", Type: "*bool", Column: "auto_pop_up"}, {Name: "SOMCType", Type: "uint8", Column: "somc_type"}, {Name: "SOMCData", Type: "Base64String", Column: "somc_data"}, {Name: "SOMCSuccessPing", Type: "*time.Time", Column: "somc_success_ping"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Offering", SQLSchema: "", SQLName: "offerings", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "IsLocal", Type: "bool", Column: "is_local"}, {Name: "IPType", Type: "string", Column: "ip_type"}, {Name: "Template", Type: "string", Column: "tpl"}, {Name: "Product", Type: "string", Column: "product"}, {Name: "Hash", Type: "HexString", Column: "hash"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "BlockNumberUpdated", Type: "uint64", Column: "block_number_updated"}, {Name: "Agent", Type: "HexString", Column: "agent"}, {Name: "RawMsg", Type: "Base64String", Column: "raw_msg"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "Description", Type: "*string", Column: "description"}, {Name: "Country", Type: "string", Column: "country"}, {Name: "Supply", Type: "uint16", Column: "supply"}, {Name: "CurrentSupply", Type: "uint16", Column: "current_supply"}, {Name: "UnitName", Type: "string", Column: "unit_name"}, {Name: "UnitType", Type: "string", Column: "unit_type"}, {Name: "BillingType", Type: "string", Column: "billing_type"}, {Name: "SetupPrice", Type: "uint64", Column: "setup_price"}, {Name: "UnitPrice", Type: "uint64", Column: "unit_price"}, {Name: "MinUnits", Type: "uint64", Column: "min_units"}, {Name: "MaxUnit", Type: "*uint64", Column: "max_unit"}, {Name: "BillingInterval", Type: "uint", Column: "billing_interval"}, {Name: "MaxBillingUnitLag", Type: "uint", Column: "max_billing_unit_lag"}, {Name: "MaxSuspendTime", Type: "uint", Column: "max_suspended_time"}, {Name: "MaxInactiveTimeSec", Type: "uint64", Column: "max_inactive_time_sec"}, {Name: "FreeUnits", Type: "uint8", Column: "free_units"}, {Name: "AdditionalParams", Type: "json.RawMessage", Column: "additional_params"}, {Name: "AutoPopUp", Type: "*bool", Column: "auto_pop_up"}, {Name: "SOMCType", Type: "uint8", Column: "somc_type"}, {Name: "SOMCData", Type: "Base64String", Column: "somc_data"}, {Name: "SOMCSuccessPing", Type: "*time.Time", Column: "somc_success_ping"}}, PKFieldIndex: 0},
 	z: new(Offering).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Offering) String() string {
-	res := make([]string, 31)
+	res := make([]string, 32)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "IsLocal: " + reform.Inspect(s.IsLocal, true)
-	res[2] = "Template: " + reform.Inspect(s.Template, true)
-	res[3] = "Product: " + reform.Inspect(s.Product, true)
-	res[4] = "Hash: " + reform.Inspect(s.Hash, true)
-	res[5] = "Status: " + reform.Inspect(s.Status, true)
-	res[6] = "BlockNumberUpdated: " + reform.Inspect(s.BlockNumberUpdated, true)
-	res[7] = "Agent: " + reform.Inspect(s.Agent, true)
-	res[8] = "RawMsg: " + reform.Inspect(s.RawMsg, true)
-	res[9] = "ServiceName: " + reform.Inspect(s.ServiceName, true)
-	res[10] = "Description: " + reform.Inspect(s.Description, true)
-	res[11] = "Country: " + reform.Inspect(s.Country, true)
-	res[12] = "Supply: " + reform.Inspect(s.Supply, true)
-	res[13] = "CurrentSupply: " + reform.Inspect(s.CurrentSupply, true)
-	res[14] = "UnitName: " + reform.Inspect(s.UnitName, true)
-	res[15] = "UnitType: " + reform.Inspect(s.UnitType, true)
-	res[16] = "BillingType: " + reform.Inspect(s.BillingType, true)
-	res[17] = "SetupPrice: " + reform.Inspect(s.SetupPrice, true)
-	res[18] = "UnitPrice: " + reform.Inspect(s.UnitPrice, true)
-	res[19] = "MinUnits: " + reform.Inspect(s.MinUnits, true)
-	res[20] = "MaxUnit: " + reform.Inspect(s.MaxUnit, true)
-	res[21] = "BillingInterval: " + reform.Inspect(s.BillingInterval, true)
-	res[22] = "MaxBillingUnitLag: " + reform.Inspect(s.MaxBillingUnitLag, true)
-	res[23] = "MaxSuspendTime: " + reform.Inspect(s.MaxSuspendTime, true)
-	res[24] = "MaxInactiveTimeSec: " + reform.Inspect(s.MaxInactiveTimeSec, true)
-	res[25] = "FreeUnits: " + reform.Inspect(s.FreeUnits, true)
-	res[26] = "AdditionalParams: " + reform.Inspect(s.AdditionalParams, true)
-	res[27] = "AutoPopUp: " + reform.Inspect(s.AutoPopUp, true)
-	res[28] = "SOMCType: " + reform.Inspect(s.SOMCType, true)
-	res[29] = "SOMCData: " + reform.Inspect(s.SOMCData, true)
-	res[30] = "SOMCSuccessPing: " + reform.Inspect(s.SOMCSuccessPing, true)
+	res[2] = "IPType: " + reform.Inspect(s.IPType, true)
+	res[3] = "Template: " + reform.Inspect(s.Template, true)
+	res[4] = "Product: " + reform.Inspect(s.Product, true)
+	res[5] = "Hash: " + reform.Inspect(s.Hash, true)
+	res[6] = "Status: " + reform.Inspect(s.Status, true)
+	res[7] = "BlockNumberUpdated: " + reform.Inspect(s.BlockNumberUpdated, true)
+	res[8] = "Agent: " + reform.Inspect(s.Agent, true)
+	res[9] = "RawMsg: " + reform.Inspect(s.RawMsg, true)
+	res[10] = "ServiceName: " + reform.Inspect(s.ServiceName, true)
+	res[11] = "Description: " + reform.Inspect(s.Description, true)
+	res[12] = "Country: " + reform.Inspect(s.Country, true)
+	res[13] = "Supply: " + reform.Inspect(s.Supply, true)
+	res[14] = "CurrentSupply: " + reform.Inspect(s.CurrentSupply, true)
+	res[15] = "UnitName: " + reform.Inspect(s.UnitName, true)
+	res[16] = "UnitType: " + reform.Inspect(s.UnitType, true)
+	res[17] = "BillingType: " + reform.Inspect(s.BillingType, true)
+	res[18] = "SetupPrice: " + reform.Inspect(s.SetupPrice, true)
+	res[19] = "UnitPrice: " + reform.Inspect(s.UnitPrice, true)
+	res[20] = "MinUnits: " + reform.Inspect(s.MinUnits, true)
+	res[21] = "MaxUnit: " + reform.Inspect(s.MaxUnit, true)
+	res[22] = "BillingInterval: " + reform.Inspect(s.BillingInterval, true)
+	res[23] = "MaxBillingUnitLag: " + reform.Inspect(s.MaxBillingUnitLag, true)
+	res[24] = "MaxSuspendTime: " + reform.Inspect(s.MaxSuspendTime, true)
+	res[25] = "MaxInactiveTimeSec: " + reform.Inspect(s.MaxInactiveTimeSec, true)
+	res[26] = "FreeUnits: " + reform.Inspect(s.FreeUnits, true)
+	res[27] = "AdditionalParams: " + reform.Inspect(s.AdditionalParams, true)
+	res[28] = "AutoPopUp: " + reform.Inspect(s.AutoPopUp, true)
+	res[29] = "SOMCType: " + reform.Inspect(s.SOMCType, true)
+	res[30] = "SOMCData: " + reform.Inspect(s.SOMCData, true)
+	res[31] = "SOMCSuccessPing: " + reform.Inspect(s.SOMCSuccessPing, true)
 	return strings.Join(res, ", ")
 }
 
@@ -608,6 +609,7 @@ func (s *Offering) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.IsLocal,
+		s.IPType,
 		s.Template,
 		s.Product,
 		s.Hash,
@@ -646,6 +648,7 @@ func (s *Offering) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.IsLocal,
+		&s.IPType,
 		&s.Template,
 		&s.Product,
 		&s.Hash,

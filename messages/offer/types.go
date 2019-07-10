@@ -8,6 +8,7 @@ type Message struct {
 	TemplateHash              data.HexString    `json:"templateHash"`
 	Country                   string            `json:"country"`
 	ServiceSupply             uint16            `json:"serviceSupply"`
+	IPType                    string            `json:"ipType"`
 	UnitName                  string            `json:"unitName"`
 	UnitType                  string            `json:"unitType"`
 	BillingType               string            `json:"billingType"`

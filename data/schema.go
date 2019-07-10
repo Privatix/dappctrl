@@ -106,11 +106,19 @@ const (
 	OfferingSOMCTor uint8 = 1 + iota
 )
 
+// Offering ip types.
+const (
+	OfferingResidential = "residential"
+	OfferingDatacenter  = "datacenter"
+	OfferingMobile      = "mobile"
+)
+
 // Offering is a service offering.
 //reform:offerings
 type Offering struct {
 	ID                 string          `json:"id" reform:"id,pk"`
 	IsLocal            bool            `json:"isLocal" reform:"is_local"`
+	IPType             string          `json:"ipType" reform:"ip_type"`
 	Template           string          `json:"template" reform:"tpl" validate:"required"`    // Offering's.
 	Product            string          `json:"product" reform:"product" validate:"required"` // Specific billing and actions.
 	Hash               HexString       `json:"hash" reform:"hash"`                           // Offering's hash.

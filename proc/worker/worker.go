@@ -29,7 +29,6 @@ type GasConf struct {
 		CreateChannel           uint64
 		CooperativeClose        uint64
 		ReturnBalanceERC20      uint64
-		SetNetworkFee           uint64
 		UncooperativeClose      uint64
 		Settle                  uint64
 		TopUp                   uint64

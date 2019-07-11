@@ -164,7 +164,7 @@ func (h *Handler) ChangeOfferingStatus(
 
 func (h *Handler) getClientOfferingsConditions(
 	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
-	country []string) (conditions string, arguments []interface{}) {
+	country, ipTypes []string) (conditions string, arguments []interface{}) {
 
 	count := 1
 
@@ -213,6 +213,19 @@ func (h *Handler) getClientOfferingsConditions(
 		}
 	}
 
+	if len(ipTypes) != 0 {
+		indexes := h.db.Placeholders(count, len(ipTypes))
+		count = count + len(ipTypes)
+
+		condition := fmt.Sprintf("ip_type IN (%s)",
+			strings.Join(indexes, ","))
+		conditions = join(conditions, condition)
+
+		for _, val := range ipTypes {
+			arguments = append(arguments, val)
+		}
+	}
+
 	var format string
 	if conditions != "" {
 		format = "WHERE %s AND %s"
@@ -227,7 +240,7 @@ func (h *Handler) getClientOfferingsConditions(
 // GetClientOfferings returns active offerings available for a client.
 func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	minUnitPrice, maxUnitPrice uint64, countries []string,
-	offset, limit uint) (*GetClientOfferingsResult, error) {
+	offset, limit uint, ipTypes []string) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
 		"maxUnitPrice", maxUnitPrice, "countries", countries, "offset", offset,
@@ -245,7 +258,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	}
 
 	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
-		maxUnitPrice, countries)
+		maxUnitPrice, countries, ipTypes)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)

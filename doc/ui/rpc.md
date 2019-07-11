@@ -984,6 +984,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 3. Minimum unit price (number)
 4. Maximum unit price (number)
 5. Country codes ISO 3166-1 alpha-2 (array of strings)
+6. IP types of offerings. Empty means all.
 
 *Result (array of `data.Offering` objects)*: offerings.
 
@@ -991,7 +992,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], 0, 1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], ["residential"]], "id": 67}' http://localhost:8888/http
 
 // Result
 {

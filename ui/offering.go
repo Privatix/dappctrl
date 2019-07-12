@@ -239,8 +239,8 @@ func (h *Handler) getClientOfferingsConditions(
 
 // GetClientOfferings returns active offerings available for a client.
 func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
-	minUnitPrice, maxUnitPrice uint64, countries []string,
-	offset, limit uint, ipTypes []string) (*GetClientOfferingsResult, error) {
+	minUnitPrice, maxUnitPrice uint64, countries, ipTypes []string,
+	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
 		"maxUnitPrice", maxUnitPrice, "countries", countries, "offset", offset,

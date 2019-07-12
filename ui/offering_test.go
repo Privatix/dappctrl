@@ -188,11 +188,11 @@ func TestGetClientOfferings(t *testing.T) {
 	highPrice := fxt.Offering.UnitPrice + 10
 
 	_, err := handler.GetClientOfferings(
-		"wrong-token", "", 0, 0, nil, 0, 0, []string{data.OfferingMobile})
+		"wrong-token", "", 0, 0, nil, nil, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = handler.GetClientOfferings(
-		testToken.v, "", highPrice, lowPrice, nil, 0, 0, []string{data.OfferingDatacenter})
+		testToken.v, "", highPrice, lowPrice, nil, nil, 0, 0)
 	assertErrEqual(ui.ErrBadUnitPriceRange, err)
 
 	testArgs := []testGetClientOfferingsArgs{
@@ -216,8 +216,8 @@ func TestGetClientOfferings(t *testing.T) {
 
 	for _, v := range testArgs {
 		res, err := handler.GetClientOfferings(testToken.v,
-			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country,
-			v.offset, v.limit, v.ipTypes)
+			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country, v.ipTypes,
+			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
 }

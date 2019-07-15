@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"encoding/json"
+	"io"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -81,6 +82,9 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 		for err, ok := <-sub.Err(); ok; {
 			if err != nil {
 				logger.Warn(err.Error())
+			}
+			if err == io.EOF {
+				break
 			}
 		}
 

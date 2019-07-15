@@ -44,7 +44,9 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("client", client.EthAddr)
+	if client != nil {
+		logger = logger.Add("client", client.EthAddr)
+	}
 
 	tx, err := w.db.Begin()
 	if err != nil {

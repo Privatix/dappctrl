@@ -123,6 +123,10 @@
                 "TryLimit": 10,
                 "TryPeriod": 60000
             },
+            "clientAfterOfferingPopUp": {
+                "TryLimit": 10,
+                "TryPeriod": 60000
+            },
             "clientEndpointGet": {
                 "TryLimit": 6,
                 "TryPeriod": 10000

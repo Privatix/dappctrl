@@ -5,13 +5,13 @@
     "BlockMonitor": {
         "EthCallTimeout": 60000,
         "InitialBlocks": 5760,
-        "QueryPause": 6000,
+        "QueryPause": 20000,
         "RateAfter": 1
     },
     "ClientMonitor": {
         "CollectPeriod": 1500,
         "RequestTLS": false,
-        "RequestTimeout": 2500
+        "RequestTimeout": 1500
     },
     "Country": {
         "Field": "country",

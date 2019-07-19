@@ -3,6 +3,8 @@ package ui
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -49,28 +51,35 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	}
 
 	sub := ntf.CreateSubscription()
+	sid := string(sub.ID)
+	cbLogger := logger.Add("method", "cb")
 	cb := func(job *data.Job, result error) {
 		obj, err := h.db.FindByPrimaryKeyFrom(table, job.RelatedID)
 		if err != nil {
-			logger.Error(err.Error())
+			cbLogger.Error(err.Error())
 		}
 
 		var odata json.RawMessage
 		if obj != nil {
 			odata, err = json.Marshal(obj)
 			if err != nil {
-				logger.Error(err.Error())
+				cbLogger.Error(err.Error())
 			}
 		}
 
 		err = ntf.Notify(sub.ID,
 			&ObjectChangeResult{odata, job, rpcsrv.ToError(result)})
 		if err != nil {
-			logger.Warn(err.Error())
+			cbLogger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
+			if err == io.EOF {
+				err = h.queue.Unsubscribe(objectIDs, sid)
+				if err != nil {
+					logger.Error(fmt.Sprintf("could not unsubscribe: %v", err))
+				}
+			}
 		}
 	}
 
-	sid := string(sub.ID)
 	err := h.queue.Subscribe(objectIDs, sid, cb)
 	if err != nil {
 		logger.Error(err.Error())
@@ -78,8 +87,10 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	}
 
 	go func() {
-		if err := <-sub.Err(); err != nil {
-			logger.Warn(err.Error())
+		for err, ok := <-sub.Err(); ok; {
+			if err != nil {
+				logger.Warn(err.Error())
+			}
 		}
 
 		err := h.queue.Unsubscribe(objectIDs, sid)

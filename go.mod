@@ -9,6 +9,7 @@ require (
 	github.com/bugsnag/bugsnag-go v0.0.0-20181016233232-c0f14af66db6
 	github.com/bugsnag/panicwrap v1.2.0
 	github.com/deckarep/golang-set v1.7.1
+	github.com/denisenkom/go-mssqldb v0.0.0-20190715232110-2b613d287457 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
 	github.com/ethereum/go-ethereum v1.9.0
@@ -57,12 +58,13 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415
 	github.com/xeipuuv/gojsonschema v1.1.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20190123085648-057139ce5d2b
-	golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3
+	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
 	golang.org/x/sys v0.0.0-20190710143415-6ec70d6a5542 // indirect
-	golang.org/x/text v0.3.0
+	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 	gopkg.in/reform.v1 v1.3.3
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
+	syreclabs.com/go/faker v1.1.0 // indirect
 )

@@ -52,30 +52,27 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 
 	sub := ntf.CreateSubscription()
 	sid := string(sub.ID)
-	cbLogger := logger.Add("method", "cb")
+	closech := make(chan struct{})
 	cb := func(job *data.Job, result error) {
 		obj, err := h.db.FindByPrimaryKeyFrom(table, job.RelatedID)
 		if err != nil {
-			cbLogger.Error(err.Error())
+			logger.Error(err.Error())
 		}
 
 		var odata json.RawMessage
 		if obj != nil {
 			odata, err = json.Marshal(obj)
 			if err != nil {
-				cbLogger.Error(err.Error())
+				logger.Error(err.Error())
 			}
 		}
 
 		err = ntf.Notify(sub.ID,
 			&ObjectChangeResult{odata, job, rpcsrv.ToError(result)})
 		if err != nil {
-			cbLogger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
+			logger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
 			if err == io.EOF {
-				err = h.queue.Unsubscribe(objectIDs, sid)
-				if err != nil {
-					logger.Error(fmt.Sprintf("could not unsubscribe: %v", err))
-				}
+				close(closech)
 			}
 		}
 	}
@@ -87,15 +84,17 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	}
 
 	go func() {
-		for err, ok := <-sub.Err(); ok; {
+		select {
+		case err := <-sub.Err():
 			if err != nil {
-				logger.Warn(err.Error())
+				logger.Warn(fmt.Sprintf("subscription error: %v", err))
 			}
+		case <-closech:
 		}
 
 		err := h.queue.Unsubscribe(objectIDs, sid)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Error(fmt.Sprintf("could not unsubscribe: %v", err))
 		}
 	}()
 

@@ -2,6 +2,8 @@ package sess
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	"github.com/ethereum/go-ethereum/rpc"
 
@@ -22,7 +24,7 @@ type ConnChangeResult struct {
 }
 
 func (h *Handler) handleConnChange(product string, logger log.Logger,
-	ntf *rpc.Notifier, sub *rpc.Subscription, job *data.Job) {
+	ntf *rpc.Notifier, sub *rpc.Subscription, job *data.Job, closeCh chan struct{}) {
 	var ch data.Channel
 	err := data.FindByPrimaryKeyTo(h.db.Querier, &ch, job.RelatedID)
 	if err != nil {
@@ -55,7 +57,10 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 
 	err = ntf.Notify(sub.ID, &ConnChangeResult{ch.ID, status})
 	if err != nil {
-		logger.Warn(err.Error())
+		logger.Warn(fmt.Sprintf("could not notify: %v", err))
+		if err == io.EOF {
+			close(closeCh)
+		}
 	}
 }
 
@@ -78,9 +83,10 @@ func (h *Handler) ConnChange(ctx context.Context,
 	}
 
 	sub := ntf.CreateSubscription()
+	closeCh := make(chan struct{})
 	cb := func(job *data.Job, result error) {
 		if result == nil {
-			h.handleConnChange(product, logger, ntf, sub, job)
+			h.handleConnChange(product, logger, ntf, sub, job, closeCh)
 		}
 	}
 	jobTypes := []string{
@@ -101,10 +107,12 @@ func (h *Handler) ConnChange(ctx context.Context,
 	}
 
 	go func() {
-		for err, ok := <-sub.Err(); ok; {
+		select {
+		case err := <-sub.Err():
 			if err != nil {
-				logger.Warn(err.Error())
+				logger.Warn(fmt.Sprintf("subscription error: %v", err))
 			}
+		case <-closeCh:
 		}
 
 		err := h.queue.Unsubscribe(jobTypes, sid)

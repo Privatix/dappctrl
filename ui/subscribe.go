@@ -71,7 +71,7 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 			&ObjectChangeResult{odata, job, rpcsrv.ToError(result)})
 		if err != nil {
 			logger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
-			if err == io.EOF {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				close(closech)
 			}
 		}

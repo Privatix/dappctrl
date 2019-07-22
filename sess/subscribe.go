@@ -58,7 +58,7 @@ func (h *Handler) handleConnChange(product string, logger log.Logger,
 	err = ntf.Notify(sub.ID, &ConnChangeResult{ch.ID, status})
 	if err != nil {
 		logger.Warn(fmt.Sprintf("could not notify: %v", err))
-		if err == io.EOF {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			close(closeCh)
 		}
 	}

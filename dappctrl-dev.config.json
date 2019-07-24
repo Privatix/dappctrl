@@ -68,7 +68,7 @@
             "CreateChannel": 75446,
             "PopupServiceOffering": 42579,
             "RegisterServiceOffering": 112941,
-            "RemoveServiceOffering": 28190,
+            "RemoveServiceOffering": 39935,
             "ReturnBalanceERC20": 52691,
             "Settle": 54290,
             "TopUp": 45836,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -71,9 +70,7 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 			&ObjectChangeResult{odata, job, rpcsrv.ToError(result)})
 		if err != nil {
 			logger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				close(closech)
-			}
+			close(closech)
 		}
 	}
 

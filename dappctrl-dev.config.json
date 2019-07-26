@@ -4,7 +4,7 @@
     },
     "BlockMonitor": {
         "EthCallTimeout": 60000,
-        "InitialBlocks": 5760,
+        "InitialBlocks": 11520,
         "QueryPause": 20000,
         "RateAfter": 1
     },

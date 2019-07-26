@@ -947,7 +947,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 			logOfferingPopUp.offeringHash, logOfferingPopUp.currentSupply)
 	}
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrInternal
 	}
 
@@ -971,7 +971,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		return nil
 	}
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrFetchOffering
 	}
 	hashHex := data.HexFromBytes(hash.Bytes())
@@ -984,7 +984,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrFetchOffering
 	}
 	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
@@ -1042,7 +1042,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	_, _, _, _, _, active, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hashBytes)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrInternal
 	}
 
@@ -1062,7 +1062,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrInternal
 	}
 
@@ -1084,7 +1084,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	if err := w.db.SelectOneTo(
 		product, "WHERE offer_tpl_id = $1 AND NOT is_server",
 		template.ID); err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrProductNotFound
 	}
 

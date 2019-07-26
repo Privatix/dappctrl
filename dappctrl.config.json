@@ -83,102 +83,134 @@
         "CollectPeriod": 1000,
         "TryLimit": 3,
         "TryPeriod": 60000,
+        "Duplicated": false,
+        "FirstStartDelay": 0,
         "Types": {
             "accountUpdateBalances": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "afterAccountAddBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "afterAccountReturnBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentAfterOfferingPopUp": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentPreOfferingPopUp": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "agentPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientAfterChannelCreate": {
                 "FirstStartDelay": 3000,
                 "TryLimit": 10,
-                "TryPeriod": 30000
+                "TryPeriod": 30000,
+                "Duplicated": false
             },
             "clientAfterOfferingMsgBCPublish": {
                 "TryLimit": 10,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
             },
             "clientAfterOfferingPopUp": {
                 "TryLimit": 10,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
             },
             "clientEndpointGet": {
                 "TryLimit": 6,
-                "TryPeriod": 10000
+                "TryPeriod": 10000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
             },
             "clientPreChannelCreate": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "clientPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientPreUncooperativeClose": {
-                "FirstStartDelay": 75000000,
+                "FirstStartDelay": 300000,
                 "TryLimit": 200,
-                "TryPeriod": 180000
+                "TryPeriod": 180000,
+                "Duplicated": false
             },
             "completeServiceTransition": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "decrementCurrentSupply": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "incrementCurrentSupply": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountAddBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountReturnBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             }
         },
         "WorkerBufLen": 10,

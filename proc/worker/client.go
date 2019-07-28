@@ -1008,7 +1008,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hash)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrInternal
 	}
 
@@ -1130,6 +1130,10 @@ func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
 func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
 	offering, err := w.relatedOffering(logger, job, data.JobDecrementCurrentSupply)
+	if err == ErrOfferingNotFound {
+		logger.Warn("offering not found, skipping job.")
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -1150,6 +1154,10 @@ func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
 	offering, err := w.relatedOffering(logger, job,
 		data.JobIncrementCurrentSupply)
+	if err == ErrOfferingNotFound {
+		logger.Warn("offering not found, skipping job.")
+		return nil
+	}
 	if err != nil {
 		return err
 	}

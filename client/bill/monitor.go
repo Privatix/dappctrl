@@ -1,6 +1,7 @@
 package bill
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"sync"
 	"time"
@@ -33,8 +34,8 @@ func NewConfig() *Config {
 	}
 }
 
-type postChequeFunc func(db *reform.DB, channel string,
-	pscAddr data.HexString, pass string, amount uint64,
+type postChequeFunc func(db *reform.DB, channel *data.Channel,
+	pscAddr data.HexString, key *ecdsa.PrivateKey, amount uint64,
 	tls bool, timeout uint, pr *proc.Processor) error
 
 // Monitor is a client billing monitor.
@@ -279,8 +280,8 @@ func (m *Monitor) maxInactiveTimeReached(
 	return qty > 0 && inactiveSeconds > offer.MaxInactiveTimeSec, nil
 }
 
-func (m *Monitor) postCheque(ch string, amount uint64) {
-	logger := m.logger.Add("method", "posting cheque", "channel", ch,
+func (m *Monitor) postCheque(channelID string, amount uint64) {
+	logger := m.logger.Add("method", "posting cheque", "channel", channelID,
 		"amount", amount)
 
 	handleErr := func(err error) {
@@ -290,8 +291,28 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 		}
 	}
 
+	var channel data.Channel
+	if err := m.db.FindByPrimaryKeyTo(&channel, channelID); err != nil {
+		logger.Error(err.Error())
+		go handleErr(err)
+		return
+	}
+
+	var client data.Account
+	if err := m.db.FindOneTo(&client, "eth_addr", channel.Client); err != nil {
+		logger.Error(err.Error())
+		go handleErr(err)
+		return
+	}
+
 	pscHex := data.HexFromBytes(common.HexToAddress(m.psc).Bytes())
-	err := m.post(m.db, ch, pscHex, m.pw.Get(), amount,
+	key, err := m.pw.GetKey(&client)
+	if err != nil {
+		logger.Error(err.Error())
+		go handleErr(err)
+		return
+	}
+	err = m.post(m.db, &channel, pscHex, key, amount,
 		m.conf.RequestTLS, m.conf.RequestTimeout, m.pr)
 	if err != nil {
 		if err2, ok := err.(*srv.Error); ok {
@@ -312,7 +333,7 @@ func (m *Monitor) postCheque(ch string, amount uint64) {
 	res, err := m.db.Exec(`
 		UPDATE channels
 		   SET receipt_balance = $1
-		 WHERE id = $2 AND receipt_balance < $1`, amount, ch)
+		 WHERE id = $2 AND receipt_balance < $1`, amount, channelID)
 	if err != nil {
 		logger.Error(err.Error())
 		go handleErr(err)

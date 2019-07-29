@@ -78,14 +78,14 @@ func newWorkerTest(t *testing.T) *workerTest {
 
 	ethBack := eth.NewTestEthBackend(conf.pscAddr)
 
-	pwdStorage := new(data.PWDStorage)
+	pwdStorage := data.NewPWDStorage(data.TestToPrivateKey)
 	pwdStorage.Set(data.TestPassword)
 
 	testClient = somc.NewTestClient()
 
 	worker, err := NewWorker(logger, db, ethBack, conf.Gas, conf.pscAddr,
-		conf.PayServer.Addr, pwdStorage, conf.Country, data.TestToPrivateKey,
-		conf.EptMsg, "testhostname", somc.NewTestClientBuilder(testClient))
+		conf.PayServer.Addr, pwdStorage, conf.Country, conf.EptMsg,
+		"testhostname", somc.NewTestClientBuilder(testClient))
 	if err != nil {
 		panic(err)
 	}
@@ -220,8 +220,7 @@ func (e *workerTest) setOfferingHash(t *testing.T, fixture *workerTestFixture) {
 		fixture.Offering)
 	msgBytes, _ := json.Marshal(msg)
 
-	agentKey, _ := e.worker.decryptKeyFunc(fixture.Account.PrivateKey,
-		data.TestPassword)
+	agentKey, _ := e.worker.pwdGetter.GetKey(fixture.Account)
 
 	packed, _ := messages.PackWithSignature(msgBytes, agentKey)
 

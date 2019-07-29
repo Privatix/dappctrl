@@ -397,7 +397,7 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 		return handleErr(err)
 	}
 
-	agentKey, err := h.decryptKeyFunc(agent.PrivateKey, h.pwdStorage.Get())
+	agentKey, err := h.pwdStorage.GetKey(agent)
 	if err != nil {
 		return handleErr(err)
 	}

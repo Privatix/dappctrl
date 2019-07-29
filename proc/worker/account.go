@@ -71,7 +71,7 @@ func (w *Worker) PreAccountAddBalanceApprove(job *data.Job) error {
 		return ErrInsufficientEthBalance
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (w *Worker) PreAccountAddBalance(job *data.Job) error {
 		return ErrInsufficientEthBalance
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 		return err
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}

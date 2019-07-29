@@ -1,6 +1,7 @@
 package pay
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,32 +15,23 @@ import (
 	"github.com/privatix/dappctrl/util/srv"
 )
 
-func newPayload(db *reform.DB, channel string, pscAddr data.HexString,
-	pass string, amount uint64) (*paymentPayload, error) {
-	var ch data.Channel
-	if err := db.FindByPrimaryKeyTo(&ch, channel); err != nil {
-		return nil, err
-	}
+func newPayload(db *reform.DB, channel *data.Channel, pscAddr data.HexString,
+	key *ecdsa.PrivateKey, amount uint64) (*paymentPayload, error) {
 
 	var offer data.Offering
-	if err := db.FindByPrimaryKeyTo(&offer, ch.Offering); err != nil {
-		return nil, err
-	}
-
-	var client data.Account
-	if err := db.FindOneTo(&client, "eth_addr", ch.Client); err != nil {
+	if err := db.FindByPrimaryKeyTo(&offer, channel.Offering); err != nil {
 		return nil, err
 	}
 
 	pld := &paymentPayload{
-		AgentAddress:    ch.Agent,
-		OpenBlockNumber: ch.Block,
+		AgentAddress:    channel.Agent,
+		OpenBlockNumber: channel.Block,
 		OfferingHash:    offer.Hash,
 		Balance:         amount,
 		ContractAddress: pscAddr,
 	}
 
-	agentAddr, err := data.HexToAddress(ch.Agent)
+	agentAddr, err := data.HexToAddress(channel.Agent)
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +46,8 @@ func newPayload(db *reform.DB, channel string, pscAddr data.HexString,
 		return nil, err
 	}
 
-	hash := eth.BalanceProofHash(pscAddrParsed, agentAddr, ch.Block, offerHash,
+	hash := eth.BalanceProofHash(pscAddrParsed, agentAddr, channel.Block, offerHash,
 		uint64(amount))
-
-	key, err := data.ToPrivateKey(client.PrivateKey, pass)
-	if err != nil {
-		return nil, err
-	}
 
 	sig, err := crypto.Sign(hash, key)
 	if err != nil {
@@ -72,7 +59,7 @@ func newPayload(db *reform.DB, channel string, pscAddr data.HexString,
 	return pld, nil
 }
 
-func postPayload(db *reform.DB, channel string, pld *paymentPayload,
+func postPayload(db *reform.DB, channel *data.Channel, pld *paymentPayload,
 	tls bool, timeout uint, pr *proc.Processor,
 	sendFunc func(req *http.Request) (*srv.Response, error)) error {
 	pldArgs, err := json.Marshal(pld)
@@ -81,7 +68,7 @@ func postPayload(db *reform.DB, channel string, pld *paymentPayload,
 	}
 
 	var endp data.Endpoint
-	if err := db.FindOneTo(&endp, "channel", channel); err != nil {
+	if err := db.FindOneTo(&endp, "channel", channel.ID); err != nil {
 		return err
 	}
 
@@ -102,7 +89,7 @@ func postPayload(db *reform.DB, channel string, pld *paymentPayload,
 	if resp.Error != nil {
 		if resp.Error.Code == errCodeTerminatedService {
 			_, err = pr.TerminateChannel(
-				channel, data.JobBillingChecker, false)
+				channel.ID, data.JobBillingChecker, false)
 			if err != nil {
 				return err
 			}
@@ -114,10 +101,10 @@ func postPayload(db *reform.DB, channel string, pld *paymentPayload,
 }
 
 // PostCheque sends a payment cheque to a payment server.
-func PostCheque(db *reform.DB, channel string,
-	pscAddr data.HexString, pass string, amount uint64,
+func PostCheque(db *reform.DB, channel *data.Channel,
+	pscAddr data.HexString, key *ecdsa.PrivateKey, amount uint64,
 	tls bool, timeout uint, pr *proc.Processor) error {
-	pld, err := newPayload(db, channel, pscAddr, pass, amount)
+	pld, err := newPayload(db, channel, pscAddr, key, amount)
 	if err != nil {
 		return err
 	}

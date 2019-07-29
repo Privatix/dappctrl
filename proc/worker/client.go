@@ -97,7 +97,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 		return ErrParseEthAddr
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -328,7 +328,7 @@ func (w *Worker) extractEndpointMessage(logger log.Logger,
 		return nil, ErrInternal
 	}
 
-	key, err := w.key(logger, client.PrivateKey)
+	key, err := w.key(logger, client)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +588,7 @@ func (w *Worker) blocksTillChallangeEnd(ctx context.Context, logger log.Logger,
 func (w *Worker) settle(ctx context.Context, logger log.Logger,
 	acc *data.Account, agent common.Address, block uint32,
 	hash [common.HashLength]byte) (*types.Transaction, error) {
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return nil, err
 	}
@@ -713,7 +713,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 		return ErrParseOfferingHash
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -792,7 +792,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 		return ErrParseEthAddr
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}

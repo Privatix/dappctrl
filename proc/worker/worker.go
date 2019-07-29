@@ -42,7 +42,6 @@ type Worker struct {
 	abi               abi.ABI
 	logger            log.Logger
 	db                *reform.DB
-	decryptKeyFunc    data.ToPrivateKeyFunc
 	ept               *ept.Service
 	ethBack           eth.Backend
 	gasConf           *GasConf
@@ -59,8 +58,7 @@ type Worker struct {
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 	gasConc *GasConf, pscAddr common.Address, payAddr string,
-	pwdGetter data.PWDGetter, countryConf *country.Config,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
+	pwdGetter data.PWDGetter, countryConf *country.Config, eptConf *ept.Config,
 	torHostname string, somcClientBuilder somc.ClientBuilderInterface) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
@@ -80,7 +78,6 @@ func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 		abi:               abi,
 		logger:            l,
 		db:                db,
-		decryptKeyFunc:    decryptKeyFunc,
 		gasConf:           gasConc,
 		ept:               eptService,
 		ethBack:           ethBack,

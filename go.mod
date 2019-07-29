@@ -8,6 +8,7 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20190115013929-ed77733ec07d
 	github.com/bugsnag/bugsnag-go v0.0.0-20181016233232-c0f14af66db6
 	github.com/bugsnag/panicwrap v1.2.0
+	github.com/cespare/cp v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.7.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20190715232110-2b613d287457 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect

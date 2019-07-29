@@ -283,6 +283,7 @@ func (m *Monitor) maxInactiveTimeReached(
 func (m *Monitor) postCheque(channelID string, amount uint64) {
 	logger := m.logger.Add("method", "posting cheque", "channel", channelID,
 		"amount", amount)
+	logger.Info("posting cheque")
 
 	handleErr := func(err error) {
 		select {

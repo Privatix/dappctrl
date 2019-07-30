@@ -9,7 +9,7 @@ header = {
     'Content-Type': 'application/json',
 }
 
-default_password = os.environ.get("DAPP_PASSWORD", "Qwerty=999")
+default_password = os.environ.get("DAPP_PASSWORD", "")
 default_id = 1
 
 endpoint = "http://localhost:8888/http"
@@ -17,6 +17,12 @@ endpoint = "http://localhost:8888/http"
 _prix_multiplier = 100000000
 _gwei_multiplier = 1000000000
 _eth_multiplier = 1000000000000000000
+
+if not default_password:
+    print("No password set.")
+    print("To set up the password, execute the following command (replace '<password>' by your real password):")
+    print("\nexport DAPP_PASSWORD=<password>")
+    exit(1)
 
 
 def _check_ok(text, response):

@@ -18,3 +18,5 @@ statik/scripts/*
 vendor
 
 *.iml
+
+*.pyc

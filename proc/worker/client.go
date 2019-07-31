@@ -97,7 +97,7 @@ func (w *Worker) clientPreChannelCreateSaveTX(logger log.Logger,
 		return ErrParseEthAddr
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -328,7 +328,7 @@ func (w *Worker) extractEndpointMessage(logger log.Logger,
 		return nil, ErrInternal
 	}
 
-	key, err := w.key(logger, client.PrivateKey)
+	key, err := w.key(logger, client)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +588,7 @@ func (w *Worker) blocksTillChallangeEnd(ctx context.Context, logger log.Logger,
 func (w *Worker) settle(ctx context.Context, logger log.Logger,
 	acc *data.Account, agent common.Address, block uint32,
 	hash [common.HashLength]byte) (*types.Transaction, error) {
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return nil, err
 	}
@@ -713,7 +713,7 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 		return ErrParseOfferingHash
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -792,7 +792,7 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 		return ErrParseEthAddr
 	}
 
-	key, err := w.key(logger, acc.PrivateKey)
+	key, err := w.key(logger, acc)
 	if err != nil {
 		return err
 	}
@@ -947,7 +947,7 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 			logOfferingPopUp.offeringHash, logOfferingPopUp.currentSupply)
 	}
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrInternal
 	}
 
@@ -971,7 +971,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		return nil
 	}
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrFetchOffering
 	}
 	hashHex := data.HexFromBytes(hash.Bytes())
@@ -984,7 +984,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	}
 	offeringRawMsgBytes, err := data.ToBytes(offeringRawMsg)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrFetchOffering
 	}
 	offering, err := w.fillOfferingFromMsg(logger, offeringRawMsgBytes,
@@ -1008,7 +1008,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 	_, minDeposit, mSupply, _, _, _, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hash)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return ErrInternal
 	}
 
@@ -1042,7 +1042,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	_, _, _, _, _, active, err := w.ethBack.PSCGetOfferingInfo(
 		&bind.CallOpts{}, hashBytes)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrInternal
 	}
 
@@ -1062,7 +1062,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 
 	pubk, err := data.ToBytes(msg.AgentPubKey)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrInternal
 	}
 
@@ -1084,7 +1084,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	if err := w.db.SelectOneTo(
 		product, "WHERE offer_tpl_id = $1 AND NOT is_server",
 		template.ID); err != nil {
-		logger.Error(err.Error())
+		logger.Warn(err.Error())
 		return nil, ErrProductNotFound
 	}
 
@@ -1130,6 +1130,10 @@ func (w *Worker) ClientAfterOfferingDelete(job *data.Job) error {
 func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "DecrementCurrentSupply", "job", job)
 	offering, err := w.relatedOffering(logger, job, data.JobDecrementCurrentSupply)
+	if err == ErrOfferingNotFound {
+		logger.Warn("offering not found, skipping job.")
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -1150,6 +1154,10 @@ func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 	logger := w.logger.Add("method", "IncrementCurrentSupply", "job", job)
 	offering, err := w.relatedOffering(logger, job,
 		data.JobIncrementCurrentSupply)
+	if err == ErrOfferingNotFound {
+		logger.Warn("offering not found, skipping job.")
+		return nil
+	}
 	if err != nil {
 		return err
 	}

@@ -79,9 +79,10 @@ func checkAccountsPKeys(t *testing.T, accounts []reform.Struct,
 
 func TestUpdatePassword(t *testing.T) {
 	server := rpc.NewServer()
-	pwdStorage := new(data.PWDStorage)
+	pwdStorage := data.NewPWDStorage(data.ToPrivateKey)
+	pwdStorage.Set(data.TestPassword)
 	handler := ui.NewHandler(logger, db, nil, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, data.RoleClient, nil,
+		data.EncryptedKey, data.RoleClient, nil,
 		somc.NewTestClientBuilder(testSOMCClient), testToken)
 	err := server.RegisterName("ui2", handler)
 	if err != nil {

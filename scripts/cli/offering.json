@@ -1,0 +1,22 @@
+{
+    "supply": 30,
+    "unitName": "MB",
+    "autoPopUp": true,
+    "unitType": "units",
+    "billingType": "postpaid",
+    "setupPrice": 0,
+    "unitPrice": 0.0002,
+    "minUnits": 1000,
+    "maxUnit": 0,
+    "billingInterval": 70,
+    "maxBillingUnitLag": 100,
+    "maxSuspendTime": 1800,
+    "maxInactiveTimeSec": 2700,
+    "freeUnits": 0,
+    "ipType": "datacenter",
+    "additionalParams": {
+        "minDownloadMbits": 100,
+        "minUploadMbits": 80
+    }
+}
+

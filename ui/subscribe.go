@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"gopkg.in/reform.v1"
@@ -49,6 +50,8 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	}
 
 	sub := ntf.CreateSubscription()
+	sid := string(sub.ID)
+	closech := make(chan struct{})
 	cb := func(job *data.Job, result error) {
 		obj, err := h.db.FindByPrimaryKeyFrom(table, job.RelatedID)
 		if err != nil {
@@ -66,11 +69,11 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 		err = ntf.Notify(sub.ID,
 			&ObjectChangeResult{odata, job, rpcsrv.ToError(result)})
 		if err != nil {
-			logger.Warn(err.Error())
+			logger.Warn(fmt.Sprintf("could not notify subscriber: %v", err))
+			close(closech)
 		}
 	}
 
-	sid := string(sub.ID)
 	err := h.queue.Subscribe(objectIDs, sid, cb)
 	if err != nil {
 		logger.Error(err.Error())
@@ -78,15 +81,17 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	}
 
 	go func() {
-		for err, ok := <-sub.Err(); ok; {
+		select {
+		case err := <-sub.Err():
 			if err != nil {
-				logger.Warn(err.Error())
+				logger.Warn(fmt.Sprintf("subscription error: %v", err))
 			}
+		case <-closech:
 		}
 
 		err := h.queue.Unsubscribe(objectIDs, sid)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Error(fmt.Sprintf("could not unsubscribe: %v", err))
 		}
 	}()
 

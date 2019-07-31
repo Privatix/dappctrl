@@ -17,7 +17,6 @@ type Handler struct {
 	queue             job.Queue
 	pwdStorage        data.PWDGetSetter
 	encryptKeyFunc    data.EncryptedKeyFunc
-	decryptKeyFunc    data.ToPrivateKeyFunc
 	userRole          string
 	processor         *proc.Processor
 	somcClientBuilder somc.ClientBuilderInterface
@@ -27,8 +26,7 @@ type Handler struct {
 // NewHandler creates a new handler.
 func NewHandler(logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter,
-	encryptKeyFunc data.EncryptedKeyFunc,
-	decryptKeyFunc data.ToPrivateKeyFunc, userRole string,
+	encryptKeyFunc data.EncryptedKeyFunc, userRole string,
 	processor *proc.Processor,
 	somcClientBuilder somc.ClientBuilderInterface,
 	token TokenMakeChecker) *Handler {
@@ -39,7 +37,6 @@ func NewHandler(logger log.Logger, db *reform.DB,
 		queue:             queue,
 		pwdStorage:        pwdStorage,
 		encryptKeyFunc:    encryptKeyFunc,
-		decryptKeyFunc:    decryptKeyFunc,
 		userRole:          userRole,
 		processor:         processor,
 		somcClientBuilder: somcClientBuilder,

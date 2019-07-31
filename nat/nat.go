@@ -66,7 +66,7 @@ func Map(ctx context.Context, conf *Config, logger log.Logger, m Interface,
 
 	if err := m.AddMapping(protocol, extPort, intPort,
 		name, mapTimeout); err != nil {
-		logger.Error(err.Error())
+		logger.Info(err.Error())
 		return ErrAddMapping
 	}
 	logger.Info("mapped network port")

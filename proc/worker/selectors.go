@@ -23,7 +23,6 @@ func (w *Worker) relatedOffering(logger log.Logger, job *data.Job,
 	rec := &data.Offering{}
 	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
 	if err != nil {
-		logger.Error(err.Error())
 		return nil, ErrOfferingNotFound
 	}
 

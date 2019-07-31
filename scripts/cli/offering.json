@@ -1,5 +1,5 @@
 {
-    "supply": 8,
+    "supply": 30,
     "unitName": "MB",
     "autoPopUp": true,
     "unitType": "units",
@@ -11,7 +11,7 @@
     "billingInterval": 70,
     "maxBillingUnitLag": 100,
     "maxSuspendTime": 1800,
-    "maxInactiveTimeSec": 1800,
+    "maxInactiveTimeSec": 2700,
     "freeUnits": 0,
     "ipType": "datacenter",
     "additionalParams": {

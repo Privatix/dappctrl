@@ -39,6 +39,8 @@ type Backend interface {
 
 	PTCIncreaseApproval(*bind.TransactOpts, common.Address, *big.Int) (*types.Transaction, error)
 
+	PTCAllowance(*bind.CallOpts, common.Address, common.Address) (uint64, error)
+
 	PSCBalanceOf(*bind.CallOpts, common.Address) (uint64, error)
 
 	PSCAddBalanceERC20(*bind.TransactOpts, uint64) (*types.Transaction, error)
@@ -325,6 +327,19 @@ func (b *backendInstance) PTCIncreaseApproval(opts *bind.TransactOpts,
 		return nil, fmt.Errorf("failed to PTC increase approval: %s", err)
 	}
 	return tx, nil
+}
+
+func (b *backendInstance) PTCAllowance(opts *bind.CallOpts, owner, spender common.Address) (uint64, error) {
+	ctx, cancel := b.addTimeout(opts.Context)
+	defer cancel()
+	opts.Context = ctx
+
+	allowance, err := b.ptc.Allowance(opts, owner, spender)
+	if err != nil {
+		return 0, err
+	}
+
+	return allowance.Uint64(), nil
 }
 
 // PSCBalanceOf calls balanceOf method of Privatix service contract.

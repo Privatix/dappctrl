@@ -30,6 +30,7 @@ const (
 	ErrSmallDeposit
 	ErrFindApprovalBalanceData
 	ErrPTCRetrieveBalance
+	ErrPTCRetrieveAllowance
 	ErrPTCIncreaseApproval
 	ErrPSCRetrieveBalance
 	ErrPSCAddBalance
@@ -108,6 +109,7 @@ var errMsgs = errors.Messages{
 	ErrSmallDeposit:                  "deposit is too small",
 	ErrFindApprovalBalanceData:       "could not find PTC approval data",
 	ErrPTCRetrieveBalance:            "could not get PTC balance",
+	ErrPTCRetrieveAllowance:          "could not get PTC allowance",
 	ErrPTCIncreaseApproval:           "could not increase approval (PTC)",
 	ErrPSCRetrieveBalance:            "could not get PSC balance",
 	ErrPSCAddBalance:                 "could not add balance (PSC)",

@@ -202,7 +202,7 @@ func TestServiceTerminate(t *testing.T) {
 	payload := newTestPayload(t,
 		100, fxt.Channel, fxt.Offering, fxt.UserAcc)
 	postPayload(
-		testDB, fxt.Channel.ID, payload, false, 0, pr, mock)
+		testDB, fxt.Channel, payload, false, 0, pr, mock)
 
 	j := &data.Job{}
 	data.FindInTestDB(t, testDB, j, "related_id", fxt.Channel.ID)

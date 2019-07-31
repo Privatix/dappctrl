@@ -3,6 +3,7 @@
 package bill
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -22,6 +23,10 @@ import (
 type pwStore struct{}
 
 func (s *pwStore) Get() string { return "test-password" }
+
+func (s *pwStore) GetKey(acc *data.Account) (*ecdsa.PrivateKey, error) {
+	return data.TestToPrivateKey(acc.PrivateKey, s.Get())
+}
 
 var (
 	conf struct {
@@ -257,8 +262,8 @@ func TestPayment(t *testing.T) {
 	mtx := sync.Mutex{}
 	called := false
 	err := fmt.Errorf("some error")
-	mon.post = func(db *reform.DB, channel string, pscAddr data.HexString,
-		pass string, amount uint64, tls bool, timeout uint,
+	mon.post = func(db *reform.DB, channel *data.Channel, pscAddr data.HexString,
+		key *ecdsa.PrivateKey, amount uint64, tls bool, timeout uint,
 		pr *proc.Processor) error {
 		mtx.Lock()
 		defer mtx.Unlock()

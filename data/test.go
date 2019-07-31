@@ -190,6 +190,7 @@ func NewTestOffering(agent HexString, product, tpl string) *Offering {
 		Supply:             1,
 		CurrentSupply:      1,
 		UnitType:           UnitSeconds,
+		IPType:             OfferingResidential,
 		BillingType:        BillingPostpaid,
 		BillingInterval:    100,
 		AdditionalParams:   []byte("{}"),

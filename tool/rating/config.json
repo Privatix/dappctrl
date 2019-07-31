@@ -1,0 +1,19 @@
+{
+    "Eth": {
+        "CheckTimeout": 10000,
+        "Contract": {
+            "PSCAddrHex": "0x76DB05f1c70F3aBB663010391f1BD67877ae7FC8",
+            "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
+        },
+        "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
+        "HTTPClient": {
+            "DialTimeout": 10000,
+            "IdleConnTimeout": 60000,
+            "KeepAliveTimeout": 60000,
+            "RequestTimeout": 60000,
+            "ResponseHeaderTimeout": 60000,
+            "TLSHandshakeTimeout": 5000
+        },
+        "Timeout": 120000
+    }
+}

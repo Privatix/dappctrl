@@ -4,13 +4,14 @@
     },
     "BlockMonitor": {
         "EthCallTimeout": 60000,
-        "InitialBlocks": 5760,
-        "QueryPause": 6000
+        "InitialBlocks": 11520,
+        "QueryPause": 20000,
+        "RateAfter": 1
     },
     "ClientMonitor": {
         "CollectPeriod": 1500,
         "RequestTLS": false,
-        "RequestTimeout": 2500
+        "RequestTimeout": 1500
     },
     "Country": {
         "Field": "country",
@@ -41,7 +42,7 @@
             "PSCAddrHex": "0x7c70f8da8829756b807ef18acaaaf0ef344f94cf",
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
         },
-        "GethURL": "https://rinkeby.infura.io/v3/6396832f7ea1488ba30fb4de8f6b06ea",
+        "GethURL": "https://rinkeby.infura.io/v3/dcc53bc9e070473bb91ecbdac188cc22",
         "HTTPClient": {
             "DialTimeout": 10000,
             "IdleConnTimeout": 60000,
@@ -62,24 +63,19 @@
     },
     "Gas": {
         "PSC": {
-            "AddBalanceERC20": 100000,
-            "BalanceOf": 100000,
-            "CooperativeClose": 200000,
-            "CreateChannel": 200000,
-            "GetChannelInfo": 100000,
-            "GetKey": 100000,
-            "PopupServiceOffering": 100000,
-            "PublishServiceOfferingEndpoint": 100000,
-            "RegisterServiceOffering": 200000,
-            "RemoveServiceOffering": 100000,
-            "ReturnBalanceERC20": 100000,
-            "SetNetworkFee": 100000,
-            "Settle": 100000,
-            "TopUp": 100000,
-            "UncooperativeClose": 100000
+            "AddBalanceERC20": 97937,
+            "CooperativeClose": 99070,
+            "CreateChannel": 75446,
+            "PopupServiceOffering": 42579,
+            "RegisterServiceOffering": 112941,
+            "RemoveServiceOffering": 39935,
+            "ReturnBalanceERC20": 61473,
+            "Settle": 54290,
+            "TopUp": 45836,
+            "UncooperativeClose": 72964
         },
         "PTC": {
-            "Approve": 100000
+            "Approve": 50818
         }
     },
     "Job": {
@@ -87,105 +83,141 @@
         "CollectPeriod": 1000,
         "TryLimit": 3,
         "TryPeriod": 60000,
+        "Duplicated": false,
+        "FirstStartDelay": 0,
         "Types": {
             "accountUpdateBalances": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "afterAccountAddBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "afterAccountReturnBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentAfterOfferingPopUp": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentPreOfferingPopUp": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "agentPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "agentPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientAfterChannelCreate": {
                 "FirstStartDelay": 3000,
                 "TryLimit": 10,
-                "TryPeriod": 30000
+                "TryPeriod": 30000,
+                "Duplicated": false
             },
             "clientAfterOfferingMsgBCPublish": {
                 "TryLimit": 10,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
+            },
+            "clientAfterOfferingPopUp": {
+                "TryLimit": 10,
+                "TryPeriod": 60000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
             },
             "clientEndpointGet": {
                 "TryLimit": 6,
-                "TryPeriod": 10000
+                "TryPeriod": 10000,
+                "Duplicated": false,
+                "FirstStartDelay": 0
             },
             "clientPreChannelCreate": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "clientPreServiceSuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientPreServiceUnsuspend": {
                 "Duplicated": true,
                 "TryLimit": 2,
-                "TryPeriod": 20000
+                "TryPeriod": 20000,
+                "FirstStartDelay": 0
             },
             "clientPreUncooperativeClose": {
                 "FirstStartDelay": 300000,
                 "TryLimit": 200,
-                "TryPeriod": 180000
+                "TryPeriod": 180000,
+                "Duplicated": false
             },
             "completeServiceTransition": {
-                "Duplicated": true
+                "Duplicated": true,
+                "TryLimit": 3,
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "decrementCurrentSupply": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "incrementCurrentSupply": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountAddBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountAddBalanceApprove": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             },
             "preAccountReturnBalance": {
                 "Duplicated": true,
                 "TryLimit": 3,
-                "TryPeriod": 60000
+                "TryPeriod": 60000,
+                "FirstStartDelay": 0
             }
         },
         "WorkerBufLen": 10,
         "Workers": 0
     },
     "Looper": {
-        "AutoOfferingPopUpTimeout": 3600000
+        "AutoOfferingPopUpTimeout": 86400000
     },
     "NAT": {
         "CheckTimeout": 1000,

@@ -57,24 +57,19 @@
     },
     "Gas": {
         "PSC": {
-            "AddBalanceERC20": 49412,
-            "BalanceOf": 23655,
-            "CooperativeClose": 97566,
-            "CreateChannel": 76797,
-            "GetChannelInfo": 29066,
-            "GetKey": 27310,
-            "PopupServiceOffering": 32674,
-            "PublishServiceOfferingEndpoint": 30528,
-            "RegisterServiceOffering": 95625,
-            "RemoveServiceOffering": 39238,
-            "ReturnBalanceERC20": 43417,
-            "SetNetworkFee": 27400,
-            "Settle": 41828,
-            "TopUp": 42065,
-            "UncooperativeClose": 56612
+            "AddBalanceERC20": 97937,
+            "CooperativeClose": 99070,
+            "CreateChannel": 75446,
+            "PopupServiceOffering": 42579,
+            "RegisterServiceOffering": 112941,
+            "RemoveServiceOffering": 25841,
+            "ReturnBalanceERC20": 48300,
+            "Settle": 54290,
+            "TopUp": 45836,
+            "UncooperativeClose": 72964
         },
         "PTC": {
-            "Approve": 45375
+            "Approve": 50818
         }
     },
     "Job": {

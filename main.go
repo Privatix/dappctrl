@@ -120,10 +120,9 @@ func readFlags(conf *config) {
 
 func getPWDStorage(conf *config) data.PWDGetSetter {
 	if conf.StaticPassword == "" {
-		return new(data.PWDStorage)
+		return data.NewPWDStorage(data.ToPrivateKey)
 	}
-	storage := data.StaticPWDStorage(conf.StaticPassword)
-	return &storage
+	return data.NewStatisPWDStorage(conf.StaticPassword, data.ToPrivateKey)
 }
 
 func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
@@ -170,7 +169,7 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	}
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
-		data.EncryptedKey, data.ToPrivateKey, userRole, processor,
+		data.EncryptedKey, userRole, processor,
 		somcClientBuilder, ui.NewSimpleToken())
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
@@ -316,8 +315,7 @@ func main() {
 
 	worker, err := worker.NewWorker(logger, db, ethBack, conf.Gas,
 		ethBack.PSCAddress(), conf.PayAddress, pwdStorage, conf.Country,
-		data.ToPrivateKey, conf.EptMsg, conf.TorHostname,
-		somc.NewClientBuilder(conf.TorSocksListener))
+		conf.EptMsg, conf.TorHostname, somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

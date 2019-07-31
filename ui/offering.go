@@ -61,6 +61,7 @@ type GetClientOfferingsFilterParamsResult struct {
 	Countries []string `json:"countries"`
 	MinPrice  uint64   `json:"minPrice"`
 	MaxPrice  uint64   `json:"maxPrice"`
+	MaxRating uint64   `json:"maxRating"`
 }
 
 // AcceptOffering initiates JobClientPreChannelCreate job.
@@ -163,7 +164,7 @@ func (h *Handler) ChangeOfferingStatus(
 
 func (h *Handler) getClientOfferingsConditions(
 	agent data.HexString, minUnitPrice, maxUnitPrice uint64,
-	country []string) (conditions string, arguments []interface{}) {
+	country, ipTypes []string) (conditions string, arguments []interface{}) {
 
 	count := 1
 
@@ -212,6 +213,19 @@ func (h *Handler) getClientOfferingsConditions(
 		}
 	}
 
+	if len(ipTypes) != 0 {
+		indexes := h.db.Placeholders(count, len(ipTypes))
+		count = count + len(ipTypes)
+
+		condition := fmt.Sprintf("ip_type IN (%s)",
+			strings.Join(indexes, ","))
+		conditions = join(conditions, condition)
+
+		for _, val := range ipTypes {
+			arguments = append(arguments, val)
+		}
+	}
+
 	var format string
 	if conditions != "" {
 		format = "WHERE %s AND %s"
@@ -225,7 +239,7 @@ func (h *Handler) getClientOfferingsConditions(
 
 // GetClientOfferings returns active offerings available for a client.
 func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
-	minUnitPrice, maxUnitPrice uint64, countries []string,
+	minUnitPrice, maxUnitPrice uint64, countries, ipTypes []string,
 	offset, limit uint) (*GetClientOfferingsResult, error) {
 	logger := h.logger.Add("method", "GetClientOfferings",
 		"agent", agent, "minUnitPrice", minUnitPrice,
@@ -244,7 +258,7 @@ func (h *Handler) GetClientOfferings(tkn string, agent data.HexString,
 	}
 
 	cond, args := h.getClientOfferingsConditions(agent, minUnitPrice,
-		maxUnitPrice, countries)
+		maxUnitPrice, countries, ipTypes)
 
 	count, err := h.numberOfObjects(
 		logger, data.OfferingTable.Name(), cond, args)
@@ -383,7 +397,7 @@ func (h *Handler) setOfferingHash(logger log.Logger, offering *data.Offering,
 		return handleErr(err)
 	}
 
-	agentKey, err := h.decryptKeyFunc(agent.PrivateKey, h.pwdStorage.Get())
+	agentKey, err := h.pwdStorage.GetKey(agent)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -543,6 +557,16 @@ func (h *Handler) offeringsMinMaxPrice(
 	return min, max, nil
 }
 
+func (h *Handler) maxRating(logger log.Logger) (uint64, error) {
+	query := `SELECT COALESCE(MAX(val), 0) FROM ratings`
+	var ret uint64
+	if err := h.db.QueryRow(query).Scan(&ret); err != nil {
+		logger.Error(err.Error())
+		return 0, err
+	}
+	return ret, nil
+}
+
 // GetClientOfferingsFilterParams returns offerings filter parameters for client.
 func (h *Handler) GetClientOfferingsFilterParams(
 	tkn string) (*GetClientOfferingsFilterParamsResult, error) {
@@ -563,7 +587,12 @@ func (h *Handler) GetClientOfferingsFilterParams(
 		return nil, err
 	}
 
-	return &GetClientOfferingsFilterParamsResult{countries, min, max}, nil
+	maxRating, err := h.maxRating(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetClientOfferingsFilterParamsResult{countries, min, max, maxRating}, nil
 }
 
 // PingOfferings given offerings ids pings each of them and returns result of the test.

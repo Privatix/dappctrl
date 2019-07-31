@@ -29,12 +29,11 @@ func (w *Worker) accountKey(logger log.Logger, ethAddr data.HexString) (*ecdsa.P
 		return nil, err
 	}
 
-	return w.key(logger, acc.PrivateKey)
+	return w.key(logger, acc)
 }
 
-func (w *Worker) key(logger log.Logger,
-	key data.Base64String) (*ecdsa.PrivateKey, error) {
-	ret, err := w.decryptKeyFunc(key, w.pwdGetter.Get())
+func (w *Worker) key(logger log.Logger, acc *data.Account) (*ecdsa.PrivateKey, error) {
+	ret, err := w.pwdGetter.GetKey(acc)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, ErrParsePrivateKey

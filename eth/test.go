@@ -30,6 +30,7 @@ type TestEthBackend struct {
 	CallStack              []TestEthBackCall
 	BalanceEth             *big.Int
 	BalancePSC             uint64
+	Allowance              uint64
 	BalancePTC             *big.Int
 	BlockNumber            *big.Int
 	Abi                    abi.ABI
@@ -164,6 +165,15 @@ func (b *TestEthBackend) PTCIncreaseApproval(opts *bind.TransactOpts,
 	})
 	tx := types.NewTransaction(0, common.Address{}, big.NewInt(1), 1, big.NewInt(1), nil)
 	return tx, nil
+}
+
+func (b *TestEthBackend) PTCAllowance(opts *bind.CallOpts, owner, spender common.Address) (uint64, error) {
+	b.CallStack = append(b.CallStack, TestEthBackCall{
+		method: "PTCAllowance",
+		caller: opts.From,
+		args:   []interface{}{owner, spender},
+	})
+	return b.Allowance, nil
 }
 
 // PSCAddBalanceERC20 is mock to PSCAddBalanceERC20.

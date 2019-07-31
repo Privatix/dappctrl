@@ -61,6 +61,7 @@ const (
 	JobAgentAfterOfferingPopUp              = "agentAfterOfferingPopUp"
 	JobAgentAfterOfferingDelete             = "agentAfterOfferingDelete"
 	JobPreAccountAddBalanceApprove          = "preAccountAddBalanceApprove"
+	JobAfterAccountAddBalanceApprove        = "afterAccountAddBalanceApprove"
 	JobPreAccountAddBalance                 = "preAccountAddBalance"
 	JobAfterAccountAddBalance               = "afterAccountAddBalance"
 	JobPreAccountReturnBalance              = "preAccountReturnBalance"

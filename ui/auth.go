@@ -102,9 +102,9 @@ func (h *Handler) updatePrivateKeys(
 
 	for _, v := range accounts {
 		acc := v.(*data.Account)
-		logger = logger.Add("account", acc)
+		logger = logger.Add("account", acc.EthAddr)
 
-		key, err := h.decryptKeyFunc(acc.PrivateKey, current)
+		key, err := h.pwdStorage.GetKey(acc)
 		if err != nil {
 			logger.Error(err.Error())
 			return ErrInternal

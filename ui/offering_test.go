@@ -40,6 +40,7 @@ type testGetClientOfferingsArgs struct {
 	offset       uint
 	limit        uint
 	total        int
+	ipTypes      []string
 }
 
 type testField struct {
@@ -187,35 +188,35 @@ func TestGetClientOfferings(t *testing.T) {
 	highPrice := fxt.Offering.UnitPrice + 10
 
 	_, err := handler.GetClientOfferings(
-		"wrong-token", "", 0, 0, nil, 0, 0)
+		"wrong-token", "", 0, 0, nil, nil, 0, 0)
 	assertErrEqual(ui.ErrAccessDenied, err)
 
 	_, err = handler.GetClientOfferings(
-		testToken.v, "", highPrice, lowPrice, nil, 0, 0)
+		testToken.v, "", highPrice, lowPrice, nil, nil, 0, 0)
 	assertErrEqual(ui.ErrBadUnitPriceRange, err)
 
 	testArgs := []testGetClientOfferingsArgs{
 		// Test pagination.
-		{1, "", 0, 0, nil, 0, 1, 4},
-		{2, "", 0, 0, nil, 1, 2, 4},
-		{0, "", 0, 0, nil, 4, 3, 4},
+		{1, "", 0, 0, nil, 0, 1, 4, []string{data.OfferingResidential}},
+		{2, "", 0, 0, nil, 1, 2, 4, []string{data.OfferingResidential}},
+		{0, "", 0, 0, nil, 4, 3, 4, []string{data.OfferingResidential}},
 		// // Test by filters.
-		{4, "", 0, 0, nil, 0, 0, 4},
-		{0, "", 0, lowPrice, nil, 0, 0, 0},
-		{0, "", highPrice, 0, nil, 0, 0, 0},
-		{4, "", lowPrice, price, nil, 0, 0, 4},
-		{4, "", price, highPrice, nil, 0, 0, 4},
-		{4, "", price, price, nil, 0, 0, 4},
-		{1, "", 0, 0, []string{"US"}, 0, 0, 1},
-		{2, "", 0, 0, []string{"SU"}, 0, 0, 2},
-		{3, "", 0, 0, []string{"SU", "US"}, 0, 0, 3},
-		{0, data.NewTestAccount(data.TestPassword).EthAddr, 0, 0, nil, 0, 0, 0},
-		{2, agent.EthAddr, 0, 0, nil, 0, 0, 2},
+		{4, "", 0, 0, nil, 0, 0, 4, []string{data.OfferingResidential}},
+		{0, "", 0, lowPrice, nil, 0, 0, 0, []string{data.OfferingResidential}},
+		{0, "", highPrice, 0, nil, 0, 0, 0, []string{data.OfferingResidential}},
+		{4, "", lowPrice, price, nil, 0, 0, 4, []string{data.OfferingResidential}},
+		{4, "", price, highPrice, nil, 0, 0, 4, []string{data.OfferingResidential}},
+		{4, "", price, price, nil, 0, 0, 4, []string{data.OfferingResidential}},
+		{1, "", 0, 0, []string{"US"}, 0, 0, 1, []string{data.OfferingResidential}},
+		{2, "", 0, 0, []string{"SU"}, 0, 0, 2, []string{data.OfferingResidential}},
+		{3, "", 0, 0, []string{"SU", "US"}, 0, 0, 3, []string{data.OfferingResidential}},
+		{0, data.NewTestAccount(data.TestPassword).EthAddr, 0, 0, nil, 0, 0, 0, []string{data.OfferingResidential}},
+		{2, agent.EthAddr, 0, 0, nil, 0, 0, 2, []string{data.OfferingResidential}},
 	}
 
 	for _, v := range testArgs {
 		res, err := handler.GetClientOfferings(testToken.v,
-			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country,
+			v.agent, v.minUnitPrice, v.maxUnitPrice, v.country, v.ipTypes,
 			v.offset, v.limit)
 		assertResult(res, err, v.exp, v.total)
 	}
@@ -501,6 +502,14 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 		defer data.DeleteFromTestDB(t, db, v)
 	}
 
+	var maxRating uint64 = 100
+	r := &data.Rating{
+		EthAddr: fxt.UserAcc.EthAddr,
+		Val:     maxRating,
+	}
+	data.InsertToTestDB(t, fxt.DB, r)
+	defer data.DeleteFromTestDB(t, fxt.DB, r)
+
 	_, err := handler.GetClientOfferingsFilterParams("wrong-token")
 	assertMatchErr(ui.ErrAccessDenied, err)
 
@@ -525,6 +534,10 @@ func TestGetClientOfferingsFilterParams(t *testing.T) {
 
 	if res.MaxPrice != max {
 		t.Fatalf("wanted: %v, got: %v", max, res.MaxPrice)
+	}
+
+	if res.MaxRating != maxRating {
+		t.Fatalf("wanted max rating: %v, got: %v", maxRating, res.MaxRating)
 	}
 }
 

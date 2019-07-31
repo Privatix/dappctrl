@@ -206,7 +206,7 @@ func (m *Monitor) onTokenApprove(l *data.JobEthLog, _ []data.Job) ([]data.Job, e
 		logger.Error(err.Error())
 		return nil, nil
 	}
-	return m.produceCommon(l, acc.ID, data.JobAccount, data.JobPreAccountAddBalance)
+	return m.produceCommon(l, acc.ID, data.JobAccount, data.JobAfterAccountAddBalanceApprove)
 }
 
 func (m *Monitor) onTokenTransfer(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {

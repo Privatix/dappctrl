@@ -130,13 +130,12 @@ func TestMain(m *testing.M) {
 	defer data.CloseDB(db)
 
 	server := rpc.NewServer()
-	pwdStorage := new(data.PWDStorage)
+	pwdStorage := data.NewPWDStorage(data.TestToPrivateKey)
 	testSOMCClient = somc.NewTestClient()
 	testToken = &dumbToken{}
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
-		data.TestEncryptedKey, data.TestToPrivateKey,
-		data.RoleAgent, nil, somc.NewTestClientBuilder(testSOMCClient),
-		testToken)
+		data.TestEncryptedKey, data.RoleAgent, nil,
+		somc.NewTestClientBuilder(testSOMCClient), testToken)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

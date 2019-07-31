@@ -277,14 +277,14 @@ func TestJobsProducers(t *testing.T) {
 				{
 					RelatedID:   fxt.Account.ID,
 					RelatedType: data.JobAccount,
-					Type:        data.JobPreAccountAddBalance,
+					Type:        data.JobAfterAccountAddBalanceApprove,
 				},
 			},
 			clientProduced: []data.Job{
 				{
 					RelatedID:   fxt.Account.ID,
 					RelatedType: data.JobAccount,
-					Type:        data.JobPreAccountAddBalance,
+					Type:        data.JobAfterAccountAddBalanceApprove,
 				},
 			},
 		},

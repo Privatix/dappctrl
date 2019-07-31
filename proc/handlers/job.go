@@ -47,13 +47,14 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobClientRecordClosing:                  worker.ClientRecordClosing,
 
 		// Common jobs.
-		data.JobPreAccountAddBalanceApprove: worker.PreAccountAddBalanceApprove,
-		data.JobPreAccountAddBalance:        worker.PreAccountAddBalance,
-		data.JobAfterAccountAddBalance:      worker.AfterAccountAddBalance,
-		data.JobPreAccountReturnBalance:     worker.PreAccountReturnBalance,
-		data.JobAfterAccountReturnBalance:   worker.AfterAccountReturnBalance,
-		data.JobAccountUpdateBalances:       worker.AccountUpdateBalances,
-		data.JobDecrementCurrentSupply:      worker.DecrementCurrentSupply,
-		data.JobIncrementCurrentSupply:      worker.IncrementCurrentSupply,
+		data.JobPreAccountAddBalanceApprove:   worker.PreAccountAddBalanceApprove,
+		data.JobAfterAccountAddBalanceApprove: worker.AfterAccountAddBalanceApprove,
+		data.JobPreAccountAddBalance:          worker.PreAccountAddBalance,
+		data.JobAfterAccountAddBalance:        worker.AfterAccountAddBalance,
+		data.JobPreAccountReturnBalance:       worker.PreAccountReturnBalance,
+		data.JobAfterAccountReturnBalance:     worker.AfterAccountReturnBalance,
+		data.JobAccountUpdateBalances:         worker.AccountUpdateBalances,
+		data.JobDecrementCurrentSupply:        worker.DecrementCurrentSupply,
+		data.JobIncrementCurrentSupply:        worker.IncrementCurrentSupply,
 	}
 }

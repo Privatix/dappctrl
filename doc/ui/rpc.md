@@ -780,6 +780,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getObjec
            "currentSupply":3,
            "unitName":"",
            "unitType":"units",
+           "ipType": "mobile",
            "billingType":"postpaid",
            "setupPrice":0,
            "unitPrice":100000,
@@ -876,7 +877,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_changeOf
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOffering", "params": ["qwert", {"product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523", "agent": "0ba0e5f1-17f4-4f6d-b410-745a53048fc3", "serviceName": "my service", "description": "my service description", "country": "KG", "supply": 3, "unitName": "MB", "unitType": "units", "billingType": "postpaid", "setupPrice": 0, "unitPrice": 100000, "minUnits": 100, "maxUnit": 200, "billingInterval": 1, "maxBillingUnitLag": 3, "maxSuspendTime": 1800, "maxInactiveTimeSec": 1800, "freeUnits": 0, "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80}, "autoPopUp":false}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_createOffering", "params": ["qwert", {"product": "4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532", "template": "efc61769-96c8-4c0d-b50a-e4d11fc30523", "agent": "0ba0e5f1-17f4-4f6d-b410-745a53048fc3", "serviceName": "my service", "description": "my service description", "country": "KG", "ipType": "residential", "supply": 3, "unitName": "MB", "unitType": "units", "billingType": "postpaid", "setupPrice": 0, "unitPrice": 100000, "minUnits": 100, "maxUnit": 200, "billingInterval": 1, "maxBillingUnitLag": 3, "maxSuspendTime": 1800, "maxInactiveTimeSec": 1800, "freeUnits": 0, "additionalParams": {"minDownloadMbits":100,"minUploadMbits":80}, "autoPopUp":false}], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -934,6 +935,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
                 "unitType":"units",
                 "billingType":"postpaid",
                 "setupPrice":0,
+                "ipType": "residential",
                 "unitPrice":100000,
                 "minUnits":100,
                 "maxUnit":null,
@@ -982,6 +984,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
 3. Minimum unit price (number)
 4. Maximum unit price (number)
 5. Country codes ISO 3166-1 alpha-2 (array of strings)
+6. IP types of offerings. Empty means all.
 
 *Result (array of `data.Offering` objects)*: offerings.
 
@@ -989,7 +992,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getAgent
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], 0, 1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClientOfferings", "params": ["qwert", "4638140465c0ee8fc796323971431c30250433b2", 0, 1000000, ["KG"], ["residential"]], "id": 67}' http://localhost:8888/http
 
 // Result
 {
@@ -1018,6 +1021,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getClien
                     "billingType":"postpaid",
                     "setupPrice":0,
                     "unitPrice":100000,
+                    "ipType": "residential",
                     "minUnits":100,
                     "maxUnit":null,
                     "billingInterval":1800,
@@ -1181,7 +1185,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getOffer
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000,"minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{},"autoPopUp":true}], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_updateOffering", "params": ["qwert", {"id":"687f26ab-5c62-4b05-8225-12e102a99450","isLocal":false,"template":"efc61769-96c8-4c0d-b50a-e4d11fc30523","product":"4b26dc82-ffb6-4ff1-99d8-f0eaac0b0532","hash":"                                            ","status":"empty","blockNumberUpdated":1,"agent":"4638140465c0ee8fc796323971431c30250433b2","rawMsg":"","serviceName":"my service 2","description":"my service description 2","country":"KG","supply":3,"currentSupply":3,"unitName":"","unitType":"units","billingType":"postpaid","setupPrice":0,"unitPrice":100000, "ipType": "residential", "minUnits":100,"maxUnit":null,"billingInterval":1800,"maxBillingUnitLag":1800,"maxSuspendTime":1800,"maxInactiveTimeSec":null,"freeUnits":0,"additionalParams":{},"autoPopUp":true}], "id": 67}' http://localhost:8888/http
 
 // Result
 {

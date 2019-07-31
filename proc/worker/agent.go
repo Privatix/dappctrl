@@ -44,7 +44,9 @@ func (w *Worker) AgentAfterChannelCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("client", client)
+	if client != nil {
+		logger = logger.Add("client", client.EthAddr)
+	}
 
 	tx, err := w.db.Begin()
 	if err != nil {
@@ -296,7 +298,7 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 	closingHash := eth.BalanceClosingHash(clientAddr, w.pscAddr, block,
 		offeringHash, balance)
 
-	accKey, err := w.key(logger, agent.PrivateKey)
+	accKey, err := w.key(logger, agent)
 	if err != nil {
 		return err
 	}
@@ -412,7 +414,7 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("client", client)
+	logger = logger.Add("client", client.EthAddr)
 
 	clientPub, err := data.ToBytes(client.PublicKey)
 	if err != nil {
@@ -425,9 +427,9 @@ func (w *Worker) AgentPreEndpointMsgCreate(job *data.Job) error {
 		return err
 	}
 
-	logger = logger.Add("agent", agent)
+	logger = logger.Add("agent", agent.EthAddr)
 
-	agentKey, err := w.key(logger, agent.PrivateKey)
+	agentKey, err := w.key(logger, agent)
 	if err != nil {
 		return err
 	}
@@ -533,7 +535,7 @@ func (w *Worker) AgentPreOfferingMsgBCPublish(job *data.Job) error {
 		return err
 	}
 
-	agentKey, err := w.key(logger, agent.PrivateKey)
+	agentKey, err := w.key(logger, agent)
 	if err != nil {
 		return err
 	}

@@ -164,7 +164,7 @@ func sealMessage(t *testing.T, env *workerTest,
 	pub, err := data.ToBytes(fxt.User.PublicKey)
 	util.TestExpectResult(t, "Decode pub", nil, err)
 
-	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
+	key, err := env.worker.pwdGetter.GetKey(fxt.Account)
 	util.TestExpectResult(t, "Get key", nil, err)
 
 	sealed, err := messages.AgentSeal(mdata, pub, key)
@@ -697,11 +697,12 @@ func TestClientAfterOfferingMsgBCPublish(t *testing.T) {
 	expectedOffering.Status = data.OfferRegistered
 	expectedOffering.Country = "US"
 	expectedOffering.MinUnits = 100
+	expectedOffering.IPType = data.OfferingResidential
 	msg := offer.OfferingMessage(fxt.Account,
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
 	util.TestExpectResult(t, "Marshall msg", nil, err)
-	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
+	key, err := env.worker.pwdGetter.GetKey(fxt.Account)
 	util.TestExpectResult(t, "Get key", nil, err)
 	packed, err := messages.PackWithSignature(msgBytes, key)
 	util.TestExpectResult(t, "PackWithSignature", nil, err)
@@ -863,7 +864,7 @@ func testClientAfterNewOfferingPopUp(t *testing.T) {
 		fxt.TemplateOffer, &expectedOffering)
 	msgBytes, err := json.Marshal(msg)
 	util.TestExpectResult(t, "Marshall msg", nil, err)
-	key, err := env.worker.key(env.worker.logger, fxt.Account.PrivateKey)
+	key, err := env.worker.pwdGetter.GetKey(fxt.Account)
 	util.TestExpectResult(t, "Get key", nil, err)
 	packed, err := messages.PackWithSignature(msgBytes, key)
 	util.TestExpectResult(t, "PackWithSignature", nil, err)

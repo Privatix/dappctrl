@@ -128,17 +128,12 @@ Default gas limits for psc methods.
 |Field|Type|Description|Example|
 |-|-|-|-|
 |AddBalanceERC20|uint64||100000|
-|BalanceOf|uint64||100000|
 |CooperativeClose|uint64||100000|
 |CreateChannel|uint64||100000|
-|GetChannelInfo|uint64||100000|
-|GetKey|uint64||100000|
 |PopupServiceOffering|uint64||100000|
-|PublishServiceOfferingEndpoint|uint64||100000|
 |RegisterServiceOffering|uint64||100000|
 |RemoveServiceOffering|uint64||100000|
 |ReturnBalanceERC20|uint64||100000|
-|SetNetworkFee|uint64||100000|
 |Settle|uint64||100000|
 |TopUp|uint64||100000|
 |UncooperativeClose|uint64||100000|
@@ -324,14 +319,9 @@ UI api server configuration.
             "CreateChannel": 200000,
             "CooperativeClose": 200000,
             "ReturnBalanceERC20": 100000,
-            "SetNetworkFee": 100000,
             "UncooperativeClose": 100000,
             "Settle": 100000,
             "TopUp": 100000,
-            "GetChannelInfo": 100000,
-            "PublishServiceOfferingEndpoint": 100000,
-            "GetKey": 100000,
-            "BalanceOf": 100000,
             "PopupServiceOffering": 100000,
             "RemoveServiceOffering": 100000
         }

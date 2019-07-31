@@ -24,21 +24,16 @@ type GasConf struct {
 		Approve uint64
 	}
 	PSC struct {
-		AddBalanceERC20                uint64
-		RegisterServiceOffering        uint64
-		CreateChannel                  uint64
-		CooperativeClose               uint64
-		ReturnBalanceERC20             uint64
-		SetNetworkFee                  uint64
-		UncooperativeClose             uint64
-		Settle                         uint64
-		TopUp                          uint64
-		GetChannelInfo                 uint64
-		PublishServiceOfferingEndpoint uint64
-		GetKey                         uint64
-		BalanceOf                      uint64
-		PopupServiceOffering           uint64
-		RemoveServiceOffering          uint64
+		AddBalanceERC20         uint64
+		RegisterServiceOffering uint64
+		CreateChannel           uint64
+		CooperativeClose        uint64
+		ReturnBalanceERC20      uint64
+		UncooperativeClose      uint64
+		Settle                  uint64
+		TopUp                   uint64
+		PopupServiceOffering    uint64
+		RemoveServiceOffering   uint64
 	}
 }
 
@@ -47,7 +42,6 @@ type Worker struct {
 	abi               abi.ABI
 	logger            log.Logger
 	db                *reform.DB
-	decryptKeyFunc    data.ToPrivateKeyFunc
 	ept               *ept.Service
 	ethBack           eth.Backend
 	gasConf           *GasConf
@@ -64,8 +58,7 @@ type Worker struct {
 // NewWorker returns new instance of worker.
 func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 	gasConc *GasConf, pscAddr common.Address, payAddr string,
-	pwdGetter data.PWDGetter, countryConf *country.Config,
-	decryptKeyFunc data.ToPrivateKeyFunc, eptConf *ept.Config,
+	pwdGetter data.PWDGetter, countryConf *country.Config, eptConf *ept.Config,
 	torHostname string, somcClientBuilder somc.ClientBuilderInterface) (*Worker, error) {
 
 	l := logger.Add("type", "proc/worker.Worker")
@@ -85,7 +78,6 @@ func NewWorker(logger log.Logger, db *reform.DB, ethBack eth.Backend,
 		abi:               abi,
 		logger:            l,
 		db:                db,
-		decryptKeyFunc:    decryptKeyFunc,
 		gasConf:           gasConc,
 		ept:               eptService,
 		ethBack:           ethBack,

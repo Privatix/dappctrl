@@ -12,46 +12,70 @@ import (
 )
 
 func TestPreAccountAddBalanceApprove(t *testing.T) {
-	// check PTC balance PTC.balanceOf()
-	// PTC.increaseApproval()
-	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobPreAccountAddBalanceApprove,
-		data.JobAccount)
-	defer env.close()
-	defer fixture.close()
+	t.Run("OK", func(t *testing.T) {
+		env := newWorkerTest(t)
+		fixture := env.newTestFixture(t, data.JobPreAccountAddBalanceApprove,
+			data.JobAccount)
+		defer env.close()
+		defer fixture.close()
 
-	var transferAmount int64 = 10
+		var transferAmount int64 = 10
 
-	setJobData(t, fixture.DB, fixture.job, data.JobBalanceData{
-		Amount: uint64(transferAmount),
+		setJobData(t, fixture.DB, fixture.job, data.JobBalanceData{
+			Amount: uint64(transferAmount),
+		})
+
+		env.ethBack.BalancePTC = big.NewInt(transferAmount)
+		env.ethBack.BalanceEth = big.NewInt(999999)
+
+		runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
+
+		agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
+
+		env.ethBack.TestCalled(t, "PTCIncreaseApproval", agentAddr,
+			env.gasConf.PTC.Approve,
+			conf.pscAddr,
+			big.NewInt(transferAmount))
+
+		noCallerAddr := common.BytesToAddress([]byte{})
+		env.ethBack.TestCalled(t, "PTCBalanceOf", noCallerAddr, 0,
+			agentAddr)
+
+		// Test eth transaction was recorded.
+		env.deleteEthTx(t, fixture.job.ID)
+
+		testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
+			*fixture.job)
 	})
 
-	env.ethBack.BalancePTC = big.NewInt(transferAmount)
-	env.ethBack.BalanceEth = big.NewInt(999999)
+	t.Run("HasAllowance", func(t *testing.T) {
+		env := newWorkerTest(t)
+		fixture := env.newTestFixture(t, data.JobPreAccountAddBalanceApprove,
+			data.JobAccount)
+		defer env.close()
+		defer fixture.close()
 
-	runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
+		var transferAmount int64 = 10
 
-	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
+		setJobData(t, fixture.DB, fixture.job, data.JobBalanceData{
+			Amount:   uint64(transferAmount),
+			GasPrice: 1111,
+		})
 
-	env.ethBack.TestCalled(t, "PTCIncreaseApproval", agentAddr,
-		env.gasConf.PTC.Approve,
-		conf.pscAddr,
-		big.NewInt(transferAmount))
+		env.ethBack.BalancePTC = big.NewInt(0)
+		env.ethBack.BalanceEth = big.NewInt(99999)
+		env.ethBack.Allowance = uint64(transferAmount)
 
-	noCallerAddr := common.BytesToAddress([]byte{})
-	env.ethBack.TestCalled(t, "PTCBalanceOf", noCallerAddr, 0,
-		agentAddr)
+		runJob(t, env.worker.PreAccountAddBalanceApprove, fixture.job)
 
-	// Test eth transaction was recorded.
-	env.deleteEthTx(t, fixture.job.ID)
-
-	testCommonErrors(t, env.worker.PreAccountAddBalanceApprove,
-		*fixture.job)
+		// Has allowance, must skip and create add balance job.
+		env.deleteJob(t, data.JobPreAccountAddBalance, data.JobAccount, fixture.job.RelatedID)
+	})
 }
 
-func TestPreAccountAddBalance(t *testing.T) {
+func TestAfterAccountAddBalanceApprove(t *testing.T) {
 	env := newWorkerTest(t)
-	fixture := env.newTestFixture(t, data.JobPreAccountAddBalance,
+	fixture := env.newTestFixture(t, data.JobAfterAccountAddBalanceApprove,
 		data.JobAccount)
 	defer env.close()
 	defer fixture.close()
@@ -89,12 +113,34 @@ func TestPreAccountAddBalance(t *testing.T) {
 
 	defer env.deleteFromTestDB(t, tx)
 
+	runJob(t, env.worker.AfterAccountAddBalanceApprove, fixture.job)
+
+	// Check reAccountAddBalance created.
+	env.deleteJob(t, data.JobPreAccountAddBalance, data.JobAccount,
+		fixture.job.RelatedID)
+}
+
+func TestPreAccountAddBalance(t *testing.T) {
+	env := newWorkerTest(t)
+	defer env.close()
+	fixture := env.newTestFixture(t, data.JobPreAccountAddBalance, data.JobAccount)
+	defer fixture.close()
+
+	var transferAmount uint64 = 10
+
+	setJobData(t, fixture.DB, fixture.job, &data.JobBalanceData{
+		Amount: transferAmount,
+	})
+
+	env.ethBack.BalanceEth = big.NewInt(123)
+	env.ethBack.BalancePTC = big.NewInt(123)
+
 	runJob(t, env.worker.PreAccountAddBalance, fixture.job)
 
 	agentAddr := data.TestToAddress(t, fixture.Account.EthAddr)
 
 	env.ethBack.TestCalled(t, "PSCAddBalanceERC20", agentAddr,
-		env.gasConf.PSC.AddBalanceERC20, uint64(transferAmount))
+		env.gasConf.PSC.AddBalanceERC20, transferAmount)
 
 	// Test eth transaction was recorded.
 	env.deleteEthTx(t, fixture.job.ID)

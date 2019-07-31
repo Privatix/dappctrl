@@ -1,0 +1,26 @@
+[
+    {
+        "agent": 0,
+        "client": 0,
+        "prixClosed": 1.0,
+        "type": "coop"
+    },
+    {
+        "agent": 0,
+        "client": 1,
+        "prixClosed": 1.0,
+        "type": "coop"
+    },
+    {
+        "agent": 1,
+        "client": 0,
+        "prixClosed": 0.5,
+        "type": "coop"
+    },
+    {
+        "agent": 1,
+        "client": 1,
+        "prixClosed": 0.5,
+        "type": "coop"
+    }
+]

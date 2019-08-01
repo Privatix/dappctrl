@@ -69,7 +69,7 @@ DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.default.gasprice',
-        '10000000000',
+        '20000000000',
         2,
         'Default GAS price for transactions.',
         'default gas price')

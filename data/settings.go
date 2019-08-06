@@ -11,7 +11,6 @@ import (
 const (
 	SettingAppVersion                       = "system.version.app"
 	SettingBlockLimit                       = "eth.event.blocklimit"
-	SettingDefaultGasPrice                  = "eth.default.gasprice"
 	SettingFreshBlocks                      = "eth.event.freshblocks"
 	SettingOfferingAutoPopUp                = "offering.autopopup"
 	SettingLastProcessedBlock               = "eth.event.lastProcessedBlock"

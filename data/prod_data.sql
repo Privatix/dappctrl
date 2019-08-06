@@ -68,15 +68,6 @@ ON CONFLICT (key)
 DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.default.gasprice',
-        '20000000000',
-        2,
-        'Default GAS price for transactions.',
-        'default gas price')
-ON CONFLICT (key)
-DO NOTHING;
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.max.deposit',
         '30000000000',
         2,

@@ -162,7 +162,8 @@ func createLogger(conf *config, db *reform.DB) (log.Logger, io.Closer, error) {
 
 func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 	queue job.Queue, pwdStorage data.PWDGetSetter, userRole string,
-	processor *proc.Processor, somcClientBuilder somc.ClientBuilderInterface) (*rpcsrv.Server, error) {
+	ethBack eth.Backend, processor *proc.Processor,
+	somcClientBuilder somc.ClientBuilderInterface) (*rpcsrv.Server, error) {
 	server, err := rpcsrv.NewServer(conf)
 	if err != nil {
 		return nil, err
@@ -170,7 +171,7 @@ func createUIServer(conf *rpcsrv.Config, logger log.Logger, db *reform.DB,
 
 	handler := ui.NewHandler(logger, db, queue, pwdStorage,
 		data.EncryptedKey, userRole, processor,
-		somcClientBuilder, ui.NewSimpleToken())
+		somcClientBuilder, ui.NewSimpleToken(), ethBack)
 	if err := server.AddHandler("ui", handler); err != nil {
 		return nil, err
 	}
@@ -340,7 +341,7 @@ func main() {
 	}()
 
 	uiSrv, err := createUIServer(conf.UI, logger, db, queue, pwdStorage,
-		conf.Role, pr, somc.NewClientBuilder(conf.TorSocksListener))
+		conf.Role, ethBack, pr, somc.NewClientBuilder(conf.TorSocksListener))
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -358,8 +359,8 @@ func main() {
 	}()
 
 	if conf.Role == data.RoleClient {
-		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, pr, queue,
-			conf.Eth.Contract.PSCAddrHex, pwdStorage)
+		cmon := cbill.NewMonitor(conf.ClientMonitor, logger, db, ethBack,
+			pr, queue, conf.Eth.Contract.PSCAddrHex, pwdStorage)
 		go func() {
 			fatal <- cmon.Run()
 		}()

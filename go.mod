@@ -30,6 +30,7 @@ require (
 	github.com/jpillora/backoff v0.0.0-20170918002102-8eab2debe79d
 	github.com/karalabe/usb v0.0.0-20190703133951-9be757f914c0 // indirect
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leekchan/timeutil v0.0.0-20150802142658-28917288c48d
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-colorable v0.1.2 // indirect

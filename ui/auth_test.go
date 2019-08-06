@@ -83,7 +83,7 @@ func TestUpdatePassword(t *testing.T) {
 	pwdStorage.Set(data.TestPassword)
 	handler := ui.NewHandler(logger, db, nil, pwdStorage,
 		data.EncryptedKey, data.RoleClient, nil,
-		somc.NewTestClientBuilder(testSOMCClient), testToken)
+		somc.NewTestClientBuilder(testSOMCClient), testToken, &testGasPriceSuggestor)
 	err := server.RegisterName("ui2", handler)
 	if err != nil {
 		t.Fatal(err)

@@ -235,6 +235,12 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	var gasPrice *big.Int
 	if jdata.GasPrice != 0 {
 		gasPrice = new(big.Int).SetUint64(jdata.GasPrice)
+	} else {
+		gasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 
 	return w.clientPreChannelCreateSaveTX(logger,
@@ -725,6 +731,12 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	} else {
+		opts.GasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 	if w.gasConf.PSC.TopUp != 0 {
 		opts.GasLimit = w.gasConf.PSC.TopUp
@@ -804,6 +816,12 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	} else {
+		opts.GasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 
 	offerHash, err := data.HexToHash(offer.Hash)

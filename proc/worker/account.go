@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -259,72 +258,4 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 
 	return w.saveEthTX(logger, job, tx, "PSCReturnBalanceERC20", job.RelatedType,
 		job.RelatedID, data.HexFromBytes(w.pscAddr.Bytes()), acc.EthAddr)
-}
-
-func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
-	logger := w.logger.Add("method", "afterChannelTopUp", "job", job)
-
-	channel, err := w.relatedChannel(logger, job, jobType)
-	if err != nil {
-		return err
-	}
-
-	ethLog, err := w.ethLog(logger, job)
-	if err != nil {
-		return err
-	}
-
-	logInput, err := extractLogChannelToppedUp(logger, ethLog)
-	if err != nil {
-		return fmt.Errorf("could not parse log: %v", err)
-	}
-
-	agentAddr, err := data.HexToAddress(channel.Agent)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrParseEthAddr
-	}
-
-	clientAddr, err := data.HexToAddress(channel.Client)
-	if err != nil {
-		logger.Error(err.Error())
-		return ErrParseEthAddr
-	}
-
-	logger = logger.Add("agent", agentAddr, "client", clientAddr)
-
-	offering, err := w.offering(logger, channel.Offering)
-	if err != nil {
-		return err
-	}
-
-	offeringHash, err := w.toOfferingHashArr(logger, offering.Hash)
-	if err != nil {
-		return err
-	}
-
-	if agentAddr != logInput.agentAddr ||
-		clientAddr != logInput.clientAddr ||
-		offeringHash != logInput.offeringHash ||
-		channel.Block != logInput.openBlockNum {
-		return ErrEthLogChannelMismatch
-	}
-
-	channel.TotalDeposit += logInput.addedDeposit
-	if err = w.db.Update(channel); err != nil {
-		logger.Error(err.Error())
-		return ErrInternal
-	}
-
-	if job.Type == data.JobClientAfterChannelTopUp {
-		account, err := w.account(logger, channel.Client)
-		if err != nil {
-			return err
-		}
-
-		return w.addJob(logger, nil, data.JobAccountUpdateBalances,
-			data.JobAccount, account.ID)
-	}
-
-	return nil
 }

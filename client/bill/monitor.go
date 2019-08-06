@@ -1,8 +1,10 @@
 package bill
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -38,19 +40,25 @@ type postChequeFunc func(db *reform.DB, channel *data.Channel,
 	pscAddr data.HexString, key *ecdsa.PrivateKey, amount uint64,
 	tls bool, timeout uint, pr *proc.Processor) error
 
+// PriceSuggestor suggests best gas price for current moment.
+type PriceSuggestor interface {
+	SuggestGasPrice(ctx context.Context) (*big.Int, error)
+}
+
 // Monitor is a client billing monitor.
 type Monitor struct {
-	conf   *Config
-	logger log.Logger
-	db     *reform.DB
-	pr     *proc.Processor
-	queue  job.Queue
-	psc    string
-	pw     data.PWDGetter
-	post   postChequeFunc // Is overrided in unit-tests.
-	mtx    sync.Mutex     // To guard the exit channels.
-	exit   chan struct{}
-	exited chan struct{}
+	conf      *Config
+	logger    log.Logger
+	db        *reform.DB
+	pr        *proc.Processor
+	queue     job.Queue
+	psc       string
+	pw        data.PWDGetter
+	post      postChequeFunc // Is overrided in unit-tests.
+	mtx       sync.Mutex     // To guard the exit channels.
+	suggestor PriceSuggestor
+	exit      chan struct{}
+	exited    chan struct{}
 	// The channel is only needed for tests.
 	// It allows to get a result of a processing.
 	processErrors chan error
@@ -69,7 +77,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates a new client billing monitor.
-func NewMonitor(conf *Config, logger log.Logger, db *reform.DB,
+func NewMonitor(conf *Config, logger log.Logger, db *reform.DB, suggestor PriceSuggestor,
 	pr *proc.Processor, queue job.Queue, pscAddr string, pw data.PWDGetter) *Monitor {
 	return &Monitor{
 		conf:                     conf,
@@ -80,6 +88,7 @@ func NewMonitor(conf *Config, logger log.Logger, db *reform.DB,
 		psc:                      pscAddr,
 		pw:                       pw,
 		post:                     pay.PostCheque,
+		suggestor:                suggestor,
 		lockAutoIncreaseDuration: 2 * time.Minute,
 	}
 }
@@ -218,14 +227,14 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 	// Check to auto increase deposit.
 	autoincreaseAfter := uint64(float64(ch.TotalDeposit) * m.autoIncreaseAtRate)
 	if m.autoIncrease && amount >= autoincreaseAfter && time.Now().Sub(m.lastAutoIncrease) > m.lockAutoIncreaseDuration {
-		gasPrice, err := data.ReadUint64Setting(m.db.Querier, data.SettingDefaultGasPrice)
-		if err != nil {
-			return err
-		}
+		timeout := 5 * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		gasPrice, err := m.suggestor.SuggestGasPrice(ctx)
 		err = job.AddWithData(m.queue, nil, data.JobClientPreChannelTopUp,
 			data.JobChannel, ch.ID, data.JobBillingChecker,
 			&data.JobTopUpChannelData{
-				GasPrice: gasPrice,
+				GasPrice: gasPrice.Uint64(),
 				Deposit:  ch.TotalDeposit,
 			})
 		if err != nil && err != job.ErrDuplicatedJob {

@@ -55,8 +55,7 @@ func TestTopUpChannel(t *testing.T) {
 
 	// Test default gas price setup.
 	var testGasPrice uint64 = 500
-	deleteSetting := insertDefaultGasPriceSetting(t, testGasPrice)
-	defer deleteSetting()
+	testGasPriceSuggestor.v = testGasPrice
 	handler.TopUpChannel(testToken.v, fxt.Channel.ID, 0, 0)
 	jdata := unmarshalJobData()
 	if jdata.GasPrice != testGasPrice {
@@ -107,8 +106,7 @@ func TestChangeChannelStatus(t *testing.T) {
 
 	// Test default gas price setup.
 	var testGasPrice uint64 = 500
-	deleteSetting := insertDefaultGasPriceSetting(t, testGasPrice)
-	defer deleteSetting()
+	testGasPriceSuggestor.v = testGasPrice
 
 	type testObject struct {
 		channel       *data.Channel

@@ -257,5 +257,5 @@ func (w *Worker) PreAccountReturnBalance(job *data.Job) error {
 	}
 
 	return w.saveEthTX(logger, job, tx, "PSCReturnBalanceERC20", job.RelatedType,
-		job.RelatedID, data.HexFromBytes(w.pscAddr.Bytes()), acc.EthAddr)
+		job.RelatedID, acc.EthAddr, data.HexFromBytes(w.pscAddr.Bytes()))
 }

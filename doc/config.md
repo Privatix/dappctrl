@@ -212,7 +212,7 @@ Independent agent somc server. Intended to be shared via tor net. For agents onl
 
 |Field|Type|Description|Example|
 |-|-|-|-|
-|Addr|int|the agents somc server address|5555|
+|Addr|int|the agents somc server address|3452|
 |TLS|struct|Transport Layer Security settings| {"CertFile":"cert.pem","KeyFile": "key.pem"}| 
 
 ### SessionServer
@@ -358,7 +358,7 @@ UI api server configuration.
         "URL": "ws://89.38.96.53:8080"
     },
     "SOMCServer": {
-        "Addr": "localhost:5555",
+        "Addr": "localhost:3452",
         "TLS": null
     },
     "StaticPassword": "",

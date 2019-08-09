@@ -251,7 +251,7 @@
     },
     "Role": "agent",
     "SOMCServer": {
-        "Addr": "0.0.0.0:5555",
+        "Addr": "0.0.0.0:3452",
         "TLS": null
     },
     "Sess": {

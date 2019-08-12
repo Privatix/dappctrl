@@ -1156,6 +1156,10 @@ func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 		return err
 	}
 
+	if offering.CurrentSupply == 0 {
+		return w.updateOfferingSupplyFromChain(logger, offering)
+	}
+
 	offering.CurrentSupply--
 
 	err = data.Save(w.db.Querier, offering)
@@ -1180,11 +1184,38 @@ func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 		return err
 	}
 
+	if offering.CurrentSupply+1 > offering.Supply {
+		return w.updateOfferingSupplyFromChain(logger, offering)
+	}
+
 	offering.CurrentSupply++
 
 	err = data.Save(w.db.Querier, offering)
 	if err != nil {
 		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
+}
+
+func (w *Worker) updateOfferingSupplyFromChain(logger log.Logger, offering *data.Offering) error {
+	offerHash, err := data.HexToHash(offering.Hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
+	}
+
+	_, _, _, supplyFromContract, _, _, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, offerHash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrPSCOfferingSupply
+	}
+
+	offering.CurrentSupply = supplyFromContract
+	if err := w.db.Save(offering); err != nil {
+		logger.Error(fmt.Sprintf("could not update offering's current supply from chain: %v", err))
 		return ErrInternal
 	}
 
@@ -1300,9 +1331,9 @@ func (w *Worker) closingEvents(logger log.Logger) ([]closingEvent, error) {
 		return nil, ErrInternal
 	}
 
-	freshNum, err := data.GetUint64Setting(w.db, data.SettingFreshBlocks)
+	freshNum, err := data.GetUint64Setting(w.db, data.SettingOfferingsFreshBlocks)
 	if err != nil {
-		logger.Error(fmt.Sprintf("could not read `%s` setting: %v", data.SettingFreshBlocks, err))
+		logger.Error(fmt.Sprintf("could not read `%s` setting: %v", data.SettingOfferingsFreshBlocks, err))
 		return nil, ErrInternal
 	}
 

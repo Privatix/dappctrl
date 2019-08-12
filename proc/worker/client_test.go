@@ -984,7 +984,7 @@ func TestClientRecordClosing(t *testing.T) {
 	// Set fresh blocks number.
 	// Set rating steps.
 	setting2 := &data.Setting{
-		Key:   data.SettingFreshBlocks,
+		Key:   data.SettingOfferingsFreshBlocks,
 		Value: "100",
 		Name:  "Fresh blocks",
 	}

@@ -1928,7 +1928,7 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRo
     
 ```js
 // Request
-curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_suggestGasPrice", "id": 67}' http://localhost:8888/http
+curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_suggestGasPrice", "params": ["qwer"], "id": 67}' http://localhost:8888/http
 
 // Result (1 gwei)
 {

@@ -1,11 +1,11 @@
-package monitor
+package bc
 
 import "github.com/privatix/dappctrl/util/errors"
 
 // Errors.
 const (
-	// CRC16("github.com/privatix/dappctrl/monitor") = 0xE464
-	ErrFailedToFetchLogs errors.Error = 0xE464<<8 + iota
+	// CRC16("github.com/privatix/dappctrl/bc") = 0xD8D2
+	ErrFailedToFetchLogs errors.Error = 0xD8D2<<8 + iota
 	ErrFailedToGetActiveAccounts
 	ErrFailedToScanRows
 	ErrFailedToTraverseAddresses

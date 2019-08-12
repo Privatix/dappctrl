@@ -18,6 +18,7 @@ import (
 
 	abill "github.com/privatix/dappctrl/agent/bill"
 	"github.com/privatix/dappctrl/agent/somcsrv"
+	"github.com/privatix/dappctrl/bc"
 	cbill "github.com/privatix/dappctrl/client/bill"
 	"github.com/privatix/dappctrl/client/somc"
 	"github.com/privatix/dappctrl/country"
@@ -27,7 +28,6 @@ import (
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/messages/ept"
-	"github.com/privatix/dappctrl/monitor"
 	"github.com/privatix/dappctrl/nat"
 	"github.com/privatix/dappctrl/pay"
 	"github.com/privatix/dappctrl/proc"
@@ -52,7 +52,7 @@ var (
 
 type config struct {
 	AgentMonitor     *abill.Config
-	BlockMonitor     *monitor.Config
+	BlockMonitor     *bc.Config
 	ClientMonitor    *cbill.Config
 	Country          *country.Config
 	DB               *data.DBConfig
@@ -82,7 +82,7 @@ type config struct {
 func newConfig() *config {
 	return &config{
 		AgentMonitor:  abill.NewConfig(),
-		BlockMonitor:  monitor.NewConfig(),
+		BlockMonitor:  bc.NewConfig(),
 		ClientMonitor: cbill.NewConfig(),
 		Country:       country.NewConfig(),
 		DB:            data.NewDBConfig(),
@@ -328,12 +328,12 @@ func main() {
 	pr := proc.NewProcessor(conf.Proc, db, queue)
 	worker.SetProcessor(pr)
 
-	mon, err := monitor.NewMonitor(conf.BlockMonitor, ethBack, db, logger,
-		ethBack.PSCAddress(), ethBack.PTCAddress(), conf.Role, queue)
+	mon, err := bc.NewMonitor(conf.BlockMonitor, ethBack, queue, db, logger,
+		ethBack.PSCAddress(), ethBack.PTCAddress(), conf.Role)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-	mon.Start()
+	go mon.Start()
 	defer mon.Stop()
 
 	go func() {

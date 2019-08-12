@@ -36,13 +36,13 @@ ON CONFLICT (key)
 DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.event.freshblocks',
-        '11520',
+VALUES ('eth.event.offeringsfreshblocks',
+        '345600',
         2,
-        'Defines number of latest ethereum blocks to retrieve.' ||
-        ' If eth.event.freshblocks is null or zero then all events' ||
-        ' will be downloaded.',
-        'last events blocks')
+        'For clients, defines number of latest ethereum blocks to retrieve offerings from.' ||
+        ' If eth.event.offeringsfreshblocks is null or zero then events starting' ||
+        ' from the latest block will be downloaded.',
+        'offerings last events blocks')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -83,6 +83,24 @@ VALUES ('eth.event.lastProcessedBlock',
         1,
         'Last block number in blockchain stores last proccessed block.',
         'last processed block')
+ON CONFLICT (key)
+DO NOTHING;
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.lastBackSearchBlock',
+        '0',
+        1,
+        'On client, the last block offerings searched from.',
+        'last back search block')
+ON CONFLICT (key)
+DO NOTHING;
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.lastOfferingsBackwardSearchToBlock',
+        '0',
+        1,
+        'On client, the last block offerings searched till.',
+        'last backward search to block')
 ON CONFLICT (key)
 DO NOTHING;
 

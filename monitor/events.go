@@ -19,25 +19,25 @@ const (
 
 func (m *Monitor) eventNameFromHash(hash common.Hash) string {
 	switch hash {
-	case m.pscABI.Events[logChannelCreated].Id():
+	case m.pscABI.Events[logChannelCreated].ID():
 		return logChannelCreated
-	case m.pscABI.Events[logChannelToppedUp].Id():
+	case m.pscABI.Events[logChannelToppedUp].ID():
 		return logChannelToppedUp
-	case m.pscABI.Events[logChannelCloseRequested].Id():
+	case m.pscABI.Events[logChannelCloseRequested].ID():
 		return logChannelCloseRequested
-	case m.pscABI.Events[logOfferingCreated].Id():
+	case m.pscABI.Events[logOfferingCreated].ID():
 		return logOfferingCreated
-	case m.pscABI.Events[logOfferingDeleted].Id():
+	case m.pscABI.Events[logOfferingDeleted].ID():
 		return logOfferingDeleted
-	case m.pscABI.Events[logOfferingPopedUp].Id():
+	case m.pscABI.Events[logOfferingPopedUp].ID():
 		return logOfferingPopedUp
-	case m.pscABI.Events[logCooperativeChannelClose].Id():
+	case m.pscABI.Events[logCooperativeChannelClose].ID():
 		return logCooperativeChannelClose
-	case m.pscABI.Events[logUnCooperativeChannelClose].Id():
+	case m.pscABI.Events[logUnCooperativeChannelClose].ID():
 		return logUnCooperativeChannelClose
-	case m.ptcABI.Events[approval].Id():
+	case m.ptcABI.Events[approval].ID():
 		return approval
-	case m.ptcABI.Events[transfer].Id():
+	case m.ptcABI.Events[transfer].ID():
 		return transfer
 	}
 	return hash.String()

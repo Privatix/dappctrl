@@ -171,7 +171,7 @@
                 "FirstStartDelay": 0
             },
             "clientPreUncooperativeClose": {
-                "FirstStartDelay": 300000,
+                "FirstStartDelay": 750000000,
                 "TryLimit": 200,
                 "TryPeriod": 180000,
                 "Duplicated": false

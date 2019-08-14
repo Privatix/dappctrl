@@ -13,6 +13,9 @@ product = products[0]
 accounts = get_accounts(token)
 account = accounts[0]
 
+suggested_gas_price = get_suggested_gas_price(token)
+print("\nSuggested gas price: {}".format(eth_to_gwei(suggested_gas_price)))
+
 print("\nUsed product: {}".format(product["name"]))
 print("\nUsed account: {}".format(account["name"]))
 
@@ -38,4 +41,4 @@ print("\nOffering: {}".format(json.dumps(offering, indent=8)))
 offering_id = create_offering(token, offering)
 print("\nOffering id: {}".format(offering_id))
 
-change_offering_status(token, offering_id, "publish")
+change_offering_status(token, offering_id, "publish", suggested_gas_price)

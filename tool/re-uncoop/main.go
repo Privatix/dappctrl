@@ -29,9 +29,9 @@ func main() {
 	}
 
 	query := `UPDATE jobs
-	            SET try_count=0, status=$1, not_before=$2
-			    WHERE type=$3 AND status=$4`
-	if _, err := db.Exec(query, data.JobActive, nil,
+	            SET try_count=0, status=$1
+			    WHERE type=$2 AND status=$3`
+	if _, err := db.Exec(query, data.JobActive,
 		data.JobClientPreUncooperativeClose, data.JobFailed); err != nil {
 		panic(fmt.Sprintf("failed to re-activate uncoop close jobs: %v", err))
 	}

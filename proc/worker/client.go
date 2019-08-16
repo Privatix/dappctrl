@@ -969,11 +969,16 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 		return ErrInternal
 	}
 
-	// Existing offering, just update offering status.
-	offering.BlockNumberUpdated = ethLog.Block
-	offering.Status = data.OfferPoppedUp
+	// Offerings can be searched backward too.
+	if offering.Status != data.OfferRemoved && ethLog.Block > offering.BlockNumberUpdated {
+		offering.BlockNumberUpdated = ethLog.Block
+		// Existing offering, just update offering status.
+		offering.Status = data.OfferPoppedUp
 
-	return w.saveRecord(logger, w.db.Querier, &offering)
+		return w.saveRecord(logger, w.db.Querier, &offering)
+	}
+
+	return nil
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
@@ -1051,7 +1056,8 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	logger = logger.Add("offering", offering)
 	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {
-		return nil, ErrOfferingExists
+		logger.Warn("offerings already exists")
+		return nil, nil
 	}
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(offering))
@@ -1065,7 +1071,8 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	}
 
 	if !active {
-		return nil, ErrOfferingNotActive
+		logger.Warn("offering is not active")
+		return nil, nil
 	}
 
 	msgRaw, sig := messages.UnpackSignature(offering)

@@ -75,7 +75,6 @@ const (
 	ErrFailedStartService
 	ErrChallengePeriodIsNotOver
 	ErrWrongOfferingMsgSignature
-	ErrOfferingExists
 	ErrUncompletedJobsExists
 	ErrOfferingNotActive
 	ErrPopUpPeriodIsNotOver
@@ -154,7 +153,6 @@ var errMsgs = errors.Messages{
 	ErrFailedStartService:            "failed to start a service",
 	ErrChallengePeriodIsNotOver:      "challenge period is not over",
 	ErrWrongOfferingMsgSignature:     "wrong offering msg's signature",
-	ErrOfferingExists:                "offering with a given hash exists",
 	ErrUncompletedJobsExists:         "active offering related jobs exists",
 	ErrOfferingNotActive:             "offering is inactive",
 	ErrPopUpPeriodIsNotOver:          "popup period is not over, try again later",

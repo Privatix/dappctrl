@@ -824,7 +824,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 
 	ethLog := &data.JobEthLog{
 		Topics: topics,
-		Block:  12345,
+		Block:  fxt.Offering.BlockNumberUpdated + 1,
 		Data:   logData,
 	}
 	setJobData(t, db, fxt.job, &data.JobData{

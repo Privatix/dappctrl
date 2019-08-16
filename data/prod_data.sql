@@ -96,15 +96,6 @@ ON CONFLICT (key)
 DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.event.lastOfferingsBackwardSearchToBlock',
-        '0',
-        1,
-        'On client, the last block offerings searched till.',
-        'Last backward search to block')
-ON CONFLICT (key)
-DO NOTHING;
-
-INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('offering.autopopup',
         'false',
         2,
@@ -146,7 +137,7 @@ VALUES('client.min.deposit',
         2,
         'This value will override min. deposit proposed by Agent' ||
         ' in auto-increase mode, if greater than proposed. ',
-        'Client auto-increase min. deposit')
+        'Auto-increase min deposit')
 ON CONFLICT (key)
 DO NOTHING;
 

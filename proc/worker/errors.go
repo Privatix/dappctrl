@@ -77,6 +77,7 @@ const (
 	ErrWrongOfferingMsgSignature
 	ErrUncompletedJobsExists
 	ErrOfferingNotActive
+	ErrOfferingExists
 	ErrPopUpPeriodIsNotOver
 	ErrOfferingDeletePeriodIsNotOver
 	ErrOfferingDeposit
@@ -155,6 +156,7 @@ var errMsgs = errors.Messages{
 	ErrWrongOfferingMsgSignature:     "wrong offering msg's signature",
 	ErrUncompletedJobsExists:         "active offering related jobs exists",
 	ErrOfferingNotActive:             "offering is inactive",
+	ErrOfferingExists:                "offering exists",
 	ErrPopUpPeriodIsNotOver:          "popup period is not over, try again later",
 	ErrOfferingDeletePeriodIsNotOver: "remove period is not over, try again later",
 	ErrOfferingDeposit:               "incorrect offering deposit",

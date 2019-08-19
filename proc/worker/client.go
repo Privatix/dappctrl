@@ -1015,7 +1015,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		data.HexFromBytes(hash.Bytes()), job.RelatedID,
 		somcType, somcData)
 	if err != nil {
-		if err == ErrTemplateByHashNotFound {
+		if err == ErrTemplateByHashNotFound || err == ErrOfferingNotActive || err == ErrOfferingExists {
 			job.Status = data.JobCanceled
 			w.db.Save(job)
 			return nil
@@ -1057,7 +1057,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {
 		logger.Warn("offerings already exists")
-		return nil, nil
+		return nil, ErrOfferingExists
 	}
 
 	hashBytes := common.BytesToHash(crypto.Keccak256(offering))
@@ -1072,7 +1072,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 
 	if !active {
 		logger.Warn("offering is not active")
-		return nil, nil
+		return nil, ErrOfferingNotActive
 	}
 
 	msgRaw, sig := messages.UnpackSignature(offering)

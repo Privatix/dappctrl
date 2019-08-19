@@ -105,7 +105,7 @@ func (q *queue) checkDuplicated(j *data.Job, logger log.Logger) error {
 	jdata := &data.JobData{}
 	json.Unmarshal(j.Data, jdata)
 	var err error
-	if jdata.EthLog != nil {
+	if jdata.EthLog != nil && j.Type != data.JobAccountUpdateBalances {
 		_, err = q.db.SelectOneFrom(data.JobTable,
 			`WHERE related_id = $1
 			    AND type = $2
@@ -262,6 +262,7 @@ func (q *queue) processMain() error {
 			   WHERE status = $1
 			   ORDER BY related_id, created_at) AS ordered
 			 WHERE not_before <= $2
+			 ORDER BY related_type
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			logger.Error(err.Error())

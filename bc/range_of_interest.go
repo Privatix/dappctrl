@@ -36,7 +36,7 @@ func rangeOfInterest(db *reform.DB, latestBlock uint64) (first uint64, last uint
 	return first, last, nil
 }
 
-func offeringsRangeOfInterest(db *reform.DB, latestBlock uint64) (uint64, uint64, error) {
+func offeringsRangeOfInterest(db *reform.DB, upBlock uint64) (uint64, uint64, error) {
 	unreliableNum, err := data.GetUint64Setting(db, data.SettingMinConfirmations)
 	if err != nil {
 		return 0, 0, err
@@ -58,18 +58,18 @@ func offeringsRangeOfInterest(db *reform.DB, latestBlock uint64) (uint64, uint64
 	}
 
 	if lastFrom == 0 {
-		lastFrom = safeSub(latestBlock, unreliableNum) + 1
+		lastFrom = safeSub(upBlock, unreliableNum) + 1
 	}
 
 	from := safeSub(safeSub(lastFrom, limitNum), 1)
 	last := safeSub(lastFrom, 1)
 
-	if last <= safeSub(latestBlock, freshNum) {
+	if last <= safeSub(upBlock, freshNum) {
 		return 0, 0, nil
 	}
 
-	if from < safeSub(latestBlock, freshNum) {
-		from = safeSub(safeSub(latestBlock, freshNum), unreliableNum)
+	if from < safeSub(upBlock, freshNum) {
+		from = safeSub(safeSub(upBlock, freshNum), unreliableNum)
 	}
 
 	if last <= from {

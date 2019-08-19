@@ -78,6 +78,15 @@ ON CONFLICT (key)
 DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.clientMonitoringStartBlock',
+        '0',
+        0,
+        'Block from which (Client) monitoring started started.',
+        'Client monitoring start block')
+ON CONFLICT (key)
+DO NOTHING;
+
+INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.lastProcessedBlock',
         '0',
         1,

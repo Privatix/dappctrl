@@ -15,6 +15,7 @@ const (
 	SettingOfferingAutoPopUp                = "offering.autopopup"
 	SettingLastProcessedBlock               = "eth.event.lastProcessedBlock"
 	SettingLastBackSearchBlock              = "eth.event.lastBackSearchBlock"
+	SettingClientMonitoringStartBlock       = "eth.event.clientmonitoringStartBlock"
 	SettingMinConfirmations                 = "eth.min.confirmations"
 	SettingPasswordHash                     = "system.password"
 	SettingPasswordSalt                     = "system.salt"

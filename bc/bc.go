@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"gopkg.in/reform.v1"
@@ -130,11 +131,6 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		return nil, nil, fmt.Errorf("could not get range of interest: %v", err)
 	}
 	logger.Debug(fmt.Sprintf("range of interest from: %d, to: %v", from, to))
-	offeringsFrom, offeringsTo, err := offeringsRangeOfInterest(db, latestBlock)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not get offerings range of interest: %v", err)
-	}
-	logger.Debug(fmt.Sprintf("offerings range of interest from: %v, to: %v", offeringsFrom, offeringsTo))
 	addrs, err := getAddressesInUse(db)
 	logger.Debug(fmt.Sprintf("addresses in use: %v", addrs))
 	if err != nil {
@@ -183,6 +179,34 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 			},
 		})
 	}
+	// Get up block for backward offerings search.
+	upBlock := latestBlock
+	var startBlock data.Setting
+	if err := db.SelectOneTo(&startBlock, "key", data.SettingClientMonitoringStartBlock); err == sql.ErrNoRows {
+		logger.Debug("recording monitoring start block to " + fmt.Sprint(upBlock))
+		startBlock.Key = data.SettingClientMonitoringStartBlock
+		startBlock.Value = fmt.Sprint(upBlock)
+		startBlock.Permissions = data.AccessDenied
+		tmp := "Block from which (Client) monitoring started started."
+		startBlock.Description = &tmp
+		startBlock.Name = "Client monitoring start block"
+		if err := db.Insert(&startBlock); err != nil {
+			return nil, nil, err
+		}
+	} else if err == nil {
+		val, err := strconv.ParseUint(startBlock.Value, 10, 64)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not parse `%s`: %v", data.SettingClientMonitoringStartBlock, err)
+		}
+		upBlock = val
+	} else if err != nil {
+		return nil, nil, fmt.Errorf("could not get `%s`: %v", data.SettingClientMonitoringStartBlock, err)
+	}
+	offeringsFrom, offeringsTo, err := offeringsRangeOfInterest(db, upBlock)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not get offerings range of interest: %v", err)
+	}
+	logger.Debug(fmt.Sprintf("offerings range of interest from: %v, to: %v", offeringsFrom, offeringsTo))
 	if offeringsFrom < offeringsTo {
 		ret = append(ret, ethereum.FilterQuery{
 			Addresses: []common.Address{pscAddr},

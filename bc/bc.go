@@ -182,7 +182,7 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 	// Get up block for backward offerings search.
 	upBlock := latestBlock
 	var startBlock data.Setting
-	if err := db.SelectOneTo(&startBlock, "key", data.SettingClientMonitoringStartBlock); err == sql.ErrNoRows {
+	if err := db.FindOneTo(&startBlock, "key", data.SettingClientMonitoringStartBlock); err == sql.ErrNoRows {
 		logger.Debug("recording monitoring start block to " + fmt.Sprint(upBlock))
 		startBlock.Key = data.SettingClientMonitoringStartBlock
 		startBlock.Value = fmt.Sprint(upBlock)

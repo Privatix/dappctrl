@@ -9,7 +9,6 @@ import (
 
 // Setting keys.
 const (
-	SettingAppVersion                       = "system.version.app"
 	SettingBlockLimit                       = "eth.event.blocklimit"
 	SettingOfferingsFreshBlocks             = "eth.event.offeringsfreshblocks"
 	SettingOfferingAutoPopUp                = "offering.autopopup"

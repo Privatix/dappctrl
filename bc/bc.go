@@ -198,7 +198,14 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not parse `%s`: %v", data.SettingClientMonitoringStartBlock, err)
 		}
-		upBlock = val
+		if val == 0 {
+			startBlock.Value = fmt.Sprint(latestBlock)
+			if err := db.Save(&startBlock); err != nil {
+				return nil, nil, fmt.Errorf("could not set initial start block value: %v", err)
+			}
+		} else {
+			upBlock = val
+		}
 	} else if err != nil {
 		return nil, nil, fmt.Errorf("could not get `%s`: %v", data.SettingClientMonitoringStartBlock, err)
 	}

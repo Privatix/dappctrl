@@ -421,3 +421,25 @@ Get token
 Change offering status (offering_id: 89763b49-5ef3-4467-8f9a-339544e0ed5e, action: popup)
 	Ok: <Response [200]>
 ```
+## import_account_from_json.py
+
+#### Usage
+
+Import an account from a JSON Keystore file.
+
+```bash
+python import_account_from_json.py /opt/privatix/backup.json 
+```
+
+#### Output
+
+```
+Get token
+	Ok: <Response [200]>
+
+Import account from json (account params: {'name': 'imported', 'isDefault': True, 'inUse': True}, json_content: {u'id': u'140ee426-d33b-46b8-9b86-aa530dc8cf40', u'version': 3, u'crypto': {u'ciphertext': u'e3ca896098f5a4c8f0bd06fb2438c67c356c1c994171f8d078c6cf0844ae7f14', u'cipherparams': {u'iv': u'6ddd174050ef115ca563b2c58aa5c47d'}, u'kdf': u'scrypt', u'kdfparams': {u'dklen': 32, u'r': 8, u'salt': u'3af9286d683f8bfd470376fc0b1ef2b4b7aaa73b57e5c3c5fef8081ba01c87f6', u'p': 1, u'n': 262144}, u'mac': u'429b6d8d277d5f31eb0f7492af4a3e7a6a4123e0f7569d945fc6997e230c78eb', u'cipher': u'aes-128-ctr'}, u'address': u'1a2292f0b1b1f24e4ee8b01bded8ce60a088e745'})
+	Ok: <Response [200]>
+
+
+Account id: 99a341f7-726f-44cb-a41c-e3561c3faa99
+```

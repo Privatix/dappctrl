@@ -257,3 +257,13 @@ def get_suggested_gas_price(token):
     _check_ok("Get suggested gas price".format(), response)
 
     return response.json()["result"]
+
+
+def import_account_from_json(token, account_params, json_content, password_to_decrypt):
+    data = _request_payload("ui_importAccountFromJSON", [token, account_params, json_content, password_to_decrypt])
+
+    response = requests.post(endpoint, json=data, headers=header)
+    _check_ok("Import account from json (account params: {}, json_content: {})".format(account_params, json_content),
+              response)
+
+    return response.json()["result"]

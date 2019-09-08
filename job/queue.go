@@ -260,9 +260,9 @@ func (q *queue) processMain() error {
 			  SELECT DISTINCT ON (related_id) *
 			    FROM jobs
 			   WHERE status = $1
-			   ORDER BY related_id, created_at) AS ordered
+			   ORDER BY related_id) AS ordered
 			 WHERE not_before <= $2
-			 ORDER BY related_type
+			 ORDER BY related_type desc, created_at asc
 			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
 		if err != nil {
 			logger.Error(err.Error())

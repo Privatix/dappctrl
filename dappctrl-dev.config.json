@@ -87,7 +87,7 @@
         "FirstStartDelay": 0,
         "Types": {
             "accountUpdateBalances": {
-                "Duplicated": true,
+                "Duplicated": false,
                 "TryLimit": 3,
                 "TryPeriod": 60000,
                 "FirstStartDelay": 0

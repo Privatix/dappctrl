@@ -11,6 +11,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/util/log"
 )
 
@@ -134,11 +135,15 @@ func (m *Monitor) Round() error {
 	}
 
 	return m.db.InTransaction(func(tx *reform.TX) error {
-		for _, job := range jobsToCreate {
-			job.CreatedBy = data.JobBCMonitor
+		for _, j := range jobsToCreate {
+			j.CreatedBy = data.JobBCMonitor
 
-			if err := m.Queue.Add(tx, &job); err != nil {
-				return fmt.Errorf("could not insert a job: %v", err)
+			if err := m.Queue.Add(tx, &j); err != nil {
+				if err == job.ErrDuplicatedJob {
+					logger.Add("job", j).Warn(err.Error())
+				} else {
+					return fmt.Errorf("could not insert a job %s: %v", j.Type, err)
+				}
 			}
 		}
 

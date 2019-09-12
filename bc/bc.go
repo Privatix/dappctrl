@@ -140,7 +140,7 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		return nil, nil, nil
 	}
 	ret := make([]ethereum.FilterQuery, 0)
-	if from < to {
+	if from <= to {
 		ret = append(ret, ethereum.FilterQuery{
 			Addresses: []common.Address{pscAddr, ptcAddr},
 			FromBlock: new(big.Int).SetUint64(from),
@@ -198,7 +198,14 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not parse `%s`: %v", data.SettingClientMonitoringStartBlock, err)
 		}
-		upBlock = val
+		if val == 0 {
+			startBlock.Value = fmt.Sprint(latestBlock)
+			if err := db.Save(&startBlock); err != nil {
+				return nil, nil, fmt.Errorf("could not set initial start block value: %v", err)
+			}
+		} else {
+			upBlock = val
+		}
 	} else if err != nil {
 		return nil, nil, fmt.Errorf("could not get `%s`: %v", data.SettingClientMonitoringStartBlock, err)
 	}
@@ -207,7 +214,7 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		return nil, nil, fmt.Errorf("could not get offerings range of interest: %v", err)
 	}
 	logger.Debug(fmt.Sprintf("offerings range of interest from: %v, to: %v", offeringsFrom, offeringsTo))
-	if offeringsFrom < offeringsTo {
+	if offeringsFrom <= offeringsTo {
 		ret = append(ret, ethereum.FilterQuery{
 			Addresses: []common.Address{pscAddr},
 			FromBlock: new(big.Int).SetUint64(offeringsFrom),
@@ -230,6 +237,7 @@ func getClientFilterQueries(logger log.Logger, db *reform.DB, latestBlock uint64
 		}
 		logger.Debug(fmt.Sprintf("updating last processed blocks in backward offerings search to=%d", offeringsFrom))
 		return data.UpdateUint64Setting(tx.Querier, data.SettingLastBackSearchBlock, offeringsFrom)
+		return nil
 	}, nil
 }
 

@@ -32,12 +32,12 @@ type client struct {
 }
 
 // newClient creates client for connection to the Ethereum.
-func newClient(cfg *Config, logger log.Logger) (*client, error) {
+func newClient(cfg *Config, logger log.Logger) (*client, *rpc.Client, error) {
 	logger2 := logger.Add("method", "newClient", "config", cfg)
 
 	u, err := url.Parse(cfg.GethURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -62,15 +62,15 @@ func newClient(cfg *Config, logger log.Logger) (*client, error) {
 		rpcClient, err = rpc.DialIPC(ctx, cfg.GethURL)
 	default:
 		logger2.Add("scheme", u.Scheme).Error(err.Error())
-		return nil, ErrURLScheme
+		return nil, nil, ErrURLScheme
 	}
 	if err != nil {
 		logger2.Error(err.Error())
-		return nil, ErrCreateClient
+		return nil, nil, ErrCreateClient
 	}
 
 	c.client = ethclient.NewClient(rpcClient)
-	return c, nil
+	return c, rpcClient, nil
 }
 
 // close closes client.

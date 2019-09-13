@@ -70,7 +70,7 @@
             "RegisterServiceOffering": 112941,
             "RemoveServiceOffering": 58728,
             "ReturnBalanceERC20": 61473,
-            "Settle": 54290,
+            "Settle": 108459,
             "TopUp": 45836,
             "UncooperativeClose": 72964
         },

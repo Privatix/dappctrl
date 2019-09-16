@@ -340,6 +340,7 @@ func (m *Monitor) postCheque(channelID string, amount uint64) {
 		return
 	}
 
+	logger.Info(fmt.Sprintf("sent payment channel: %s, amount: %v", channel, amount))
 	res, err := m.db.Exec(`
 		UPDATE channels
 		   SET receipt_balance = $1

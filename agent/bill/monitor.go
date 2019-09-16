@@ -126,7 +126,8 @@ func (m *Monitor) VerifyUnitsBasedChannels() error {
               HAVING offer.setup_price + coalesce(sum(ses.units_used), 0) * offer.unit_price >= channels.total_deposit
                   OR COALESCE(SUM(ses.units_used), 0) >= offer.max_unit;`
 
-	return m.processEachChannel(query, m.terminateService)
+	logger := m.logger.Add("method", "VerifyUnitsBasedChannels")
+	return m.processEachChannel(logger, query, m.terminateService)
 }
 
 // VerifyBillingLags checks all active channels for billing lags,
@@ -155,8 +156,8 @@ func (m *Monitor) VerifyBillingLags() error {
               HAVING COALESCE(SUM(ses.units_used), 0) /
 	      offer.billing_interval - (channels.receipt_balance - offer.setup_price ) /
 	      offer.unit_price > offer.max_billing_unit_lag;`
-
-	return m.processEachChannel(query, m.suspendService)
+	logger := m.logger.Add("method", "VerifyBillingLags")
+	return m.processEachChannel(logger, query, m.suspendService)
 }
 
 // VerifySuspendedChannelsAndTryToUnsuspend scans all supsended channels,
@@ -185,8 +186,8 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToUnsuspend() error {
               HAVING COALESCE(SUM(ses.units_used), 0) /
 	      offer.billing_interval - (channels.receipt_balance - offer.setup_price) /
 	      offer.unit_price <= offer.max_billing_unit_lag;`
-
-	return m.processEachChannel(query, m.unsuspendService)
+	logger := m.logger.Add("method", "VerifySuspendedChannelsAndTryToUnsuspend")
+	return m.processEachChannel(logger, query, m.unsuspendService)
 }
 
 // VerifyChannelsForInactivity scans all channels, that are not terminated,
@@ -207,8 +208,8 @@ func (m *Monitor) VerifyChannelsForInactivity() error {
                GROUP BY channels.id, offer.max_inactive_time_sec
               HAVING GREATEST(MAX(ses.last_usage_time), channels.service_changed_time) +
 	      (offer.max_inactive_time_sec * INTERVAL '1 second') < now();`
-
-	return m.processEachChannel(query, m.terminateService)
+	logger := m.logger.Add("method", "VerifyChannelsForInactivity")
+	return m.processEachChannel(logger, query, m.terminateService)
 }
 
 // VerifySuspendedChannelsAndTryToTerminate scans all suspended channels,
@@ -226,8 +227,8 @@ func (m *Monitor) VerifySuspendedChannelsAndTryToTerminate() error {
                  AND channels.channel_status NOT IN ('pending')
                  AND acc.in_use
                  AND channels.service_changed_time + (offer.max_suspended_time * INTERVAL '1 SECOND') < now();`
-
-	return m.processEachChannel(query, m.terminateService)
+	logger := m.logger.Add("method", "VerifySuspendedChannelsAndTryToTerminate")
+	return m.processEachChannel(logger, query, m.terminateService)
 }
 
 func (m *Monitor) processRound() error {
@@ -280,20 +281,21 @@ func (m *Monitor) callChecksAndReportErrorIfAny(checks ...func() error) error {
 	return nil
 }
 
-func (m *Monitor) processEachChannel(query string,
+func (m *Monitor) processEachChannel(logger log.Logger, query string,
 	processor func(string) error) error {
 	rows, err := m.db.Query(query)
 	defer rows.Close()
 	if err != nil {
-		m.logger.Error(err.Error())
+		logger.Error(err.Error())
 		return err
 	}
 
 	for rows.Next() {
 		channelUUID := ""
 		if err := rows.Scan(&channelUUID); err != nil {
-			m.logger.Error(err.Error())
+			logger.Error(err.Error())
 		}
+		logger.Info("processing channel: " + channelUUID)
 		if err := processor(channelUUID); err != nil {
 			return err
 		}

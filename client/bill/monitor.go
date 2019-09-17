@@ -67,10 +67,6 @@ type Monitor struct {
 	postChequeErrors chan error
 	// Auto increase deposit enabled/disabled. Read from settings table.
 	autoIncrease bool
-	// lockAutoIncreaseDuration is a duration before next auto increase.
-	lockAutoIncreaseDuration time.Duration
-	// lastAutoIncreaes is when last auto increase has been made.
-	lastAutoIncrease time.Time
 	// Auto increase deposit when used percent of all available traffic.
 	// Read from settings table.
 	autoIncreaseAtRate float64
@@ -80,16 +76,15 @@ type Monitor struct {
 func NewMonitor(conf *Config, logger log.Logger, db *reform.DB, suggestor PriceSuggestor,
 	pr *proc.Processor, queue job.Queue, pscAddr string, pw data.PWDGetter) *Monitor {
 	return &Monitor{
-		conf:                     conf,
-		logger:                   logger.Add("type", "client/bill.Monitor"),
-		db:                       db,
-		pr:                       pr,
-		queue:                    queue,
-		psc:                      pscAddr,
-		pw:                       pw,
-		post:                     pay.PostCheque,
-		suggestor:                suggestor,
-		lockAutoIncreaseDuration: 2 * time.Minute,
+		conf:      conf,
+		logger:    logger.Add("type", "client/bill.Monitor"),
+		db:        db,
+		pr:        pr,
+		queue:     queue,
+		psc:       pscAddr,
+		pw:        pw,
+		post:      pay.PostCheque,
+		suggestor: suggestor,
 	}
 }
 
@@ -224,23 +219,9 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 		return nil
 	}
 
-	// Check to auto increase deposit.
-	autoincreaseAfter := uint64(float64(ch.TotalDeposit) * m.autoIncreaseAtRate)
-	if m.autoIncrease && amount >= autoincreaseAfter && time.Now().Sub(m.lastAutoIncrease) > m.lockAutoIncreaseDuration {
-		timeout := 5 * time.Second
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		gasPrice, err := m.suggestor.SuggestGasPrice(ctx)
-		err = job.AddWithData(m.queue, nil, data.JobClientPreChannelTopUp,
-			data.JobChannel, ch.ID, data.JobBillingChecker,
-			&data.JobTopUpChannelData{
-				GasPrice: gasPrice.Uint64(),
-				Deposit:  ch.TotalDeposit,
-			})
-		if err != nil && err != job.ErrDuplicatedJob {
-			return err
-		}
-		m.lastAutoIncrease = time.Now()
+	if err := m.checkAndCreateAutoIncreaseJob(logger, ch, amount); err != nil {
+		logger.Error(err.Error())
+		return err
 	}
 
 	lag := int64(consumed) - (int64(ch.ReceiptBalance)-
@@ -250,6 +231,67 @@ func (m *Monitor) processChannel(ch *data.Channel) error {
 	}
 
 	return nil
+}
+
+func (m *Monitor) checkAndCreateAutoIncreaseJob(logger log.Logger, ch *data.Channel, amount uint64) error {
+	autoincreaseAfter := uint64(float64(ch.TotalDeposit) * m.autoIncreaseAtRate)
+	if !m.autoIncrease || amount < autoincreaseAfter {
+		return nil
+	}
+	err, exists := notMinedChannelTopUpExists(logger, m.db, ch.ID)
+	if exists {
+		logger.Warn("active channel topup exists")
+		return nil
+	}
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	suggestedGasPrice, err := m.fetchSuggestedGasPrice()
+	if err != nil {
+		return fmt.Errorf("could not fetch suggested gas price: %v", err)
+	}
+	logger = logger.Add("suggestedGasPrice", suggestedGasPrice.Uint64())
+	jdata := &data.JobTopUpChannelData{
+		GasPrice: suggestedGasPrice.Uint64(),
+		Deposit:  ch.TotalDeposit,
+	}
+	err = job.AddWithData(m.queue, nil, data.JobClientPreChannelTopUp, data.JobChannel, ch.ID, data.JobBillingChecker, jdata)
+	if err == job.ErrAlreadyProcessing || err == job.ErrDuplicatedJob {
+		logger.Warn("active channel topup exists")
+		return nil
+	}
+	return err
+}
+
+func notMinedChannelTopUpExists(logger log.Logger, db *reform.DB, chID string) (error, bool) {
+	row := db.QueryRow(`
+		SELECT count(*)
+		  FROM jobs
+		 WHERE status in ($1, $2)
+			   AND type = $3
+			   AND related_id=$5
+			   AND created_at > (
+				   SELECT COALESCE(MAX(created_at), '0001-01-01 00:00:00')
+					 FROM jobs
+					WHERE type = $4
+					      AND related_id=$5
+			   );`, data.JobActive, data.JobDone, data.JobClientAfterChannelTopUp,
+		data.JobClientPreChannelTopUp, chID)
+	var qty int
+	err := row.Scan(&qty)
+	if err != nil {
+		logger.Error(fmt.Sprintf("could not check for after topup channel job existance: %v", err))
+		return err, false
+	}
+	return nil, qty == 0
+}
+
+func (m *Monitor) fetchSuggestedGasPrice() (*big.Int, error) {
+	timeout := 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return m.suggestor.SuggestGasPrice(ctx)
 }
 
 func (m *Monitor) isToBeTerminated(logger log.Logger,

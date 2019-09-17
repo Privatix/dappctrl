@@ -262,8 +262,18 @@ func (q *queue) processMain() error {
 			   WHERE status = $1
 			   ORDER BY related_id) AS ordered
 			 WHERE not_before <= $2
-			 ORDER BY related_type desc, created_at asc
-			 LIMIT $3`, data.JobActive, started, q.conf.CollectJobs)
+			 ORDER BY
+				 CASE
+					WHEN related_type=$3 THEN 1
+					WHEN related_type=$4 AND type=$5 THEN 3
+					WHEN related_type=$4 THEN 2
+					WHEN related_type=$6 THEN 3
+					WHEN related_type=$7 THEN 4
+					ELSE 5
+				 END, created_at asc
+			 LIMIT $8`, data.JobActive, started, data.JobEndpoint,
+			data.JobChannel, data.JobClientRecordClosing, data.JobAccount, data.JobOffering,
+			q.conf.CollectJobs)
 		if err != nil {
 			logger.Error(err.Error())
 			return ErrInternal

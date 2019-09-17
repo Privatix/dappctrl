@@ -258,21 +258,21 @@ func (q *queue) processMain() error {
 		rows, err := q.db.Query(`
 			SELECT id, related_id FROM (
 			  SELECT DISTINCT ON (related_id) *
-			    FROM jobs
+				FROM jobs
 			   WHERE status = $1
 			   ORDER BY related_id) AS ordered
 			 WHERE not_before <= $2
 			 ORDER BY
 				 CASE
 					WHEN related_type=$3 THEN 1
-					WHEN related_type=$4 AND type=$5 THEN 3
 					WHEN related_type=$4 THEN 2
-					WHEN related_type=$6 THEN 3
-					WHEN related_type=$7 THEN 4
-					ELSE 5
+					WHEN related_type=$5 THEN 3
+					WHEN related_type=$6 THEN 4
+					WHEN related_type=$7 THEN 5
+					ELSE 6
 				 END, created_at asc
-			 LIMIT $8`, data.JobActive, started, data.JobEndpoint,
-			data.JobChannel, data.JobClientRecordClosing, data.JobAccount, data.JobOffering,
+			 LIMIT $8`, data.JobActive, started, data.JobTransaction,
+			data.JobEndpoint, data.JobChannel, data.JobAccount, data.JobOffering,
 			q.conf.CollectJobs)
 		if err != nil {
 			logger.Error(err.Error())

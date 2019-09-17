@@ -31,8 +31,7 @@ var getRecordFuncs = map[string]func(*reform.DB, *data.Job) (reform.Record, erro
 	data.JobChannel:  recordByRelatedIDCB(data.ChannelTable),
 	data.JobEndpoint: recordByRelatedIDCB(data.EndpointTable),
 	data.JobAccount:  recordByRelatedIDCB(data.AccountTable),
-	// TODO(furkhat): change to data.JobTransaction when introduced.
-	"transaction": func(db *reform.DB, j *data.Job) (reform.Record, error) {
+	data.JobTransaction: func(db *reform.DB, j *data.Job) (reform.Record, error) {
 		var tx data.EthTx
 		err := db.FindOneTo(&tx, "job", j.ID)
 		return &tx, err

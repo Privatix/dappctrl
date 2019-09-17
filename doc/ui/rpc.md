@@ -1818,6 +1818,36 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getTempla
 
 ### Transactions
 
+#### Increase Transaction Gas Price (Resend)
+
+*Method*:	`increaseTxGasPrice`
+
+*Description*: Creates `increaseTxGasPrice` job. 
+
+*Parameters*:
+1. Token (string)
+3. ID (string, uuid)
+4. GasPrice (number)
+
+*Result*: None.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_increaseTxGasPrice", "params": ["qwert", "d0dfbbb2-dd07-423a-8ce0-1e74ce50105b", 1234567890], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": null
+}
+```
+</details>
+
+
+
 #### Get Ethereum Transactions
 
 *Method*:	`getEthTransactions`

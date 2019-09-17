@@ -39,6 +39,8 @@ const (
 	ErrInvalidValueForSetting
 	ErrInconsistentSOMCSwitch
 	ErrSOMCIsNotAvailable
+	ErrTxNotFound
+	ErrTxIsUnderpriced
 )
 
 var errMsgs = errors.Messages{
@@ -74,6 +76,8 @@ var errMsgs = errors.Messages{
 	ErrInvalidValueForSetting:    "invalid value for setting",
 	ErrInconsistentSOMCSwitch:    "inconsistent somc transport switch",
 	ErrSOMCIsNotAvailable:        "somc is not available",
+	ErrTxNotFound:                "transaction not found",
+	ErrTxIsUnderpriced:           "transaction new gas price must be bigger than before",
 }
 
 func init() { errors.InjectMessages(errMsgs) }

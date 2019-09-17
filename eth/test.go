@@ -37,6 +37,7 @@ type TestEthBackend struct {
 	Abi                    abi.ABI
 	PscAddr                common.Address
 	Tx                     *types.Transaction
+	TxIsPending            bool
 	OfferingAgent          common.Address
 	OfferMinDeposit        uint64
 	OfferCurrentSupply     uint16
@@ -73,9 +74,14 @@ func (b *TestEthBackend) LatestBlockNumber(ctx context.Context) (*big.Int, error
 }
 
 // SuggestGasPrice is mock to SuggestGasPrice.
-func (b *TestEthBackend) SuggestGasPrice(
-	ctx context.Context) (*big.Int, error) {
+func (b *TestEthBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	return b.GasPrice, nil
+}
+
+// SendTransaction is mock for send transaction.
+func (b *TestEthBackend) SendTransaction(_ context.Context,
+	_ *types.Transaction) error {
+	return nil
 }
 
 // EstimateGas is mock to EstimateGas.
@@ -229,7 +235,7 @@ func (b *TestEthBackend) SetTransaction(t *testing.T,
 // GetTransactionByHash is mock to GetTransactionByHash.
 func (b *TestEthBackend) GetTransactionByHash(context.Context,
 	common.Hash) (*types.Transaction, bool, error) {
-	return b.Tx, false, nil
+	return b.Tx, b.TxIsPending, nil
 }
 
 // TestCalled tests the existence of a Ethereum call.

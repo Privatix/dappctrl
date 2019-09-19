@@ -29,7 +29,7 @@ const (
 var errUnexpected = &srv.Error{
 	Status:  http.StatusBadRequest,
 	Code:    errCodeInvalidSignature,
-	Message: "Client signature does not match",
+	Message: "Unexpected error occurred",
 }
 
 func (s *Server) findChannel(logger log.Logger,
@@ -43,6 +43,7 @@ func (s *Server) findChannel(logger log.Logger,
 
 	err := s.db.SelectOneTo(channel, tail, offeringHash, agentAddr, block)
 	if err != nil {
+		logger.Warn("channel is not found")
 		s.RespondError(logger, w, &srv.Error{
 			Status:  http.StatusUnauthorized,
 			Message: "Channel is not found",
@@ -62,6 +63,7 @@ func (s *Server) validateChannelState(logger log.Logger,
 			Message: "Channel is closed",
 			Code:    errCodeClosedChannel,
 		})
+		logger.Warn("channel is closed")
 		return false
 	}
 	return true
@@ -75,6 +77,7 @@ func (s *Server) isServiceTerminated(logger log.Logger,
 			Message: "Service is terminated",
 			Code:    errCodeTerminatedService,
 		})
+		logger.Warn("service is terminated")
 		return true
 	}
 	return false
@@ -134,6 +137,7 @@ func (s *Server) verifySignature(logger log.Logger,
 			Code:    errCodeInvalidSignature,
 			Message: "Client signature does not match",
 		})
+		logger.Warn("client signature does not match")
 		return false
 	}
 	return true

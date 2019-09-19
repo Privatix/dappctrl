@@ -42,7 +42,7 @@
             "PSCAddrHex": "0x7c70f8da8829756b807ef18acaaaf0ef344f94cf",
             "PTCAddrHex": "0x0d825eb81b996c67a55f7da350b6e73bab3cb0ec"
         },
-        "GethURL": "https://cloudflare-eth.com",
+        "GethURL": "https://rinkeby.infura.io/v3/dcc53bc9e070473bb91ecbdac188cc22",
         "HTTPClient": {
             "DialTimeout": 10000,
             "IdleConnTimeout": 60000,

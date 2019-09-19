@@ -49,8 +49,12 @@ def _request_payload(method, args):
     }
 
 
-def gwei(raw_eth):
-    return raw_eth * _gwei_multiplier
+def gwei_to_eth(gwei):
+    return gwei * _gwei_multiplier
+
+
+def eth_to_gwei(eth):
+    return float(eth) / _gwei_multiplier
 
 
 def prix(raw_prix):
@@ -122,7 +126,7 @@ def export_private_key(token, account_id):
     return response.json()["result"]
 
 
-def transfer_tokens(token, account_id, token_amount, direction, gas_price=gwei(10)):
+def transfer_tokens(token, account_id, token_amount, direction, gas_price=gwei_to_eth(10)):
     data = _request_payload("ui_transferTokens", [token, account_id, direction,
                                                   token_amount, gas_price])
 
@@ -172,7 +176,7 @@ def get_agent_offerings(token, product_id, status, offset, limit):
     return response.json()["result"]["items"]
 
 
-def change_offering_status(token, offering_id, action, gas_price=gwei(10)):
+def change_offering_status(token, offering_id, action, gas_price=gwei_to_eth(10)):
     data = _request_payload("ui_changeOfferingStatus", [token, offering_id,
                                                         action, gas_price])
 
@@ -242,5 +246,24 @@ def get_total_income(token):
 
     response = requests.post(endpoint, json=data, headers=header)
     _check_ok("Get total income".format(), response)
+
+    return response.json()["result"]
+
+
+def get_suggested_gas_price(token):
+    data = _request_payload("ui_suggestGasPrice", [token])
+
+    response = requests.post(endpoint, json=data, headers=header)
+    _check_ok("Get suggested gas price".format(), response)
+
+    return response.json()["result"]
+
+
+def import_account_from_json(token, account_params, json_content, password_to_decrypt):
+    data = _request_payload("ui_importAccountFromJSON", [token, account_params, json_content, password_to_decrypt])
+
+    response = requests.post(endpoint, json=data, headers=header)
+    _check_ok("Import account from json (account params: {}, json_content: {})".format(account_params, json_content),
+              response)
 
     return response.json()["result"]

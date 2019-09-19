@@ -408,3 +408,18 @@ func TestUpdateAccount(t *testing.T) {
 		t.Fatal("only 1 account allowed to be default")
 	}
 }
+
+func TestSuggestGasPrice(t *testing.T) {
+	fxt, assertMatchErr := newTest(t, "SuggestGasPrice")
+	defer fxt.close()
+
+	_, err := handler.SuggestGasPrice("wrong-token")
+	assertMatchErr(ui.ErrAccessDenied, err)
+
+	testGasPriceSuggestor.v = 999
+	ret, err := handler.SuggestGasPrice(testToken.v)
+	assertMatchErr(nil, err)
+	if ret != 999 {
+		t.Fatalf("wanted gas price: 999, got: %v", ret)
+	}
+}

@@ -13,7 +13,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20190715232110-2b613d287457 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
-	github.com/ethereum/go-ethereum v1.9.0
+	github.com/ethereum/go-ethereum v1.9.3
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
@@ -21,6 +21,7 @@ require (
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/snappy v0.0.1
 	github.com/google/uuid v1.1.0
+	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20190610161739-8f92f34fc598 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
@@ -30,6 +31,7 @@ require (
 	github.com/jpillora/backoff v0.0.0-20170918002102-8eab2debe79d
 	github.com/karalabe/usb v0.0.0-20190703133951-9be757f914c0 // indirect
 	github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leekchan/timeutil v0.0.0-20150802142658-28917288c48d
 	github.com/lib/pq v1.0.0
 	github.com/mattn/go-colorable v0.1.2 // indirect

@@ -3,9 +3,11 @@
 package bill
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"sync"
 	"testing"
@@ -26,6 +28,14 @@ func (s *pwStore) Get() string { return "test-password" }
 
 func (s *pwStore) GetKey(acc *data.Account) (*ecdsa.PrivateKey, error) {
 	return data.TestToPrivateKey(acc.PrivateKey, s.Get())
+}
+
+type gasPriceSuggestor struct {
+	v uint64
+}
+
+func (s gasPriceSuggestor) SuggestGasPrice(_ context.Context) (*big.Int, error) {
+	return new(big.Int).SetUint64(s.v), nil
 }
 
 var (
@@ -56,18 +66,13 @@ var (
 		Permissions: data.ReadWrite,
 		Name:        data.SettingClientAutoincreaseDepositPercent,
 	}
-	defaultGasPrice = &data.Setting{
-		Key:         data.SettingDefaultGasPrice,
-		Value:       "10",
-		Permissions: data.ReadWrite,
-		Name:        "default gas price",
-	}
+	testGasPriceSuggestor gasPriceSuggestor
 )
 
 func newTestMonitor(
 	processErrChan, postErrChan chan error) (*Monitor, chan error) {
-	mon := NewMonitor(conf.ClientBilling, logger, db, pr, queue,
-		"test-psc-address", pws)
+	mon := NewMonitor(conf.ClientBilling, logger, db, &testGasPriceSuggestor, pr,
+		queue, "test-psc-address", pws)
 	mon.processErrors = processErrChan
 	mon.postChequeErrors = postErrChan
 
@@ -167,8 +172,8 @@ func TestAutoIncreaseDeposit(t *testing.T) {
 	s.LastUsageTime = time.Now()
 	// 70% used, need to auto increase
 	s.UnitsUsed = uint64(float64(fxt.Offering.MinUnits) * 0.7)
-	data.InsertToTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, defaultGasPrice, s)
-	defer data.DeleteFromTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, defaultGasPrice, s)
+	data.InsertToTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, s)
+	defer data.DeleteFromTestDB(t, fxt.DB, &autoincrease, autoincreaseAt, s)
 	data.SaveToTestDB(t, fxt.DB, fxt.Channel)
 
 	job := runMonitorAndExpectJobs(t, fxt.Channel.ID, data.JobClientPreChannelTopUp)

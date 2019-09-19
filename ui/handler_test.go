@@ -3,6 +3,7 @@ package ui_test
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"os"
 	"testing"
@@ -19,6 +20,14 @@ import (
 	"github.com/privatix/dappctrl/util/log"
 )
 
+type gasPriceSuggestor struct {
+	v uint64
+}
+
+func (s gasPriceSuggestor) SuggestGasPrice(_ context.Context) (*big.Int, error) {
+	return new(big.Int).SetUint64(s.v), nil
+}
+
 var (
 	conf struct {
 		DB   *data.DBConfig
@@ -28,11 +37,12 @@ var (
 	}
 	logger log.Logger
 
-	db             *reform.DB
-	handler        *ui.Handler
-	client         *rpc.Client
-	testSOMCClient *somc.TestClient
-	testToken      *dumbToken
+	db                    *reform.DB
+	handler               *ui.Handler
+	client                *rpc.Client
+	testSOMCClient        *somc.TestClient
+	testToken             *dumbToken
+	testGasPriceSuggestor gasPriceSuggestor
 )
 
 type dumbToken struct {
@@ -92,17 +102,6 @@ func (f *fixture) close() {
 	f.TestFixture.Close()
 }
 
-// insertDefaultGasPriceSetting inserts default gas price settings and returns
-// clean up function.
-func insertDefaultGasPriceSetting(t *testing.T, v uint64) func() {
-	rec := &data.Setting{
-		Key:   data.SettingDefaultGasPrice,
-		Value: fmt.Sprint(v),
-	}
-	data.InsertToTestDB(t, db, rec)
-	return func() { data.DeleteFromTestDB(t, db, rec) }
-}
-
 func subscribe(client *rpc.Client, channel interface{}, method string,
 	args ...interface{}) (*rpc.ClientSubscription, error) {
 	return client.Subscribe(context.Background(),
@@ -135,7 +134,7 @@ func TestMain(m *testing.M) {
 	testToken = &dumbToken{}
 	handler = ui.NewHandler(logger, db, nil, pwdStorage,
 		data.TestEncryptedKey, data.RoleAgent, nil,
-		somc.NewTestClientBuilder(testSOMCClient), testToken)
+		somc.NewTestClientBuilder(testSOMCClient), testToken, &testGasPriceSuggestor)
 	if err := server.RegisterName("ui", handler); err != nil {
 		panic(err)
 	}

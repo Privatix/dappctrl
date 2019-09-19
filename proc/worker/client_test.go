@@ -824,7 +824,7 @@ func testClientAfterExistingOfferingPopUp(t *testing.T) {
 
 	ethLog := &data.JobEthLog{
 		Topics: topics,
-		Block:  12345,
+		Block:  fxt.Offering.BlockNumberUpdated + 1,
 		Data:   logData,
 	}
 	setJobData(t, db, fxt.job, &data.JobData{
@@ -984,7 +984,7 @@ func TestClientRecordClosing(t *testing.T) {
 	// Set fresh blocks number.
 	// Set rating steps.
 	setting2 := &data.Setting{
-		Key:   data.SettingFreshBlocks,
+		Key:   data.SettingOfferingsFreshBlocks,
 		Value: "100",
 		Name:  "Fresh blocks",
 	}

@@ -28,6 +28,7 @@ type TestEthBackCall struct {
 // TestEthBackend is mock for Backend.
 type TestEthBackend struct {
 	CallStack              []TestEthBackCall
+	Logs                   []types.Log
 	BalanceEth             *big.Int
 	BalancePSC             uint64
 	Allowance              uint64
@@ -383,13 +384,15 @@ func (b *TestEthBackend) PSCPopupServiceOffering(opts *bind.TransactOpts,
 // FilterLogs is mock to FilterLogs.
 func (b *TestEthBackend) FilterLogs(ctx context.Context,
 	q ethereum.FilterQuery) ([]types.Log, error) {
-	return nil, nil
+	return b.Logs, nil
 }
 
 // HeaderByNumber is mock to HeaderByNumber.
 func (b *TestEthBackend) HeaderByNumber(ctx context.Context,
 	number *big.Int) (*types.Header, error) {
-	return nil, nil
+	return &types.Header{
+		Number: b.BlockNumber,
+	}, nil
 }
 
 // PTCAddress is mock to PTCAddress.

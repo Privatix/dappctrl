@@ -235,6 +235,12 @@ func (w *Worker) ClientPreChannelCreate(job *data.Job) error {
 	var gasPrice *big.Int
 	if jdata.GasPrice != 0 {
 		gasPrice = new(big.Int).SetUint64(jdata.GasPrice)
+	} else {
+		gasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 
 	return w.clientPreChannelCreateSaveTX(logger,
@@ -725,6 +731,12 @@ func (w *Worker) clientPreChannelTopUpSaveTx(logger log.Logger, job *data.Job,
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	} else {
+		opts.GasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 	if w.gasConf.PSC.TopUp != 0 {
 		opts.GasLimit = w.gasConf.PSC.TopUp
@@ -804,6 +816,12 @@ func (w *Worker) doClientPreUncooperativeCloseRequestAndSaveTx(logger log.Logger
 	opts.Context = ctx
 	if gasPrice != 0 {
 		opts.GasPrice = new(big.Int).SetUint64(gasPrice)
+	} else {
+		opts.GasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+		if err != nil {
+			logger.Error(err.Error())
+			return ErrInternal
+		}
 	}
 
 	offerHash, err := data.HexToHash(offer.Hash)
@@ -951,11 +969,16 @@ func (w *Worker) ClientAfterOfferingPopUp(job *data.Job) error {
 		return ErrInternal
 	}
 
-	// Existing offering, just update offering status.
-	offering.BlockNumberUpdated = ethLog.Block
-	offering.Status = data.OfferPoppedUp
+	// Offerings can be searched backward too.
+	if offering.Status != data.OfferRemoved && ethLog.Block > offering.BlockNumberUpdated {
+		offering.BlockNumberUpdated = ethLog.Block
+		// Existing offering, just update offering status.
+		offering.Status = data.OfferPoppedUp
 
-	return w.saveRecord(logger, w.db.Querier, &offering)
+		return w.saveRecord(logger, w.db.Querier, &offering)
+	}
+
+	return nil
 }
 
 func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
@@ -992,7 +1015,7 @@ func (w *Worker) clientRetrieveAndSaveOffering(logger log.Logger,
 		data.HexFromBytes(hash.Bytes()), job.RelatedID,
 		somcType, somcData)
 	if err != nil {
-		if err == ErrTemplateByHashNotFound {
+		if err == ErrTemplateByHashNotFound || err == ErrOfferingNotActive || err == ErrOfferingExists {
 			job.Status = data.JobCanceled
 			w.db.Save(job)
 			return nil
@@ -1033,6 +1056,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	logger = logger.Add("offering", offering)
 	_, err := w.offeringByHashString(logger, hash)
 	if err == nil {
+		logger.Warn("offerings already exists")
 		return nil, ErrOfferingExists
 	}
 
@@ -1047,6 +1071,7 @@ func (w *Worker) fillOfferingFromMsg(logger log.Logger, offering []byte,
 	}
 
 	if !active {
+		logger.Warn("offering is not active")
 		return nil, ErrOfferingNotActive
 	}
 
@@ -1138,6 +1163,10 @@ func (w *Worker) DecrementCurrentSupply(job *data.Job) error {
 		return err
 	}
 
+	if offering.CurrentSupply == 0 {
+		return w.updateOfferingSupplyFromChain(logger, offering)
+	}
+
 	offering.CurrentSupply--
 
 	err = data.Save(w.db.Querier, offering)
@@ -1162,11 +1191,38 @@ func (w *Worker) IncrementCurrentSupply(job *data.Job) error {
 		return err
 	}
 
+	if offering.CurrentSupply+1 > offering.Supply {
+		return w.updateOfferingSupplyFromChain(logger, offering)
+	}
+
 	offering.CurrentSupply++
 
 	err = data.Save(w.db.Querier, offering)
 	if err != nil {
 		logger.Error(err.Error())
+		return ErrInternal
+	}
+
+	return nil
+}
+
+func (w *Worker) updateOfferingSupplyFromChain(logger log.Logger, offering *data.Offering) error {
+	offerHash, err := data.HexToHash(offering.Hash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrParseOfferingHash
+	}
+
+	_, _, _, supplyFromContract, _, _, err := w.ethBack.PSCGetOfferingInfo(
+		&bind.CallOpts{}, offerHash)
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrPSCOfferingSupply
+	}
+
+	offering.CurrentSupply = supplyFromContract
+	if err := w.db.Save(offering); err != nil {
+		logger.Error(fmt.Sprintf("could not update offering's current supply from chain: %v", err))
 		return ErrInternal
 	}
 
@@ -1282,9 +1338,9 @@ func (w *Worker) closingEvents(logger log.Logger) ([]closingEvent, error) {
 		return nil, ErrInternal
 	}
 
-	freshNum, err := data.GetUint64Setting(w.db, data.SettingFreshBlocks)
+	freshNum, err := data.GetUint64Setting(w.db, data.SettingOfferingsFreshBlocks)
 	if err != nil {
-		logger.Error(fmt.Sprintf("could not read `%s` setting: %v", data.SettingFreshBlocks, err))
+		logger.Error(fmt.Sprintf("could not read `%s` setting: %v", data.SettingOfferingsFreshBlocks, err))
 		return nil, ErrInternal
 	}
 

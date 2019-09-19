@@ -101,7 +101,7 @@ func (h *Handler) TopUpChannel(
 func (h *Handler) topUpChannelJobData(logger log.Logger,
 	deposit, gasPrice uint64) (*data.JobTopUpChannelData, error) {
 	if gasPrice == 0 {
-		defGasPrice, err := h.defaultGasPrice(logger)
+		defGasPrice, err := h.suggestedGasPrice(logger)
 		if err != nil {
 			return nil, err
 		}

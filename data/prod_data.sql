@@ -31,18 +31,18 @@ VALUES ('eth.min.confirmations',
         ' give ability to user to specify how many latest blocks' ||
         ' are considered non reliable. These last blocks' ||
         ' will not be used to fetch events or transactions.',
-        'ethereum confirmation blocks')
+        'Ethereum confirmation blocks')
 ON CONFLICT (key)
 DO NOTHING;
 
 INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.event.freshblocks',
-        '11520',
+VALUES ('eth.event.offeringsfreshblocks',
+        '345600',
         2,
-        'Defines number of latest ethereum blocks to retrieve.' ||
-        ' If eth.event.freshblocks is null or zero then all events' ||
-        ' will be downloaded.',
-        'last events blocks')
+        'For clients, defines number of latest ethereum blocks to retrieve offerings from.' ||
+        ' If eth.event.offeringsfreshblocks is null or zero then events starting' ||
+        ' from the latest block will be downloaded.',
+        'Offerings last events blocks')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -54,7 +54,7 @@ VALUES ('eth.event.blocklimit',
         ' for new events. It is used as pagination mechanism while' ||
         ' querying ethereum JSON RPC. If eth.event.blocklimit is null' ||
         ' or zero then no pagination is used, which is not recommended.',
-        'maximum events blocks')
+        'Maximum events blocks')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -63,16 +63,7 @@ VALUES ('error.sendremote',
         'false',
         2,
         'Allow error reporting to send logs to Privatix.',
-        'error reporting')
-ON CONFLICT (key)
-DO NOTHING;
-
-INSERT INTO settings (key, value, permissions, description, name)
-VALUES ('eth.default.gasprice',
-        '20000000000',
-        2,
-        'Default GAS price for transactions.',
-        'default gas price')
+        'Error reporting')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -82,7 +73,16 @@ VALUES ('eth.max.deposit',
         2,
         'We temporarily limit total token deposits in a channel to 300' ||
         ' PRIX. This is just for the bug bounty release, as a safety measure.',
-        'maximum deposit')
+        'Maximum deposit')
+ON CONFLICT (key)
+DO NOTHING;
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.clientMonitoringStartBlock',
+        '0',
+        0,
+        'Block from which (Client) monitoring started started.',
+        'Client monitoring start block')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -90,8 +90,17 @@ INSERT INTO settings (key, value, permissions, description, name)
 VALUES ('eth.event.lastProcessedBlock',
         '0',
         1,
-        'Last block number in blockchain stores last proccessed block.',
-        'last processed block')
+        'Last proccessed blockchain block number.',
+        'Last processed block')
+ON CONFLICT (key)
+DO NOTHING;
+
+INSERT INTO settings (key, value, permissions, description, name)
+VALUES ('eth.event.lastBackSearchBlock',
+        '0',
+        1,
+        'On client, the last block offerings searched from.',
+        'Last back search block')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -100,7 +109,7 @@ VALUES ('offering.autopopup',
         'false',
         2,
         'Allow offerings to pop up automatically.',
-        'offering autopopup')
+        'Offering autopopup')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -137,7 +146,7 @@ VALUES('client.min.deposit',
         2,
         'This value will override min. deposit proposed by Agent' ||
         ' in auto-increase mode, if greater than proposed. ',
-        'Min deposit')
+        'Auto-increase min deposit')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -156,7 +165,7 @@ VALUES('client.autoincrease.deposit',
         'true',
         2,
         'Enable or disable auto-increase mode. Only for client.',
-        'Client auto increase deposit')
+        'Client auto-increase deposit')
 ON CONFLICT (key)
 DO NOTHING;
 
@@ -165,6 +174,6 @@ VALUES('rating.ranking.steps',
         '30',
         2,
         'Number of iterations to compute rank in ratings calculation',
-        'Ranking # steps')
+        'Ranking steps number')
 ON CONFLICT (key)
 DO NOTHING;

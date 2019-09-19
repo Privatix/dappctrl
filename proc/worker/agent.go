@@ -327,6 +327,11 @@ func (w *Worker) agentCooperativeClose(logger log.Logger, job *data.Job,
 
 	auth := bind.NewKeyedTransactor(accKey)
 	auth.GasLimit = w.gasConf.PSC.CooperativeClose
+	auth.GasPrice, err = w.ethBack.SuggestGasPrice(context.Background())
+	if err != nil {
+		logger.Error(err.Error())
+		return ErrInternal
+	}
 
 	tx, err := w.ethBack.CooperativeClose(auth, agentAddr,
 		uint32(channel.Block), offeringHash, balance, balanceMsgSig,

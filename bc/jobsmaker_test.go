@@ -1,19 +1,32 @@
-package monitor_test
+package bc
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
-	"github.com/privatix/dappctrl/monitor"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
 )
 
+func randHash() common.Hash {
+	randbytes := make([]byte, common.HashLength)
+	rand.Read(randbytes)
+	return common.BytesToHash(randbytes[:])
+}
+
 func packEventData(t *testing.T, ename string, args ...interface{}) []byte {
+	pscABI, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret, err := pscABI.Events[ename].Inputs.NonIndexed().Pack(args...)
 	if err != nil {
 		t.Fatal(err)
@@ -37,11 +50,13 @@ func TestJobsProducers(t *testing.T) {
 	defer data.DeleteFromTestDB(t, db, etx)
 	defer fxt.Close()
 
+	pscAddr := common.HexToAddress("0x1")
+	agentjm, _ := newJobsMaker(db, logger, pscAddr, 1, data.RoleAgent)
+	clientjm, _ := newJobsMaker(db, logger, pscAddr, 1, data.RoleClient)
+
 	agentHash := common.HexToHash(string(fxt.Channel.Agent))
 	clientHash := common.HexToHash(string(fxt.Channel.Client))
 	offeringHash := common.HexToHash(string(fxt.Offering.Hash))
-	agentProducersMap := mon.AgentJobsProducers()
-	clientProducersMap := mon.ClientJobsProducers()
 
 	for i, tc := range []struct {
 		l              *data.JobEthLog
@@ -336,27 +351,19 @@ func TestJobsProducers(t *testing.T) {
 		},
 	} {
 		t.Log("before", i)
-		testProducedJobs(t, agentProducersMap, tc.l, nil, tc.agentProduced)
+		testProducedJobs(t, agentjm, tc.l, tc.agentProduced)
 		t.Log("after", i)
-		testProducedJobs(t, clientProducersMap, tc.l, nil, tc.clientProduced)
+		testProducedJobs(t, clientjm, tc.l, tc.clientProduced)
 	}
 
 	// Decrement/Increment current supply needs to find offering to decerement supply at.
-	// If related Offering created job was not yet in db, it is most
-	// likely in current list of jobs to create, which is in memory.
 	// Test case below ensures decrement current supply correctly examines produced jobs
 	// to find related offering id from job that is not yet in db.
-	offeringHash = randHash()
+	offHash, _ := data.HexToHash(fxt.Offering.Hash)
 	ethLog := &data.JobEthLog{
-		Topics: []common.Hash{randHash(), randHash(), offeringHash},
+		Topics: []common.Hash{randHash(), randHash(), offHash},
 	}
 	jobData, _ := json.Marshal(&data.JobData{EthLog: ethLog})
-	producingJobs := []data.Job{{
-		Type:        data.JobClientAfterOfferingMsgBCPublish,
-		RelatedID:   util.NewUUID(),
-		RelatedType: data.JobOffering,
-		Data:        jobData,
-	}}
 	for _, test := range []struct {
 		log *data.JobEthLog
 		ret []data.Job
@@ -372,7 +379,7 @@ func TestJobsProducers(t *testing.T) {
 			},
 			ret: []data.Job{
 				{
-					RelatedID:   producingJobs[0].RelatedID,
+					RelatedID:   fxt.Offering.ID,
 					RelatedType: data.JobOffering,
 					Type:        data.JobDecrementCurrentSupply,
 				},
@@ -394,7 +401,7 @@ func TestJobsProducers(t *testing.T) {
 					Type:        data.JobClientRecordClosing,
 				},
 				{
-					RelatedID:   producingJobs[0].RelatedID,
+					RelatedID:   fxt.Offering.ID,
 					RelatedType: data.JobOffering,
 					Type:        data.JobIncrementCurrentSupply,
 				},
@@ -416,14 +423,14 @@ func TestJobsProducers(t *testing.T) {
 					Type:        data.JobClientRecordClosing,
 				},
 				{
-					RelatedID:   producingJobs[0].RelatedID,
+					RelatedID:   fxt.Offering.ID,
 					RelatedType: data.JobOffering,
 					Type:        data.JobIncrementCurrentSupply,
 				},
 			},
 		},
 	} {
-		testProducedJobs(t, clientProducersMap, test.log, producingJobs, test.ret)
+		testProducedJobs(t, clientjm, test.log, test.ret)
 	}
 
 	// It is possilbe to have both uncooperative and cooperative close logs related
@@ -453,7 +460,7 @@ func TestJobsProducers(t *testing.T) {
 	}
 	data.InsertToTestDB(t, fxt.DB, uncoopIncrementJob)
 	defer data.DeleteFromTestDB(t, fxt.DB, uncoopIncrementJob)
-	testProducedJobs(t, clientProducersMap, &data.JobEthLog{
+	testProducedJobs(t, clientjm, &data.JobEthLog{
 		Topics: []common.Hash{
 			eth.ServiceCooperativeChannelClose,
 			randHash1,
@@ -461,17 +468,17 @@ func TestJobsProducers(t *testing.T) {
 			offeringHash,
 		},
 		Data: packEventData(t, "LogCooperativeChannelClose", fxt.Channel.Block, uint64(0)),
-	}, nil, []data.Job{{
+	}, []data.Job{{
 		RelatedType: data.JobChannel,
 		Type:        data.JobClientRecordClosing,
 	}})
 }
 
-func testProducedJobs(t *testing.T, producers monitor.JobsProducers,
-	l *data.JobEthLog, alreadyProducedJobs, jobs []data.Job) {
+func testProducedJobs(t *testing.T, jm *jobsMaker,
+	l *data.JobEthLog, jobs []data.Job) {
 	t.Helper()
 
-	produced, err := producers[l.Topics[0]](l, alreadyProducedJobs)
+	produced, err := jm.makeJobs(l)
 	util.TestExpectResult(t, "produceFunc", nil, err)
 	if len(jobs) != len(produced) {
 		t.Fatalf("wanted %v jobs, got: %v", len(jobs),

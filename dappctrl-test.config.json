@@ -137,7 +137,7 @@
     },
     "Role": "agent",
     "SOMCServer": {
-        "Addr": "localhost:5555",
+        "Addr": "localhost:3452",
         "TLS": null
     },
     "SOMCTest": {

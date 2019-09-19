@@ -1,25 +1,83 @@
-package monitor
+package bc
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
 	"github.com/privatix/dappctrl/eth"
+	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util"
+	"github.com/privatix/dappctrl/util/log"
 )
 
-// JobsProducers used to bind methods as jobs builder for specific event.
-// First argument is log to proccess.
-// Second argument is jobs produced but not yet created in db. It is used to
-// produce jobs that might have relateds in current produced set.
-type JobsProducers map[common.Hash]func(*data.JobEthLog, []data.Job) ([]data.Job, error)
+const (
+	logChannelCreated            = "LogChannelCreated"
+	logChannelToppedUp           = "LogChannelToppedUp"
+	logChannelCloseRequested     = "LogChannelCloseRequested"
+	logOfferingCreated           = "LogOfferingCreated"
+	logOfferingDeleted           = "LogOfferingDeleted"
+	logOfferingPopedUp           = "LogOfferingPopedUp"
+	logCooperativeChannelClose   = "LogCooperativeChannelClose"
+	logUnCooperativeChannelClose = "LogUnCooperativeChannelClose"
+	approval                     = "Approval"
+	transfer                     = "Transfer"
+)
 
-func (m *Monitor) agentJobsProducers() JobsProducers {
-	return JobsProducers{
+// jobsProducers used to bind methods as jobs builder for specific event.
+// Argument is log to proccess.
+type jobsProducers map[common.Hash]func(*data.JobEthLog) ([]data.Job, error)
+
+type jobsMaker struct {
+	db                 *reform.DB
+	logger             log.Logger
+	pscAddr            common.Address
+	pscABI             *abi.ABI
+	closingsCount      uint
+	makeRatingJobAfter uint
+	isAgent            bool
+}
+
+func newJobsMaker(db *reform.DB, logger log.Logger, pscAddr common.Address, rateAfter uint, role string) (*jobsMaker, error) {
+	pscABI, err := abi.JSON(strings.NewReader(contract.PrivatixServiceContractABI))
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrFailedToParseABI
+	}
+	jm := &jobsMaker{
+		db:                 db,
+		logger:             logger.Add("type", "bc.jobsMaker"),
+		pscAddr:            pscAddr,
+		pscABI:             &pscABI,
+		closingsCount:      0,
+		makeRatingJobAfter: rateAfter,
+		isAgent:            role == data.RoleAgent,
+	}
+	return jm, nil
+}
+
+func (m *jobsMaker) makeJobs(l *data.JobEthLog) ([]data.Job, error) {
+	logger := m.logger.Add("method", "makeJobs", "log", l)
+	producers := m.clientJobsProducers()
+	if m.isAgent {
+		producers = m.agentJobsProducers()
+	}
+	producerF, ok := producers[l.Topics[0]]
+	if !ok {
+		logger.Warn("unknown log hash")
+		return nil, ErrUnsupportedTopic
+	}
+	return producerF(l)
+}
+
+func (m *jobsMaker) agentJobsProducers() jobsProducers {
+	return jobsProducers{
 		eth.ServiceChannelCreated:            m.agentOnChannelCreated,
 		eth.ServiceChannelToppedUp:           m.agentOnChannelToppedUp,
 		eth.ServiceChannelCloseRequested:     m.agentOnChannelCloseRequested,
@@ -33,8 +91,8 @@ func (m *Monitor) agentJobsProducers() JobsProducers {
 	}
 }
 
-func (m *Monitor) clientJobsProducers() JobsProducers {
-	return JobsProducers{
+func (m *jobsMaker) clientJobsProducers() jobsProducers {
+	return jobsProducers{
 		eth.ServiceChannelCreated:            m.clientOnChannelCreated,
 		eth.ServiceChannelToppedUp:           m.clientOnChannelToppedUp,
 		eth.ServiceChannelCloseRequested:     m.clientOnChannelCloseRequested,
@@ -48,7 +106,7 @@ func (m *Monitor) clientJobsProducers() JobsProducers {
 	}
 }
 
-func (m *Monitor) agentOnChannelCreated(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnChannelCreated(l *data.JobEthLog) ([]data.Job, error) {
 	offering := l.Topics[3]
 	oid := m.findOfferingID(offering)
 	if oid == "" {
@@ -58,41 +116,41 @@ func (m *Monitor) agentOnChannelCreated(l *data.JobEthLog, _ []data.Job) ([]data
 		data.JobAgentAfterChannelCreate)
 }
 
-func (m *Monitor) agentOnChannelToppedUp(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnChannelToppedUp(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobAgentAfterChannelTopUp)
 }
 
-func (m *Monitor) agentOnChannelCloseRequested(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnChannelCloseRequested(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobAgentAfterUncooperativeCloseRequest)
 }
 
-func (m *Monitor) agentOnCooperativeChannelClose(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnCooperativeChannelClose(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobAgentAfterCooperativeClose)
 }
 
-func (m *Monitor) agentOnUnCooperativeChannelClose(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnUnCooperativeChannelClose(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobAgentAfterUncooperativeClose)
 }
 
-func (m *Monitor) agentOnOfferingCreated(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnOfferingCreated(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onOfferingRelatedEvent(l, data.JobAgentAfterOfferingMsgBCPublish)
 }
 
-func (m *Monitor) agentOnOfferingPopedUp(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnOfferingPopedUp(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onOfferingRelatedEvent(l, data.JobAgentAfterOfferingPopUp)
 }
 
-func (m *Monitor) agentOnOfferingDeleted(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) agentOnOfferingDeleted(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onOfferingRelatedEvent(l, data.JobAgentAfterOfferingDelete)
 }
 
-func (m *Monitor) clientOnChannelCreated(l *data.JobEthLog, producingJobs []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnChannelCreated(l *data.JobEthLog) ([]data.Job, error) {
 	jobs, err := m.onExistingChannelEvent(l, data.JobClientAfterChannelCreate)
 	if err != nil {
 		return nil, err
 	}
 
-	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobDecrementCurrentSupply, producingJobs)
+	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobDecrementCurrentSupply)
 
 	if err != nil {
 		return nil, err
@@ -101,24 +159,24 @@ func (m *Monitor) clientOnChannelCreated(l *data.JobEthLog, producingJobs []data
 	return append(jobs, updateJobs...), nil
 }
 
-func (m *Monitor) clientOnChannelToppedUp(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnChannelToppedUp(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobClientAfterChannelTopUp)
 }
 
-func (m *Monitor) clientOnChannelCloseRequested(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnChannelCloseRequested(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onExistingChannelEvent(l, data.JobClientAfterUncooperativeCloseRequest)
 }
 
-func (m *Monitor) clientOnOfferingCreated(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnOfferingCreated(l *data.JobEthLog) ([]data.Job, error) {
 	return m.produceCommon(l, util.NewUUID(), data.JobOffering,
 		data.JobClientAfterOfferingMsgBCPublish)
 }
 
-func (m *Monitor) clientOnOfferingDeleted(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnOfferingDeleted(l *data.JobEthLog) ([]data.Job, error) {
 	return m.onOfferingRelatedEvent(l, data.JobClientAfterOfferingDelete)
 }
 
-func (m *Monitor) clientOnOfferingPopedUp(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnOfferingPopedUp(l *data.JobEthLog) ([]data.Job, error) {
 	oid := m.findOfferingID(l.Topics[2])
 	if oid == "" {
 		oid = util.NewUUID()
@@ -126,7 +184,7 @@ func (m *Monitor) clientOnOfferingPopedUp(l *data.JobEthLog, _ []data.Job) ([]da
 	return m.produceCommon(l, oid, data.JobOffering, data.JobClientAfterOfferingPopUp)
 }
 
-func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog, producingJobs []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnCooperativeChannelClose(l *data.JobEthLog) ([]data.Job, error) {
 	jobs, err := m.onExistingChannelEvent(l, data.JobClientAfterCooperativeClose)
 	if err != nil {
 		return nil, err
@@ -138,7 +196,7 @@ func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog, producingJo
 	}
 	jobs = append(jobs, rateJob)
 
-	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
+	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +214,7 @@ func (m *Monitor) clientOnCooperativeChannelClose(l *data.JobEthLog, producingJo
 	return append(jobs, updateJobs...), nil
 }
 
-func (m *Monitor) clientOnUnCooperativeChannelClose(l *data.JobEthLog, producingJobs []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) clientOnUnCooperativeChannelClose(l *data.JobEthLog) ([]data.Job, error) {
 	jobs, err := m.onExistingChannelEvent(l, data.JobClientAfterUncooperativeClose)
 	if err != nil {
 		return nil, err
@@ -168,7 +226,7 @@ func (m *Monitor) clientOnUnCooperativeChannelClose(l *data.JobEthLog, producing
 	}
 	jobs = append(jobs, rateJob)
 
-	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply, producingJobs)
+	updateJobs, err := m.updateCurrentSupplyJobs(l, data.JobIncrementCurrentSupply)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +234,7 @@ func (m *Monitor) clientOnUnCooperativeChannelClose(l *data.JobEthLog, producing
 	return append(jobs, updateJobs...), nil
 }
 
-func (m *Monitor) onExistingChannelEvent(l *data.JobEthLog, jtype string) ([]data.Job, error) {
+func (m *jobsMaker) onExistingChannelEvent(l *data.JobEthLog, jtype string) ([]data.Job, error) {
 	cid := m.findChannelID(l)
 	if cid == "" {
 		m.logger.Add("ethereumLog", *l).Warn("channel not found")
@@ -185,7 +243,7 @@ func (m *Monitor) onExistingChannelEvent(l *data.JobEthLog, jtype string) ([]dat
 	return m.produceCommon(l, cid, data.JobChannel, jtype)
 }
 
-func (m *Monitor) onOfferingRelatedEvent(l *data.JobEthLog, jtype string) ([]data.Job, error) {
+func (m *jobsMaker) onOfferingRelatedEvent(l *data.JobEthLog, jtype string) ([]data.Job, error) {
 	oid := m.findOfferingID(l.Topics[2])
 	if oid == "" {
 		return nil, nil
@@ -193,7 +251,7 @@ func (m *Monitor) onOfferingRelatedEvent(l *data.JobEthLog, jtype string) ([]dat
 	return m.produceCommon(l, oid, data.JobOffering, jtype)
 }
 
-func (m *Monitor) onTokenApprove(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) onTokenApprove(l *data.JobEthLog) ([]data.Job, error) {
 	addr := common.BytesToAddress(l.Topics[1].Bytes())
 	addrHash := data.HexFromBytes(addr.Bytes())
 	acc := &data.Account{}
@@ -209,7 +267,7 @@ func (m *Monitor) onTokenApprove(l *data.JobEthLog, _ []data.Job) ([]data.Job, e
 	return m.produceCommon(l, acc.ID, data.JobAccount, data.JobAfterAccountAddBalanceApprove)
 }
 
-func (m *Monitor) onTokenTransfer(l *data.JobEthLog, _ []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) onTokenTransfer(l *data.JobEthLog) ([]data.Job, error) {
 	addr1 := common.BytesToAddress(l.Topics[1].Bytes())
 	addr1Hash := data.HexFromBytes(addr1.Bytes())
 	addr2 := common.BytesToAddress(l.Topics[2].Bytes())
@@ -238,7 +296,7 @@ func (m *Monitor) onTokenTransfer(l *data.JobEthLog, _ []data.Job) ([]data.Job, 
 	return m.produceCommon(l, acc.ID, data.JobAccount, jtype)
 }
 
-func (m *Monitor) findChannelID(el *data.JobEthLog) string {
+func (m *jobsMaker) findChannelID(el *data.JobEthLog) string {
 	agentAddress := common.BytesToAddress(el.Topics[1].Bytes())
 	clientAddress := common.BytesToAddress(el.Topics[2].Bytes())
 	offeringHash := el.Topics[3]
@@ -287,7 +345,7 @@ func (m *Monitor) findChannelID(el *data.JobEthLog) string {
 	return id
 }
 
-func (m *Monitor) findOfferingID(topic common.Hash) string {
+func (m *jobsMaker) findOfferingID(topic common.Hash) string {
 	hashHex := data.HexFromBytes(topic.Bytes())
 	offering := &data.Offering{}
 	err := m.db.FindOneTo(offering, "hash", hashHex)
@@ -302,15 +360,12 @@ func (m *Monitor) findOfferingID(topic common.Hash) string {
 	return offering.ID
 }
 
-func (m *Monitor) updateCurrentSupplyJobs(
-	l *data.JobEthLog, jtype string, producingJobs []data.Job) ([]data.Job, error) {
+func (m *jobsMaker) updateCurrentSupplyJobs(
+	l *data.JobEthLog, jtype string) ([]data.Job, error) {
 	offering := l.Topics[3]
 	oid := m.findOfferingID(offering)
 	if oid == "" {
 		oid = m.offeringCreateJobRelatedID(offering)
-		if oid == "" {
-			oid = m.findByHashIn(offering, producingJobs)
-		}
 		if oid == "" {
 			return nil, nil
 		}
@@ -319,7 +374,7 @@ func (m *Monitor) updateCurrentSupplyJobs(
 	return m.produceCommon(l, oid, data.JobOffering, jtype)
 }
 
-func (m *Monitor) produceCommon(l *data.JobEthLog, rid, rtype, jtype string) ([]data.Job, error) {
+func (m *jobsMaker) produceCommon(l *data.JobEthLog, rid, rtype, jtype string) ([]data.Job, error) {
 	jdata, err := json.Marshal(&data.JobData{EthLog: l})
 	if err != nil {
 		return nil, err
@@ -334,7 +389,7 @@ func (m *Monitor) produceCommon(l *data.JobEthLog, rid, rtype, jtype string) ([]
 	}, nil
 }
 
-func (m *Monitor) rateJob(l *data.JobEthLog, closingType string) (data.Job, error) {
+func (m *jobsMaker) rateJob(l *data.JobEthLog, closingType string) (data.Job, error) {
 	// Find cooperative closing channel block number.
 	inputs := m.pscABI.Events[logCooperativeChannelClose].Inputs
 	if closingType == data.ClosingUncoop {
@@ -370,9 +425,9 @@ func (m *Monitor) rateJob(l *data.JobEthLog, closingType string) (data.Job, erro
 
 // updateRating called on channel closing event.
 // Returns true if monitor received rateAfter closings after last ratings calculation.
-func (m *Monitor) updateRating() bool {
+func (m *jobsMaker) updateRating() bool {
 	m.closingsCount++
-	if m.closingsCount >= m.rateAfter {
+	if m.closingsCount >= m.makeRatingJobAfter {
 		m.closingsCount = 0
 		return true
 	}
@@ -382,7 +437,7 @@ func (m *Monitor) updateRating() bool {
 // getOpenBlockNumber extracts the Open_block_number field of a given
 // channel-related EthLog. Returns false in case it failed, i.e.
 // the event has no such field.
-func (m *Monitor) getOpenBlockNumber(
+func (m *jobsMaker) getOpenBlockNumber(
 	el *data.JobEthLog) (block uint32, ok bool, err error) {
 	var event string
 	switch el.Topics[0] {
@@ -406,7 +461,7 @@ func (m *Monitor) getOpenBlockNumber(
 	return
 }
 
-func (m *Monitor) offeringCreateJobRelatedID(hash common.Hash) string {
+func (m *jobsMaker) offeringCreateJobRelatedID(hash common.Hash) string {
 	hashHex := hashToHex(hash)
 	job := &data.Job{}
 	err := m.db.SelectOneTo(job,
@@ -422,7 +477,7 @@ func (m *Monitor) offeringCreateJobRelatedID(hash common.Hash) string {
 	return job.RelatedID
 }
 
-func (m *Monitor) findByHashIn(hash common.Hash, jobs []data.Job) string {
+func (m *jobsMaker) findByHashIn(hash common.Hash, jobs []data.Job) string {
 	for _, job := range jobs {
 		if job.Type == data.JobClientAfterOfferingMsgBCPublish ||
 			job.Type == data.JobClientAfterOfferingPopUp {
@@ -446,7 +501,7 @@ func (m *Monitor) findByHashIn(hash common.Hash, jobs []data.Job) string {
 	return ""
 }
 
-func (m *Monitor) incrementSupplyAlreadyCreated(l *data.JobEthLog) (bool, error) {
+func (m *jobsMaker) incrementSupplyAlreadyCreated(l *data.JobEthLog) (bool, error) {
 	if l.Topics[0] != eth.ServiceCooperativeChannelClose && len(l.Topics) != 4 {
 		return false, ErrWrongNumberOfEventArgs
 	}
@@ -496,7 +551,7 @@ func (m *Monitor) incrementSupplyAlreadyCreated(l *data.JobEthLog) (bool, error)
 	return false, nil
 }
 
-func (m *Monitor) blockNumber(bs []byte, event string) (uint32, error) {
+func (m *jobsMaker) blockNumber(bs []byte, event string) (uint32, error) {
 	logger := m.logger.Add("method", "blockNumber")
 
 	arg, err := m.pscABI.Events[event].Inputs.NonIndexed().UnpackValues(bs)

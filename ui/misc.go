@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"database/sql"
 
@@ -67,7 +69,7 @@ func (h *Handler) jobPublishData(
 	logger log.Logger, gasPrice uint64) (*data.JobPublishData, error) {
 	ret := &data.JobPublishData{GasPrice: gasPrice}
 	if gasPrice == 0 {
-		defGasPrice, err := h.defaultGasPrice(logger)
+		defGasPrice, err := h.suggestedGasPrice(logger)
 		if err != nil {
 			return nil, err
 		}
@@ -76,8 +78,15 @@ func (h *Handler) jobPublishData(
 	return ret, nil
 }
 
-func (h *Handler) defaultGasPrice(logger log.Logger) (uint64, error) {
-	return h.findSettingsUint64(logger, data.SettingDefaultGasPrice)
+func (h *Handler) suggestedGasPrice(logger log.Logger) (uint64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	price, err := h.suggestor.SuggestGasPrice(ctx)
+	if err != nil {
+		logger.Warn(fmt.Sprintf("could not get suggested gas price: %v", err))
+		return 0, err
+	}
+	return price.Uint64(), nil
 }
 
 func (h *Handler) minConfirmations(logger log.Logger) (uint64, error) {

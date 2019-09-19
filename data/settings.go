@@ -9,12 +9,12 @@ import (
 
 // Setting keys.
 const (
-	SettingAppVersion                       = "system.version.app"
 	SettingBlockLimit                       = "eth.event.blocklimit"
-	SettingDefaultGasPrice                  = "eth.default.gasprice"
-	SettingFreshBlocks                      = "eth.event.freshblocks"
+	SettingOfferingsFreshBlocks             = "eth.event.offeringsfreshblocks"
 	SettingOfferingAutoPopUp                = "offering.autopopup"
 	SettingLastProcessedBlock               = "eth.event.lastProcessedBlock"
+	SettingLastBackSearchBlock              = "eth.event.lastBackSearchBlock"
+	SettingClientMonitoringStartBlock       = "eth.event.clientMonitoringStartBlock"
 	SettingMinConfirmations                 = "eth.min.confirmations"
 	SettingPasswordHash                     = "system.password"
 	SettingPasswordSalt                     = "system.salt"
@@ -70,6 +70,12 @@ func ReadUint64Setting(db *reform.Querier, key string) (uint64, error) {
 	}
 
 	return uint64(val2), nil
+}
+
+// UpdateUint64Setting reads value of a given uint setting.
+func UpdateUint64Setting(db *reform.Querier, key string, val uint64) error {
+	_, err := db.Exec(`UPDATE settings SET value=$1 WHERE key=$2`, val, key)
+	return err
 }
 
 // ReadBoolSetting reads value of a given bool setting.

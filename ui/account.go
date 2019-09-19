@@ -356,3 +356,15 @@ func (h *Handler) UpdateAccount(tkn, account, name string,
 
 	return update(logger, h.db.Querier, &acc)
 }
+
+// SuggestGasPrice returns currently suggested gas price.
+func (h *Handler) SuggestGasPrice(token string) (uint64, error) {
+	logger := h.logger.Add("method", "SuggestGasPrice")
+
+	if !h.token.Check(token) {
+		logger.Warn("access denied")
+		return 0, ErrAccessDenied
+	}
+
+	return h.suggestedGasPrice(logger)
+}

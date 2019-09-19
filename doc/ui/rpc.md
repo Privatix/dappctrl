@@ -1886,6 +1886,9 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getEthTr
 ```
 </details>
 
+
+### Other
+
 #### Get User Role
 
 *Method*:	`getUserRole`
@@ -1907,6 +1910,31 @@ curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_getUserRo
     "id": 67,
     "jsonrpc": "2.0",
     "result": "client"
+}
+```
+</details>
+
+#### Suggest Gas Price
+
+*Method*:	`suggestGasPrice`
+
+*Description*: Get currently suggested gas price.
+
+*Parameters*: None.
+
+*Result (string)*: value in WEI.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X GET -H "Content-Type: application/json" --data '{"method": "ui_suggestGasPrice", "params": ["qwer"], "id": 67}' http://localhost:8888/http
+
+// Result (1 gwei)
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": 1000000000
 }
 ```
 </details>

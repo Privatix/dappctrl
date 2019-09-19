@@ -42,7 +42,7 @@
             "PSCAddrHex": "0x0619ed1187ecad8d089269ce6c21ef12c8c0b72d",
             "PTCAddrHex": "0x3adfc4999f77d04c8341bac5f3a76f58dff5b37a"
         },
-        "GethURL": "https://mainnet.infura.io/v3/dcc53bc9e070473bb91ecbdac188cc22",
+        "GethURL": "https://cloudflare-eth.com",
         "HTTPClient": {
             "DialTimeout": 10000,
             "IdleConnTimeout": 60000,
@@ -64,13 +64,13 @@
     "Gas": {
         "PSC": {
             "AddBalanceERC20": 97937,
-            "CooperativeClose": 99070,
+            "CooperativeClose": 143336,
             "CreateChannel": 75446,
             "PopupServiceOffering": 42579,
             "RegisterServiceOffering": 112941,
-            "RemoveServiceOffering": 39935,
+            "RemoveServiceOffering": 58728,
             "ReturnBalanceERC20": 61473,
-            "Settle": 54290,
+            "Settle": 108459,
             "TopUp": 45836,
             "UncooperativeClose": 72964
         },
@@ -87,7 +87,7 @@
         "FirstStartDelay": 0,
         "Types": {
             "accountUpdateBalances": {
-                "Duplicated": true,
+                "Duplicated": false,
                 "TryLimit": 3,
                 "TryPeriod": 60000,
                 "FirstStartDelay": 0
@@ -171,7 +171,7 @@
                 "FirstStartDelay": 0
             },
             "clientPreUncooperativeClose": {
-                "FirstStartDelay": 300000,
+                "FirstStartDelay": 750000000,
                 "TryLimit": 200,
                 "TryPeriod": 180000,
                 "Duplicated": false
@@ -245,7 +245,7 @@
     },
     "Role": "agent",
     "SOMCServer": {
-        "Addr": "localhost:5555",
+        "Addr": "localhost:3452",
         "TLS": null
     },
     "Sess": {

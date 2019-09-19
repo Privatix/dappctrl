@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/privatix/dappctrl/eth/contract"
 	"github.com/privatix/dappctrl/util/log"
@@ -93,22 +95,23 @@ type Backend interface {
 }
 
 type backendInstance struct {
-	cfg    *Config
-	psc    *contract.PrivatixServiceContract
-	ptc    *contract.PrivatixTokenContract
-	conn   *client
-	logger log.Logger
+	cfg          *Config
+	psc          *contract.PrivatixServiceContract
+	ptc          *contract.PrivatixTokenContract
+	conn         *client
+	rawRPCClient *rpc.Client
+	logger       log.Logger
 }
 
 // NewBackend returns eth back implementation.
 func NewBackend(cfg *Config, logger log.Logger) Backend {
-	conn, ptc, psc, err := newInstance(cfg, logger)
+	conn, ptc, psc, rawRPCClient, err := newInstance(cfg, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 
 	b := &backendInstance{cfg: cfg, ptc: ptc, psc: psc,
-		conn: conn, logger: logger,
+		conn: conn, rawRPCClient: rawRPCClient, logger: logger,
 	}
 
 	go b.connectionControl()
@@ -118,27 +121,27 @@ func NewBackend(cfg *Config, logger log.Logger) Backend {
 
 func newInstance(cfg *Config,
 	logger log.Logger) (*client, *contract.PrivatixTokenContract,
-	*contract.PrivatixServiceContract, error) {
-	conn, err := newClient(cfg, logger)
+	*contract.PrivatixServiceContract, *rpc.Client, error) {
+	conn, rawRPCClient, err := newClient(cfg, logger)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, rawRPCClient, err
 	}
 
 	ptcAddr := common.HexToAddress(cfg.Contract.PTCAddrHex)
 	ptc, err := contract.NewPrivatixTokenContract(
 		ptcAddr, conn.ethClient())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, rawRPCClient, err
 	}
 
 	pscAddr := common.HexToAddress(cfg.Contract.PSCAddrHex)
 	psc, err := contract.NewPrivatixServiceContract(
 		pscAddr, conn.ethClient())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, rawRPCClient, err
 	}
 
-	return conn, ptc, psc, nil
+	return conn, ptc, psc, rawRPCClient, nil
 }
 
 func (b *backendInstance) dropConnection() {
@@ -175,7 +178,7 @@ func (b *backendInstance) connectionControl() {
 			connected = false
 			logger.Warn("reconnecting to Ethereum")
 			b.dropConnection()
-			conn, ptc, psc, err := newInstance(b.cfg, b.logger)
+			conn, ptc, psc, rawRPCClient, err := newInstance(b.cfg, b.logger)
 			if err != nil {
 				logger.Warn(fmt.Sprintf("failed to"+
 					" reconnect to Ethereum: %s", err))
@@ -183,6 +186,7 @@ func (b *backendInstance) connectionControl() {
 			}
 
 			b.conn = conn
+			b.rawRPCClient = rawRPCClient
 			b.psc = psc
 			b.ptc = ptc
 			continue
@@ -227,12 +231,22 @@ func (b *backendInstance) SuggestGasPrice(
 	ctx2, cancel := b.addTimeout(ctx)
 	defer cancel()
 
-	gasPrice, err := b.conn.ethClient().SuggestGasPrice(ctx2)
+	gasPrice, err := b.customSuggestedGasPrice(ctx2)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get"+
 			" suggested gas price: %s", err)
 	}
 	return gasPrice, err
+}
+
+func (b *backendInstance) customSuggestedGasPrice(ctx context.Context) (*big.Int, error) {
+	var hex hexutil.Big
+	// HACK: Some public rpc's fail on absent params. Sending empty but not nil params.
+	args := make([]interface{}, 0)
+	if err := b.rawRPCClient.CallContext(ctx, &hex, "eth_gasPrice", args...); err != nil {
+		return nil, err
+	}
+	return (*big.Int)(&hex), nil
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific

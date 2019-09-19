@@ -64,13 +64,13 @@
     "Gas": {
         "PSC": {
             "AddBalanceERC20": 97937,
-            "CooperativeClose": 99070,
+            "CooperativeClose": 143336,
             "CreateChannel": 75446,
             "PopupServiceOffering": 42579,
             "RegisterServiceOffering": 112941,
-            "RemoveServiceOffering": 39935,
+            "RemoveServiceOffering": 58728,
             "ReturnBalanceERC20": 61473,
-            "Settle": 54290,
+            "Settle": 108459,
             "TopUp": 45836,
             "UncooperativeClose": 72964
         },
@@ -87,7 +87,7 @@
         "FirstStartDelay": 0,
         "Types": {
             "accountUpdateBalances": {
-                "Duplicated": true,
+                "Duplicated": false,
                 "TryLimit": 3,
                 "TryPeriod": 60000,
                 "FirstStartDelay": 0
@@ -251,7 +251,7 @@
     },
     "Role": "agent",
     "SOMCServer": {
-        "Addr": "0.0.0.0:5555",
+        "Addr": "0.0.0.0:3452",
         "TLS": null
     },
     "Sess": {

@@ -252,5 +252,4 @@ func (h *Handler) StopSession(product, productPassword, clientKey string) error 
 	}
 
 	return nil
-
 }

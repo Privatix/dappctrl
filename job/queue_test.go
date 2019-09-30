@@ -217,6 +217,8 @@ func TestSubscribe(t *testing.T) {
 	job2 := job1
 	job2.Type = "b"
 	job2.RelatedID = util.NewUUID()
+	defer db.Delete(&job2)
+	defer db.Delete(&job1)
 
 	var q *queue
 	handlers := HandlerMap{

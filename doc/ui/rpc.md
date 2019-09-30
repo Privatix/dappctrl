@@ -119,7 +119,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_importAc
 
 // Result
 {
-    "id":6 7, 
+    "id": 67, 
     "jsonrpc": "2.0",
     "result": "8e0e455e-e11b-4341-95c3-1d66990eb22f"
 }
@@ -697,6 +697,75 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 
 *Result (array of `data.Endpoint` objects)*: endpoints.
 
+### Jobs
+
+#### Get jobs
+
+*Method*:	`getJobs`
+
+*Description*: Get paginated jobs list filtered by optional date range, status and type.
+
+*Parameters*:
+1. Token (string)
+2. Status (string)
+3. Job type (string)
+4. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+5. Upper bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+6. Offset (string)
+7. Limit (string)
+
+*Result (object)*:
+- `items` (array of `data.Job` objects) - jobs.
+- `totalItems` (number) - total items.
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getJobs", "params": ["qwert", "failed", "accountUpdateBalances", "2018-10-19T10:47:22","2019-10-19T10:47:22", 0, 1], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67,
+    "jsonrpc": "2.0",
+    "result": [
+        "items": [
+            {
+                "id": "...",
+                // other job fields...
+            },
+        ],
+        "totalItems": 10
+    ]
+}
+```
+
+#### Reactivate job
+
+*Method*: `reactivateJob`
+
+*Description*: Set a not active or successful job back to active state and resets its try count to zerro.
+
+*Parameters*:
+1. Token (string)
+2. Job id (string uuid)
+
+*Result (string)*: None
+
+<details><summary>Example</summary>
+    
+```js
+// Request
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_reactivateJob", "params": ["qwert", "8e0e455e-e11b-1234-95c3-1d66990eb22f"], "id": 67}' http://localhost:8888/http
+
+// Result
+{
+    "id": 67, 
+    "jsonrpc": "2.0",
+    "result": null
+}
+```
+</details>
 
 ### Objects
 

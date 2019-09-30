@@ -12,7 +12,7 @@ func TestClientCompleteServiceTransition(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientPreServiceUnsuspend, data.JobChannel)
-	defer fxt.Close()
+	defer fxt.close()
 
 	fxt.job.Type = data.JobCompleteServiceTransition
 
@@ -45,7 +45,7 @@ func TestIncreaseTxGasPrice(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobIncreaseTxGasPrice, data.JobTransaction)
-	defer fxt.Close()
+	defer fxt.close()
 
 	// Low gas price validation.
 	jdata := &data.JobPublishData{

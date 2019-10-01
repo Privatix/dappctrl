@@ -707,10 +707,10 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
 
 *Parameters*:
 1. Token (string)
-2. Status (string)
 3. Job type (string)
 4. Lower bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
 5. Upper bound of the filter by time. Time in ISO 8601 RFC 3339 format (string)
+2. Statuses (Array of strings)
 6. Offset (string)
 7. Limit (string)
 
@@ -722,7 +722,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_topUpCha
     
 ```js
 // Request
-curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getJobs", "params": ["qwert", "failed", "accountUpdateBalances", "2018-10-19T10:47:22","2019-10-19T10:47:22", 0, 1], "id": 67}' http://localhost:8888/http
+curl -X POST -H "Content-Type: application/json" --data '{"method": "ui_getJobs", "params": ["qwert", "accountUpdateBalances", "2018-10-19T10:47:22","2019-10-19T10:47:22", ["failed"], 0, 1], "id": 67}' http://localhost:8888/http
 
 // Result
 {

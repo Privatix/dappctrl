@@ -11,7 +11,7 @@ import (
 
 func TestGetJobs(t *testing.T) {
 	// Token validation.
-	if _, err := handler.GetJobs("wrong-token", "", "", "", "", 0, 0); err != ui.ErrAccessDenied {
+	if _, err := handler.GetJobs("wrong-token", "", "", "", nil, 0, 0); err != ui.ErrAccessDenied {
 		t.Fatalf("wanted: %v, got: %v", ui.ErrAccessDenied, err)
 	}
 	job := data.NewTestJob(data.JobAccountUpdateBalances, data.JobUser, data.JobOffering)
@@ -20,48 +20,48 @@ func TestGetJobs(t *testing.T) {
 	data.InsertToTestDB(t, db, job)
 	defer data.DeleteFromTestDB(t, db, job)
 	// Filter by status.
-	if ret, err := handler.GetJobs(testToken.v, data.JobCanceled, "", "", "", 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "", "", []string{data.JobCanceled}, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("filtering by status, wanted 0 jobs, got: %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, job.Status, "", "", "", 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "", "", []string{job.Status, data.JobCanceled}, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 1 {
 		t.Fatalf("filtering by status, wanted 1 job, got %d", len(ret.Items))
 	}
 	// Filter by job type.
-	if ret, err := handler.GetJobs(testToken.v, "", data.JobAgentAfterChannelCreate, "", "", 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, data.JobAgentAfterChannelCreate, "", "", nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("filtering by type, wanted 0 jobs, got: %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", job.Type, "", "", 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, job.Type, "", "", nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 1 {
 		t.Fatalf("filtering by type, wanted 1 job, got %d", len(ret.Items))
 	}
 	// Filter by date range.
-	if ret, err := handler.GetJobs(testToken.v, "", "", dateArg(time.Now().Add(time.Minute)),
-		dateArg(time.Now().Add(2*time.Minute)), 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", dateArg(time.Now().Add(time.Minute)),
+		dateArg(time.Now().Add(2*time.Minute)), nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("filtering by date range, wanted 0 jobs, got: %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", "", dateArg(time.Now().Add(-time.Minute)),
-		dateArg(time.Now().Add(time.Minute)), 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", dateArg(time.Now().Add(-time.Minute)),
+		dateArg(time.Now().Add(time.Minute)), nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 1 {
 		t.Fatalf("filtering by date range, wanted 1 job, got %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", "", dateArg(time.Now().Add(-time.Minute)),
-		dateArg(time.Now().Add(-2*time.Minute)), 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", dateArg(time.Now().Add(-time.Minute)),
+		dateArg(time.Now().Add(-2*time.Minute)), nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("filtering by date range, wanted 0 jobs, got %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", "", "",
-		dateArg(time.Now().Add(-time.Minute)), 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "",
+		dateArg(time.Now().Add(-time.Minute)), nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("filtering by date range, wanted 0 jobs, got %d", len(ret.Items))
@@ -71,19 +71,19 @@ func TestGetJobs(t *testing.T) {
 	job2.ID = util.NewUUID()
 	data.InsertToTestDB(t, db, &job2)
 	defer data.DeleteFromTestDB(t, db, &job2)
-	if ret, err := handler.GetJobs(testToken.v, "", "", "", "", 0, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "", "", nil, 0, 0); err != nil {
 		t.Fatal(err)
 	} else if ret.TotalItems != 2 {
 		t.Fatalf("wanted total items 2, got: %d", ret.TotalItems)
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", "", "", "", 2, 0); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "", "", nil, 2, 0); err != nil {
 		t.Fatal(err)
 	} else if ret.TotalItems != 2 {
 		t.Fatalf("wanted total items 2, got: %d", ret.TotalItems)
 	} else if len(ret.Items) != 0 {
 		t.Fatalf("wanted 0 items, got: %d", len(ret.Items))
 	}
-	if ret, err := handler.GetJobs(testToken.v, "", "", "", "", 0, 1); err != nil {
+	if ret, err := handler.GetJobs(testToken.v, "", "", "", nil, 0, 1); err != nil {
 		t.Fatal(err)
 	} else if ret.TotalItems != 2 {
 		t.Fatalf("wanted total items 2, got: %d", ret.TotalItems)

@@ -15,7 +15,7 @@ type GetJobsResult struct {
 }
 
 // GetJobs returns list of jobs for given params.
-func (h *Handler) GetJobs(tkn, status, jtype, dfrom, dto string, offset, limit uint) (*GetJobsResult, error) {
+func (h *Handler) GetJobs(tkn, jtype, dfrom, dto string, statuses []string, offset, limit uint) (*GetJobsResult, error) {
 	logger := h.logger.Add("method", "GetJobs")
 
 	if !h.token.Check(tkn) {
@@ -24,12 +24,16 @@ func (h *Handler) GetJobs(tkn, status, jtype, dfrom, dto string, offset, limit u
 	}
 	var conditions []string
 	var args []interface{}
+	if len(statuses) != 0 {
+		for _, status := range statuses {
+			args = append(args, status)
+		}
+		conditions = append(conditions, fmt.Sprintf("status in (%s)",
+			strings.Join(h.db.Placeholders(1, len(statuses)), ",")))
+	}
 	addFilter := func(cond string, arg interface{}) {
 		conditions = append(conditions, fmt.Sprintf("%s%s", cond, h.db.Placeholder(len(args)+1)))
 		args = append(args, arg)
-	}
-	if status != "" {
-		addFilter("status=", status)
 	}
 	if jtype != "" {
 		addFilter("type=", jtype)

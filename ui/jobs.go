@@ -56,6 +56,7 @@ func (h *Handler) GetJobs(tkn, jtype, dfrom, dto string, statuses []string, offs
 		logger.Error(fmt.Sprintf("could not query total number of jobs: %v", err))
 		return nil, ErrInternal
 	}
+	qtail += " ORDER BY created_at DESC"
 	if offset != 0 {
 		qtail += " OFFSET " + h.db.Placeholder(len(args)+1)
 		args = append(args, offset)

@@ -398,6 +398,7 @@ type TestFixture struct {
 	Offering       *Offering
 	Channel        *Channel
 	Endpoint       *Endpoint
+	EthTx          *EthTx
 }
 
 // Test service addresses.
@@ -425,8 +426,18 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 	prod.OfferTplID = &tmpl.ID
 	prod.ServiceEndpointAddress = pointer.ToString(TestServiceEndpointAddress)
 	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
+	ethtx := &EthTx{
+		ID:       util.NewUUID(),
+		GasPrice: 100,
+		Gas:      200,
+		Status:   TxSent,
+		// real tx from testnet.
+		TxRaw:       []byte(`{"r": "0x3f9d93049aca794c3d391c0fa0156dc25daec65c7996aa7834005ce559bd9c27", "s": "0x406107d7a7e8ed0e17eebc53079e5880c45bdb32514ddad68ccd8f7fb9fd9409", "v": "0x1c", "to": "0x7c70f8da8829756b807ef18acaaaf0ef344f94cf", "gas": "0x1b92d", "hash": "0x3e825a2ff414f6587794ca490645de23c310668ccf87ec70a2897793e878ae09", "input": "0xd7a0314bcce9aee36912efad55dc5a4ba5e22043a2570a6f01659317af96a72189af044800000000000000000000000000000000000000000000000000000000004c4b40000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000206348673362484677625852304e446476626d68785a793576626d6c7662673d3d", "nonce": "0x36", "value": "0x0", "gasPrice": "0xba43b7400"}`),
+		RelatedID:   util.NewUUID(),
+		RelatedType: JobOffering,
+	}
 
-	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, userAcc, user, off, ch, endp)
+	InsertToTestDB(t, db, endpTmpl, tmpl, prod, acc, userAcc, user, off, ch, endp, ethtx)
 
 	return &TestFixture{
 		T:              t,
@@ -440,48 +451,14 @@ func NewTestFixture(t *testing.T, db *reform.DB) *TestFixture {
 		Offering:       off,
 		Channel:        ch,
 		Endpoint:       endp,
-	}
-}
-
-// NewEthTestFixture creates a new ethereum test fixture.
-func NewEthTestFixture(t *testing.T, db *reform.DB,
-	account *truffle.TestAccount) *TestFixture {
-	t.Helper()
-	prod := NewTestProduct()
-	acc := NewEthTestAccount(TestPassword, account)
-	userAcc := NewTestAccount(TestPassword)
-	user := &User{
-		ID:        util.NewUUID(),
-		PublicKey: userAcc.PublicKey,
-		EthAddr:   userAcc.EthAddr,
-	}
-	tmpl := NewTestTemplate(TemplateOffer)
-	off := NewTestOffering(acc.EthAddr, prod.ID, tmpl.ID)
-	ch := NewTestChannel(
-		acc.EthAddr, user.EthAddr, off.ID, 0, 0, ChannelActive)
-	endpTmpl := NewTestTemplate(TemplateAccess)
-	endp := NewTestEndpoint(ch.ID, endpTmpl.ID)
-
-	InsertToTestDB(t, db, prod, acc, userAcc, user, tmpl, off, ch, endpTmpl, endp)
-
-	return &TestFixture{
-		T:              t,
-		DB:             db,
-		Product:        prod,
-		Account:        acc,
-		User:           user,
-		TemplateOffer:  tmpl,
-		TemplateAccess: endpTmpl,
-		Offering:       off,
-		Channel:        ch,
-		Endpoint:       endp,
+		EthTx:          ethtx,
 	}
 }
 
 // Close closes a given test fixture.
 func (f *TestFixture) Close() {
 	// (t, db, endpTmpl, prod, acc, user, tmpl, off, ch, endp)
-	DeleteFromTestDB(f.T, f.DB, f.Endpoint, f.Channel, f.Offering,
+	DeleteFromTestDB(f.T, f.DB, f.EthTx, f.Endpoint, f.Channel, f.Offering,
 		f.UserAcc, f.User, f.Account, f.Product,
 		f.TemplateAccess, f.TemplateOffer)
 }

@@ -27,6 +27,8 @@ type Backend interface {
 
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
 
+	SendTransaction(context.Context, *types.Transaction) error
+
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
 
 	CooperativeClose(*bind.TransactOpts, common.Address, uint32,
@@ -237,6 +239,14 @@ func (b *backendInstance) SuggestGasPrice(
 			" suggested gas price: %s", err)
 	}
 	return gasPrice, err
+}
+
+// SendTransaction sends transaction.
+func (b *backendInstance) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	ctx, cancel := b.addTimeout(ctx)
+	defer cancel()
+
+	return b.conn.ethClient().SendTransaction(ctx, tx)
 }
 
 func (b *backendInstance) customSuggestedGasPrice(ctx context.Context) (*big.Int, error) {

@@ -206,6 +206,8 @@ func (e *workerTest) newTestFixture(t *testing.T,
 		job.RelatedID = f.Offering.ID
 	case data.JobAccount:
 		job.RelatedID = f.Account.ID
+	case data.JobTransaction:
+		job.RelatedID = f.EthTx.ID
 	}
 	e.insertToTestDB(t, job)
 

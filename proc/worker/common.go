@@ -1,8 +1,11 @@
 package worker
 
 import (
+	"context"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/privatix/dappctrl/data"
 )
 
@@ -93,4 +96,51 @@ func (w *Worker) afterChannelTopUp(job *data.Job, jobType string) error {
 	}
 
 	return nil
+}
+
+// IncreaseTxGasPrice resent related_id tranaction with increased gas price.
+func (w *Worker) IncreaseTxGasPrice(job *data.Job) error {
+	logger := w.logger.Add("method", "IncreaseTxGasPrice", "job", job)
+
+	ethTx, err := w.relatedEthTx(logger, job, data.JobIncreaseTxGasPrice)
+	if err != nil {
+		return err
+	}
+
+	jdata, err := w.publishData(logger, job)
+	if err != nil {
+		return err
+	}
+
+	if jdata.GasPrice <= ethTx.GasPrice {
+		return ErrTxNoGasIncrease
+	}
+
+	txHash, err := data.HexToHash(ethTx.Hash)
+	if err != nil {
+		logger.Error(fmt.Sprintf("could not get tx hash from hex representation: %v", err))
+	}
+	_, pending, err := w.ethBack.GetTransactionByHash(context.Background(), txHash)
+	if err != nil {
+		logger.Error(fmt.Sprintf("could not get tx by hash: %v", err))
+		return ErrEthGetTransaction
+	}
+
+	if !pending {
+		return ErrEthTxIsMined
+	}
+
+	tx := new(types.Transaction)
+	if err := tx.UnmarshalJSON(ethTx.TxRaw); err != nil {
+		return fmt.Errorf("could not build transaction to send: %v", err)
+	}
+	tx = types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(),
+		new(big.Int).SetUint64(jdata.GasPrice), tx.Data())
+
+	if err := w.ethBack.SendTransaction(context.Background(), tx); err != nil {
+		return fmt.Errorf("could not send transaction: %v", err)
+	}
+
+	return w.saveEthTX(logger, job, tx, ethTx.Method, data.JobTransaction, ethTx.ID,
+		ethTx.AddrFrom, ethTx.AddrTo)
 }

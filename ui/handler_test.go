@@ -108,6 +108,23 @@ func subscribe(client *rpc.Client, channel interface{}, method string,
 		"ui", channel, append([]interface{}{method}, args...)...)
 }
 
+func setTestJobQueueToExpectJobAdd(t *testing.T, j *data.Job) job.QueueMock {
+	m := job.QueueMock(func(method int, tx *reform.TX,
+		j2 *data.Job, relatedIDs []string, subID string,
+		subFunc job.SubFunc) error {
+		switch method {
+		case job.MockAdd:
+			*j = *j2
+			t.Log("HERE", j)
+		default:
+			t.Fatal("unexpected queue call")
+		}
+		return nil
+	})
+	handler.SetMockQueue(m)
+	return m
+}
+
 func TestMain(m *testing.M) {
 	var err error
 

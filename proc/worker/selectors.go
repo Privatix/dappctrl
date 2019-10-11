@@ -45,6 +45,21 @@ func (w *Worker) relatedChannel(logger log.Logger, job *data.Job,
 	return rec, err
 }
 
+func (w *Worker) relatedEthTx(logger log.Logger, job *data.Job,
+	jobType string) (*data.EthTx, error) {
+	if w.isJobInvalid(job, jobType, data.JobTransaction) {
+		return nil, ErrInvalidJob
+	}
+
+	rec := &data.EthTx{}
+	err := data.FindByPrimaryKeyTo(w.db.Querier, rec, job.RelatedID)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, ErrTxNotFound
+	}
+	return rec, nil
+}
+
 func (w *Worker) relatedEndpoint(logger log.Logger, job *data.Job,
 	jobType string) (*data.Endpoint, error) {
 	if w.isJobInvalid(job, jobType, data.JobEndpoint) {

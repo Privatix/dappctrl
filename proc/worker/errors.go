@@ -82,6 +82,9 @@ const (
 	ErrOfferingDeletePeriodIsNotOver
 	ErrOfferingDeposit
 	ErrTorNoSet
+	ErrTxNoGasIncrease
+	ErrEthTxIsMined
+	ErrTxNotFound
 )
 
 var errMsgs = errors.Messages{
@@ -161,6 +164,9 @@ var errMsgs = errors.Messages{
 	ErrOfferingDeletePeriodIsNotOver: "remove period is not over, try again later",
 	ErrOfferingDeposit:               "incorrect offering deposit",
 	ErrTorNoSet:                      "hostname of tor hidden service must be provided",
+	ErrTxNoGasIncrease:               "gas price must be bigger than before",
+	ErrEthTxIsMined:                  "transaction is mined",
+	ErrTxNotFound:                    "transaction not found",
 }
 
 func init() {

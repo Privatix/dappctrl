@@ -20,10 +20,11 @@ const (
 
 // Job related object types.
 const (
-	JobOffering = "offering"
-	JobChannel  = "channel"
-	JobEndpoint = "endpoint"
-	JobAccount  = "account"
+	JobOffering    = "offering"
+	JobChannel     = "channel"
+	JobEndpoint    = "endpoint"
+	JobAccount     = "account"
+	JobTransaction = "transaction"
 )
 
 // Job types.
@@ -70,6 +71,7 @@ const (
 	JobCompleteServiceTransition            = "completeServiceTransition"
 	JobDecrementCurrentSupply               = "decrementCurrentSupply"
 	JobIncrementCurrentSupply               = "incrementCurrentSupply"
+	JobIncreaseTxGasPrice                   = "increaseTxGasPrice"
 )
 
 // JobEthLog is log data a job derived from.

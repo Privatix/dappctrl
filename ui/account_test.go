@@ -7,10 +7,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
@@ -177,18 +175,8 @@ func TestImportAccountFromHex(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "ImportAccountFromHex")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	pk, _ := crypto.GenerateKey()
 
@@ -206,18 +194,8 @@ func TestImportAccountFromJSON(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "ImportAccountFromJSON")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	pk, _ := crypto.GenerateKey()
 	key, pass := privateKeyToJSON(pk)
@@ -235,18 +213,8 @@ func TestTransferTokens(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "TransferTokens")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	res := handler.TransferTokens("wrong-token",
 		fxt.Account.ID, data.ContractPSC, 1, 1)
@@ -329,18 +297,8 @@ func TestUpdateBalance(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "UpdateBalance")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	res := handler.UpdateBalance("wrong-token", fxt.Account.ID)
 	assertMatchErr(ui.ErrAccessDenied, res)

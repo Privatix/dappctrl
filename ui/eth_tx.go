@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/privatix/dappctrl/data"
+	"github.com/privatix/dappctrl/job"
 )
 
 // AccountAggregatedType is related type to aggregate transactions for
@@ -84,4 +85,21 @@ func (h *Handler) GetEthTransactions(tkn, relType, relID string,
 		ret[i] = *v.(*data.EthTx)
 	}
 	return &GetEthTransactionsResult{ret, count}, nil
+}
+
+// IncreaseTxGasPrice creates a increaseTxGasPrice job.
+func (h *Handler) IncreaseTxGasPrice(tkn, id string, gasPrice uint64) error {
+	if id == "" {
+		return ErrAccessDenied
+	}
+	ethTx := new(data.EthTx)
+	if err := h.db.FindByPrimaryKeyTo(ethTx, id); err != nil {
+		return ErrTxNotFound
+	}
+	if gasPrice <= ethTx.GasPrice {
+		return ErrTxIsUnderpriced
+	}
+
+	return job.AddWithData(h.queue, nil, data.JobIncreaseTxGasPrice,
+		data.JobTransaction, id, data.JobUser, &data.JobPublishData{GasPrice: gasPrice})
 }

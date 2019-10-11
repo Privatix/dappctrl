@@ -42,7 +42,7 @@
             "PSCAddrHex": "0x0619ed1187ecad8d089269ce6c21ef12c8c0b72d",
             "PTCAddrHex": "0x3adfc4999f77d04c8341bac5f3a76f58dff5b37a"
         },
-        "GethURL": "https://cloudflare-eth.com",
+        "GethURL": "https://mainnet.infura.io/v3/dcc53bc9e070473bb91ecbdac188cc22",
         "HTTPClient": {
             "DialTimeout": 10000,
             "IdleConnTimeout": 60000,

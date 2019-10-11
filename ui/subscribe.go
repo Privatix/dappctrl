@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -19,11 +20,22 @@ type ObjectChangeResult struct {
 	Error  *rpcsrv.Error   `json:"error,omitempty"`
 }
 
-var objectChangeTables = map[string]reform.Table{
-	data.JobOffering: data.OfferingTable,
-	data.JobChannel:  data.ChannelTable,
-	data.JobEndpoint: data.EndpointTable,
-	data.JobAccount:  data.AccountTable,
+func recordByRelatedIDCB(t reform.Table) func(*reform.DB, *data.Job) (reform.Record, error) {
+	return func(db *reform.DB, j *data.Job) (reform.Record, error) {
+		return db.FindByPrimaryKeyFrom(t, j.RelatedID)
+	}
+}
+
+var getRecordFuncs = map[string]func(*reform.DB, *data.Job) (reform.Record, error){
+	data.JobOffering: recordByRelatedIDCB(data.OfferingTable),
+	data.JobChannel:  recordByRelatedIDCB(data.ChannelTable),
+	data.JobEndpoint: recordByRelatedIDCB(data.EndpointTable),
+	data.JobAccount:  recordByRelatedIDCB(data.AccountTable),
+	data.JobTransaction: func(db *reform.DB, j *data.Job) (reform.Record, error) {
+		var tx data.EthTx
+		err := db.FindOneTo(&tx, "job", j.ID)
+		return &tx, err
+	},
 }
 
 // ObjectChange subscribes to changes for objects of a given type.
@@ -37,7 +49,7 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 		return nil, ErrAccessDenied
 	}
 
-	table, ok := objectChangeTables[objectType]
+	getRecord, ok := getRecordFuncs[objectType]
 	if !ok {
 		logger.Warn(ErrBadObjectType.Error())
 		return nil, ErrBadObjectType
@@ -53,9 +65,13 @@ func (h *Handler) ObjectChange(ctx context.Context, tkn, objectType string,
 	sid := string(sub.ID)
 	closech := make(chan struct{})
 	cb := func(job *data.Job, result error) {
-		obj, err := h.db.FindByPrimaryKeyFrom(table, job.RelatedID)
+		obj, err := getRecord(h.db, job)
 		if err != nil {
-			logger.Error(err.Error())
+			if err == sql.ErrNoRows {
+				logger.Add("job", job, "result", result).Warn(err.Error())
+			} else {
+				logger.Error(err.Error())
+			}
 		}
 
 		var odata json.RawMessage

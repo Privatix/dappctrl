@@ -8,7 +8,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
 )
@@ -60,18 +59,8 @@ func TestAcceptOffering(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "AcceptOffering")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	minDeposit := data.ComputePrice(fxt.Offering, fxt.Offering.MinUnits)
 
@@ -438,18 +427,8 @@ func TestChangeOfferingStatus(t *testing.T) {
 	fxt, assertMatchErr := newTest(t, "ChangeOfferingStatus")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	for action, jobType := range ui.OfferingChangeActions {
 		err := handler.ChangeOfferingStatus(
@@ -458,6 +437,7 @@ func TestChangeOfferingStatus(t *testing.T) {
 
 		if j == nil || j.Type != jobType ||
 			j.RelatedID != fxt.Offering.ID {
+			t.Log(j)
 			t.Fatal("expected job not created")
 		}
 	}

@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"gopkg.in/reform.v1"
 
 	"github.com/privatix/dappctrl/data"
-	"github.com/privatix/dappctrl/job"
 	"github.com/privatix/dappctrl/proc"
 	"github.com/privatix/dappctrl/ui"
 	"github.com/privatix/dappctrl/util"
@@ -19,18 +17,8 @@ func TestTopUpChannel(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "TopUpChannel")
 	defer fxt.close()
 
-	var j *data.Job
-	handler.SetMockQueue(job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	}))
+	j := new(data.Job)
+	setTestJobQueueToExpectJobAdd(t, j)
 
 	err := handler.TopUpChannel("wrong-token", fxt.Channel.ID, 0, 123)
 	assertErrEqual(ui.ErrAccessDenied, err)
@@ -78,21 +66,8 @@ func TestChangeChannelStatus(t *testing.T) {
 	fxt, assertErrEqual := newTest(t, "ChangeChannelStatus")
 	defer fxt.close()
 
-	var j *data.Job
-
-	queueMock := job.QueueMock(func(method int, tx *reform.TX,
-		j2 *data.Job, relatedIDs []string, subID string,
-		subFunc job.SubFunc) error {
-		switch method {
-		case job.MockAdd:
-			j = j2
-		default:
-			t.Fatal("unexpected queue call")
-		}
-		return nil
-	})
-
-	handler.SetMockQueue(queueMock)
+	j := new(data.Job)
+	queueMock := setTestJobQueueToExpectJobAdd(t, j)
 	handler.SetProcessor(proc.NewProcessor(conf.Proc, db, queueMock))
 
 	// Set client channel.

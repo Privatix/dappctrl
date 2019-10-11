@@ -394,7 +394,7 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 
 	fxt := env.newTestFixture(t,
 		data.JobClientAfterUncooperativeCloseRequest, data.JobChannel)
-	defer fxt.close()
+	defer fxt.Close()
 
 	challangePeriodSetting := &data.Setting{
 		Key:   data.SettingsPeriodChallange,
@@ -425,9 +425,9 @@ func TestClientAfterUncooperativeCloseRequest(t *testing.T) {
 	for _, v := range j {
 		if job, ok := v.(*data.Job); ok {
 			jobs = append(jobs, job)
+			defer env.deleteFromTestDB(t, job)
 		}
 	}
-
 	if len(jobs) != 2 {
 		t.Fatal("not all jobs are in the database")
 	}
@@ -560,6 +560,7 @@ func TestClientPreServiceTerminate(t *testing.T) {
 
 	var job data.Job
 	env.findTo(t, &job, jobID)
+	defer env.deleteFromTestDB(t, &job)
 
 	runJob(t, env.worker.ClientPreServiceTerminate, &job)
 

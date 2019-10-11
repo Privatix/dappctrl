@@ -56,5 +56,6 @@ func HandlersMap(worker *worker.Worker) job.HandlerMap {
 		data.JobAccountUpdateBalances:         worker.AccountUpdateBalances,
 		data.JobDecrementCurrentSupply:        worker.DecrementCurrentSupply,
 		data.JobIncrementCurrentSupply:        worker.IncrementCurrentSupply,
+		data.JobIncreaseTxGasPrice:            worker.IncreaseTxGasPrice,
 	}
 }

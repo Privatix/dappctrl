@@ -3,30 +3,23 @@ language: go
 go:
     - 1.12.1
 
-services:
-    - postgresql
-
 addons:
-    postgresql: 11.2
-
+    postgresql: "10"
+    apt:
+        packages:
+            - postgresql-10
 env:
     global:
         - GO111MODULE=on
-
-before_install:
-    # install postgresql 11
-    - sudo apt-get update
-    - sudo apt-get --yes remove postgresql\*
-    - sudo apt-get install -y postgresql-11 postgresql-client-11
-    - sudo cp /etc/postgresql/{9.6,11}/main/pg_hba.conf
-    - sudo service postgresql restart 11
+        - PGPORT=5432
+        - PGUSER=postgres
 
 install:
     - ${TRAVIS_BUILD_DIR}/scripts/build.sh
 
 before_script:
     # create database
-    - CONNECTION_STRING="host=localhost sslmode=disable user=postgres port=5432"
+    - CONNECTION_STRING="host=localhost sslmode=disable user=${PGUSER} port=${PGPORT}"
     - dappctrl db-create -conn "${CONNECTION_STRING} dbname=postgres"
     - dappctrl db-migrate -conn "${CONNECTION_STRING} dbname=dappctrl"
 

@@ -13,7 +13,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20190715232110-2b613d287457 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
-	github.com/ethereum/go-ethereum v1.9.6
+	github.com/ethereum/go-ethereum v1.9.11
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
@@ -45,7 +45,7 @@ require (
 	github.com/pkg/profile v1.3.0
 	github.com/pressly/goose v2.6.0+incompatible
 	github.com/prometheus/tsdb v0.9.1 // indirect
-	github.com/rakyll/statik v0.1.6
+	github.com/rakyll/statik v0.1.7
 	github.com/rdegges/go-ipify v0.0.0-20150526035502-2d94a6a86c40
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.6.0
@@ -71,3 +71,5 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	syreclabs.com/go/faker v1.1.0 // indirect
 )
+
+replace github.com/ethereum/go-ethereum => github.com/ethereum/go-ethereum v1.9.6

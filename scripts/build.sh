@@ -9,7 +9,7 @@ echo
 echo go get
 echo
 
-cd "${DAPPCTRL}"
+cd "${DAPPCTRL}" || exit 1
 
 go get -u -v gopkg.in/reform.v1/reform
 go get -u -v github.com/rakyll/statik
